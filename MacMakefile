@@ -1,0 +1,45 @@
+TARGETS=	Gen/zengine
+
+CXXFLAGS=	-g -O2 -I/Library/Frameworks/SDL.framework/Headers
+
+LDFLAGS=	-framework SDL -framework SDL_mixer -framework Cocoa 
+
+SOURCES=	Engine.cpp
+
+ifneq ($(INCLUDE_DEPENDENCIES),yes)
+
+all:	
+	@make --no-print-directory INCLUDE_DEPENDENCIES=yes $(TARGETS)
+	cp world.dat Gen/world.dat
+	cp -r Images Gen/
+	cp -r Sounds Gen/
+
+.PHONY:	clean
+clean:
+	rm -rf Gen
+
+else
+
+-include $(addprefix Gen/,$(SOURCES:.cpp=.d))
+-include $(addprefix Gen/,$(SOURCES:.cpp=.d))
+
+endif
+
+
+FLOAT_OBJECTS= $(addprefix Gen/,$(SOURCES:.cpp=.o)) Gen/SDL_prims.o
+
+Gen/%.o:		%.cpp
+	mkdir -p $(dir $@)
+	c++ $(CXXFLAGS) -c -o $@ $<
+
+Gen/%.o:		%.c
+	mkdir -p $(dir $@)
+	cc $(CXXFLAGS) -c -o $@ $<
+
+Gen/zengine:	$(FLOAT_OBJECTS) 
+	g++ -o $@ $^ SDLMain.m $(LDFLAGS)
+
+Gen/%.d:		%.cpp
+	@mkdir -p $(dir $@)
+	c++ -M -MT $(@:.d=.o) $(CXXFLAGS) -o $@ $<
+
