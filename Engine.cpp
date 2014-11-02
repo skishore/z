@@ -345,6 +345,15 @@ void redrawTiles() {
 }
 
 void update() {
+  static long long minTime = 0, curTime = 0, lastTime = 0, lastSecond = 0, delay = 0;
+  static int framesPerSecond = 0;
+  static timeval t;
+  gettimeofday(&t, NULL);
+  curTime = t.tv_sec*TICKSPERSEC + t.tv_usec - minTime;
+  if (curTime < 0) {
+    minTime += curTime;
+  }
+
   frameNum = (frameNum + 1) % MAXFRAMENUM;
 
   SDL_Event event;
@@ -379,6 +388,14 @@ void update() {
   SDL_RenderClear(renderer);
   SDL_RenderCopy(renderer, texture, NULL, NULL);
   SDL_RenderPresent(renderer);
+
+  if (curTime > lastSecond + TICKSPERSEC) {
+    cout << "FPS = " << 1.0f*framesPerSecond*TICKSPERSEC/(curTime - lastSecond) << endl;
+    lastSecond = curTime;
+    framesPerSecond = 1;
+  } else {
+    framesPerSecond++;
+  }
 }
 
 void gameLoop() {
