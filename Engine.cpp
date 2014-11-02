@@ -3,6 +3,11 @@
 #include "GUI.cpp"
 #include "Animations.cpp"
 
+#ifdef EMSCRIPTEN
+#include "emscripten.h"
+#define SDL_DisplayFormat SDL_DisplayFormatAlpha
+#endif
+
 void HandleEvent(SDL_Event event) {
     switch (event.type) {
         case SDL_QUIT:
@@ -190,7 +195,11 @@ int main(int argc, char** argv) {
 
     SDL_BlitSurface(buffer, NULL, screen, NULL);
     SDL_UpdateRect(screen, 0, 0, 0, 0);
+    #ifdef EMSCRIPTEN
+    emscripten_set_main_loop(update, FRAMERATE, 1);
+    #else
     gameLoop();
+    #endif
     cleanup();
     return 0;
 }
@@ -337,6 +346,42 @@ void redrawTiles() {
     }
 }
 
+void update() {
+  frameNum = (frameNum + 1) % MAXFRAMENUM;
+
+  SDL_Event event;
+  for (int i = 0; (i < EVENTSPERFRAME) && SDL_PollEvent(&event); i++)
+      HandleEvent(event);
+
+  movePlayer();
+  for (int i = 0; i < numZombies; i++)
+      moveZombie(zombies[i]);
+  for (int i = 0; i < numBullets; i++)
+      if (bullets[i].active)
+          moveBullet(&bullets[i]);
+  checkStats();
+  scrollCamera();
+
+  SDL_BlitSurface(buffer, NULL, screen, NULL);
+
+  allSprites.sort(highToLow);
+  for (list<zSprite*>::iterator it = allSprites.begin(); it != allSprites.end(); it++) {
+      if ((*it == player) && (player->usingItem))
+          item->draw(screen);
+      (*it)->draw(screen);
+  }
+
+  for (int i = 0; i < numBullets; i++) {
+      if ((bullets[i].active) && (bullets[i].pos.y >= 0))
+          for (int j = 0; j < 4; j++)
+              SDL_DrawPixel(screen, bullets[i].pos.x + (j % 2), bullets[i].pos.y + GUIHEIGHT + (j/2 % 2), WHITE);
+  }
+
+  drawMouse();
+
+  SDL_UpdateRect(screen, 0, 0, 0, 0);
+}
+
 void gameLoop() {
     int curTime, lastTime, lastSecond, delay, i;
     int framesPerSecond = 0;
@@ -360,39 +405,8 @@ void gameLoop() {
             } else {
                 framesPerSecond++;
             }
-            frameNum = (frameNum + 1) % MAXFRAMENUM;
 
-            SDL_Event event;
-            for (i = 0; (i < EVENTSPERFRAME) && SDL_PollEvent(&event); i++)
-                HandleEvent(event);
-
-            movePlayer();
-            for (i = 0; i < numZombies; i++)
-                moveZombie(zombies[i]);
-            for (i = 0; i < numBullets; i++)
-                if (bullets[i].active)
-                    moveBullet(&bullets[i]);
-            checkStats();
-            scrollCamera();
-            
-            SDL_BlitSurface(buffer, NULL, screen, NULL);
-
-            allSprites.sort(highToLow);
-            for (list<zSprite*>::iterator it = allSprites.begin(); it != allSprites.end(); it++) {
-                if ((*it == player) && (player->usingItem))
-                    item->draw(screen);
-                (*it)->draw(screen);
-            }
-
-            for (i = 0; i < numBullets; i++) {
-                if ((bullets[i].active) && (bullets[i].pos.y >= 0))
-                    for (int j = 0; j < 4; j++)
-                        SDL_DrawPixel(screen, bullets[i].pos.x + (j % 2), bullets[i].pos.y + GUIHEIGHT + (j/2 % 2), WHITE);
-            }
-
-            drawMouse();
-
-            SDL_UpdateRect(screen, 0, 0, 0, 0);
+            update();
 
             gettimeofday(&t, NULL);
             delay = lastTime + FRAMEDELAY - t.tv_sec*TICKSPERSEC - t.tv_usec - MINDELAY;

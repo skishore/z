@@ -139,6 +139,7 @@ void drawTiles(const point);
 void redrawTiles();
 void drawMouse();
 
+void update();
 void gameLoop();
 void HandleEvent(const SDL_Event);
 

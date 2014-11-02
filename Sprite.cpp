@@ -5,6 +5,8 @@ using namespace std;
 
 #include <iostream>
 
+#define SDL_DisplayFormat SDL_DisplayFormatAlpha
+
 Sprite::Sprite() {
     numSprites++;    
 }
