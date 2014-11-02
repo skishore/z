@@ -6,7 +6,7 @@ using namespace std;
 #define GAMEHEIGHT 256
 
 #include "zSprite.cpp"
-#include "Audio.cpp"
+#include "Audio.h"
 
 #include <cstdlib>
 #include <cstdio>

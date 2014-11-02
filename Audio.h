@@ -1,11 +1,11 @@
 
-#include "SDL_mixer/SDL_mixer.h"
+//#include "SDL_mixer/SDL_mixer.h"
 #include <iostream>
 
-const int audio_rate = MIX_DEFAULT_FREQUENCY;
-const Uint16 audio_format = AUDIO_S16SYS; 
-const int audio_channels = 2;
-const int audio_buffers = 256;
+//const int audio_rate = MIX_DEFAULT_FREQUENCY;
+//const Uint16 audio_format = AUDIO_S16SYS;
+//const int audio_channels = 2;
+//const int audio_buffers = 256;
 #define NUMCHANNELS 12
 
 #define BASEDIST 1.05f
@@ -25,13 +25,13 @@ const int audio_buffers = 256;
 const int NUMSOUNDS[SOUNDTYPES] = {8, 3, 8, 3, 3, 5, 4, 8};
 const char* SOUNDNAMES[SOUNDTYPES] = \
         {"step", "punch", "punched", "equip", "swing", "knifed", "fire", "shot"};
-#define VOL MIX_MAX_VOLUME
-const int VOLUME[SOUNDTYPES] = {3*VOL/8, VOL/3, VOL/3, VOL, 2*VOL/3, VOL/6, VOL, VOL};
-Mix_Chunk*** chunks;
+//#define VOL MIX_MAX_VOLUME
+//const int VOLUME[SOUNDTYPES] = {3*VOL/8, VOL/3, VOL/3, VOL, 2*VOL/3, VOL/6, VOL, VOL};
+//Mix_Chunk*** chunks;
 
-void initAudio();
-void playSound(const zSprite* const, const int, const int=-1);
-void cleanupAudio();
+void initAudio() {};
+void playSound(const zSprite* const, const int, const int=-1) {};
+void cleanupAudio() {};
 
-void assert(const bool, const char*);
+void assert(const bool, const char*) {};
 
