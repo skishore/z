@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
         renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
         SCREENWIDTH, SCREENHEIGHT);
     buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0, 0, 0, 0);
+    tilemap = SDL_CreateRGBSurface(0, ZONESIZE*GAMEWIDTH, ZONESIZE*GAMEHEIGHT, BITDEPTH, 0, 0, 0, 0);
 
     //SDL_EnableKeyRepeat(0, 0);
     SDL_ShowCursor(SDL_DISABLE);
@@ -163,7 +164,8 @@ int main(int argc, char** argv) {
 
     // load and draw the tileset sprite
     tileset = new Sprite();
-    tileset->loadSprite(SPRITESIZE, SPRITESIZE, "tileset.bmp", 5, 1, buffer, bound);
+    SDL_Rect tileset_bound = {0, 0, ZONESIZE*GAMEWIDTH, ZONESIZE*GAMEHEIGHT};
+    tileset->loadSprite(SPRITESIZE, SPRITESIZE, "tileset.bmp", 5, 1, buffer, tileset_bound);
     camera.set(INITCAMERAX, INITCAMERAY);
     redrawTiles();
 
@@ -245,103 +247,36 @@ void loadZoneFragment(const point scene, const point min, const point max, const
 
 void drawTiles(const point diff) {
     SDL_Rect rSrc, rTarget;
-    point tile = point(camera.x/SPRITESIZE, camera.y/SPRITESIZE);
-    point maxTile;
+    rSrc.x = camera.x;
+    rSrc.y = camera.y;
+    rSrc.w = GAMEWIDTH;
+    rSrc.h = GAMEHEIGHT;
 
-    rSrc.x = max(diff.x, (short)0);
-    rSrc.y = max(diff.y, (short)0) + GUIHEIGHT;
-    rSrc.w = GAMEWIDTH - abs(diff.x);
-    rSrc.h = GAMEHEIGHT - abs(diff.y);
-
-    rTarget.x = max(-diff.x, 0);
-    rTarget.y = max(-diff.y, 0) + GUIHEIGHT;
+    rTarget.x = 0;
+    rTarget.y = GUIHEIGHT;
     rTarget.w = rSrc.w;
     rTarget.h = rSrc.h;
 
-    SDL_BlitSurface(buffer, &rSrc, buffer, &rTarget);
-
-    if (diff.x != 0) {
-        maxTile.x = 1;
-        int overlap = camera.x % SPRITESIZE - diff.x;
-        if ((overlap < 0) || (overlap >= SPRITESIZE))
-            maxTile.x = 2;
-
-        tileset->x = -(camera.x % SPRITESIZE);
-        tileset->y = -(camera.y % SPRITESIZE);
-
-        if (diff.x > 0) {
-            int offset = NUMCOLS + 1 - maxTile.x;
-            tile.x += offset;
-            tileset->x += SPRITESIZE*offset;
-        }
-        maxTile.x += tile.x;
-        maxTile.y = tile.y + NUMROWS + (camera.y % SPRITESIZE == 0 ? 0 : 1);
-
-        for (; tile.x < maxTile.x; tile.x++) {
-            for (tile.y = camera.y/SPRITESIZE; tile.y < maxTile.y; tile.y++) {
-                tileset->frameCol = tiles[tile.x][tile.y];
-                tileset->draw(buffer);
-
-                tileset->y += SPRITESIZE;
-            }
-            tileset->x += SPRITESIZE;
-            tileset->y = -(camera.y % SPRITESIZE);
-        }
-    }
-
-    if (diff.y != 0) {
-        tile.set(camera.x/SPRITESIZE, camera.y/SPRITESIZE);
-
-        maxTile.y = 1;
-        int overlap = camera.y % SPRITESIZE - diff.y;
-        if ((overlap < 0) || (overlap >= SPRITESIZE))
-            maxTile.y = 2;
-
-        tileset->x = -(camera.x % SPRITESIZE);
-        tileset->y = -(camera.y % SPRITESIZE);
-
-        if (diff.y > 0) {
-            int offset = NUMROWS + 1 - maxTile.y;
-            tile.y += offset;
-            tileset->y += SPRITESIZE*offset;
-        }
-        maxTile.x = tile.x + NUMCOLS + (camera.x % SPRITESIZE == 0 ? 0 : 1);
-        maxTile.y += tile.y;
-
-        for (; tile.y < maxTile.y; tile.y++) {
-            for (tile.x = camera.x/SPRITESIZE; tile.x < maxTile.x; tile.x++) {
-                tileset->frameCol = tiles[tile.x][tile.y];
-                tileset->draw(buffer);
-
-                tileset->x += SPRITESIZE;
-            }
-            tileset->x = -(camera.x % SPRITESIZE);
-            tileset->y += SPRITESIZE;
-        }
-    }
+    SDL_BlitSurface(tilemap, &rSrc, buffer, &rTarget);
 }
 
 void redrawTiles() {
-    point minTile = point(camera.x/SPRITESIZE, camera.y/SPRITESIZE);
-    point tilesPos = point(minTile);
-    point maxTile;
+    tileset->x = 0;
+    tileset->y = 0;
 
-    tileset->x = -camera.x % SPRITESIZE;
-    tileset->y = -camera.y % SPRITESIZE;
-
-    maxTile.x = minTile.x + NUMCOLS + (tileset->x == 0 ? 0 : 1);
-    maxTile.y = minTile.y + NUMROWS + (tileset->y == 0 ? 0 : 1);
-
-    for (int i = minTile.x; i < maxTile.x; i++) {
-        for (int j = minTile.y; j < maxTile.y; j++) {
+    for (int i = 0; i < ZONESIZE*NUMCOLS; i++) {
+        for (int j = 0; j < ZONESIZE*NUMROWS; j++) {
             tileset->frameCol = tiles[i][j];
-            tileset->draw(buffer);
+            tileset->draw(tilemap);
 
             tileset->y += SPRITESIZE;
         }
         tileset->x = tileset->x + SPRITESIZE;
-        tileset->y = -camera.y % SPRITESIZE;
+        tileset->y = 0;
     }
+
+    point dummy;
+    drawTiles(dummy);
 }
 
 void update() {
@@ -799,6 +734,7 @@ void scrollCamera() {
                 zombies[i]->setSquare(camera.x, camera.y, true);
 
             loadZone();
+            redrawTiles();
         }
     }
 }
