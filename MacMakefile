@@ -1,10 +1,12 @@
-TARGETS=	Gen/zengine
+TARGETS=	Gen/zengine.html
 
-CXXFLAGS=	-g -O2 -I/Library/Frameworks/SDL.framework/Headers
+CXXFLAGS=	-g -O2 #-I/Library/Frameworks/SDL.framework/Headers
 
-LDFLAGS=	-framework SDL -framework SDL_mixer -framework Cocoa 
+LDFLAGS=	#-framework SDL -framework Cocoa 
 
 SOURCES=	Engine.cpp
+
+CC= /Users/skishore/Projects/emscripten/emcc
 
 ifneq ($(INCLUDE_DEPENDENCIES),yes)
 
@@ -30,16 +32,16 @@ FLOAT_OBJECTS= $(addprefix Gen/,$(SOURCES:.cpp=.o)) Gen/SDL_prims.o
 
 Gen/%.o:		%.cpp
 	mkdir -p $(dir $@)
-	c++ $(CXXFLAGS) -c -o $@ $<
+	${CC} $(CXXFLAGS) -c -o $@ $<
 
 Gen/%.o:		%.c
 	mkdir -p $(dir $@)
-	cc $(CXXFLAGS) -c -o $@ $<
+	${CC} $(CXXFLAGS) -c -o $@ $<
 
-Gen/zengine:	$(FLOAT_OBJECTS) 
-	g++ -o $@ $^ SDLMain.m $(LDFLAGS)
+Gen/zengine.html:	$(FLOAT_OBJECTS)
+	${CC} -o $@ $^ $(LDFLAGS) --preload-file Images
 
 Gen/%.d:		%.cpp
 	@mkdir -p $(dir $@)
-	c++ -M -MT $(@:.d=.o) $(CXXFLAGS) -o $@ $<
+	${CC} -M -MT $(@:.d=.o) $(CXXFLAGS) -o $@ $<
 
