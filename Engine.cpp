@@ -145,11 +145,21 @@ int main(int argc, char** argv) {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     int status = SDL_CreateWindowAndRenderer(
         SCREENWIDTH, SCREENHEIGHT, 0, &screen, &renderer);
+    assert(status == 0, "SDL_CreateWindowAndRenderer failed!");
+
+    Uint32 format = SDL_PIXELFORMAT_ARGB8888;
     texture = SDL_CreateTexture(
-        renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-        SCREENWIDTH, SCREENHEIGHT);
-    buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0, 0, 0, 0);
-    tilemap = SDL_CreateRGBSurface(0, ZONESIZE*GAMEWIDTH, ZONESIZE*GAMEHEIGHT, BITDEPTH, 0, 0, 0, 0);
+        renderer, format, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT);
+
+    temp = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0, 0, 0, 0);
+    buffer = SDL_ConvertSurfaceFormat(temp, format, 0);
+    assert(buffer->format->format == format, "Format mismatch!");
+    SDL_FreeSurface(temp);
+
+    temp = SDL_CreateRGBSurface(0, ZONESIZE*GAMEWIDTH, ZONESIZE*GAMEHEIGHT, BITDEPTH, 0, 0, 0, 0);
+    tilemap = SDL_ConvertSurfaceFormat(temp, format, 0);
+    assert(tilemap->format->format == format, "Format mismatch!");
+    SDL_FreeSurface(temp);
 
     //SDL_EnableKeyRepeat(0, 0);
     SDL_ShowCursor(SDL_DISABLE);

@@ -35,7 +35,10 @@ void Sprite::loadSprite(const int a, const int b, const char* name, const int co
 
     // load sprite
     sprintf(dirname, "Images/%s", name);
-    sprite = SDL_LoadBMP(dirname);
+    SDL_Surface* temp = SDL_LoadBMP(dirname);
+    sprite = SDL_ConvertSurface(temp, screen->format, 0);
+    //assert(sprite->format->format == screen->format->format, "Format mismatch!");
+    SDL_FreeSurface(temp);
 
     // set sprite transparent color
     //colorKey = SDL_MapRGB(screen->format, 255, 0, 255);
