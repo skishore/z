@@ -91,7 +91,7 @@ const float DELTASTAT[NUMSTATS] = \
 #define MINFORCEDIST 2.0f
 
 // zombie probability distribution constants
-#define MAXNUMZOMBIES 32
+#define MAXNUMZOMBIES 12
 #define ZOMBIESTART 7
 
 #define MAXNUMBULLETS 12
@@ -105,7 +105,9 @@ list<int> moveDir;
 
 // drawing surfaces and player sprite
 SDL_Rect rcSrc, rcSprite;
-SDL_Surface* screen;
+SDL_Window* screen;
+SDL_Texture* texture;
+SDL_Renderer* renderer;
 SDL_Surface* buffer;
 Sprite* tileset;
 Player* player;

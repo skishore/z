@@ -6,7 +6,7 @@ LDFLAGS=	#-framework SDL -framework Cocoa
 
 SOURCES=	Engine.cpp
 
-CC= /Users/skishore/Projects/emscripten/emcc
+CC= /Users/skishore/Projects/emscripten/emcc -s USE_SDL=2
 
 ifneq ($(INCLUDE_DEPENDENCIES),yes)
 

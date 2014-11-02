@@ -143,14 +143,14 @@ int main(int argc, char** argv) {
 
     // initialize SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
-    SDL_WM_SetCaption("Seamless world engine", "Seamless world engine");
+    int status = SDL_CreateWindowAndRenderer(
+        SCREENWIDTH, SCREENHEIGHT, 0, &screen, &renderer);
+    texture = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+        SCREENWIDTH, SCREENHEIGHT);
+    buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0, 0, 0, 0);
 
-    screen = SDL_SetVideoMode(SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0);
-    temp = SDL_CreateRGBSurface(SDL_SWSURFACE, SCREENWIDTH, SCREENHEIGHT, BITDEPTH, 0, 0, 0, 0);
-    buffer = SDL_DisplayFormat(temp);
-    SDL_FreeSurface(temp);
-
-    SDL_EnableKeyRepeat(0, 0);
+    //SDL_EnableKeyRepeat(0, 0);
     SDL_ShowCursor(SDL_DISABLE);
 
     initAudio();
@@ -163,13 +163,13 @@ int main(int argc, char** argv) {
 
     // load and draw the tileset sprite
     tileset = new Sprite();
-    tileset->loadSprite(SPRITESIZE, SPRITESIZE, "tileset.bmp", 5, 1, screen, bound);
+    tileset->loadSprite(SPRITESIZE, SPRITESIZE, "tileset.bmp", 5, 1, buffer, bound);
     camera.set(INITCAMERAX, INITCAMERAY);
     redrawTiles();
 
     // load player sprite
     player = new Player();
-    player->loadSprite(SPRITESIZE, SPRITESIZE, "player.bmp", 41, 1, screen, bound);
+    player->loadSprite(SPRITESIZE, SPRITESIZE, "player.bmp", 41, 1, buffer, bound);
     player->x = NUMCOLS*SPRITESIZE/2;
     player->y = NUMROWS*SPRITESIZE/2 - ZERO;
     player->setSquare(camera.x, camera.y);
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
     // load zombie sprites
     for (int i = 0; i < numZombies; i++) {
         zombies[i] = new Zombie();
-        zombies[i]->loadSprite(SPRITESIZE, SPRITESIZE, "zombie.bmp", 25, 1, screen, bound);
+        zombies[i]->loadSprite(SPRITESIZE, SPRITESIZE, "zombie.bmp", 25, 1, buffer, bound);
         zombies[i]->x = NUMCOLS*SPRITESIZE/2 + ZOMBIESTART*SPRITESIZE*SHIFT[i % 4].x;
         zombies[i]->y = NUMCOLS*SPRITESIZE/2 - ZERO + ZOMBIESTART*SPRITESIZE*SHIFT[i % 4].y;
         zombies[i]->setSquare(camera.x, camera.y);
@@ -189,12 +189,10 @@ int main(int argc, char** argv) {
 
     // load and hide item sprite
     item = new Sprite();
-    item->loadSprite(ITEMSIZE, ITEMSIZE, "item.bmp", 8, 13, screen, bound);
+    item->loadSprite(ITEMSIZE, ITEMSIZE, "item.bmp", 8, 13, buffer, bound);
 
     initGUI();
 
-    SDL_BlitSurface(buffer, NULL, screen, NULL);
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
     #ifdef EMSCRIPTEN
     emscripten_set_main_loop(update, FRAMERATE, 1);
     #else
@@ -362,24 +360,25 @@ void update() {
   checkStats();
   scrollCamera();
 
-  SDL_BlitSurface(buffer, NULL, screen, NULL);
-
   allSprites.sort(highToLow);
   for (list<zSprite*>::iterator it = allSprites.begin(); it != allSprites.end(); it++) {
       if ((*it == player) && (player->usingItem))
-          item->draw(screen);
-      (*it)->draw(screen);
+          item->draw(buffer);
+      (*it)->draw(buffer);
   }
 
   for (int i = 0; i < numBullets; i++) {
       if ((bullets[i].active) && (bullets[i].pos.y >= 0))
           for (int j = 0; j < 4; j++)
-              SDL_DrawPixel(screen, bullets[i].pos.x + (j % 2), bullets[i].pos.y + GUIHEIGHT + (j/2 % 2), WHITE);
+              SDL_DrawPixel(buffer, bullets[i].pos.x + (j % 2), bullets[i].pos.y + GUIHEIGHT + (j/2 % 2), WHITE);
   }
 
   drawMouse();
 
-  SDL_UpdateRect(screen, 0, 0, 0, 0);
+  SDL_UpdateTexture(texture, NULL, buffer->pixels, buffer->pitch);
+  SDL_RenderClear(renderer);
+  SDL_RenderCopy(renderer, texture, NULL, NULL);
+  SDL_RenderPresent(renderer);
 }
 
 void gameLoop() {

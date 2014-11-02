@@ -264,6 +264,7 @@ int SDL_DrawVLine(SDL_Surface *s, int x1, int y1, int y2, Uint32 colour)
   return -1;
 }
 
+/*
 int SDL_DrawLine(SDL_Surface *s, int x1, int y1, int x2, int y2, Uint32 colour)
 {
   if (x1 == x2) return SDL_DrawVLine(s, x1, y1, y2, colour);
@@ -283,6 +284,7 @@ int SDL_DrawLine(SDL_Surface *s, int x1, int y1, int x2, int y2, Uint32 colour)
     }
   return -1;
 }
+*/
 
 /* ---------------------------------------------------------------- */
 /* FillLine							    */

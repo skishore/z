@@ -1,7 +1,7 @@
 #ifndef __SDL_prims_h
 #define __SDL_prims_h
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #ifndef EMSCRIPTEN
 typedef struct SDL_Point {

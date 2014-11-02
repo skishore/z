@@ -52,6 +52,7 @@ void drawStatus() {
 }
 
 void drawMouse() {
+  /*
     screen->clip_rect.y = GUIHEIGHT;
     screen->clip_rect.h -= GUIHEIGHT;
 
@@ -64,17 +65,18 @@ void drawMouse() {
 
     screen->clip_rect.y = 0;
     screen->clip_rect.h = SCREENHEIGHT;
+  */
 }
 
 void initGUI() {
     SDL_Rect bound = {0, 0, SCREENWIDTH, GUIHEIGHT};
     
     background = new Sprite();
-    background->loadSprite(SCREENWIDTH, GUIHEIGHT, "gui.bmp", 1, 1, screen, bound);
+    background->loadSprite(SCREENWIDTH, GUIHEIGHT, "gui.bmp", 1, 1, buffer, bound);
     background->draw(buffer);
 
     status = new Sprite();
-    status->loadSprite(SPRITESIZE, SPRITESIZE, "walkrun.bmp", 2, 1, screen, bound);
+    status->loadSprite(SPRITESIZE, SPRITESIZE, "walkrun.bmp", 2, 1, buffer, bound);
     status->x = STATUSX;
     status->y = STATUSY;
     status->draw(buffer);

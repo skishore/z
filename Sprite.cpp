@@ -5,8 +5,6 @@ using namespace std;
 
 #include <iostream>
 
-#define SDL_DisplayFormat SDL_DisplayFormatAlpha
-
 Sprite::Sprite() {
     numSprites++;    
 }
@@ -37,14 +35,12 @@ void Sprite::loadSprite(const int a, const int b, const char* name, const int co
 
     // load sprite
     sprintf(dirname, "Images/%s", name);
-    temp = SDL_LoadBMP(dirname);
-    sprite = SDL_DisplayFormat(temp);
-    SDL_FreeSurface(temp);
+    sprite = SDL_LoadBMP(dirname);
 
     // set sprite transparent color
-    colorKey = SDL_MapRGB(screen->format, 255, 0, 255);
-    SDL_SetColorKey(sprite, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorKey);
-    SDL_SetAlpha(sprite, 0, 0);
+    //colorKey = SDL_MapRGB(screen->format, 255, 0, 255);
+    //SDL_SetColorKey(sprite, SDL_SRCCOLORKEY | SDL_RLEACCEL, colorKey);
+    //SDL_SetAlpha(sprite, 0, 0);
 
     cache[sname] = sprite;
 }

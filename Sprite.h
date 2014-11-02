@@ -1,7 +1,7 @@
 
 using namespace std;
 
-#include "SDL/SDL.h"
+#include "SDL2/SDL.h"
 #include <algorithm>
 #include <complex>
 #include <map>
