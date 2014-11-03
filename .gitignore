@@ -1,4 +1,3 @@
 *.pyc
-*,swp
-Makefile
-Gen
+*.swp
+build
