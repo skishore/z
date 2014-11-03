@@ -39,7 +39,7 @@ Gen/%.o:		%.c
 	${CC} $(CXXFLAGS) -c -o $@ $<
 
 Gen/zengine.html:	$(FLOAT_OBJECTS)
-	${CC} -o $@ $^ $(LDFLAGS) --preload-file Images
+	${CC} -o $@ $^ $(LDFLAGS) --preload-file Images --preload-file world.dat
 
 Gen/%.d:		%.cpp
 	@mkdir -p $(dir $@)
