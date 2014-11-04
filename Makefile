@@ -34,7 +34,7 @@ $(BUILD)/%.obj: %.cpp
 
 $(HTML):	$(EMCC_OBJ_FILES)
 	mkdir -p $(BUILD)
-	emcc $(LD_FLAGS) -o $@ $^
+	emcc $(LD_FLAGS) -o $@ $^ --preload-file data
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 
 $(BUILD)/%.o: %.cpp
