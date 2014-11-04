@@ -16,7 +16,7 @@ all:
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
 	rm -f $(HTML) $(BUILD)/*.js $(BUILD)/*.data $(BUILD)/*.o
-	rm -f $(BUILD)/*.d
+	rm -f $(BUILD)/*.ccd $(BUILD)/*.emccd
 	rmdir -p $(BUILD)
 
 exe: $(EXECUTABLE)
@@ -30,13 +30,16 @@ $(EXECUTABLE):	$(OBJ_FILES)
 $(BUILD)/%.obj: %.cpp
 	mkdir -p $(BUILD)
 	$(CC) $(CC_FLAGS) -c -MD -o $@ $<
+	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.ccd; done
 
 $(HTML):	$(EMCC_OBJ_FILES)
 	mkdir -p $(BUILD)
 	emcc $(LD_FLAGS) -o $@ $^
+	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 
 $(BUILD)/%.o: %.cpp
 	mkdir -p $(BUILD)
 	emcc $(CC_FLAGS) -c -MD -o $@ $<
 
--include build/*.d
+-include build/*.ccd
+-include build/*.emccd
