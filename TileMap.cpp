@@ -40,7 +40,31 @@ bool TileMap::LoadMap(const string& filename) {
   return true;
 }
 
-Tile TileMap::GetTile(const Point& point) const {
+void TileMap::LoadZone(const Point& zone_offset) {
+  zone_offset_ = zone_offset;
+  for (int x = 0; x < zone_size_.x; x++) {
+    for (int y = 0; y < zone_size_.y; y++) {
+      zone_tiles_[x][y] = GetMapTile(Point(x, y) + zone_offset_);
+    }
+  }
+}
+
+std::ostream& TileMap::PrintDebug(std::ostream& out) const {
+  out << "TileMap:" << std::endl
+      << "  map_dimensions: " << map_dimensions_ << std::endl
+      << "  zone_size: " << zone_size_ << std::endl
+      << "  zone_offset: " << zone_offset_ << std::endl
+      << "  zone_tiles:";
+  for (int y = 0; y < zone_size_.y; y++) {
+    out << std::endl << "   ";
+    for (int x = 0; x < zone_size_.x; x++) {
+      out << " " << (int)zone_tiles_[x][y];
+    }
+  }
+  return out;
+}
+
+Tile TileMap::GetMapTile(const Point& point) const {
   if (0 <= point.x && point.x < map_dimensions_.x &&
       0 <= point.y && point.y < map_dimensions_.y) {
     return map_tiles_[point.x*map_dimensions_.y + point.y];
