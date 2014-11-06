@@ -10,8 +10,13 @@ CC := clang++
 CC_FLAGS := -Wall -std=c++11 -stdlib=libc++
 LD_FLAGS := $(CC_FLAGS)
 
+EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS)
+EMCC_LD_FLAGS := $(EMCC_FLAGS)
+
 all:
-	make exe && make html
+	# Building the local binary is disabled while SDL2 is not installed.
+	#make exe && make html
+	make html
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
@@ -34,12 +39,12 @@ $(BUILD)/%.obj: %.cpp
 
 $(HTML):	$(EMCC_OBJ_FILES)
 	mkdir -p $(BUILD)
-	emcc $(LD_FLAGS) -o $@ $^ --preload-file data
+	emcc $(EMCC_LD_FLAGS) -o $@ $^ --preload-file data
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 
 $(BUILD)/%.o: %.cpp
 	mkdir -p $(BUILD)
-	emcc $(CC_FLAGS) -c -MD -o $@ $<
+	emcc $(EMCC_FLAGS) -c -MD -o $@ $<
 
 -include build/*.ccd
 -include build/*.emccd
