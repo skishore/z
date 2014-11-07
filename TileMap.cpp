@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "debug.h"
 #include "TileMap.h"
 
 using std::string;
@@ -15,6 +16,7 @@ TileMap::TileMap(const Point& zone_size) :
 bool TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
   if (!file.is_open()) {
+    DEBUG("Failed to open " << filename);
     return false;
   }
 
@@ -34,6 +36,8 @@ bool TileMap::LoadMap(const string& filename) {
   map_tiles_.reset(new Tile[map_size]);
   file.read((char*)map_tiles_.get(), map_size);
   if (file.gcount() < map_size) {
+    DEBUG("Expected to read " << map_size << " characters from "
+          << filename << ", but only read " << file.gcount());
     return false;
   }
 

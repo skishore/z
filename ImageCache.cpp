@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "debug.h"
 #include "ImageCache.h"
 
 using std::map;
@@ -11,6 +12,7 @@ ImageCache::ImageCache(const SDL_PixelFormat* format) : format_(format) {}
 
 ImageCache::~ImageCache() {
   for (auto& pair : images_by_filename_) {
+    DEBUG("Freed " << pair.first);
     SDL_FreeSurface(pair.second);
   }
 }
@@ -40,17 +42,20 @@ void ImageCache::FreeImage(SDL_Surface* surface) {
 bool ImageCache::LoadImageInner(const string& filename, SDL_Surface** surface) {
   SDL_Surface* temp = SDL_LoadBMP(("images/" + filename).c_str());
   if (temp == nullptr) {
+    DEBUG("Failed to load " << filename);
     return false;
   }
   *surface = SDL_ConvertSurface(temp, format_, 0);
   SDL_FreeSurface(temp);
   if (*surface == nullptr) {
+    DEBUG("Failed to convert surface for " << filename);
     return false;
   }
 
   images_by_filename_[filename] = *surface;
   filenames_by_image_[*surface] = filename;
   counts_by_image_[*surface] = 1;
+  DEBUG("Loaded " << filename);
   return true;
 }
 
@@ -60,6 +65,7 @@ void ImageCache::FreeImageInner(SDL_Surface* surface) {
   filenames_by_image_.erase(surface);
   counts_by_image_.erase(surface);
   SDL_FreeSurface(surface);
+  DEBUG("Freed " << filename);
 }
 
 } // namespace skishore
