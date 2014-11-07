@@ -32,5 +32,7 @@ int main(int argc, char** argv) {
   assert(cache.LoadImage("tileset.bmp", &surface_2));
   assert(surface_1 == surface_2);
   assert(surface_1 != nullptr);
+  cache.FreeImage(surface_1);
+  cache.FreeImage(surface_1);
   return 0;
 }

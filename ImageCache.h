@@ -9,7 +9,7 @@ namespace skishore {
 
 class ImageCache {
  public:
-  ImageCache(Uint32 pixel_format);
+  ImageCache(Uint32 pixel_format, bool clear_cache_eagerly=false);
   ~ImageCache();
   
   bool LoadImage(const std::string& filename, SDL_Surface** surface);
@@ -20,6 +20,10 @@ class ImageCache {
   bool LoadImageInner(const std::string& filename, SDL_Surface** surface);
   void FreeImageInner(SDL_Surface* surface);
 
+  // By default, once an image is loaded into memory, it is never unloaded.
+  // If clear_cache_eagerly_ is true, then the image is unloaded as soon as the
+  // last reference to that image is freed.
+  const bool clear_cache_eagerly_;
   const Uint32 pixel_format_;
 
   // All surfaces in the cache are owned by the instance.

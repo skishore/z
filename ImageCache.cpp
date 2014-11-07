@@ -8,7 +8,8 @@ using std::string;
 
 namespace skishore {
 
-ImageCache::ImageCache(Uint32 pixel_format) : pixel_format_(pixel_format) {}
+ImageCache::ImageCache(Uint32 pixel_format, bool clear_cache_eagerly)
+    : clear_cache_eagerly_(clear_cache_eagerly), pixel_format_(pixel_format) {}
 
 ImageCache::~ImageCache() {
   for (auto& pair : images_by_filename_) {
@@ -25,6 +26,7 @@ bool ImageCache::LoadImage(const string& filename, SDL_Surface** surface) {
     }
   }
   *surface = images_by_filename_[filename];
+  counts_by_image_[*surface] += 1;
   return true;
 }
 
@@ -32,9 +34,9 @@ void ImageCache::FreeImage(SDL_Surface* surface) {
   if (surface == nullptr) {
     return;
   }
-  assert(counts_by_image_.count(surface) > 0);
+  assert(counts_by_image_.count(surface) > 0 && counts_by_image_[surface] > 0);
   counts_by_image_[surface] -= 1;
-  if (counts_by_image_[surface] == 0) {
+  if (clear_cache_eagerly_ && counts_by_image_[surface] == 0) {
     FreeImageInner(surface);
   }
 }
@@ -54,7 +56,7 @@ bool ImageCache::LoadImageInner(const string& filename, SDL_Surface** surface) {
 
   images_by_filename_[filename] = *surface;
   filenames_by_image_[*surface] = filename;
-  counts_by_image_[*surface] = 1;
+  counts_by_image_[*surface] = 0;
   DEBUG("Loaded " << filename);
   return true;
 }
@@ -65,7 +67,7 @@ void ImageCache::FreeImageInner(SDL_Surface* surface) {
   filenames_by_image_.erase(surface);
   counts_by_image_.erase(surface);
   SDL_FreeSurface(surface);
-  DEBUG("Freed " << filename);
+  DEBUG("Eagerly freed " << filename);
 }
 
 } // namespace skishore
