@@ -8,7 +8,7 @@ using std::string;
 
 namespace skishore {
 
-ImageCache::ImageCache(const SDL_PixelFormat* format) : format_(format) {}
+ImageCache::ImageCache(Uint32 pixel_format) : pixel_format_(pixel_format) {}
 
 ImageCache::~ImageCache() {
   for (auto& pair : images_by_filename_) {
@@ -45,7 +45,7 @@ bool ImageCache::LoadImageInner(const string& filename, SDL_Surface** surface) {
     DEBUG("Failed to load " << filename);
     return false;
   }
-  *surface = SDL_ConvertSurface(temp, format_, 0);
+  *surface = SDL_ConvertSurfaceFormat(temp, pixel_format_, 0);
   SDL_FreeSurface(temp);
   if (*surface == nullptr) {
     DEBUG("Failed to convert surface for " << filename);

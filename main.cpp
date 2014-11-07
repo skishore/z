@@ -1,5 +1,8 @@
+#include <assert.h>
 #include <iostream>
+#include <SDL2/SDL.h>
 
+#include "ImageCache.h"
 #include "Point.h"
 #include "TileMap.h"
 
@@ -21,5 +24,13 @@ int main(int argc, char** argv) {
   }
   tile_map.LoadZone(Point(-1, -2));
   cout << tile_map << endl;
+
+  skishore::ImageCache cache(SDL_PIXELFORMAT_ARGB8888);
+  SDL_Surface* surface_1;
+  SDL_Surface* surface_2;
+  assert(cache.LoadImage("tileset.bmp", &surface_1));
+  assert(cache.LoadImage("tileset.bmp", &surface_2));
+  assert(surface_1 == surface_2);
+  assert(surface_1 != nullptr);
   return 0;
 }

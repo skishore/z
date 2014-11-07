@@ -9,7 +9,7 @@ namespace skishore {
 
 class ImageCache {
  public:
-  ImageCache(const SDL_PixelFormat* format);
+  ImageCache(Uint32 pixel_format);
   ~ImageCache();
   
   bool LoadImage(const std::string& filename, SDL_Surface** surface);
@@ -20,10 +20,9 @@ class ImageCache {
   bool LoadImageInner(const std::string& filename, SDL_Surface** surface);
   void FreeImageInner(SDL_Surface* surface);
 
-  // format is passed in the constructor and owned by the caller.
-  // Its lifetime must be longer than the lifetime of this instance.
-  // All the other surfaces in the cache are owned by the instance.
-  const SDL_PixelFormat* format_;
+  const Uint32 pixel_format_;
+
+  // All surfaces in the cache are owned by the instance.
   std::map<std::string, SDL_Surface*> images_by_filename_;
   std::map<SDL_Surface*, std::string> filenames_by_image_;
   std::map<SDL_Surface*, int> counts_by_image_;
