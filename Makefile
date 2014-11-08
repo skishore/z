@@ -8,15 +8,13 @@ HTML := $(BUILD)/main.html
 
 CC := clang++
 CC_FLAGS := -Wall -std=c++11 -stdlib=libc++
-LD_FLAGS := $(CC_FLAGS)
+LD_FLAGS := $(CC_FLAGS) -lSDL2
 
 EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS)
 EMCC_LD_FLAGS := $(EMCC_FLAGS)
 
 all:
-	# Building the local binary is disabled while SDL2 is not installed.
-	#make exe && make html
-	make html
+	make exe && make html
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
