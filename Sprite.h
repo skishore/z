@@ -15,8 +15,12 @@ class Sprite {
   ~Sprite();
   
   bool LoadImage(const std::string& filename);
+  void Draw(const SDL_Rect& bounds, SDL_Surface* surface);
 
  private:
+  bool PositionRects(
+      const SDL_Rect& bounds, SDL_Rect* source, SDL_Rect* target);
+
   Point size_;
   Point position_;
   Point frame_;
