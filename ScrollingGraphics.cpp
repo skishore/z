@@ -9,12 +9,13 @@ namespace skishore {
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const Point kSpriteSize(16, 16);
+// The side length of each grid square, in pixels.
+static const int kGridSize = 16;
 }  // namespace
 
 ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
     : size_(size), zone_size_(map->GetZoneSize()), map_(map),
-      bounds_{0, 0, size_.x*kSpriteSize.x, size_.y*kSpriteSize.y},
+      bounds_{0, 0, size_.x*kGridSize, size_.y*kGridSize},
       cache_(kFormat) {
   SDL_Init(SDL_INIT_VIDEO);
   int status = SDL_CreateWindowAndRenderer(
@@ -32,7 +33,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
   SDL_FreeSurface(temp);
 
   temp = SDL_CreateRGBSurface(
-      0, zone_size_.x*kSpriteSize.x, zone_size_.y*kSpriteSize.y,
+      0, zone_size_.x*kGridSize, zone_size_.y*kGridSize,
       kBitDepth, 0, 0, 0, 0);
   assert(temp != nullptr);
   background_ = SDL_ConvertSurfaceFormat(temp, kFormat, 0);
@@ -41,7 +42,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
 
   SDL_ShowCursor(SDL_DISABLE);
 
-  tileset_.reset(new Sprite(kSpriteSize, &cache_));
+  tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
   tileset_->LoadImage("tileset.bmp");
 }
 
@@ -55,14 +56,18 @@ ScrollingGraphics::~ScrollingGraphics() {
 }
 
 void ScrollingGraphics::RedrawBackground() {
-  Point camera;
+  SDL_Rect bounds{0, 0, zone_size_.x*kGridSize, zone_size_.y*kGridSize};
   Point position;
-  for (position.x = 0; position.x < zone_size_.x; position.x++) {
-    for (position.y = 0; position.y < zone_size_.y; position.y++) {
-      tileset_->SetFrame(Point(map_->GetZoneTile(position), 0));
+  Point square;
+  for (square.x = 0; square.x < zone_size_.x; square.x++) {
+    for (square.y = 0; square.y < zone_size_.y; square.y++) {
+      tileset_->SetFrame(Point(map_->GetZoneTile(square), 0));
       tileset_->SetPosition(position);
-      tileset_->Draw(bounds_, camera, background_);
+      tileset_->Draw(bounds, background_);
+      position.y += kGridSize;
     }
+    position.x += kGridSize;
+    position.y = 0;
   }
 }
 

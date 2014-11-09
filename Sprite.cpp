@@ -20,11 +20,10 @@ bool Sprite::LoadImage(const string& filename) {
   return cache_->LoadImage(filename, &image_);
 }
 
-void Sprite::Draw(
-    const SDL_Rect& bounds, const Point& camera, SDL_Surface* surface) {
+void Sprite::Draw(const SDL_Rect& bounds, SDL_Surface* surface) {
   SDL_Rect source;
   SDL_Rect target;
-  if (!PositionRects(bounds, camera, &source, &target)) {
+  if (!PositionRects(bounds, &source, &target)) {
     return;
   }
   source.x += frame_.x*size_.x;
@@ -32,10 +31,10 @@ void Sprite::Draw(
   SDL_BlitSurface(image_, &source, surface, &target);
 }
 
-bool Sprite::PositionRects(const SDL_Rect& bounds, const Point& camera,
-                           SDL_Rect* source, SDL_Rect* target) {
-  const int x = position_.x*size_.x - camera.x;
-  const int y = position_.y*size_.y - camera.y;
+bool Sprite::PositionRects(
+    const SDL_Rect& bounds, SDL_Rect* source, SDL_Rect* target) {
+  const int x = position_.x;
+  const int y = position_.y;
 
   // Don't draw the sprite if it is out of the target bounds.
   if ((x + size_.x < 0) or (x > bounds.w) or
