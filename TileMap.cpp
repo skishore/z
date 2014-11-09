@@ -48,9 +48,17 @@ void TileMap::LoadZone(const Point& zone_offset) {
   zone_offset_ = zone_offset;
   for (int x = 0; x < zone_size_.x; x++) {
     for (int y = 0; y < zone_size_.y; y++) {
-      zone_tiles_[x][y] = GetMapTile(Point(x, y) + zone_offset_);
+      zone_tiles_[x][y] = GetTile(Point(x, y) + zone_offset_);
     }
   }
+}
+
+Tile TileMap::GetTile(const Point& point) const {
+  if (0 <= point.x && point.x < map_dimensions_.x &&
+      0 <= point.y && point.y < map_dimensions_.y) {
+    return map_tiles_[point.x*map_dimensions_.y + point.y];
+  }
+  return map_default_tile_;
 }
 
 std::ostream& TileMap::PrintDebug(std::ostream& out) const {
@@ -66,14 +74,6 @@ std::ostream& TileMap::PrintDebug(std::ostream& out) const {
     }
   }
   return out;
-}
-
-Tile TileMap::GetMapTile(const Point& point) const {
-  if (0 <= point.x && point.x < map_dimensions_.x &&
-      0 <= point.y && point.y < map_dimensions_.y) {
-    return map_tiles_[point.x*map_dimensions_.y + point.y];
-  }
-  return map_default_tile_;
 }
 
 } // namespace skishore

@@ -1,23 +1,23 @@
-#include <assert.h>
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <SDL2/SDL.h>
 
-#include "ImageCache.h"
+#include "ScrollingGraphics.h"
 #include "Point.h"
 #include "TileMap.h"
 
 using std::cout;
 using std::endl;
 using skishore::Point;
+using skishore::ScrollingGraphics;
 using skishore::TileMap;
 
-static const int kZoneScreens = 3;
-static const int kScreenWidth = 16;
-static const int kScreenHeight = 16;
+static const Point kScreenSize(16, 16);
+static const Point kZoneSize(3*kScreenSize.x, 3*kScreenSize.y);
 
 int main(int argc, char** argv) {
-  Point zone_size(kZoneScreens*kScreenWidth, kZoneScreens*kScreenHeight);
-  TileMap tile_map(zone_size);
+  TileMap tile_map(kZoneSize);
   if (!tile_map.LoadMap("world.dat")) {
     cout << "Failed to load map data!" << endl;
     return -1;
@@ -25,14 +25,10 @@ int main(int argc, char** argv) {
   tile_map.LoadZone(Point(-1, -2));
   cout << tile_map << endl;
 
-  skishore::ImageCache cache(SDL_PIXELFORMAT_ARGB8888);
-  SDL_Surface* surface_1;
-  SDL_Surface* surface_2;
-  assert(cache.LoadImage("tileset.bmp", &surface_1));
-  assert(cache.LoadImage("tileset.bmp", &surface_2));
-  assert(surface_1 == surface_2);
-  assert(surface_1 != nullptr);
-  cache.FreeImage(surface_1);
-  cache.FreeImage(surface_1);
+  ScrollingGraphics graphics(kScreenSize, &tile_map);
+  while (true) {
+    std::chrono::milliseconds timespan(1000);
+    std::this_thread::sleep_for(timespan);
+  }
   return 0;
 }
