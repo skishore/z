@@ -4,6 +4,10 @@
 #include <thread>
 #include <SDL2/SDL.h>
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #include "ScrollingGraphics.h"
 #include "Point.h"
 #include "TileMap.h"
@@ -15,14 +19,43 @@ using skishore::ScrollingGraphics;
 using skishore::TileMap;
 
 namespace {
+
 static const Point kScreenSize(16, 16);
 static const Point kZoneSize(3*kScreenSize.x, 3*kScreenSize.y);
 static const int kEventsPerFrame = 16;
+
+static const int kFrameRate = 60;
+static const int kMillisecondsPerFrame = 1000/kFrameRate;
 
 bool IsExitEvent(const SDL_Event& event) {
   return event.type == SDL_QUIT ||
          (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE);
 }
+
+bool Update() {
+  SDL_Event event;
+  for (int i = 0; (i < kEventsPerFrame) && SDL_PollEvent(&event); i++) {
+    if (IsExitEvent(event)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+#ifdef EMSCRIPTEN
+void VoidUpdate() {
+  Update();
+}
+#else
+void GameLoop() {
+  std::chrono::milliseconds timespan(kMillisecondsPerFrame);
+  while (true) {
+    if (Update()) break;
+    std::this_thread::sleep_for(timespan);
+  }
+}
+#endif
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -38,16 +71,10 @@ int main(int argc, char** argv) {
   graphics.EraseForeground();
   graphics.Flip();
 
-  std::chrono::milliseconds timespan(16);
-  bool running = true;
-  while (running) {
-    SDL_Event event;
-    for (int i = 0; (i < kEventsPerFrame) && SDL_PollEvent(&event); i++) {
-      if (IsExitEvent(event)) {
-        running = false;
-      }
-    }
-    std::this_thread::sleep_for(timespan);
-  }
+  #ifdef EMSCRIPTEN
+  emscripten_set_main_loop(VoidUpdate, kFrameRate, true);
+  #else
+  GameLoop();
+  #endif
   return 0;
 }
