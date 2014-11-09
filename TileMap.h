@@ -19,11 +19,15 @@ class TileMap {
   bool LoadMap(const std::string& filename);
   void LoadZone(const Point& zone_offset);
 
-  Tile GetTile(const Point& point) const;
+  Tile GetZoneTile(const Point& point) const;
   const Point& GetZoneSize() const { return zone_size_; }
+
   std::ostream& PrintDebug(std::ostream& out) const;
 
  private:
+  // This method is private because it is only used when loading zones.
+  Tile GetMapTile(const Point& point) const;
+
   // Information about the whole map: its dimensions, its packed 1d tile array,
   // and its default tile (returned when a point outside the map is accessed).
   Point map_dimensions_;

@@ -56,7 +56,7 @@ void ScrollingGraphics::RedrawBackground() {
   Point position;
   for (position.x = 0; position.x < zone_size_.x; position.x++) {
     for (position.y = 0; position.y < zone_size_.y; position.y++) {
-      tileset_->SetFrame(Point(map_->GetTile(position), 0));
+      tileset_->SetFrame(Point(map_->GetZoneTile(position), 0));
       tileset_->SetPosition(position);
       tileset_->Draw(bounds_, camera, background_);
     }

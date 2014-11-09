@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -31,9 +32,11 @@ int main(int argc, char** argv) {
     return -1;
   }
   tile_map.LoadZone(Point(-1, -2));
-  cout << tile_map << endl;
 
   ScrollingGraphics graphics(kScreenSize, &tile_map);
+  graphics.RedrawBackground();
+  graphics.EraseForeground();
+  graphics.Flip();
 
   std::chrono::milliseconds timespan(16);
   bool running = true;
