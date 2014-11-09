@@ -10,10 +10,6 @@ using std::vector;
 
 namespace skishore {
 
-TileMap::TileMap(const Point& zone_size) :
-    zone_size_(zone_size),
-    zone_tiles_(zone_size.x, vector<Tile>(zone_size.y, '\0')) {};
-
 bool TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
   if (!file.is_open()) {
@@ -43,36 +39,6 @@ bool TileMap::LoadMap(const string& filename) {
   }
 
   return true;
-}
-
-void TileMap::LoadZone(const Point& zone_offset) {
-  zone_offset_ = zone_offset;
-  for (int x = 0; x < zone_size_.x; x++) {
-    for (int y = 0; y < zone_size_.y; y++) {
-      zone_tiles_[x][y] = GetMapTile(Point(x, y) + zone_offset_);
-    }
-  }
-}
-
-Tile TileMap::GetZoneTile(const Point& point) const {
-  assert(0 <= point.x && point.x < zone_size_.x &&
-         0 <= point.y && point.y < zone_size_.y);
-  return zone_tiles_[point.x][point.y];
-}
-
-std::ostream& TileMap::PrintDebug(std::ostream& out) const {
-  out << "TileMap:" << std::endl
-      << "  map_dimensions: " << map_dimensions_ << std::endl
-      << "  zone_size: " << zone_size_ << std::endl
-      << "  zone_offset: " << zone_offset_ << std::endl
-      << "  zone_tiles:";
-  for (int y = 0; y < zone_size_.y; y++) {
-    out << std::endl << "   ";
-    for (int x = 0; x < zone_size_.x; x++) {
-      out << " " << (int)zone_tiles_[x][y];
-    }
-  }
-  return out;
 }
 
 Tile TileMap::GetMapTile(const Point& point) const {

@@ -21,7 +21,6 @@ using skishore::TileMap;
 namespace {
 
 static const Point kScreenSize(16, 16);
-static const Point kZoneSize(3*kScreenSize.x, 3*kScreenSize.y);
 static const int kEventsPerFrame = 16;
 
 static const int kFrameRate = 60;
@@ -59,15 +58,14 @@ void GameLoop() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  TileMap tile_map(kZoneSize);
+  TileMap tile_map;
   if (!tile_map.LoadMap("world.dat")) {
     cout << "Failed to load map data!" << endl;
     return -1;
   }
-  tile_map.LoadZone(Point(-1, -2));
 
   ScrollingGraphics graphics(kScreenSize, &tile_map);
-  graphics.RedrawBackground();
+  graphics.CenterCamera(Point(0, 0));
   graphics.EraseForeground();
   graphics.Flip();
 

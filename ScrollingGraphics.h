@@ -16,21 +16,30 @@ class ScrollingGraphics {
   ScrollingGraphics(const Point& size, const TileMap* map);
   ~ScrollingGraphics();
 
-  // RedrawBackground should be called when a new zone is loaded to draw it
-  // to the background buffer. EraseForeground copies the background in
-  // view to the foreground, while Flip copes the foreground to the screen.
-  void RedrawBackground();
+  // CenterCamera centers the camera on the given grid square.
+  // EraseForeground copies the background currently in view to the foreground,
+  // while Flip copes the foreground to the screen.
+  void CenterCamera(const Point& square);
   void EraseForeground();
   void Flip();
 
  private:
-  // size_ is measure in grid squares, so it is the responsibility of this
-  // class to convert it to actual pixel dimensions.
+  class DrawingSurface {
+   public:
+    DrawingSurface(const Point& size);
+    ~DrawingSurface();
+
+    // size is measured in grid squares, while bounds is measured in pixels.
+    const Point size_;
+    const SDL_Rect bounds_;
+    SDL_Surface* surface_;
+  };
+
+  // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
+  void RedrawBackground();
+
   // map_ is passed in the constructor and owned by the caller.
-  const Point size_;
-  const Point zone_size_;
   const TileMap* map_;
-  const SDL_Rect bounds_;
   ImageCache cache_;
 
   // These three SDL structures are for drawing to actual video memory.
@@ -43,11 +52,16 @@ class ScrollingGraphics {
   //
   // The background is larger than the screen and only has background tiles -
   // that is, it does not have any sprites on it. We use it to scroll the map.
-  SDL_Surface* foreground_;
-  SDL_Surface* background_;
+  std::unique_ptr<DrawingSurface> foreground_;
+  std::unique_ptr<DrawingSurface> background_;
+
+  // To maintain the background, a ScrollingGraphics instance tracks the offset
+  // (in grid squares) of the background within the map and the position of
+  // the camera (in pixels) of the foreground within the background.
+  Point background_offset_;
+  Point camera_;
 
   std::unique_ptr<Sprite> tileset_;
-  Point camera_;
 };
 
 } // namespace skishore
