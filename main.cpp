@@ -13,8 +13,16 @@ using skishore::Point;
 using skishore::ScrollingGraphics;
 using skishore::TileMap;
 
+namespace {
 static const Point kScreenSize(16, 16);
 static const Point kZoneSize(3*kScreenSize.x, 3*kScreenSize.y);
+static const int kEventsPerFrame = 16;
+
+bool IsExitEvent(const SDL_Event& event) {
+  return event.type == SDL_QUIT ||
+         (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE);
+}
+}  // namespace
 
 int main(int argc, char** argv) {
   TileMap tile_map(kZoneSize);
@@ -26,8 +34,16 @@ int main(int argc, char** argv) {
   cout << tile_map << endl;
 
   ScrollingGraphics graphics(kScreenSize, &tile_map);
-  while (true) {
-    std::chrono::milliseconds timespan(1000);
+
+  std::chrono::milliseconds timespan(16);
+  bool running = true;
+  while (running) {
+    SDL_Event event;
+    for (int i = 0; (i < kEventsPerFrame) && SDL_PollEvent(&event); i++) {
+      if (IsExitEvent(event)) {
+        running = false;
+      }
+    }
     std::this_thread::sleep_for(timespan);
   }
   return 0;
