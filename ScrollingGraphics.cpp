@@ -48,6 +48,9 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
 ScrollingGraphics::~ScrollingGraphics() {
   SDL_FreeSurface(background_);
   SDL_FreeSurface(foreground_);
+  SDL_DestroyTexture(texture_);
+  SDL_DestroyRenderer(renderer_);
+  SDL_DestroyWindow(window_);
   SDL_Quit();
 }
 
