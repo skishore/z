@@ -58,8 +58,10 @@ class ScrollingGraphics {
   // To maintain the background, a ScrollingGraphics instance tracks the offset
   // (in grid squares) of the background within the map and the position of
   // the camera (in pixels) of the foreground within the background.
+  // We also store a rect that must contain a sprite for it to be "centered".
   Point background_offset_;
   Point camera_;
+  SDL_Rect centered_;
 
   std::unique_ptr<Sprite> tileset_;
 };

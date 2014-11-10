@@ -11,6 +11,8 @@ static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
 // The side length of each grid square, in pixels.
 static const int kGridSize = 16;
+// The fraction of the view that is contained within the centered box.
+static const double kBoxFraction = 0.125;
 }  // namespace
 
 ScrollingGraphics::DrawingSurface::DrawingSurface(const Point& size)
@@ -31,18 +33,24 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
     : map_(map), cache_(kFormat) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
+  const Point dimensions(kGridSize*size.x, kGridSize*size.y);
 
   int status = SDL_CreateWindowAndRenderer(
-      size.x*kGridSize, size.y*kGridSize, 0, &window_, &renderer_);
+      dimensions.x, dimensions.y, 0, &window_, &renderer_);
   assert(status == 0);
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
-                               size.x*kGridSize, size.y*kGridSize);
+                               dimensions.x, dimensions.y);
   assert(texture_ != nullptr);
 
   foreground_.reset(new DrawingSurface(size));
   background_.reset(new DrawingSurface(Point(3*size.x, 3*size.y)));
   tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
   assert(tileset_->LoadImage("tileset.bmp"));
+
+  int box_w = kBoxFraction*dimensions.x;
+  int box_h = kBoxFraction*dimensions.y;
+  centered_ = SDL_Rect{
+      (dimensions.x - box_w)/2, (dimensions.y - box_h)/2, box_w, box_h};
 }
 
 ScrollingGraphics::~ScrollingGraphics() {
@@ -53,7 +61,30 @@ ScrollingGraphics::~ScrollingGraphics() {
 }
 
 void ScrollingGraphics::CenterCamera(const Point& square) {
-  RedrawBackground();
+  // The square is given in map coordinates. Convert it to screen coordinates.
+  Point position(kGridSize*(square.x - background_offset_.x) - camera_.x,
+                 kGridSize*(square.y - background_offset_.y) - camera_.y);
+  Point dimensions(kGridSize, kGridSize);
+  Point diff;
+
+  if (position.x < centered_.x) {
+    diff.x = position.x - centered_.x;
+  } else if (position.x + dimensions.x > centered_.x + centered_.w) {
+    diff.x = position.x + dimensions.x > centered_.x + centered_.w;
+  }
+  if (position.y < centered_.y) {
+    diff.x = position.y - centered_.y;
+  } else if (position.y + dimensions.y > centered_.y + centered_.h) {
+    diff.x = position.y + dimensions.y > centered_.y + centered_.h;
+  }
+
+  if (diff.x != 0 || diff.y != 0) {
+    camera_ = camera_ + diff;
+    const SDL_Rect& fg_bounds = foreground_->bounds_;
+    if (camera_.x < 0 || camera_.x + fg_bounds.w > background_->bounds_.w ||
+        camera_.y < 0 || camera_.y + fg_bounds.h > background_->bounds_.h) {
+    }
+  }
 }
 
 void ScrollingGraphics::EraseForeground() {
