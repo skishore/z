@@ -17,9 +17,12 @@ class ScrollingGraphics {
   ~ScrollingGraphics();
 
   // CenterCamera centers the camera on the given grid square.
+  void CenterCamera(const Point& square);
+
+  // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
   // EraseForeground copies the background currently in view to the foreground,
   // while Flip copes the foreground to the screen.
-  void CenterCamera(const Point& square);
+  void RedrawBackground();
   void EraseForeground();
   void Flip();
 
@@ -34,9 +37,6 @@ class ScrollingGraphics {
     const SDL_Rect bounds_;
     SDL_Surface* surface_;
   };
-
-  // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
-  void RedrawBackground();
 
   // map_ is passed in the constructor and owned by the caller.
   const TileMap* map_;

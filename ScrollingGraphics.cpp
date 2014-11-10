@@ -92,6 +92,17 @@ void ScrollingGraphics::CenterCamera(const Point& square) {
   }
 }
 
+void ScrollingGraphics::RedrawBackground() {
+  for (int x = 0; x < background_->size_.x; x++) {
+    for (int y = 0; y < background_->size_.y; y++) {
+      const Point square(x + background_offset_.x, y + background_offset_.y);
+      tileset_->SetFrame(Point(map_->GetMapTile(square), 0));
+      tileset_->SetPosition(Point(kGridSize*x, kGridSize*y));
+      tileset_->Draw(background_->bounds_, background_->surface_);
+    }
+  }
+}
+
 void ScrollingGraphics::EraseForeground() {
   const SDL_Rect& bounds = foreground_->bounds_;
   SDL_Rect source{camera_.x, camera_.y, bounds.w, bounds.h};
@@ -106,17 +117,6 @@ void ScrollingGraphics::Flip() {
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
-}
-
-void ScrollingGraphics::RedrawBackground() {
-  for (int x = 0; x < background_->size_.x; x++) {
-    for (int y = 0; y < background_->size_.y; y++) {
-      const Point square(x + background_offset_.x, y + background_offset_.y);
-      tileset_->SetFrame(Point(map_->GetMapTile(square), 0));
-      tileset_->SetPosition(Point(kGridSize*x, kGridSize*y));
-      tileset_->Draw(background_->bounds_, background_->surface_);
-    }
-  }
 }
 
 }  // namespace skishore

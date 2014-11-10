@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   }
 
   ScrollingGraphics graphics(kScreenSize, &tile_map);
-  graphics.CenterCamera(Point(6, 5));
+  graphics.RedrawBackground();
   graphics.EraseForeground();
   graphics.Flip();
 
