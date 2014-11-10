@@ -33,7 +33,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
     : map_(map), cache_(kFormat) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
-  const Point dimensions(kGridSize*size.x, kGridSize*size.y);
+  const Point dimensions(kGridSize*size);
 
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
@@ -43,7 +43,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
   assert(texture_ != nullptr);
 
   foreground_.reset(new DrawingSurface(size));
-  background_.reset(new DrawingSurface(Point(3*size.x, 3*size.y)));
+  background_.reset(new DrawingSurface(3*size));
   tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
   assert(tileset_->LoadImage("tileset.bmp"));
 
@@ -62,9 +62,8 @@ ScrollingGraphics::~ScrollingGraphics() {
 
 void ScrollingGraphics::CenterCamera(const Point& square) {
   // The square is given in map coordinates. Convert it to screen coordinates.
-  Point position(kGridSize*(square.x - background_offset_.x) - camera_.x,
-                 kGridSize*(square.y - background_offset_.y) - camera_.y);
-  Point dimensions(kGridSize, kGridSize);
+  const Point position = kGridSize*(square - background_offset_) - camera_;
+  const Point dimensions(kGridSize, kGridSize);
   Point diff;
 
   if (position.x < centered_.x) {
@@ -79,7 +78,7 @@ void ScrollingGraphics::CenterCamera(const Point& square) {
   }
 
   if (diff.x != 0 || diff.y != 0) {
-    camera_ = camera_ + diff;
+    camera_ += diff;
     const SDL_Rect& fg_bounds = foreground_->bounds_;
     if (camera_.x < 0 || camera_.x + fg_bounds.w > background_->bounds_.w ||
         camera_.y < 0 || camera_.y + fg_bounds.h > background_->bounds_.h) {
@@ -108,7 +107,7 @@ void ScrollingGraphics::RedrawBackground() {
     for (int y = 0; y < background_->size_.y; y++) {
       const Point square(x + background_offset_.x, y + background_offset_.y);
       tileset_->SetFrame(Point(map_->GetMapTile(square), 0));
-      tileset_->SetPosition(Point(square.x*kGridSize, square.y*kGridSize));
+      tileset_->SetPosition(kGridSize*square);
       tileset_->Draw(background_->bounds_, background_->surface_);
     }
   }

@@ -17,6 +17,16 @@ struct Point {
     return ((x == other.x) && (y == other.y));
   }
 
+  void operator+=(const Point& other) {
+    x += other.x;
+    y += other.y;
+  }
+
+  void operator-=(const Point& other) {
+    x -= other.x;
+    y -= other.y;
+  }
+
   Point operator+(const Point& other) const {
     return Point(x + other.x, y + other.y);
   }
@@ -33,6 +43,10 @@ struct Point {
     return sqrt(x*x + y*y);
   }
 };
+
+inline Point operator*(const int& scale, const Point& point) {
+  return Point(scale*point.x, scale*point.y);
+}
 
 inline std::ostream& operator<<(std::ostream& out, const Point& point) {
   return out << "Point(" << point.x << ", " << point.y << ")";
