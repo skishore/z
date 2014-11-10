@@ -72,16 +72,22 @@ void ScrollingGraphics::CenterCamera(const Point& square) {
     diff.x = position.x + dimensions.x > centered_.x + centered_.w;
   }
   if (position.y < centered_.y) {
-    diff.x = position.y - centered_.y;
+    diff.y = position.y - centered_.y;
   } else if (position.y + dimensions.y > centered_.y + centered_.h) {
-    diff.x = position.y + dimensions.y > centered_.y + centered_.h;
+    diff.y = position.y + dimensions.y > centered_.y + centered_.h;
   }
 
   if (diff.x != 0 || diff.y != 0) {
     camera_ += diff;
     const SDL_Rect& fg_bounds = foreground_->bounds_;
-    if (camera_.x < 0 || camera_.x + fg_bounds.w > background_->bounds_.w ||
-        camera_.y < 0 || camera_.y + fg_bounds.h > background_->bounds_.h) {
+    const SDL_Rect& bg_bounds = background_->bounds_;
+    if (camera_.x < 0 || camera_.x + fg_bounds.w > bg_bounds.w ||
+        camera_.y < 0 || camera_.y + fg_bounds.h > bg_bounds.h) {
+      Point offset_diff((camera_.x + (fg_bounds.w - bg_bounds.w)/2)/kGridSize,
+                        (camera_.y + (fg_bounds.h - bg_bounds.h)/2)/kGridSize);
+      background_offset_ += offset_diff;
+      camera_ -= kGridSize*offset_diff;
+      RedrawBackground();
     }
   }
 }
@@ -107,7 +113,7 @@ void ScrollingGraphics::RedrawBackground() {
     for (int y = 0; y < background_->size_.y; y++) {
       const Point square(x + background_offset_.x, y + background_offset_.y);
       tileset_->SetFrame(Point(map_->GetMapTile(square), 0));
-      tileset_->SetPosition(kGridSize*square);
+      tileset_->SetPosition(Point(kGridSize*x, kGridSize*y));
       tileset_->Draw(background_->bounds_, background_->surface_);
     }
   }
