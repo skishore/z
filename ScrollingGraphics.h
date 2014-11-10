@@ -13,7 +13,7 @@ class TileMap;
 
 class ScrollingGraphics {
  public:
-  ScrollingGraphics(const Point& size, const TileMap* map);
+  ScrollingGraphics(const Point& size, const TileMap& map);
   ~ScrollingGraphics();
 
   // CenterCamera centers the camera on the given grid square.
@@ -39,7 +39,7 @@ class ScrollingGraphics {
   };
 
   // map_ is passed in the constructor and owned by the caller.
-  const TileMap* map_;
+  const TileMap& map_;
   ImageCache cache_;
 
   // These three SDL structures are for drawing to actual video memory.

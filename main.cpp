@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  ScrollingGraphics graphics(kScreenSize, &tile_map);
+  ScrollingGraphics graphics(kScreenSize, tile_map);
   graphics.RedrawBackground();
   graphics.EraseForeground();
   graphics.Flip();

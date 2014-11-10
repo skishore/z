@@ -29,7 +29,7 @@ ScrollingGraphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap* map)
+ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
     : map_(map), cache_(kFormat) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
@@ -96,7 +96,7 @@ void ScrollingGraphics::RedrawBackground() {
   for (int x = 0; x < background_->size_.x; x++) {
     for (int y = 0; y < background_->size_.y; y++) {
       const Point square(x + background_offset_.x, y + background_offset_.y);
-      tileset_->SetFrame(Point(map_->GetMapTile(square), 0));
+      tileset_->SetFrame(Point(map_.GetMapTile(square), 0));
       tileset_->SetPosition(Point(kGridSize*x, kGridSize*y));
       tileset_->Draw(background_->bounds_, background_->surface_);
     }
