@@ -8,10 +8,10 @@ HTML := $(BUILD)/main.html
 
 CC := clang++
 CC_FLAGS := -Wall -std=c++11 -stdlib=libc++
-LD_FLAGS := $(CC_FLAGS) -lSDL2
+LD_FLAGS := $(CC_FLAGS) -lSDL2 -lSDL2_ttf
 
-EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS)
-EMCC_LD_FLAGS := $(EMCC_FLAGS)
+EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS) -Iemscripten-SDL_ttf/include
+EMCC_LD_FLAGS := $(EMCC_FLAGS) emscripten-SDL_ttf/lib/*
 
 all:
 	make exe && make html
