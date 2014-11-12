@@ -14,7 +14,7 @@ EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS) -Iemscripten-SDL_ttf/include
 EMCC_LD_FLAGS := $(EMCC_FLAGS) emscripten-SDL_ttf/lib/*
 
 all:
-	make exe && make html
+	make exe
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
@@ -37,7 +37,7 @@ $(BUILD)/%.obj: %.cpp
 
 $(HTML):	$(EMCC_OBJ_FILES)
 	mkdir -p $(BUILD)
-	emcc $(EMCC_LD_FLAGS) -o $@ $^ --preload-file data --preload-file images
+	emcc $(EMCC_LD_FLAGS) -o $@ $^ --preload-file data --preload-file fonts/default_font.ttf --preload-file images
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 
 $(BUILD)/%.o: %.cpp
