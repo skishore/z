@@ -17,6 +17,10 @@ struct Point {
     return ((x == other.x) && (y == other.y));
   }
 
+  bool operator!=(const Point& other) const {
+    return ((x != other.x) || (y != other.y));
+  }
+
   void operator+=(const Point& other) {
     x += other.x;
     y += other.y;
