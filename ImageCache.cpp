@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "debug.h"
 #include "ImageCache.h"
 
@@ -19,7 +17,7 @@ ImageCache::~ImageCache() {
 }
   
 bool ImageCache::LoadImage(const string& filename, SDL_Surface** surface) {
-  assert(filename.length() > 0);
+  ASSERT(filename.length() > 0, "Tried to load empty filename!");
   if (images_by_filename_.count(filename) == 0) {
     if (!LoadImageInner(filename, surface)) {
       return false;
@@ -34,7 +32,8 @@ void ImageCache::FreeImage(SDL_Surface* surface) {
   if (surface == nullptr) {
     return;
   }
-  assert(counts_by_image_.count(surface) > 0 && counts_by_image_[surface] > 0);
+  ASSERT(counts_by_image_.count(surface) > 0, "Tried to free missing surface!");
+  ASSERT(counts_by_image_[surface] > 0, "Tried to free surface w/ count 0!");
   counts_by_image_[surface] -= 1;
   if (clear_cache_eagerly_ && counts_by_image_[surface] == 0) {
     FreeImageInner(surface);

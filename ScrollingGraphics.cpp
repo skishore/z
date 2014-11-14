@@ -1,5 +1,4 @@
-#include <assert.h>
-
+#include "debug.h"
 #include "ScrollingGraphics.h"
 
 using std::string;
@@ -19,9 +18,9 @@ ScrollingGraphics::DrawingSurface::DrawingSurface(const Point& size)
     : size_(size), bounds_{0, 0, size.x*kGridSize, size.y*kGridSize} {
   SDL_Surface* temp = SDL_CreateRGBSurface(
       0, bounds_.w, bounds_.h, kBitDepth, 0, 0, 0, 0);
-  assert(temp != nullptr);
+  ASSERT(temp != nullptr, SDL_GetError());
   surface_ = SDL_ConvertSurfaceFormat(temp, kFormat, 0);
-  assert(surface_ != nullptr);
+  ASSERT(surface_ != nullptr, SDL_GetError());
   SDL_FreeSurface(temp);
 }
 
@@ -37,15 +36,15 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
 
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
-  assert(status == 0);
+  ASSERT(status == 0, SDL_GetError());
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
                                dimensions.x, dimensions.y);
-  assert(texture_ != nullptr);
+  ASSERT(texture_ != nullptr, SDL_GetError());
 
   foreground_.reset(new DrawingSurface(size));
   background_.reset(new DrawingSurface(3*size));
   tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
-  assert(tileset_->LoadImage("tileset.bmp"));
+  ASSERT(tileset_->LoadImage("tileset.bmp"), "Failed to load tileset!");
 
   text_renderer_.reset(new TextRenderer(
       foreground_->bounds_, foreground_->surface_));

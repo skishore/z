@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <sys/time.h>
 #include <thread>
 #include <unistd.h>
@@ -82,7 +81,8 @@ void UpdateLoop() {
 }  // namespace
 
 GameLoop::GameLoop(int frame_rate, GameLoop::Updatable* updatable) {
-  assert(updatable_ == nullptr);
+  ASSERT(updatable != nullptr, "No updatable for game loop!");
+  ASSERT(updatable_ == nullptr, "Started a second game loop!");
   updatable_ = updatable;
   frame_rate_ = frame_rate;
 
