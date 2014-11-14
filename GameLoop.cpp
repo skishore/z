@@ -63,7 +63,6 @@ void UpdateLoop() {
     if (cur_time > last_second + kTicksPerSecond) {
       if (frames > 0) {
         frame_rate = 1.0*frames*kTicksPerSecond/(cur_time - last_second);
-        DEBUG("FPS: " << frame_rate);
       }
       last_second = cur_time;
       frames = 0;

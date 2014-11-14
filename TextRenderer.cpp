@@ -17,6 +17,9 @@ TextRenderer::~TextRenderer() {
 
 void TextRenderer::DrawText(int font_size, const Point& position,
                             const std::string text, const SDL_Color color) {
+  if (text.size() == 0) {
+    return;
+  }
   TTF_Font* font = LoadFont(font_size);
   SDL_Surface* surface(TTF_RenderText_Solid(font, text.c_str(), color));
   ASSERT(surface != nullptr, TTF_GetError());

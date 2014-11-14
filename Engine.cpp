@@ -1,15 +1,14 @@
 #include <string>
 
 #include "debug.h"
+#include "util.h"
 #include "Engine.h"
 
 using std::string;
-using std::to_string;
 
 namespace skishore {
 
 namespace {
-
 static const int kEventsPerFrame = 16;
 
 bool CheckForExitEvents() {
@@ -22,11 +21,6 @@ bool CheckForExitEvents() {
   }
   return false;
 }
-
-string GetStatusMessage(double frame_rate) {
-  return "FPS: " + (frame_rate > 0 ? std::to_string(frame_rate) : "-");
-}
-
 }  // namespace
 
 Engine::Engine(int frame_rate, const Point& screen_size)
@@ -44,7 +38,7 @@ Engine::Engine(int frame_rate, const Point& screen_size)
 bool Engine::Update(double frame_rate) {
   graphics_->RedrawBackground();
   graphics_->EraseForeground();
-  graphics_->DrawStatusMessage(GetStatusMessage(frame_rate));
+  graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
   graphics_->Flip();
 
   return CheckForExitEvents();
