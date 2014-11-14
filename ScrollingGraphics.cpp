@@ -63,9 +63,9 @@ ScrollingGraphics::~ScrollingGraphics() {
   SDL_Quit();
 }
 
-void ScrollingGraphics::CenterCamera(const Point& square) {
-  // The square is given in map coordinates. Convert it to screen coordinates.
-  const Point position = kGridSize*(square - background_offset_) - camera_;
+void ScrollingGraphics::CenterCamera(const Point& map_position) {
+  // Convert the map coordinates to screen coordinates.
+  const Point position = map_position - camera_ - kGridSize*background_offset_;
   const Point dimensions(kGridSize, kGridSize);
   Point diff;
 

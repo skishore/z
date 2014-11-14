@@ -16,8 +16,8 @@ class ScrollingGraphics {
   ScrollingGraphics(const Point& size, const TileMap& map);
   ~ScrollingGraphics();
 
-  // CenterCamera centers the camera on the given grid square.
-  void CenterCamera(const Point& square);
+  // CenterCamera centers the camera on the given map position.
+  void CenterCamera(const Point& map_position);
 
   // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
   // EraseForeground copies the background currently in view to the foreground,

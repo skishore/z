@@ -26,16 +26,15 @@ bool CheckForExitEvents() {
 Engine::Engine(int frame_rate, const Point& screen_size)
     : screen_size_(screen_size) {
   ASSERT(map_.LoadMap("world.dat"), "Failed to load map.");
-
   graphics_.reset(new ScrollingGraphics(screen_size_, map_));
-  graphics_->RedrawBackground();
-  graphics_->EraseForeground();
-  graphics_->Flip();
-
   GameLoop(frame_rate, this);
 }
 
 bool Engine::Update(double frame_rate) {
+  static Point point;
+  point += Point(1, 1);
+  graphics_->CenterCamera(point);
+
   graphics_->RedrawBackground();
   graphics_->EraseForeground();
   graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
