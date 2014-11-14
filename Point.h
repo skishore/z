@@ -6,41 +6,40 @@
 
 namespace skishore {
 
-struct Point {
-  int x, y;
+template <typename T>
+struct TPoint {
+  T x, y;
 
-  Point(int x0=0, int y0=0) : x(x0), y(y0) {};
+  TPoint<T>(T x0=0, T y0=0) : x(x0), y(y0) {};
 
-  Point(double x0, double y0) : x((int)x0), y((int)y0) {};
-
-  bool operator==(const Point& other) const {
+  bool operator==(const TPoint<T>& other) const {
     return ((x == other.x) && (y == other.y));
   }
 
-  bool operator!=(const Point& other) const {
+  bool operator!=(const TPoint<T>& other) const {
     return ((x != other.x) || (y != other.y));
   }
 
-  void operator+=(const Point& other) {
+  void operator+=(const TPoint<T>& other) {
     x += other.x;
     y += other.y;
   }
 
-  void operator-=(const Point& other) {
+  void operator-=(const TPoint<T>& other) {
     x -= other.x;
     y -= other.y;
   }
 
-  Point operator+(const Point& other) const {
-    return Point(x + other.x, y + other.y);
+  TPoint<T> operator+(const TPoint<T>& other) const {
+    return TPoint<T>(x + other.x, y + other.y);
   }
 
-  Point operator-(const Point& other) const {
-    return Point(x - other.x, y - other.y);
+  TPoint<T> operator-(const TPoint<T>& other) const {
+    return TPoint<T>(x - other.x, y - other.y);
   }
 
-  Point operator*(const int& scale) const {
-    return Point(scale*x, scale*y);
+  TPoint<T> operator*(const T& scale) const {
+    return TPoint<T>(scale*x, scale*y);
   }
 
   float length() const {
@@ -48,13 +47,18 @@ struct Point {
   }
 };
 
-inline Point operator*(const int& scale, const Point& point) {
-  return Point(scale*point.x, scale*point.y);
+template <typename T>
+inline TPoint<T> operator*(const T& scale, const TPoint<T>& point) {
+  return TPoint<T>(scale*point.x, scale*point.y);
 }
 
-inline std::ostream& operator<<(std::ostream& out, const Point& point) {
-  return out << "Point(" << point.x << ", " << point.y << ")";
+template <typename T>
+inline std::ostream& operator<<(std::ostream& out, const TPoint<T>& point) {
+  return out << "TPoint(" << point.x << ", " << point.y << ")";
 }
+
+typedef TPoint<int> Point;
+typedef TPoint<double> Position;
 
 } // namespace skishore
 
