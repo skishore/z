@@ -44,6 +44,7 @@ void UpdateLoop() {
   static long long cur_time = 0, last_time = 0, last_second = 0;
   static const long long kTicksPerFrame = kTicksPerSecond/frame_rate_;
   static int frames = 0;
+  static double frame_rate = 0;
 
   bool done = emscripten_;
 
@@ -56,13 +57,13 @@ void UpdateLoop() {
     int updates = (cur_time - last_time)/kTicksPerFrame;
     updates = std::max(std::min(updates, kUpdatesPerFrame), 1);
     for (int i = 0; i < updates; i++) {
-      done |= updatable_->Update();
+      done |= updatable_->Update(frame_rate);
     }
 
     if (cur_time > last_second + kTicksPerSecond) {
       if (frames > 0) {
-        double fps = 1.0*frames*kTicksPerSecond/(cur_time - last_second);
-        DEBUG("FPS: " << fps);
+        frame_rate = 1.0*frames*kTicksPerSecond/(cur_time - last_second);
+        DEBUG("FPS: " << frame_rate);
       }
       last_second = cur_time;
       frames = 0;

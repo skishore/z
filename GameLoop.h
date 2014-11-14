@@ -15,7 +15,7 @@ class GameLoop {
   class Updatable {
    public:
     // This method should return true if it is time to exit the loop.
-    virtual bool Update() = 0;
+    virtual bool Update(double frame_rate) = 0;
   };
 };
 

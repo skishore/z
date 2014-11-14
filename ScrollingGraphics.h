@@ -5,11 +5,11 @@
 
 #include "ImageCache.h"
 #include "Point.h"
+#include "Sprite.h"
+#include "TextRenderer.h"
+#include "TileMap.h"
 
 namespace skishore {
-
-class Sprite;
-class TileMap;
 
 class ScrollingGraphics {
  public:
@@ -25,6 +25,8 @@ class ScrollingGraphics {
   void RedrawBackground();
   void EraseForeground();
   void Flip();
+
+  void DrawStatusMessage(const std::string& message);
 
  private:
   class DrawingSurface {
@@ -55,6 +57,8 @@ class ScrollingGraphics {
   std::unique_ptr<DrawingSurface> foreground_;
   std::unique_ptr<DrawingSurface> background_;
 
+  std::unique_ptr<TextRenderer> text_renderer_;
+
   // To maintain the background, a ScrollingGraphics instance tracks the offset
   // (in grid squares) of the background within the map and the position of
   // the camera (in pixels) of the foreground within the background.
@@ -68,4 +72,4 @@ class ScrollingGraphics {
 
 } // namespace skishore
 
-#endif  // __SKISHORE_SPRITE_H__
+#endif  // __SKISHORE_SCROLLING_GRAPHICS_H__

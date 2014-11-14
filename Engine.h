@@ -13,7 +13,7 @@ class Engine : public GameLoop::Updatable {
   // Automatically starts when constructed.
   Engine(int frame_rate, const Point& screen_size);
 
-  bool Update();
+  bool Update(double frame_rate);
 
  private:
   const Point screen_size_;

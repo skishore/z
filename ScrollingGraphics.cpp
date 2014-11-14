@@ -1,8 +1,8 @@
 #include <assert.h>
 
 #include "ScrollingGraphics.h"
-#include "Sprite.h"
-#include "TileMap.h"
+
+using std::string;
 
 namespace skishore {
 
@@ -46,6 +46,9 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
   background_.reset(new DrawingSurface(3*size));
   tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
   assert(tileset_->LoadImage("tileset.bmp"));
+
+  text_renderer_.reset(new TextRenderer(
+      foreground_->bounds_, foreground_->surface_));
 
   int box_w = kBoxFraction*dimensions.x;
   int box_h = kBoxFraction*dimensions.y;
@@ -117,6 +120,10 @@ void ScrollingGraphics::Flip() {
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
+}
+
+void ScrollingGraphics::DrawStatusMessage(const string& message) {
+  text_renderer_->DrawText(kGridSize, Point(0, 0), message);
 }
 
 }  // namespace skishore
