@@ -14,6 +14,7 @@ string IntToString(int value) {
   string result;
   if (value < 0) {
     result = '-' + result;
+    value = -value;
   }
   while (value > 0) {
     result = static_cast<char>('0' + (value % 10)) + result;
