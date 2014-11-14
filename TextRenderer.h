@@ -11,7 +11,7 @@
 namespace skishore {
 
 namespace {
-SDL_Color kDefaultColor{255, 255, 255};
+static const SDL_Color kDefaultColor{255, 255, 255};
 }  // namespace
 
 class TextRenderer {
