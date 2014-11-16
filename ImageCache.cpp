@@ -50,6 +50,11 @@ bool ImageCache::LoadImageInner(const string& filename) {
     return false;
   }
 
+  // TODO(skishore): At some point, we may want to apply the color key to
+  // some images but not to others.
+  Uint32 color_key = SDL_MapRGB(surface->format, 255, 0, 255);
+  SDL_SetColorKey(surface, SDL_TRUE, color_key);
+
   images_by_filename_[filename] = surface;
   filenames_by_image_[surface] = filename;
   counts_by_image_[surface] = 0;
