@@ -5,6 +5,7 @@
 #include "InputHandler.h"
 #include "Point.h"
 #include "ScrollingGraphics.h"
+#include "Sprite.h"
 #include "TileMap.h"
 
 namespace skishore {
@@ -20,7 +21,9 @@ class Engine : public GameLoop::Updatable {
   const Point screen_size_;
   InputHandler input_;
   TileMap map_;
+
   std::unique_ptr<ScrollingGraphics> graphics_;
+  std::unique_ptr<Sprite> player_;
 };
 
 } // namespace skishore

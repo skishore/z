@@ -1,3 +1,4 @@
+#include "constants.h"
 #include "debug.h"
 #include "ScrollingGraphics.h"
 
@@ -8,8 +9,6 @@ namespace skishore {
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-// The side length of each grid square, in pixels.
-static const int kGridSize = 16;
 // The fraction of the view that is contained within the centered box.
 static const double kBoxFraction = 0.125;
 }  // namespace
@@ -43,7 +42,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
 
   foreground_.reset(new DrawingSurface(size));
   background_.reset(new DrawingSurface(3*size));
-  tileset_.reset(cache_.LoadImage(Point(kGridSize, kGridSize), "tileset.bmp"));
+  tileset_.reset(LoadImage("tileset.bmp"));
 
   text_renderer_.reset(new TextRenderer(
       foreground_->bounds_, foreground_->surface_));
@@ -61,9 +60,17 @@ ScrollingGraphics::~ScrollingGraphics() {
   SDL_Quit();
 }
 
-void ScrollingGraphics::CenterCamera(const Point& map_position) {
-  // Convert the map coordinates to screen coordinates.
-  const Point position = map_position - camera_ - kGridSize*background_offset_;
+const Image* ScrollingGraphics::LoadImage(const string& filename) {
+  return cache_.LoadImage(Point(kGridSize, kGridSize), filename);
+}
+
+void ScrollingGraphics::DrawStatusMessage(const string& message) {
+  text_renderer_->DrawText(kGridSize, Point(0, 0), message);
+}
+
+void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
+  const Point position =
+      sprite.GetPosition() - camera_ - kGridSize*background_offset_;
   const Point dimensions(kGridSize, kGridSize);
   Point diff;
 
@@ -93,6 +100,11 @@ void ScrollingGraphics::CenterCamera(const Point& map_position) {
   }
 }
 
+void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
+  sprite.Draw(camera_ + kGridSize*background_offset_,
+              foreground_->bounds_, foreground_->surface_);
+}
+
 void ScrollingGraphics::RedrawBackground() {
   Point frame;
   for (int x = 0; x < background_->size_.x; x++) {
@@ -119,10 +131,6 @@ void ScrollingGraphics::Flip() {
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
-}
-
-void ScrollingGraphics::DrawStatusMessage(const string& message) {
-  text_renderer_->DrawText(kGridSize, Point(0, 0), message);
 }
 
 }  // namespace skishore

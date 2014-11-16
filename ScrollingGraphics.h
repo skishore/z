@@ -6,6 +6,7 @@
 #include "Image.h"
 #include "ImageCache.h"
 #include "Point.h"
+#include "Sprite.h"
 #include "TextRenderer.h"
 #include "TileMap.h"
 
@@ -16,8 +17,12 @@ class ScrollingGraphics {
   ScrollingGraphics(const Point& size, const TileMap& map);
   ~ScrollingGraphics();
 
-  // CenterCamera centers the camera on the given map position.
-  void CenterCamera(const Point& map_position);
+  const Image* LoadImage(const std::string& filename);
+  void DrawStatusMessage(const std::string& message);
+
+  // CenterCamera centers the camera on the sprite, while DrawSprite draws it.
+  void CenterCamera(const Sprite& sprite);
+  void DrawSprite(const Sprite& sprite);
 
   // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
   // EraseForeground copies the background currently in view to the foreground,
@@ -25,8 +30,6 @@ class ScrollingGraphics {
   void RedrawBackground();
   void EraseForeground();
   void Flip();
-
-  void DrawStatusMessage(const std::string& message);
 
  private:
   class DrawingSurface {
