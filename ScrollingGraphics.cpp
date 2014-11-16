@@ -43,8 +43,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
 
   foreground_.reset(new DrawingSurface(size));
   background_.reset(new DrawingSurface(3*size));
-  tileset_.reset(new Sprite(Point(kGridSize, kGridSize), &cache_));
-  ASSERT(tileset_->LoadImage("tileset.bmp"), "Failed to load tileset!");
+  tileset_.reset(cache_.LoadImage(Point(kGridSize, kGridSize), "tileset.bmp"));
 
   text_renderer_.reset(new TextRenderer(
       foreground_->bounds_, foreground_->surface_));
@@ -95,12 +94,13 @@ void ScrollingGraphics::CenterCamera(const Point& map_position) {
 }
 
 void ScrollingGraphics::RedrawBackground() {
+  Point frame;
   for (int x = 0; x < background_->size_.x; x++) {
     for (int y = 0; y < background_->size_.y; y++) {
       const Point square(x + background_offset_.x, y + background_offset_.y);
-      tileset_->SetFrame(Point(map_.GetMapTile(square), 0));
-      tileset_->SetPosition(Point(kGridSize*x, kGridSize*y));
-      tileset_->Draw(background_->bounds_, background_->surface_);
+      frame.x = map_.GetMapTile(square);
+      tileset_->Draw(Point(kGridSize*x, kGridSize*y), frame,
+                     background_->bounds_, background_->surface_);
     }
   }
 }

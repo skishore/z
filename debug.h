@@ -10,7 +10,7 @@ namespace skishore {
 // However, if NDEBUG is true, y will never be evaluated.
 #define ASSERT(x, y) do { \
   if (!(x)) { \
-    DEBUG("ASSERTION FAILED: " << (y)); \
+    DEBUG("ASSERTION FAILED: " << y); \
     exit(-1); \
   } \
 } while(false)

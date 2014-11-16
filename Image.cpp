@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "Sprite.h"
+#include "Image.h"
 
 using std::max;
 using std::min;
@@ -8,33 +8,25 @@ using std::string;
 
 namespace skishore {
 
-Sprite::Sprite(const Point& size, ImageCache* cache) :
-    size_(size), cache_(cache), image_(nullptr) {}
+Image::Image(const Point& size, SDL_Surface* surface)
+    : size_(size), surface_(surface) {}
 
-Sprite::~Sprite() {
-  cache_->FreeImage(image_);
-}
-
-bool Sprite::LoadImage(const string& filename) {
-  cache_->FreeImage(image_);
-  return cache_->LoadImage(filename, &image_);
-}
-
-void Sprite::Draw(const SDL_Rect& bounds, SDL_Surface* surface) {
+void Image::Draw(const Point& position, const Point& frame,
+                 const SDL_Rect& bounds, SDL_Surface* surface) {
   SDL_Rect source;
   SDL_Rect target;
-  if (!PositionRects(bounds, &source, &target)) {
+  if (!PositionRects(position, bounds, &source, &target)) {
     return;
   }
-  source.x += frame_.x*size_.x;
-  source.y += frame_.y*size_.y;
-  SDL_BlitSurface(image_, &source, surface, &target);
+  source.x += frame.x*size_.x;
+  source.y += frame.y*size_.y;
+  SDL_BlitSurface(surface_, &source, surface, &target);
 }
 
-bool Sprite::PositionRects(
-    const SDL_Rect& bounds, SDL_Rect* source, SDL_Rect* target) {
-  const int x = position_.x;
-  const int y = position_.y;
+bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
+                          SDL_Rect* source, SDL_Rect* target) {
+  const int& x = position.x;
+  const int& y = position.y;
 
   // Don't draw the sprite if it is out of the target bounds.
   if ((x + size_.x < 0) or (x > bounds.w) or

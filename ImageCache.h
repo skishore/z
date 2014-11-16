@@ -5,6 +5,9 @@
 #include <string>
 #include <SDL2/SDL.h>
 
+#include "Image.h"
+#include "Point.h"
+
 namespace skishore {
 
 class ImageCache {
@@ -12,12 +15,12 @@ class ImageCache {
   ImageCache(Uint32 pixel_format, bool clear_cache_eagerly=false);
   ~ImageCache();
   
-  bool LoadImage(const std::string& filename, SDL_Surface** surface);
+  Image* LoadImage(const Point& size, const std::string& filename);
   void FreeImage(SDL_Surface* surface);
 
  private:
   // Executed when loading an uncached image or freeing one with no references.
-  bool LoadImageInner(const std::string& filename, SDL_Surface** surface);
+  bool LoadImageInner(const std::string& filename);
   void FreeImageInner(SDL_Surface* surface);
 
   // By default, once an image is loaded into memory, it is never unloaded.

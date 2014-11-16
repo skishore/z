@@ -16,22 +16,18 @@ ImageCache::~ImageCache() {
   }
 }
   
-bool ImageCache::LoadImage(const string& filename, SDL_Surface** surface) {
+Image* ImageCache::LoadImage(const Point& size, const string& filename) {
   ASSERT(filename.length() > 0, "Tried to load empty filename!");
   if (images_by_filename_.count(filename) == 0) {
-    if (!LoadImageInner(filename, surface)) {
-      return false;
-    }
+    ASSERT(LoadImageInner(filename), "Failed to load " << filename);
   }
-  *surface = images_by_filename_[filename];
-  counts_by_image_[*surface] += 1;
-  return true;
+  SDL_Surface* surface = images_by_filename_[filename];
+  counts_by_image_[surface] += 1;
+  return new Image(size, surface);
 }
 
 void ImageCache::FreeImage(SDL_Surface* surface) {
-  if (surface == nullptr) {
-    return;
-  }
+  ASSERT(surface != nullptr, "Tried to free NULL surface!");
   ASSERT(counts_by_image_.count(surface) > 0, "Tried to free missing surface!");
   ASSERT(counts_by_image_[surface] > 0, "Tried to free surface w/ count 0!");
   counts_by_image_[surface] -= 1;
@@ -40,22 +36,22 @@ void ImageCache::FreeImage(SDL_Surface* surface) {
   }
 }
 
-bool ImageCache::LoadImageInner(const string& filename, SDL_Surface** surface) {
+bool ImageCache::LoadImageInner(const string& filename) {
   SDL_Surface* temp = SDL_LoadBMP(("images/" + filename).c_str());
   if (temp == nullptr) {
     DEBUG("Failed to load " << filename);
     return false;
   }
-  *surface = SDL_ConvertSurfaceFormat(temp, pixel_format_, 0);
+  SDL_Surface* surface = SDL_ConvertSurfaceFormat(temp, pixel_format_, 0);
   SDL_FreeSurface(temp);
-  if (*surface == nullptr) {
+  if (surface == nullptr) {
     DEBUG("Failed to convert surface for " << filename);
     return false;
   }
 
-  images_by_filename_[filename] = *surface;
-  filenames_by_image_[*surface] = filename;
-  counts_by_image_[*surface] = 0;
+  images_by_filename_[filename] = surface;
+  filenames_by_image_[surface] = filename;
+  counts_by_image_[surface] = 0;
   DEBUG("Loaded " << filename);
   return true;
 }

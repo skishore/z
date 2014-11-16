@@ -3,9 +3,9 @@
 
 #include <SDL2/SDL.h>
 
+#include "Image.h"
 #include "ImageCache.h"
 #include "Point.h"
-#include "Sprite.h"
 #include "TextRenderer.h"
 #include "TileMap.h"
 
@@ -67,7 +67,7 @@ class ScrollingGraphics {
   Point camera_;
   SDL_Rect centered_;
 
-  std::unique_ptr<Sprite> tileset_;
+  std::unique_ptr<Image> tileset_;
 };
 
 } // namespace skishore
