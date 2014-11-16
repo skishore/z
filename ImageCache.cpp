@@ -16,7 +16,7 @@ ImageCache::~ImageCache() {
   }
 }
   
-Image* ImageCache::LoadImage(const Point& size, const string& filename) {
+const Image* ImageCache::LoadImage(const Point& size, const string& filename) {
   ASSERT(filename.length() > 0, "Tried to load empty filename!");
   if (images_by_filename_.count(filename) == 0) {
     ASSERT(LoadImageInner(filename), "Failed to load " << filename);

@@ -17,7 +17,7 @@ Image::~Image() {
 }
 
 void Image::Draw(const Point& position, const Point& frame,
-                 const SDL_Rect& bounds, SDL_Surface* surface) {
+                 const SDL_Rect& bounds, SDL_Surface* surface) const {
   SDL_Rect source;
   SDL_Rect target;
   if (!PositionRects(position, bounds, &source, &target)) {
@@ -29,7 +29,7 @@ void Image::Draw(const Point& position, const Point& frame,
 }
 
 bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
-                          SDL_Rect* source, SDL_Rect* target) {
+                          SDL_Rect* source, SDL_Rect* target) const {
   const int& x = position.x;
   const int& y = position.y;
 

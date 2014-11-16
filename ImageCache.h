@@ -15,7 +15,7 @@ class ImageCache {
   ImageCache(Uint32 pixel_format, bool clear_cache_eagerly=false);
   ~ImageCache();
   
-  Image* LoadImage(const Point& size, const std::string& filename);
+  const Image* LoadImage(const Point& size, const std::string& filename);
 
  private:
   friend class Image;

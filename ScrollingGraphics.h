@@ -67,7 +67,7 @@ class ScrollingGraphics {
   Point camera_;
   SDL_Rect centered_;
 
-  std::unique_ptr<Image> tileset_;
+  std::unique_ptr<const Image> tileset_;
 };
 
 } // namespace skishore
