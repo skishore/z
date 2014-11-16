@@ -1,13 +1,12 @@
-#include "EventHandler.h"
+#include "InputHandler.h"
 
 namespace skishore {
 
-EventHandler::EventHandler(int events_per_frame)
-    : events_per_frame_(events_per_frame), exit_signaled_(false) {}
+InputHandler::InputHandler() : exit_signaled_(false) {}
 
-void EventHandler::HandleEvents() {
+void InputHandler::Poll(int max_num_events) {
   SDL_Event event;
-  for (int i = 0; (i < events_per_frame_) && SDL_PollEvent(&event); i++) {
+  for (int i = 0; (i < max_num_events) && SDL_PollEvent(&event); i++) {
     if (event.type == SDL_QUIT) {
       exit_signaled_ = true;
     } else if (event.type == SDL_KEYDOWN) {
@@ -25,11 +24,11 @@ void EventHandler::HandleEvents() {
   }
 }
 
-bool EventHandler::IsKeyPressed(const SDL_Keycode& key) const {
+bool InputHandler::IsKeyPressed(const SDL_Keycode& key) const {
   return keys_pressed_.find(key) != keys_pressed_.end();
 }
 
-bool EventHandler::IsExitSignaled() const {
+bool InputHandler::IsExitSignaled() const {
   return exit_signaled_;
 }
 

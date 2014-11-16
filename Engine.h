@@ -1,8 +1,8 @@
 #ifndef __SKISHORE_ENGINE_H__
 #define __SKISHORE_ENGINE_H__
 
-#include "EventHandler.h"
 #include "GameLoop.h"
+#include "InputHandler.h"
 #include "Point.h"
 #include "ScrollingGraphics.h"
 #include "TileMap.h"
@@ -18,9 +18,8 @@ class Engine : public GameLoop::Updatable {
 
  private:
   const Point screen_size_;
-  EventHandler handler_;
+  InputHandler input_;
   TileMap map_;
-
   std::unique_ptr<ScrollingGraphics> graphics_;
 };
 

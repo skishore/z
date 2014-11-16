@@ -14,7 +14,7 @@ static const int kEventsPerFrame = 16;
 }  // namespace
 
 Engine::Engine(int frame_rate, const Point& screen_size)
-    : screen_size_(screen_size), handler_(kEventsPerFrame) {
+    : screen_size_(screen_size) {
   ASSERT(map_.LoadMap("world.dat"), "Failed to load map.");
   graphics_.reset(new ScrollingGraphics(screen_size_, map_));
   GameLoop(frame_rate, this);
@@ -23,19 +23,18 @@ Engine::Engine(int frame_rate, const Point& screen_size)
 bool Engine::Update(double frame_rate) {
   static Point point;
 
-  handler_.HandleEvents();
-
+  input_.Poll(kEventsPerFrame);
   Point last_point = point;
-  if (handler_.IsKeyPressed(SDLK_UP)) {
+  if (input_.IsKeyPressed(SDLK_UP)) {
     point.y -= 1;
   }
-  if (handler_.IsKeyPressed(SDLK_DOWN)) {
+  if (input_.IsKeyPressed(SDLK_DOWN)) {
     point.y += 1;
   }
-  if (handler_.IsKeyPressed(SDLK_RIGHT)) {
+  if (input_.IsKeyPressed(SDLK_RIGHT)) {
     point.x += 1;
   }
-  if (handler_.IsKeyPressed(SDLK_LEFT)) {
+  if (input_.IsKeyPressed(SDLK_LEFT)) {
     point.x -= 1;
   }
   if (point != last_point) {
@@ -47,7 +46,7 @@ bool Engine::Update(double frame_rate) {
   graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
   graphics_->Flip();
 
-  return handler_.IsExitSignaled();
+  return input_.IsExitSignaled();
 }
 
 }  // namespace skishore

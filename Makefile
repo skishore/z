@@ -19,7 +19,7 @@ all:
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
 	rm -f $(HTML) $(BUILD)/*.js $(BUILD)/*.data $(BUILD)/*.o
-	rm -f $(BUILD)/*.ccd $(BUILD)/*.emccd
+	rm -f $(BUILD)/*.d $(BUILD)/*.ccd $(BUILD)/*.emccd
 	rmdir -p $(BUILD)
 
 exe: $(EXECUTABLE)
