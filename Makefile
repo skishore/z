@@ -39,6 +39,7 @@ $(HTML):	$(EMCC_OBJ_FILES)
 	mkdir -p $(BUILD)
 	emcc $(EMCC_LD_FLAGS) -o $@ $^ --preload-file data --preload-file fonts/default_font.ttf --preload-file images
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
+	cp index.html build/main.html
 
 $(BUILD)/%.o: %.cpp
 	mkdir -p $(BUILD)

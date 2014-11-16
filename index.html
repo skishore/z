@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Emscripten-Generated Code</title>
+    <style>
+      body {
+        font-family: arial;
+        margin: 0;
+        padding: 0;
+        background-color: #363636;
+      }
+
+      .emscripten-wrapper {
+        margin: 16px auto;
+        height: 256px;
+        width: 256px;
+      }
+
+      .stdout-wrapper {
+        margin: 0 auto;
+        width: 600px;
+        height: 240px;
+      }
+
+      #stdout {
+        height: 100%;
+        width: 100%;
+
+        display: block;
+        border: none;
+        margin: 0;
+        padding: 0;
+
+        background-color: black;
+        color: white;
+        font-family: 'Lucida Console', Monaco, monospace;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="emscripten-wrapper">
+      <canvas id="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+    <div class="stdout-wrapper">
+      <textarea id="stdout"></textarea>
+    </div>
+
+    <script type='text/javascript'>
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+          var element = document.getElementById('stdout');
+          if (element) element.value = ''; // clear browser cache
+          return function(text) {
+            text = Array.prototype.slice.call(arguments).join(' ');
+            // These replacements are necessary if you render to raw HTML
+            //text = text.replace(/&/g, "&amp;");
+            //text = text.replace(/</g, "&lt;");
+            //text = text.replace(/>/g, "&gt;");
+            //text = text.replace('\n', '<br>', 'g');
+            console.log(text);
+            if (element) {
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight; // focus on bottom
+            }
+          };
+        })(),
+        printErr: function(text) {
+          text = Array.prototype.slice.call(arguments).join(' ');
+          console.error(text);
+        },
+        canvas: (function() {
+          var canvas = document.getElementById('emscripten');
+
+          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
+          // application robust, you may want to override this behavior before shipping!
+          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+
+          return canvas;
+        })(),
+        setStatus: function(text) {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.text) return;
+          var match = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (match && now - Date.now() < 30) return; // if this is a progress update, skip it if too soon
+          if (match) {
+            text = match[1];
+          } else if (!text) {
+            // This case occurs when the canvas is loaded.
+          }
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = function(event) {
+        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+        Module.setStatus('Exception thrown, see JavaScript console');
+        Module.setStatus = function(text) {
+          if (text) Module.printErr('[post-exception status] ' + text);
+        };
+      };
+    </script>
+    <script async type="text/javascript" src="main.js"></script>
+  </body>
+</html>
