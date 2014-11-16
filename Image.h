@@ -8,23 +8,28 @@
 
 namespace skishore {
 
+class ImageCache;
+
 class Image {
  public:
+  ~Image();
+
   void Draw(const Point& position, const Point& frame,
             const SDL_Rect& bounds, SDL_Surface* surface);
 
  private:
-  Image(const Point& size, SDL_Surface* surface);
+  // ImageCache is a factory class used to construct Image instances.
+  friend class ImageCache;
+
+  Image(const Point& size, SDL_Surface* surface, ImageCache* cache);
 
   bool PositionRects(const Point& position, const SDL_Rect& bounds,
                      SDL_Rect* source, SDL_Rect* target);
 
-  // class ImageCache is a factory for Images.
   // The Image's surface is owned by the cache that constructed it.
   Point size_;
-  SDL_Surface* surface_;
-
-  friend class ImageCache;
+  SDL_Surface* const surface_;
+  ImageCache* const cache_;
 };
 
 } // namespace skishore

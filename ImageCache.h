@@ -16,9 +16,13 @@ class ImageCache {
   ~ImageCache();
   
   Image* LoadImage(const Point& size, const std::string& filename);
-  void FreeImage(SDL_Surface* surface);
 
  private:
+  friend class Image;
+
+  // Executed when an image is destructed.
+  void FreeImage(Image* image);
+
   // Executed when loading an uncached image or freeing one with no references.
   bool LoadImageInner(const std::string& filename);
   void FreeImageInner(SDL_Surface* surface);

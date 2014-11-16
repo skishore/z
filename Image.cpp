@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "Image.h"
+#include "ImageCache.h"
 
 using std::max;
 using std::min;
@@ -8,8 +9,12 @@ using std::string;
 
 namespace skishore {
 
-Image::Image(const Point& size, SDL_Surface* surface)
-    : size_(size), surface_(surface) {}
+Image::Image(const Point& size, SDL_Surface* surface, ImageCache* cache)
+    : size_(size), surface_(surface), cache_(cache) {}
+
+Image::~Image() {
+  cache_->FreeImage(this);
+}
 
 void Image::Draw(const Point& position, const Point& frame,
                  const SDL_Rect& bounds, SDL_Surface* surface) {

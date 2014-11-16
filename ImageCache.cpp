@@ -23,10 +23,11 @@ Image* ImageCache::LoadImage(const Point& size, const string& filename) {
   }
   SDL_Surface* surface = images_by_filename_[filename];
   counts_by_image_[surface] += 1;
-  return new Image(size, surface);
+  return new Image(size, surface, this);
 }
 
-void ImageCache::FreeImage(SDL_Surface* surface) {
+void ImageCache::FreeImage(Image* image) {
+  SDL_Surface* surface = image->surface_;
   ASSERT(surface != nullptr, "Tried to free NULL surface!");
   ASSERT(counts_by_image_.count(surface) > 0, "Tried to free missing surface!");
   ASSERT(counts_by_image_[surface] > 0, "Tried to free surface w/ count 0!");
