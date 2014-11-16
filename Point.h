@@ -6,11 +6,27 @@
 
 namespace skishore {
 
+namespace {
+// For converting a TPoint of one type to a TPoint of another, we use convert.
+template <typename T, typename U> inline T convert(const U& u) {
+  return (T)u;
+}
+
+// We have special logic for converting from doubles to ints that rounds.
+template <> inline int convert(const double& u) {
+  return round(u);
+}
+}  // namespace
+
 template <typename T>
 struct TPoint {
   T x, y;
 
   TPoint<T>(T x0=0, T y0=0) : x(x0), y(y0) {};
+
+  template <typename U>
+  TPoint<T>(TPoint<U> other)
+      : x(convert<T,U>(other.x)), y(convert<T,U>(other.y)) {};
 
   bool operator==(const TPoint<T>& other) const {
     return ((x == other.x) && (y == other.y));
@@ -52,13 +68,16 @@ inline TPoint<T> operator*(const T& scale, const TPoint<T>& point) {
   return TPoint<T>(scale*point.x, scale*point.y);
 }
 
-template <typename T>
-inline std::ostream& operator<<(std::ostream& out, const TPoint<T>& point) {
-  return out << "TPoint(" << point.x << ", " << point.y << ")";
-}
-
 typedef TPoint<int> Point;
 typedef TPoint<double> Position;
+
+inline std::ostream& operator<<(std::ostream& out, const Point& point) {
+  return out << "Point(" << point.x << ", " << point.y << ")";
+}
+
+inline std::ostream& operator<<(std::ostream& out, const Position& position) {
+  return out << "Position(" << position.x << ", " << position.y << ")";
+}
 
 } // namespace skishore
 
