@@ -76,6 +76,11 @@ inline std::ostream& operator<<(std::ostream& out, const Point& point) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const Position& position) {
+  // Suppress emscripten's warning about the unused double -> int specialization
+  // of the convert function.
+  #ifdef EMSCRIPTEN
+  Point point(position);
+  #endif  // EMSCRIPTEN
   return out << "Position(" << position.x << ", " << position.y << ")";
 }
 
