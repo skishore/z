@@ -23,21 +23,19 @@ class GameState {
   const Sprite& GetPlayer() const { return *player_; };
   const std::vector<Sprite*>& GetSprites();
 
-  // Runs all the sprites through a single time.
+  // Runs all the sprites through a single time step.
   void Update();
 
- private:
-  friend class SpriteState;
-
-  void CreateSprite(const Point& starting_square, bool is_player);
-
+  // Members exposed so that SpriteState subclasses can read them.
   const InputHandler& input_;
   const TileMap& map_;
-  ImageCache* cache_;
-
   Sprite* player_;
   std::vector<Sprite*> sprites_;
 
+ private:
+  void CreateSprite(const Point& starting_square, bool is_player);
+
+  ImageCache* cache_;
   std::map<Sprite*, std::unique_ptr<Sprite>> sprite_ownership_;
 };
 

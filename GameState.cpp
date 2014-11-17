@@ -1,6 +1,7 @@
 #include <string>
 
 #include "constants.h"
+#include "debug.h"
 #include "GameState.h"
 #include "Image.h"
 
@@ -20,16 +21,30 @@ const vector<Sprite*>& GameState::GetSprites() {
 }
 
 void GameState::Update() {
+  for (Sprite* sprite : sprites_) {
+    sprite->SetState(sprite->GetState()->MaybeTransition(*this));
+  }
+  for (Sprite* sprite : sprites_) {
+    Position* move = sprite->GetState()->Move(*this);
+    if (move != nullptr) {
+      delete move;
+    }
+  }
 }
 
 void GameState::CreateSprite(const Point& square, bool is_player) {
-  const string filename = (is_player ? "player.bmp" : "zombie.bmp");
-  const Image* image = cache_->LoadImage(Point(kGridSize, kGridSize), filename);
-  Sprite* sprite = new Sprite(is_player, square, *image);
+  Sprite* sprite = nullptr;
+  const Point size(kGridSize, kGridSize);
 
   if (is_player) {
+    const Image* image = cache_->LoadImage(size, "player.bmp");
+    sprite = new Sprite(is_player, square, *image, new WalkingState);
     player_ = sprite;
+  } else {
+    ASSERT(false, "NPCs have not been implemented!");
   }
+
+  ASSERT(sprite != nullptr, "CreateSprite failed! is_player = " << is_player);
   sprites_.push_back(sprite);
   sprite_ownership_[sprite] = std::unique_ptr<Sprite>(sprite);
 }

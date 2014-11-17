@@ -22,7 +22,13 @@ class SpriteState {
 
  protected:
   // A pointer to the sprite that owns this state.
-  Sprite* self_ = nullptr;
+  Sprite* sprite_ = nullptr;
+};
+
+class WalkingState : public SpriteState {
+ public:
+  SpriteState* MaybeTransition(const GameState& game_state) override;
+  Position* Move(const GameState& game_state) override;
 };
 
 } // namespace skishore

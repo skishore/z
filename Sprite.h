@@ -14,22 +14,25 @@ class SpriteState;
 
 class Sprite {
  public:
-  Sprite(bool is_player, const Point& square, const Image& Image);
+  Sprite(bool is_player, const Point& square,
+         const Image& Image, SpriteState* state);
 
   Point GetPosition() const;
   void Draw(const Point& camera, const SDL_Rect& bounds,
             SDL_Surface* surface) const;
 
- private:
-  friend class SpriteState;
+  SpriteState* GetState();
+  void SetState(SpriteState* state);
 
+  // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;
-  const Image& image_;
-
   Point frame_;
   Position position_;
   Direction direction_;
   std::unique_ptr<SpriteState> state_;
+
+ private:
+  const Image& image_;
 };
 
 } // namespace skishore
