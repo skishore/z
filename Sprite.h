@@ -1,29 +1,35 @@
 #ifndef __SKISHORE_SPRITE_H__
 #define __SKISHORE_SPRITE_H__
 
+#include <memory>
 #include <SDL2/SDL.h>
 
+#include "constants.h"
 #include "Image.h"
 #include "Point.h"
 
 namespace skishore {
 
+class SpriteState;
+
 class Sprite {
  public:
-  Sprite(const Point& square, const Image& Image);
+  Sprite(bool is_player, const Point& square, const Image& Image);
 
   Point GetPosition() const;
   void Draw(const Point& camera, const SDL_Rect& bounds,
             SDL_Surface* surface) const;
 
  private:
-  friend class Engine;
+  friend class SpriteState;
 
-  // The sprite's image should be a kGridSize x kGridSize square.
+  const bool is_player_;
   const Image& image_;
 
   Point frame_;
   Position position_;
+  Direction direction_;
+  std::unique_ptr<SpriteState> state_;
 };
 
 } // namespace skishore

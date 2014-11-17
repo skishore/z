@@ -42,7 +42,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
 
   foreground_.reset(new DrawingSurface(size));
   background_.reset(new DrawingSurface(3*size));
-  tileset_.reset(LoadImage("tileset.bmp"));
+  tileset_.reset(cache_.LoadImage(Point(kGridSize, kGridSize), "tileset.bmp"));
 
   text_renderer_.reset(new TextRenderer(
       foreground_->bounds_, foreground_->surface_));
@@ -58,10 +58,6 @@ ScrollingGraphics::~ScrollingGraphics() {
   SDL_DestroyRenderer(renderer_);
   SDL_DestroyWindow(window_);
   SDL_Quit();
-}
-
-const Image* ScrollingGraphics::LoadImage(const string& filename) {
-  return cache_.LoadImage(Point(kGridSize, kGridSize), filename);
 }
 
 void ScrollingGraphics::DrawStatusMessage(const string& message) {

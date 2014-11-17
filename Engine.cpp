@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "util.h"
 #include "Engine.h"
+#include "Sprite.h"
 
 using std::string;
 
@@ -20,32 +21,21 @@ Engine::Engine(int frame_rate, const Point& screen_size)
 
   graphics_.reset(new ScrollingGraphics(screen_size_, map_));
   graphics_->RedrawBackground();
-
-  player_.reset(new Sprite(
-      kStartingSquare, *graphics_->LoadImage("player.bmp")));
-  graphics_->CenterCamera(*player_);
+  game_state_.reset(new GameState(
+      kStartingSquare, input_, map_, graphics_->GetImageCache()));
 
   GameLoop(frame_rate, this);
 }
 
 bool Engine::Update(double frame_rate) {
   input_.Poll(kEventsPerFrame);
-  if (input_.IsKeyPressed(SDLK_UP)) {
-    player_->position_.y -= 1;
-  }
-  if (input_.IsKeyPressed(SDLK_DOWN)) {
-    player_->position_.y += 1;
-  }
-  if (input_.IsKeyPressed(SDLK_RIGHT)) {
-    player_->position_.x += 1;
-  }
-  if (input_.IsKeyPressed(SDLK_LEFT)) {
-    player_->position_.x -= 1;
-  }
+  game_state_->Update();
 
-  graphics_->CenterCamera(*player_);
+  graphics_->CenterCamera(game_state_->GetPlayer());
   graphics_->EraseForeground();
-  graphics_->DrawSprite(*player_);
+  for (const Sprite* sprite : game_state_->GetSprites()) {
+    graphics_->DrawSprite(*sprite);
+  }
   graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
   graphics_->Flip();
 

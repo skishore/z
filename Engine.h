@@ -2,10 +2,10 @@
 #define __SKISHORE_ENGINE_H__
 
 #include "GameLoop.h"
+#include "GameState.h"
 #include "InputHandler.h"
 #include "Point.h"
 #include "ScrollingGraphics.h"
-#include "Sprite.h"
 #include "TileMap.h"
 
 namespace skishore {
@@ -23,7 +23,7 @@ class Engine : public GameLoop::Updatable {
   TileMap map_;
 
   std::unique_ptr<ScrollingGraphics> graphics_;
-  std::unique_ptr<Sprite> player_;
+  std::unique_ptr<GameState> game_state_;
 };
 
 } // namespace skishore

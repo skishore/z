@@ -17,7 +17,7 @@ class ScrollingGraphics {
   ScrollingGraphics(const Point& size, const TileMap& map);
   ~ScrollingGraphics();
 
-  const Image* LoadImage(const std::string& filename);
+  ImageCache* GetImageCache() { return &cache_; };
   void DrawStatusMessage(const std::string& message);
 
   // CenterCamera centers the camera on the sprite, while DrawSprite draws it.

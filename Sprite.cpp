@@ -1,10 +1,11 @@
 #include "constants.h"
 #include "Sprite.h"
+#include "SpriteState.h"
 
 namespace skishore {
 
-Sprite::Sprite(const Point& square, const Image& image)
-    : image_(image), position_(kGridSize*square) {}
+Sprite::Sprite(bool is_player, const Point& square, const Image& image)
+    : is_player_(is_player), image_(image), position_(kGridSize*square) {}
 
 Point Sprite::GetPosition() const {
   return Point(position_);
