@@ -1,6 +1,12 @@
+#include <algorithm>
+
+#include "constants.h"
 #include "debug.h"
 #include "GameState.h"
 #include "SpriteState.h"
+
+using std::max;
+using std::vector;
 
 namespace skishore {
 
@@ -14,7 +20,7 @@ SpriteState* WalkingState::MaybeTransition(const GameState& game_state) {
   return nullptr;
 }
 
-Position* WalkingState::Move(const GameState& game_state) {
+Position* WalkingState::GetMove(const GameState& game_state) {
   if (game_state.input_.IsKeyPressed(SDLK_DOWN)) {
     sprite_->frame_.x = Direction::DOWN;
   }

@@ -2,11 +2,13 @@
 #define __SKISHORE_SPRITE_H__
 
 #include <memory>
+#include <vector>
 #include <SDL2/SDL.h>
 
 #include "constants.h"
 #include "Image.h"
 #include "Point.h"
+#include "TileMap.h"
 
 namespace skishore {
 
@@ -23,6 +25,12 @@ class Sprite {
 
   SpriteState* GetState();
   void SetState(SpriteState* state);
+
+  // Applies sprite-sprite forces to the position delta, which cannot be NULL.
+  void AvoidOthers(const std::vector<Sprite*> sprites, Position* move) const;
+
+  // Actually moves the sprite within the given map.
+  void Move(const TileMap& map, Position* move);
 
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;

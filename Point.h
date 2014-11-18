@@ -46,6 +46,11 @@ struct TPoint {
     y -= other.y;
   }
 
+  void operator*=(const T& scale) {
+    x *= scale;
+    y *= scale;
+  }
+
   TPoint<T> operator+(const TPoint<T>& other) const {
     return TPoint<T>(x + other.x, y + other.y);
   }
@@ -58,7 +63,7 @@ struct TPoint {
     return TPoint<T>(scale*x, scale*y);
   }
 
-  float length() const {
+  double length() const {
     return sqrt(x*x + y*y);
   }
 };
