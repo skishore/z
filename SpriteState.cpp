@@ -21,10 +21,24 @@ SpriteState* WalkingState::MaybeTransition(const GameState& game_state) {
 }
 
 Position* WalkingState::GetMove(const GameState& game_state) {
-  if (game_state.input_.IsKeyPressed(SDLK_DOWN)) {
-    sprite_->frame_.x = Direction::DOWN;
+  Position move;
+  bool moved = false;
+  Direction last_dir = sprite_->direction_;
+
+  for (int dir = 0; dir < 4; dir++) {
+    if (game_state.input_.IsKeyPressed(kDirectionKey[dir])) {
+      last_dir = (Direction)dir;
+      move += kShift[dir];
+      moved = true;
+    }
   }
-  return nullptr;
+  if (last_dir != sprite_->direction_ &&
+      !game_state.input_.IsKeyPressed(kDirectionKey[sprite_->direction_])) {
+    sprite_->direction_ = last_dir;
+  }
+  sprite_->frame_.x = sprite_->direction_;
+
+  return (moved ? new Position(kPlayerSpeed*move) : nullptr);
 }
 
 } // namespace skishore

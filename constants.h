@@ -6,6 +6,8 @@
 #ifndef __SKISHORE_CONSTANTS_H__
 #define __SKISHORE_CONSTANTS_H__
 
+#include <SDL2/SDL.h>
+
 #include "Point.h"
 
 namespace skishore {
@@ -15,6 +17,9 @@ static const int kGridSize = 16;
 
 // Minimum threshold used for double position computations.
 static const double kZero = 0.001;
+
+// Movement speed constants.
+static const double kPlayerSpeed = 1.6;
 
 // Kinematic constraint constants.
 static const double kKinematicSeparation = 32.0;
@@ -35,6 +40,13 @@ static const Point kShift[4] = {
   Point(1, 0),
   Point(0, 1),
   Point(-1, 0)
+};
+
+static SDL_Keycode kDirectionKey[4] = {
+  SDLK_UP,
+  SDLK_RIGHT,
+  SDLK_DOWN,
+  SDLK_LEFT
 };
 
 }

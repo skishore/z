@@ -73,6 +73,7 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Position* move) const {
 }
 
 void Sprite::Move(const TileMap& map, Position* move) {
+  position_ += *move;
 }
 
 }  // namespace skishore
