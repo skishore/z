@@ -13,73 +13,87 @@ namespace skishore {
 
 namespace {
 
-inline double gmod(double x) {
-  double result = fmod(x, kGridSize);
-  return result + (result < 0 ? kGridSize : 0);
+static const int kTicksPerPixel = 1024;
+static const int kTolerance = 204*kGridSize;
+static const int kPushAway =  512*kGridSize;
+static const int kFullGrid = kTicksPerPixel*kGridSize;
+
+// Takes an integer and returns it mod kGridSize, in [0, kGridSize).
+inline int gmod(int x) {
+  int result = x % kFullGrid;
+  return result + (result < 0 ? kFullGrid : 0);
 }
 
 bool CheckSquare(const TileMap& map, const Point& square) {
   return map.GetMapTile(square) != 4;
 }
 
-void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
-  Point square(pos/kGridSize);
-  Point offset;
-  bool collided = false;
-
-  double speed = move->length();
-  if (speed < kZero) {
+void CheckSquares(const TileMap& map, const Point& pos,
+                  const Position& dmove, Point* move) {
+  move->x = kTicksPerPixel*dmove.x;
+  move->y = kTicksPerPixel*dmove.y;
+  if (move->x == 0 && move->y == 0) {
     return;
   }
 
+  Point overlap(gmod(pos.x), gmod(pos.y));
+  overlap.x -= 2*overlap.x/kFullGrid*kFullGrid;
+  overlap.y -= 2*overlap.y/kFullGrid*kFullGrid;
+
+  Point square = pos - overlap;
+  ASSERT(square.x % kFullGrid == 0 && square.y % kFullGrid == 0,
+         "Unexpected: " << pos << " " << overlap << " " << " " << kFullGrid);
+  square = square/kFullGrid;
+
+  Point offset;
+  bool collided = false;
+  double speed = move->length();
+
   // Check if we cross a horizontal grid boundary going up or down.
-  if (move->y < 0 && gmod(pos.y + kTolerance) < -move->y + kZero) {
+  if (move->y < 0 && gmod(pos.y + kTolerance) < -move->y) {
     offset.y = -1;
-  } else if (move->y > 0 && gmod(pos.y) > kGridSize - move->y - kZero) {
+  } else if (move->y > 0 && gmod(-pos.y) < move->y) {
     offset.y += 1;
   }
   // If we cross a horizontal boundary, check that the next square is open.
   if (offset.y != 0) {
-    double overlap = pos.x - kGridSize*square.x;
-    offset.x = (overlap > 0 ? 1 : -1);
+    offset.x = (overlap.x > 0 ? 1 : -1);
     if (!CheckSquare(map, Point(square.x, square.y + offset.y))) {
       collided = true;
     // Also check for collisions for the square diagonally adjacent to us.
-    } else if (abs(overlap) > kTolerance &&
+    } else if (abs(overlap.x) > kTolerance &&
                !CheckSquare(map, square + offset)) {
       collided = true;
-      if (abs(overlap) < kPushAway && offset.x*move->x <= 0) {
+      if (abs(overlap.x) < kPushAway && offset.x*move->x <= 0) {
         move->x = -offset.x*speed;
       }
     }
     if (collided) {
       if (offset.y < 0) {
-        move->y = (kGridSize - kTolerance + kZero) - gmod(pos.y);
+        move->y = kFullGrid - kTolerance - gmod(pos.y);
       } else {
-        move->y = kGridSize - kZero - gmod(pos.y);
+        move->y = gmod(-pos.y);
       }
     }
   }
 
   // Run similar checks for the velocity x-coordinates.
   offset.x = 0;
-  if (move->x < 0 && gmod(pos.x + kTolerance) < -move->x + kZero) {
+  if (move->x < 0 && gmod(pos.x + kTolerance) < -move->x) {
     offset.x = -1;
-  } else if (move->x > 0 &&
-             gmod(pos.x - kTolerance) > kGridSize - move->x - kZero) {
+  } else if (move->x > 0 && gmod(kTolerance - pos.x) < move->x) {
     offset.x = 1;
   }
   if (offset.x != 0) {
-    double overlap = pos.y - kGridSize*square.y;
     // TODO(skishore): Why is this line necessary?
     collided = offset.y != 0 && !collided && !CheckSquare(map, square + offset);
-    offset.y = (overlap > 0 ? 1 : -1);
+    offset.y = (overlap.y > 0 ? 1 : -1);
     if (!CheckSquare(map, Point(square.x + offset.x, square.y))) {
       collided = true;
-    } else if ((offset.y > 0 || -overlap > kTolerance) &&
+    } else if ((offset.y > 0 || -overlap.y > kTolerance) &&
                !CheckSquare(map, square + offset)) {
       collided = true;
-      if (abs(overlap) < kPushAway && offset.y*move->y <= 0) {
+      if (abs(overlap.y) < kPushAway && offset.y*move->y <= 0) {
         // TODO(skishore): Why is this ternary expression necessary?
         move->y = (CheckSquare(map, Point(square.x, square.y + offset.y)) ?
                    -offset.y*speed : 0);
@@ -87,9 +101,9 @@ void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
     }
     if (collided) {
       if (offset.x < 0) {
-        move->x = kGridSize - kTolerance + kZero - gmod(pos.x);
+        move->x = kFullGrid - kTolerance - gmod(pos.x);
       } else {
-        move->x = kTolerance - kZero - gmod(pos.x);
+        move->x = kTolerance - gmod(pos.x);
       }
     }
   }
@@ -99,18 +113,19 @@ void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
 
 Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
-    : is_player_(is_player), position_(kGridSize*square),
-      direction_(Direction::DOWN), image_(image) {
+    : is_player_(is_player), direction_(Direction::DOWN), image_(image),
+      position_(kTicksPerPixel*kGridSize*square) {
   SetState(state);
 }
 
 Point Sprite::GetPosition() const {
-  return Point(position_);
+  // TODO(skishore): Replace this function with exact arithmetic.
+  return Point(Position(position_)/kTicksPerPixel);
 }
 
 void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
                   SDL_Surface* surface) const {
-  image_.Draw(Point(position_) - camera, frame_, bounds, surface);
+  image_.Draw(GetPosition() - camera, frame_, bounds, surface);
 }
 
 SpriteState* Sprite::GetState() {
@@ -160,10 +175,9 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Position* move) const {
 }
 
 void Sprite::Move(const TileMap& map, Position* move) {
-  CheckSquares(map, position_, move);
-  if (move->length() > kZero) {
-    position_ += *move;
-  }
+  Point final_move;
+  CheckSquares(map, position_, *move, &final_move);
+  position_ += final_move;
 }
 
 }  // namespace skishore

@@ -35,12 +35,16 @@ class Sprite {
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;
   Point frame_;
-  Position position_;
   Direction direction_;
   std::unique_ptr<SpriteState> state_;
 
  private:
   const Image& image_;
+
+  // WARNING: position_ is stored in ticks, not in pixels, where each tick is
+  // kGridResolution pixels. This makes the collision detection math work well,
+  // but as a result, position_ should never be exposed except via the API.
+  Point position_;
 };
 
 } // namespace skishore
