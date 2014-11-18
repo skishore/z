@@ -45,7 +45,7 @@ void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
     if (!CheckSquare(map, Point(square.x, square.y + offset.y))) {
       collided = true;
     // Also check for collisions for the square diagonally adjacent to us.
-    } else if (abs(overlap) > kTolerance - kZero &&
+    } else if (abs(overlap) > kTolerance &&
                !CheckSquare(map, square + offset)) {
       collided = true;
       if (abs(overlap) < kPushAway && offset.x*move->x <= 0) {
@@ -76,7 +76,7 @@ void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
     offset.y = (overlap > 0 ? 1 : -1);
     if (!CheckSquare(map, Point(square.x + offset.x, square.y))) {
       collided = true;
-    } else if ((offset.y > -kZero || -overlap > kTolerance - kZero) &&
+    } else if ((offset.y > 0 || -overlap > kTolerance) &&
                !CheckSquare(map, square + offset)) {
       collided = true;
       if (abs(overlap) < kPushAway && offset.y*move->y <= 0) {

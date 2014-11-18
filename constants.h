@@ -16,7 +16,7 @@ namespace skishore {
 static const int kGridSize = 16;
 
 // Movement speed constants.
-static const double kPlayerSpeed = 1.6;
+static const double kPlayerSpeed = 1.4;
 static const double kTolerance = 0.2*kGridSize;
 static const double kPushAway = 0.5*kGridSize;
 
