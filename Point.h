@@ -66,6 +66,10 @@ struct TPoint {
     return TPoint<T>(scale*x, scale*y);
   }
 
+  TPoint<T> operator/(const T& scale) const {
+    return TPoint<T>(x/scale, y/scale);
+  }
+
   double length() const {
     return sqrt(x*x + y*y);
   }
