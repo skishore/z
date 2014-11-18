@@ -8,7 +8,6 @@ Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
     : is_player_(is_player), position_(kGridSize*square),
       direction_(Direction::DOWN), image_(image) {
-  ASSERT(state != nullptr, "Initialized with a NULL SpriteState!");
   SetState(state);
 }
 
@@ -26,9 +25,7 @@ SpriteState* Sprite::GetState() {
 }
 
 void Sprite::SetState(SpriteState* state) {
-  if (state == nullptr) {
-    return;
-  }
+  ASSERT(state != nullptr, "Got NULL SpriteState!");
   // TODO(skishore): If we add enter/exit methods to states, call them here.
   state_.reset(state);
   state_->Register(this);

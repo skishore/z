@@ -23,7 +23,10 @@ const vector<Sprite*>& GameState::GetSprites() {
 
 void GameState::Update() {
   for (Sprite* sprite : sprites_) {
-    sprite->SetState(sprite->GetState()->MaybeTransition(*this));
+    SpriteState* new_state = sprite->GetState()->MaybeTransition(*this);
+    if (new_state != nullptr) {
+      sprite->SetState(new_state);
+    }
   }
   for (Sprite* sprite : sprites_) {
     Position* move = sprite->GetState()->Move(*this);
