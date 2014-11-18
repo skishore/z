@@ -8,6 +8,7 @@ Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
     : is_player_(is_player), position_(kGridSize*square),
       direction_(Direction::DOWN), image_(image) {
+  ASSERT(state != nullptr, "Initialized with a NULL SpriteState!");
   SetState(state);
 }
 

@@ -9,12 +9,9 @@ using std::vector;
 
 namespace skishore {
 
-bool TileMap::LoadMap(const string& filename) {
+void TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
-  if (!file.is_open()) {
-    DEBUG("Failed to open " << filename);
-    return false;
-  }
+  ASSERT(file.is_open(), "Failed to open " << filename);
 
   // Read out the map's height and width.
   string skip_token;
@@ -31,13 +28,9 @@ bool TileMap::LoadMap(const string& filename) {
   file.seekg(1, std::ios::cur);
   map_tiles_.reset(new Tile[map_size]);
   file.read((char*)map_tiles_.get(), map_size);
-  if (file.gcount() < map_size) {
-    DEBUG("Expected to read " << map_size << " characters from "
-          << filename << ", but only read " << file.gcount());
-    return false;
-  }
-
-  return true;
+  ASSERT(file.gcount() == map_size,
+         "Expected to read " << map_size << " characters from "
+         << filename << ", but only read " << file.gcount());
 }
 
 Tile TileMap::GetMapTile(const Point& point) const {

@@ -17,7 +17,7 @@ static const Point kStartingSquare(8, 8);
 
 Engine::Engine(int frame_rate, const Point& screen_size)
     : screen_size_(screen_size) {
-  ASSERT(map_.LoadMap("world.dat"), "Failed to load map.");
+  map_.LoadMap("world.dat");
 
   graphics_.reset(new ScrollingGraphics(screen_size_, map_));
   graphics_->RedrawBackground();

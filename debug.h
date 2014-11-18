@@ -6,8 +6,14 @@
 
 namespace skishore {
 
-// IMPORTANT: The expression x will be evaluated even if NDEBUG is true!
-// However, if NDEBUG is true, y will never be evaluated.
+#ifdef NDEBUG
+
+#define ASSERT(x, y)
+#define DEBUG(x)
+#define USE_FOR_DEBUG(x) (void)(x)
+
+#else  // NDEBUG
+
 #define ASSERT(x, y) do { \
   if (!(x)) { \
     DEBUG("ASSERTION FAILED: " << y); \
@@ -18,6 +24,10 @@ namespace skishore {
 #define DEBUG(x) do { \
   std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " << x << std::endl; \
 } while(false)
+
+#define USE_FOR_DEBUG(x)
+
+#endif  // NDEBUG
 
 }  // namespace skishore
 

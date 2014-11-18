@@ -13,7 +13,7 @@ typedef unsigned char Tile;
 
 class TileMap {
  public:
-  bool LoadMap(const std::string& filename);
+  void LoadMap(const std::string& filename);
   Tile GetMapTile(const Point& point) const;
 
  private:

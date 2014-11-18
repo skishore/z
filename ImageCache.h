@@ -24,7 +24,7 @@ class ImageCache {
   void FreeImage(Image* image);
 
   // Executed when loading an uncached image or freeing one with no references.
-  bool LoadImageInner(const std::string& filename);
+  void LoadImageInner(const std::string& filename);
   void FreeImageInner(SDL_Surface* surface);
 
   // By default, once an image is loaded into memory, it is never unloaded.

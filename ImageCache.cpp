@@ -19,7 +19,7 @@ ImageCache::~ImageCache() {
 const Image* ImageCache::LoadImage(const Point& size, const string& filename) {
   ASSERT(filename.length() > 0, "Tried to load empty filename!");
   if (images_by_filename_.count(filename) == 0) {
-    ASSERT(LoadImageInner(filename), "Failed to load " << filename);
+    LoadImageInner(filename);
   }
   SDL_Surface* surface = images_by_filename_[filename];
   counts_by_image_[surface] += 1;
@@ -37,18 +37,15 @@ void ImageCache::FreeImage(Image* image) {
   }
 }
 
-bool ImageCache::LoadImageInner(const string& filename) {
+void ImageCache::LoadImageInner(const string& filename) {
   SDL_Surface* temp = SDL_LoadBMP(("images/" + filename).c_str());
-  if (temp == nullptr) {
-    DEBUG("Failed to load " << filename);
-    return false;
-  }
+  ASSERT(temp != nullptr,
+         "Failed to load " << filename << ": " << SDL_GetError());
+
   SDL_Surface* surface = SDL_ConvertSurfaceFormat(temp, pixel_format_, 0);
   SDL_FreeSurface(temp);
-  if (surface == nullptr) {
-    DEBUG("Failed to convert surface for " << filename);
-    return false;
-  }
+  ASSERT(surface != nullptr,
+         "Failed to format " << filename << ": " << SDL_GetError());
 
   // TODO(skishore): At some point, we may want to apply the color key to
   // some images but not to others.
@@ -59,7 +56,6 @@ bool ImageCache::LoadImageInner(const string& filename) {
   filenames_by_image_[surface] = filename;
   counts_by_image_[surface] = 0;
   DEBUG("Loaded " << filename);
-  return true;
 }
 
 void ImageCache::FreeImageInner(SDL_Surface* surface) {
