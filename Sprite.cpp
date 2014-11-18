@@ -60,6 +60,39 @@ void CheckSquares(const TileMap& map, const Position& pos, Position* move) {
       }
     }
   }
+
+  // Run similar checks for the velocity x-coordinates.
+  offset.x = 0;
+  if (move->x < 0 && gmod(pos.x + kTolerance) < -move->x + kZero) {
+    offset.x = -1;
+  } else if (move->x > 0 &&
+             gmod(pos.x - kTolerance) > kGridSize - move->x - kZero) {
+    offset.x = 1;
+  }
+  if (offset.x != 0) {
+    double overlap = pos.y - kGridSize*square.y;
+    // TODO(skishore): Why is this line necessary?
+    collided = offset.y != 0 && !collided && !CheckSquare(map, square + offset);
+    offset.y = (overlap > 0 ? 1 : -1);
+    if (!CheckSquare(map, Point(square.x + offset.x, square.y))) {
+      collided = true;
+    } else if ((offset.y > -kZero || -overlap > kTolerance - kZero) &&
+               !CheckSquare(map, square + offset)) {
+      collided = true;
+      if (abs(overlap) < kPushAway && offset.y*move->y <= 0) {
+        // TODO(skishore): Why is this ternary expression necessary?
+        move->y = (CheckSquare(map, Point(square.x, square.y + offset.y)) ?
+                   -offset.y*speed : 0);
+      }
+    }
+    if (collided) {
+      if (offset.x < 0) {
+        move->x = kGridSize - kTolerance + kZero - gmod(pos.x);
+      } else {
+        move->x = kTolerance - kZero - gmod(pos.x);
+      }
+    }
+  }
 }
 
 } // namespace
