@@ -38,7 +38,11 @@ Position* WalkingState::GetMove(const GameState& game_state) {
   }
   sprite_->frame_.x = sprite_->direction_;
 
-  return (moved ? new Position(kPlayerSpeed*move) : nullptr);
+  if (moved) {
+    move.set_length(kPlayerSpeed);
+    return new Position(move);
+  }
+  return nullptr;
 }
 
 } // namespace skishore

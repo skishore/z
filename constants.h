@@ -15,9 +15,6 @@ namespace skishore {
 // The side length of each grid square, in pixels.
 static const int kGridSize = 16;
 
-// Minimum threshold used for double position computations.
-static const double kZero = 0.001;
-
 // Movement speed constants.
 static const double kPlayerSpeed = 1.6;
 

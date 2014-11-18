@@ -47,10 +47,9 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Position* move) const {
       continue;
     }
     Position diff = position_ - other->position_;
-    double diff_length = diff.length();
-    if (kZero < diff_length && diff_length < kKinematicSeparation) {
-      double length = kKinematicSensitivity/max(diff_length, kKinematicMinDist);
-      diff *= length/diff_length;
+    double length = diff.length();
+    if (kZero < length && length < kKinematicSeparation) {
+      diff.set_length(kKinematicSensitivity/max(length, kKinematicMinDist));
       if (is_player_) {
         diff.x = (diff.x*move->x > kZero ? 0 : diff.x);
         diff.y = (diff.y*move->y > kZero ? 0 : diff.y);

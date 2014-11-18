@@ -18,6 +18,9 @@ template <> inline int convert(const double& u) {
 }
 }  // namespace
 
+// For use when doing floating-point computations with positions.
+static const double kZero = 0.001;
+
 template <typename T>
 struct TPoint {
   T x, y;
@@ -65,6 +68,16 @@ struct TPoint {
 
   double length() const {
     return sqrt(x*x + y*y);
+  }
+
+  void set_length(double new_length) {
+    double old_length = length();
+    if (old_length < kZero) {
+      return;
+    }
+    double scale = new_length/old_length;
+    x *= scale;
+    y *= scale;
   }
 };
 
