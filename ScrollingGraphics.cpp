@@ -74,12 +74,12 @@ void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
   if (position.x < centered_.x) {
     diff.x = position.x - centered_.x;
   } else if (position.x + dimensions.x > centered_.x + centered_.w) {
-    diff.x = position.x + dimensions.x > centered_.x + centered_.w;
+    diff.x = position.x + dimensions.x - (centered_.x + centered_.w);
   }
   if (position.y < centered_.y) {
     diff.y = position.y - centered_.y;
   } else if (position.y + dimensions.y > centered_.y + centered_.h) {
-    diff.y = position.y + dimensions.y > centered_.y + centered_.h;
+    diff.y = position.y + dimensions.y - (centered_.y + centered_.h);
   }
 
   if (diff.x != 0 || diff.y != 0) {
