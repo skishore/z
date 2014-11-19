@@ -23,7 +23,7 @@ class SpriteState {
   // check if they are changing state, then Move to get a position delta.
   // Either of these methods may return NULL, which indicates no change.
   virtual SpriteState* MaybeTransition(const GameState& game_state) = 0;
-  virtual Position* GetMove(const GameState& game_state) = 0;
+  virtual Point* GetMove(const GameState& game_state) = 0;
 
 
  protected:
@@ -34,7 +34,7 @@ class SpriteState {
 class WalkingState : public SpriteState {
  public:
   SpriteState* MaybeTransition(const GameState& game_state) override;
-  Position* GetMove(const GameState& game_state) override;
+  Point* GetMove(const GameState& game_state) override;
 };
 
 } // namespace skishore

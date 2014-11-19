@@ -91,19 +91,9 @@ inline TPoint<T> operator*(const T& scale, const TPoint<T>& point) {
 }
 
 typedef TPoint<int> Point;
-typedef TPoint<double> Position;
 
 inline std::ostream& operator<<(std::ostream& out, const Point& point) {
   return out << "Point(" << point.x << ", " << point.y << ")";
-}
-
-inline std::ostream& operator<<(std::ostream& out, const Position& position) {
-  // Suppress emscripten's warning about the unused double -> int specialization
-  // of the convert function.
-  #ifdef EMSCRIPTEN
-  Point point(position);
-  #endif  // EMSCRIPTEN
-  return out << "Position(" << position.x << ", " << position.y << ")";
 }
 
 } // namespace skishore

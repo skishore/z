@@ -15,15 +15,10 @@ namespace skishore {
 // The side length of each grid square, in pixels.
 static const int kGridSize = 16;
 
-// Movement speed constants.
-static const double kPlayerSpeed = 1.4;
-
-// Kinematic constraint constants.
-static const double kKinematicSeparation = 32.0;
-static const double kKinematicSensitivity = 8.0;
-static const double kKinematicMinDist = 2.0;
-static const double kKinematicPlayerForce  = 1.1;
-static const double kKinematicBackoff = 0.4;
+// All movement calculations are done in ticks.
+static const int kTicksPerPixel = 1024;
+static const int kGridTicks = kGridSize*kTicksPerPixel;
+static const int kPlayerSpeed = 1.4*kTicksPerPixel;
 
 enum Direction {
   UP = 0,

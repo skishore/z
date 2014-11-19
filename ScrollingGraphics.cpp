@@ -67,7 +67,7 @@ void ScrollingGraphics::DrawStatusMessage(const string& message) {
 
 void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
   const Point position =
-      sprite.GetPosition() - camera_ - kGridSize*background_offset_;
+      sprite.GetDrawingPosition() - camera_ - kGridSize*background_offset_;
   const Point dimensions(kGridSize, kGridSize);
   Point diff;
 

@@ -13,37 +13,47 @@ namespace skishore {
 
 namespace {
 
-static const int kTicksPerPixel = 1024;
-static const int kTolerance = 204*kGridSize;
-static const int kPushAway =  512*kGridSize;
-static const int kFullGrid = kTicksPerPixel*kGridSize;
+// Static constraint constants, all in ticks.
+static const int kTolerance = 0.2*kGridTicks;
+static const int kPushAway = 0.5*kGridTicks;
+
+// Kinematic constraint constants. Can be unitless, in ticks, or in ticks^2.
+static const int kKinematicSeparation = 32*kTicksPerPixel;
+static const int kKinematicSensitivity = 8*kTicksPerPixel*kTicksPerPixel;
+static const double kKinematicMinDist = 2*kTicksPerPixel;
+static const double kKinematicPlayerForce  = 1.1;
+static const double kKinematicBackoff = 0.4;
 
 // Takes an integer and returns it mod kGridSize, in [0, kGridSize).
 inline int gmod(int x) {
-  int result = x % kFullGrid;
-  return result + (result < 0 ? kFullGrid : 0);
+  int result = x % kGridTicks;
+  return result + (result < 0 ? kGridTicks: 0);
 }
 
+// Takes an integer and a divisor and does division and rounding.
+inline int divround(int a, int b) {
+  return (a + (a > 0 ? b/2 : -b/2))/b;
+}
+
+// Returns true if the given square is free.
 bool CheckSquare(const TileMap& map, const Point& square) {
   return map.GetMapTile(square) != 4;
 }
 
-void CheckSquares(const TileMap& map, const Point& pos,
-                  const Position& dmove, Point* move) {
-  move->x = kTicksPerPixel*dmove.x;
-  move->y = kTicksPerPixel*dmove.y;
+// Takes a move and applies static map constraints to it.
+void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
   if (move->x == 0 && move->y == 0) {
     return;
   }
 
   Point overlap(gmod(pos.x), gmod(pos.y));
-  overlap.x -= 2*overlap.x/kFullGrid*kFullGrid;
-  overlap.y -= 2*overlap.y/kFullGrid*kFullGrid;
+  overlap.x -= 2*overlap.x/kGridTicks*kGridTicks;
+  overlap.y -= 2*overlap.y/kGridTicks*kGridTicks;
 
   Point square = pos - overlap;
-  ASSERT(square.x % kFullGrid == 0 && square.y % kFullGrid == 0,
-         "Unexpected: " << pos << " " << overlap << " " << " " << kFullGrid);
-  square = square/kFullGrid;
+  ASSERT(square.x % kGridTicks == 0 && square.y % kGridTicks == 0,
+         "Unexpected: " << pos << " " << overlap << " " << " " << kGridTicks);
+  square = square/kGridTicks;
 
   Point offset;
   bool collided = false;
@@ -70,7 +80,7 @@ void CheckSquares(const TileMap& map, const Point& pos,
     }
     if (collided) {
       if (offset.y < 0) {
-        move->y = kFullGrid - kTolerance - gmod(pos.y);
+        move->y = kGridTicks - kTolerance - gmod(pos.y);
       } else {
         move->y = gmod(-pos.y);
       }
@@ -104,7 +114,7 @@ void CheckSquares(const TileMap& map, const Point& pos,
     }
     if (collided) {
       if (offset.x < 0) {
-        move->x = kFullGrid - kTolerance - gmod(pos.x);
+        move->x = kGridTicks - kTolerance - gmod(pos.x);
       } else {
         move->x = kTolerance - gmod(pos.x);
       }
@@ -116,22 +126,17 @@ void CheckSquares(const TileMap& map, const Point& pos,
 
 Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
-    : is_player_(is_player), direction_(Direction::DOWN), image_(image),
-      position_(kTicksPerPixel*kGridSize*square) {
+    : is_player_(is_player), direction_(Direction::DOWN), image_(image) {
+  SetPosition(kGridTicks*square);
   SetState(state);
-}
-
-Point Sprite::GetPosition() const {
-  // TODO(skishore): Replace this function with exact arithmetic.
-  return Point(Position(position_)/kTicksPerPixel);
 }
 
 void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
                   SDL_Surface* surface) const {
-  image_.Draw(GetPosition() - camera, frame_, bounds, surface);
+  image_.Draw(drawing_position_ - camera, frame_, bounds, surface);
 }
 
-SpriteState* Sprite::GetState() {
+SpriteState* Sprite::GetState() const {
   return state_.get();
 }
 
@@ -142,19 +147,19 @@ void Sprite::SetState(SpriteState* state) {
   state_->Register(this);
 }
 
-void Sprite::AvoidOthers(const vector<Sprite*> others, Position* move) const {
-  if (move->length() < kZero) {
+void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
+  if (move->x == 0 && move->y == 0) {
     return;
   }
 
-  Position net;
+  Point net;
   for (Sprite* other : others) {
     if (other->is_player_ || other == this) {
       continue;
     }
-    Position diff = position_ - other->position_;
+    Point diff = position_ - other->position_;
     double length = diff.length();
-    if (kZero < length && length < kKinematicSeparation) {
+    if (0 < length && length < kKinematicSeparation) {
       diff.set_length(kKinematicSensitivity/max(length, kKinematicMinDist));
       if (is_player_) {
         diff.x = (diff.x*move->x > 0 ? 0 : diff.x);
@@ -177,10 +182,17 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Position* move) const {
   }
 }
 
-void Sprite::Move(const TileMap& map, Position* move) {
-  Point final_move;
-  CheckSquares(map, position_, *move, &final_move);
-  position_ += final_move;
+void Sprite::Move(const TileMap& map, Point* move) {
+  CheckSquares(map, position_, move);
+  SetPosition(position_ + *move);
+}
+
+void Sprite::SetPosition(const Point& position) {
+  position_ = position;
+  drawing_position_.x  = divround(position_.x, kTicksPerPixel);
+  drawing_position_.y  = divround(position_.y, kTicksPerPixel);
+  square_.x  = divround(position_.x, kGridTicks);
+  square_.y  = divround(position_.y, kGridTicks);
 }
 
 }  // namespace skishore

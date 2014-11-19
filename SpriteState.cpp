@@ -20,8 +20,8 @@ SpriteState* WalkingState::MaybeTransition(const GameState& game_state) {
   return nullptr;
 }
 
-Position* WalkingState::GetMove(const GameState& game_state) {
-  Position move;
+Point* WalkingState::GetMove(const GameState& game_state) {
+  Point move;
   bool moved = false;
   Direction last_dir = sprite_->direction_;
 
@@ -40,7 +40,7 @@ Position* WalkingState::GetMove(const GameState& game_state) {
 
   if (moved) {
     move.set_length(kPlayerSpeed);
-    return new Position(move);
+    return new Point(move);
   }
   return nullptr;
 }

@@ -29,7 +29,7 @@ void GameState::Update() {
     }
   }
   for (Sprite* sprite : sprites_) {
-    Position* move = sprite->GetState()->GetMove(*this);
+    Point* move = sprite->GetState()->GetMove(*this);
     if (move != nullptr) {
       if (sprite->GetState()->ShouldAvoidOthers()) {
         sprite->AvoidOthers(sprites_, move);
