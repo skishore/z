@@ -85,16 +85,19 @@ void CheckSquares(const TileMap& map, const Point& pos,
     offset.x = 1;
   }
   if (offset.x != 0) {
-    // TODO(skishore): Why is this line necessary?
+    // If we've moved from one square to another in the y direction (that is,
+    // if offset.y != 0 && !collided) then run an extra check in the x direction.
     collided = offset.y != 0 && !collided && !CheckSquare(map, square + offset);
     offset.y = (overlap.y > 0 ? 1 : -1);
     if (!CheckSquare(map, Point(square.x + offset.x, square.y))) {
       collided = true;
-    } else if ((offset.y > 0 || -overlap.y > kTolerance) &&
+    } else if ((overlap.y > 0 || -overlap.y > kTolerance) &&
                !CheckSquare(map, square + offset)) {
       collided = true;
       if (abs(overlap.y) < kPushAway && offset.y*move->y <= 0) {
-        // TODO(skishore): Why is this ternary expression necessary?
+        // Check that we have space to shove in the y direction.
+        // We skip this check when shoving in the x direction above because
+        // the full x check was after it.
         move->y = (CheckSquare(map, Point(square.x, square.y + offset.y)) ?
                    -offset.y*speed : 0);
       }
