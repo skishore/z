@@ -6,68 +6,48 @@
 
 namespace skishore {
 
-namespace {
-// For converting a TPoint of one type to a TPoint of another, we use convert.
-template <typename T, typename U> inline T convert(const U& u) {
-  return (T)u;
-}
+struct Point {
+  int x, y;
 
-// We have special logic for converting from doubles to ints that rounds.
-template <> inline int convert(const double& u) {
-  return round(u);
-}
-}  // namespace
+  Point(int x0=0, int y0=0) : x(x0), y(y0) {};
 
-// For use when doing floating-point computations with positions.
-static const double kZero = 0.001;
-
-template <typename T>
-struct TPoint {
-  T x, y;
-
-  TPoint<T>(T x0=0, T y0=0) : x(x0), y(y0) {};
-
-  template <typename U>
-  TPoint<T>(TPoint<U> other)
-      : x(convert<T,U>(other.x)), y(convert<T,U>(other.y)) {};
-
-  bool operator==(const TPoint<T>& other) const {
+  bool operator==(const Point& other) const {
     return ((x == other.x) && (y == other.y));
   }
 
-  bool operator!=(const TPoint<T>& other) const {
+  bool operator!=(const Point& other) const {
     return ((x != other.x) || (y != other.y));
   }
 
-  void operator+=(const TPoint<T>& other) {
+  void operator+=(const Point& other) {
     x += other.x;
     y += other.y;
   }
 
-  void operator-=(const TPoint<T>& other) {
+  void operator-=(const Point& other) {
     x -= other.x;
     y -= other.y;
   }
 
-  void operator*=(const T& scale) {
+  void operator*=(const int& scale) {
     x *= scale;
     y *= scale;
   }
 
-  TPoint<T> operator+(const TPoint<T>& other) const {
-    return TPoint<T>(x + other.x, y + other.y);
+  Point operator+(const Point& other) const {
+    return Point(x + other.x, y + other.y);
   }
 
-  TPoint<T> operator-(const TPoint<T>& other) const {
-    return TPoint<T>(x - other.x, y - other.y);
+  Point operator-(const Point& other) const {
+    return Point(x - other.x, y - other.y);
   }
 
-  TPoint<T> operator*(const T& scale) const {
-    return TPoint<T>(scale*x, scale*y);
+  Point operator*(const int& scale) const {
+    return Point(scale*x, scale*y);
   }
 
-  TPoint<T> operator/(const T& scale) const {
-    return TPoint<T>(x/scale, y/scale);
+  Point operator/(const int& scale) const {
+    return Point(x/scale, y/scale);
   }
 
   double length() const {
@@ -75,22 +55,18 @@ struct TPoint {
   }
 
   void set_length(double new_length) {
-    double old_length = length();
-    if (old_length < kZero) {
+    if (x == 0 && y == 0) {
       return;
     }
-    double scale = new_length/old_length;
+    double scale = new_length/length();
     x *= scale;
     y *= scale;
   }
 };
 
-template <typename T>
-inline TPoint<T> operator*(const T& scale, const TPoint<T>& point) {
-  return TPoint<T>(scale*point.x, scale*point.y);
+inline Point operator*(const int& scale, const Point& point) {
+  return point*scale;
 }
-
-typedef TPoint<int> Point;
 
 inline std::ostream& operator<<(std::ostream& out, const Point& point) {
   return out << "Point(" << point.x << ", " << point.y << ")";
