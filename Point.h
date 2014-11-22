@@ -55,7 +55,9 @@ struct Point {
   }
 
   double length() const {
-    return sqrt(x*x + y*y);
+    long long x_ = x;
+    long long y_ = y;
+    return sqrt(x_*x_ + y_*y_);
   }
 
   void set_length(double new_length) {

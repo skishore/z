@@ -96,6 +96,10 @@ class Map(object):
     if self.rooms:
       starting_square = self.rooms[0].random_square()
     lines.append('starting_square: %d %d' % starting_square)
+    lines.append('num_rooms: %d' % (len(self.rooms),))
+    for room in self.rooms:
+      lines.append('room: %d %d %d %d' %
+                   (room.x, room.y, room.width, room.height))
     return '\n'.join(lines)
 
   def __str__(self):

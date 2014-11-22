@@ -157,12 +157,12 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
 
   Point net;
   for (Sprite* other : others) {
-    if (other->is_player_ || other == this) {
+    Point diff = position_ - other->position_;
+    if (other->is_player_ || other == this || diff.zero()) {
       continue;
     }
-    Point diff = position_ - other->position_;
     double length = diff.length();
-    if (0 < length && length < kKinematicSeparation) {
+    if (length < kKinematicSeparation) {
       diff.set_length(kKinematicSensitivity/max(length, kKinematicMinDist));
       if (is_player_) {
         diff.x = (diff.x*move->x > 0 ? 0 : diff.x);

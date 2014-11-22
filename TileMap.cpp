@@ -20,22 +20,33 @@ void TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
   ASSERT(file.is_open(), "Failed to open " << filename);
 
-  // Read out the map's height and width.
+  // Read the map's height and width.
   string skip_token;
   file >> skip_token >> map_dimensions_.x >> skip_token >> map_dimensions_.y;
   const int map_size = map_dimensions_.x*map_dimensions_.y;
 
-  // Read out the default tile.
+  // Read the default tile.
   int map_default_tile;
   file >> skip_token >> map_default_tile;
   CheckSkipToken("map_default_tile:", skip_token);
   map_default_tile_ = map_default_tile;
 
-  // Read out the starting square.
+  // Read the starting square.
   file >> skip_token >> starting_square_.x >> starting_square_.y;
   CheckSkipToken("starting_square:", skip_token);
 
-  // Read out the actual map data.
+  // Read the list of rooms.
+  int num_rooms;
+  file >> skip_token >> num_rooms;
+  CheckSkipToken("num_rooms:", skip_token);
+  rooms_.resize(num_rooms);
+  for (int i = 0; i < num_rooms; i++) {
+    file >> skip_token >> rooms_[i].position.x >> rooms_[i].position.y
+         >> rooms_[i].size.x >> rooms_[i].size.y;
+    CheckSkipToken("room:", skip_token);
+  }
+
+  // Read the actual map data.
   file >> skip_token;
   CheckSkipToken("tiles:", skip_token);
   file.seekg(1, std::ios::cur);

@@ -13,8 +13,14 @@ typedef unsigned char Tile;
 
 class TileMap {
  public:
+  struct Room {
+    Point position;
+    Point size;
+  };
+
   void LoadMap(const std::string& filename);
   Tile GetMapTile(const Point& point) const;
+  const std::vector<Room>& GetRooms() const { return rooms_; }
   const Point& GetStartingSquare() const { return starting_square_; }
 
  private:
@@ -24,6 +30,7 @@ class TileMap {
   std::unique_ptr<Tile[]> map_tiles_;
   Tile map_default_tile_;
   Point starting_square_;
+  std::vector<Room> rooms_;
 };
 
 } // namespace skishore
