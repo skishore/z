@@ -11,7 +11,7 @@ using std::vector;
 namespace skishore {
 
 namespace {
-const int kWalkingAnimationFrames = 12;
+const int kWalkingAnimationFrames = 6;
 }  // namespace
 
 void SpriteState::Register(Sprite* sprite) {
@@ -43,10 +43,11 @@ SpriteState* WalkingState::Update(const GameState& game_state) {
   move.set_length(kPlayerSpeed);
   sprite_->AvoidOthers(game_state.sprites_, &move);
   if (sprite_->Move(game_state.map_, &move)) {
-    if (anim_num_ % kWalkingAnimationFrames >= kWalkingAnimationFrames/2) {
+    int animation_frames = kWalkingAnimationFrames*kPlayerSpeed/move.length();
+    if (anim_num_ % (2*animation_frames) >= animation_frames) {
       sprite_->frame_.x += 4;
     }
-    anim_num_ = (anim_num_ + 1) % kWalkingAnimationFrames;
+    anim_num_ = (anim_num_ + 1) % (2*animation_frames);
   }
   return nullptr;
 }
