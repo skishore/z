@@ -60,7 +60,8 @@ class Map(object):
       visited.add(best_node)
       for step in ((1, 0), (-1, 0), (0, 1), (0, -1)):
         child = (best_node[0] + step[0], best_node[1] + step[1])
-        if not (0 <= child[0] < self.width and 0 <= child[1] < self.height):
+        if not (1 <= child[0] < self.width - 1 and
+                1 <= child[1] < self.height - 1):
           continue
         if child in visited or child in self.blocks:
           continue
@@ -138,8 +139,8 @@ class Room(object):
     )
 
   def place(self, map, tolerance):
-    self.x = random.randint(0, map.width - self.width)
-    self.y = random.randint(0, map.height - self.height)
+    self.x = random.randint(1, map.width - self.width - 1)
+    self.y = random.randint(1, map.height - self.height - 1)
     for room in map.rooms:
       if self.distance(room) <= tolerance:
         return False
