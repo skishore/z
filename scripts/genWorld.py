@@ -91,7 +91,7 @@ class Map(object):
     lines = []
     lines.append('width: %d' % (self.width,))
     lines.append('height: %d' % (self.height,))
-    lines.append('default_tile: %d' % (self.tileset.default_tile,))
+    lines.append('map_default_tile: %d' % (self.tileset.default_tile,))
     starting_square = (0, 0)
     if self.rooms:
       starting_square = self.rooms[0].random_square()
@@ -186,7 +186,7 @@ def generate_mostly_linear_tree(n, bias=2):
 
 def generate_rooms_map(width, height, tileset):
   map = Map(width, height, tileset)
-  (min_size, max_size) = (8, 16)
+  (min_size, max_size) = (8, 12)
   tries = width*height/(min_size**2)
   tries_left = tries
 
@@ -248,6 +248,6 @@ def generate_rooms_map(width, height, tileset):
 
 if __name__ == '__main__':
   random.seed()
-  map = generate_rooms_map(256, 256, Tileset())
+  map = generate_rooms_map(64, 64, Tileset())
   #print map
-  map.print_to_file('world.dat')
+  map.print_to_file('data/world.dat')

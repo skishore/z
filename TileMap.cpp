@@ -9,6 +9,13 @@ using std::vector;
 
 namespace skishore {
 
+namespace {
+void CheckSkipToken(const string& expected, const string& actual) {
+  ASSERT(expected == actual,
+         "Expected: \"" << expected << "\", actual: \"" << actual << "\"");
+}
+}  // namespace
+
 void TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
   ASSERT(file.is_open(), "Failed to open " << filename);
@@ -19,13 +26,18 @@ void TileMap::LoadMap(const string& filename) {
   const int map_size = map_dimensions_.x*map_dimensions_.y;
 
   // Read out the default tile.
-  file >> skip_token >> map_default_tile_;
+  int map_default_tile;
+  file >> skip_token >> map_default_tile;
+  CheckSkipToken("map_default_tile:", skip_token);
+  map_default_tile_ = map_default_tile;
 
   // Read out the starting square.
   file >> skip_token >> starting_square_.x >> starting_square_.y;
+  CheckSkipToken("starting_square:", skip_token);
 
   // Read out the actual map data.
   file >> skip_token;
+  CheckSkipToken("tiles:", skip_token);
   file.seekg(1, std::ios::cur);
   map_tiles_.reset(new Tile[map_size]);
   file.read((char*)map_tiles_.get(), map_size);
