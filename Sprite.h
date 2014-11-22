@@ -29,10 +29,11 @@ class Sprite {
   const Point& GetSquare() const { return square_; };
   SpriteState* GetState() const;
 
-  // Instance methods used by GameState on each call to Update.
+  // Instance methods used by SpriteStates to update the sprite's data.
+  // Move returns true if the sprite actually moved.
   void SetState(SpriteState* state);
   void AvoidOthers(const std::vector<Sprite*> sprites, Point* move) const;
-  void Move(const TileMap& map, Point* move);
+  bool Move(const TileMap& map, Point* move);
 
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;

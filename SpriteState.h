@@ -20,11 +20,12 @@ class SpriteState {
   virtual bool ShouldAvoidOthers() const { return true; };
 
   // In each frame, the game engine calls MaybeTransition for each sprite to
-  // check if they are changing state, then Move to get a position delta.
-  // Either of these methods may return NULL, which indicates no change.
-  virtual SpriteState* MaybeTransition(const GameState& game_state) = 0;
-  virtual Point* GetMove(const GameState& game_state) = 0;
-
+  // check if they are changing state in response to an input event.
+  //
+  // It then calls Update for each sprite, which can modify the sprite itself
+  // and may also cause a state change.
+  virtual SpriteState* MaybeTransition(const GameState& game_state) const = 0;
+  virtual SpriteState* Update(const GameState& game_state) = 0;
 
  protected:
   // A pointer to the sprite that owns this state.
@@ -33,8 +34,11 @@ class SpriteState {
 
 class WalkingState : public SpriteState {
  public:
-  SpriteState* MaybeTransition(const GameState& game_state) override;
-  Point* GetMove(const GameState& game_state) override;
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  int anim_num_ = 0;
 };
 
 } // namespace skishore

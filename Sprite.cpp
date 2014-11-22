@@ -127,6 +127,7 @@ void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
 Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
     : is_player_(is_player), direction_(Direction::DOWN), image_(image) {
+  ASSERT(state != nullptr, "Got NULL SpriteState!");
   SetPosition(kGridTicks*square);
   SetState(state);
 }
@@ -141,7 +142,9 @@ SpriteState* Sprite::GetState() const {
 }
 
 void Sprite::SetState(SpriteState* state) {
-  ASSERT(state != nullptr, "Got NULL SpriteState!");
+  if (state == nullptr) {
+    return;
+  }
   // TODO(skishore): If we add enter/exit methods to states, call them here.
   state_.reset(state);
   state_->Register(this);
@@ -182,9 +185,13 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
   }
 }
 
-void Sprite::Move(const TileMap& map, Point* move) {
+bool Sprite::Move(const TileMap& map, Point* move) {
   CheckSquares(map, position_, move);
+  if (move->x == 0 && move->y == 0) {
+    return false;
+  }
   SetPosition(position_ + *move);
+  return true;
 }
 
 void Sprite::SetPosition(const Point& position) {
