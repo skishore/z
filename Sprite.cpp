@@ -42,7 +42,7 @@ bool CheckSquare(const TileMap& map, const Point& square) {
 
 // Takes a move and applies static map constraints to it.
 void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
-  if (move->x == 0 && move->y == 0) {
+  if (move->zero()) {
     return;
   }
 
@@ -151,7 +151,7 @@ void Sprite::SetState(SpriteState* state) {
 }
 
 void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
-  if (move->x == 0 && move->y == 0) {
+  if (move->zero()) {
     return;
   }
 
@@ -187,7 +187,7 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
 
 bool Sprite::Move(const TileMap& map, Point* move) {
   CheckSquares(map, position_, move);
-  if (move->x == 0 && move->y == 0) {
+  if (move->zero()) {
     return false;
   }
   SetPosition(position_ + *move);

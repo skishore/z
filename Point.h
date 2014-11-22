@@ -50,12 +50,16 @@ struct Point {
     return Point(x/scale, y/scale);
   }
 
+  bool zero() const {
+    return x == 0 && y == 0;
+  }
+
   double length() const {
     return sqrt(x*x + y*y);
   }
 
   void set_length(double new_length) {
-    if (x == 0 && y == 0) {
+    if (zero()) {
       return;
     }
     double scale = new_length/length();
