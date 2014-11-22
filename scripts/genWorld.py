@@ -66,8 +66,8 @@ class Map(object):
         if child in visited or child in self.blocks:
           continue
         tile = self.tiles[child[0]][child[1]]
-        step_length = (1.0 if self.tileset.blocked(tile) else 4.0)
-        distance = best_distance + (1 + random.random())*step_length
+        step_length = (2.0 if self.tileset.blocked(tile) else 1.0)
+        distance = best_distance + (1 + 0*random.random())*step_length
         if distance < frontier.get(child, float('Infinity')):
           frontier[child] = distance
           parents[child] = best_node
@@ -142,11 +142,11 @@ class Room(object):
       self.y + random.randint(0, self.height - 1),
     )
 
-  def place(self, map, tolerance):
+  def place(self, map, separation):
     self.x = random.randint(1, map.width - self.width - 1)
     self.y = random.randint(1, map.height - self.height - 1)
     for room in map.rooms:
-      if self.distance(room) <= tolerance:
+      if self.distance(room) <= separation:
         return False
     return True
 
@@ -186,16 +186,16 @@ def generate_mostly_linear_tree(n, bias=2):
 
 def generate_rooms_map(width, height, tileset):
   map = Map(width, height, tileset)
-  (min_size, max_size) = (8, 12)
+  (min_size, max_size) = (6, 12)
+  separation = 3
   tries = width*height/(min_size**2)
   tries_left = tries
 
   print 'Placing rooms!'
   while tries_left > 0:
-    width = random.randint(min_size, max_size)
-    height = random.randint(min_size, max_size)
-    room = Room(width, height)
-    if room.place(map, tolerance=min_size):
+    size = random.randint(min_size, max_size)
+    room = Room(size, size)
+    if room.place(map, separation=separation):
       map.add_room(room)
     else:
       tries_left -= 1
@@ -249,5 +249,5 @@ def generate_rooms_map(width, height, tileset):
 if __name__ == '__main__':
   random.seed()
   map = generate_rooms_map(64, 64, Tileset())
-  #print map
   map.print_to_file('data/world.dat')
+  print map
