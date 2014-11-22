@@ -16,8 +16,7 @@ namespace skishore {
 
 class GameState {
  public:
-  GameState(const Point& starting_square, const InputHandler& input,
-            const TileMap& map, ImageCache* cache);
+  GameState(const InputHandler& input, const TileMap& map, ImageCache* cache);
 
   // GetSprites is not const because it sorts the sprites in draw order.
   const Sprite& GetPlayer() const { return *player_; };

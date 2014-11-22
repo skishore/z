@@ -10,11 +10,11 @@ using std::vector;
 
 namespace skishore {
 
-GameState::GameState(const Point& starting_square, const InputHandler& input,
-                     const TileMap& map, ImageCache* cache)
+GameState::GameState(
+    const InputHandler& input, const TileMap& map, ImageCache* cache)
     : input_(input), map_(map), cache_(cache) {
   ASSERT(cache != nullptr, "Initialized with a NULL ImageCache!");
-  CreateSprite(starting_square, true);
+  CreateSprite(map.GetStartingSquare(), true);
 }
 
 const vector<Sprite*>& GameState::GetSprites() {

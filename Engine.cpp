@@ -12,7 +12,6 @@ namespace skishore {
 
 namespace {
 static const int kEventsPerFrame = 16;
-static const Point kStartingSquare(8, 8);
 }  // namespace
 
 Engine::Engine(int frame_rate, const Point& screen_size)
@@ -21,8 +20,7 @@ Engine::Engine(int frame_rate, const Point& screen_size)
 
   graphics_.reset(new ScrollingGraphics(screen_size_, map_));
   graphics_->RedrawBackground();
-  game_state_.reset(new GameState(
-      kStartingSquare, input_, map_, graphics_->GetImageCache()));
+  game_state_.reset(new GameState(input_, map_, graphics_->GetImageCache()));
 
   GameLoop(frame_rate, this);
 }

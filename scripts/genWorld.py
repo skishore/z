@@ -92,6 +92,10 @@ class Map(object):
     lines.append('width: %d' % (self.width,))
     lines.append('height: %d' % (self.height,))
     lines.append('default_tile: %d' % (self.tileset.default_tile,))
+    starting_square = (0, 0)
+    if self.rooms:
+      starting_square = self.rooms[0].random_square()
+    lines.append('starting_square: %d %d' % starting_square)
     return '\n'.join(lines)
 
   def __str__(self):
@@ -182,28 +186,35 @@ def generate_mostly_linear_tree(n, bias=2):
 
 def generate_rooms_map(width, height, tileset):
   map = Map(width, height, tileset)
-  (min_size, max_size) = (4, 8)
+  (min_size, max_size) = (8, 16)
   tries = width*height/(min_size**2)
+  tries_left = tries
 
-  while tries > 0:
+  print 'Placing rooms!'
+  while tries_left > 0:
     width = random.randint(min_size, max_size)
     height = random.randint(min_size, max_size)
     room = Room(width, height)
     if room.place(map, tolerance=min_size):
       map.add_room(room)
     else:
-      tries -= 1
+      tries_left -= 1
+  print 'Placed %d rooms and failed %d times.' % (len(map.rooms), tries)
 
+  print 'Computing minimal spanning tree!'
   room_graph = []
   for room in map.rooms:
     room_graph.append([])
     for other in map.rooms:
       room_graph[-1].append(room.distance(other))
   spanning_tree = csgraph.minimum_spanning_tree(room_graph)
+  print 'Digging corridors!'
   for (index1, index2) in zip(*spanning_tree.nonzero()):
     map.dig_corridor(index1, index2)
 
+  print 'Adding extra edges!'
   tree_distances = csgraph.dijkstra(spanning_tree, directed=False)
+  extra_edges_added = 0
   while True:
     edge_ratios = []
     for i in xrange(len(map.rooms)):
@@ -226,7 +237,10 @@ def generate_rooms_map(width, height, tileset):
           tree_distances[i,edge[0]] + room_graph[edge[0]][edge[1]] + tree_distances[edge[1],j],
           tree_distances[i,edge[1]] + room_graph[edge[1]][edge[0]] + tree_distances[edge[0],j],
         )
+    extra_edges_added += 1
+  print 'Added %d extra edges.' % (extra_edges_added,)
 
+  print 'Adding walls!'
   map.add_walls()
 
   return map
@@ -234,6 +248,6 @@ def generate_rooms_map(width, height, tileset):
 
 if __name__ == '__main__':
   random.seed()
-  map = generate_rooms_map(64, 64, Tileset())
-  #map.print_to_file('world.dat')
-  print map
+  map = generate_rooms_map(256, 256, Tileset())
+  #print map
+  map.print_to_file('world.dat')

@@ -19,9 +19,10 @@ void TileMap::LoadMap(const string& filename) {
   const int map_size = map_dimensions_.x*map_dimensions_.y;
 
   // Read out the default tile.
-  int map_default_tile;
-  file >> skip_token >> map_default_tile;
-  map_default_tile_ = map_default_tile;
+  file >> skip_token >> map_default_tile_;
+
+  // Read out the starting square.
+  file >> skip_token >> starting_square_.x >> starting_square_.y;
 
   // Read out the actual map data.
   file >> skip_token;

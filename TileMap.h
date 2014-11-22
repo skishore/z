@@ -15,6 +15,7 @@ class TileMap {
  public:
   void LoadMap(const std::string& filename);
   Tile GetMapTile(const Point& point) const;
+  const Point& GetStartingSquare() const { return starting_square_; }
 
  private:
   // Information about the whole map: its dimensions, its packed 1d tile array,
@@ -22,6 +23,7 @@ class TileMap {
   Point map_dimensions_;
   std::unique_ptr<Tile[]> map_tiles_;
   Tile map_default_tile_;
+  Point starting_square_;
 };
 
 } // namespace skishore
