@@ -179,7 +179,7 @@ def generate_rooms_map(width, height, tileset):
     map.dig_corridor(index1, index2)
 
   tree_distances = csgraph.dijkstra(spanning_tree, directed=False)
-  for _ in xrange(3):
+  while True:
     edge_ratios = []
     for i in xrange(len(map.rooms)):
       for j in xrange(len(map.rooms)):
@@ -189,7 +189,9 @@ def generate_rooms_map(width, height, tileset):
         if edge_ratio <= 1:
           continue
         edge_ratios.append((edge_ratio, (i, j)))
-    (_, edge) = max(edge_ratios)
+    (edge_ratio, edge) = max(edge_ratios)
+    if edge_ratio < 3:
+      break
     map.dig_corridor(edge[0], edge[1])
     # Update the tree distances based on the existence of the new edge.
     for i in xrange(len(map.rooms)):
