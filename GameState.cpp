@@ -11,7 +11,7 @@ using std::vector;
 namespace skishore {
 
 namespace {
-static const int kNumEnemies = 24;
+static const int kNumEnemies = 96;
 }  // namespace
 
 GameState::GameState(
