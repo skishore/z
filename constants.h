@@ -18,6 +18,8 @@ static const int kGridSize = 16;
 // All movement calculations are done in ticks.
 static const int kTicksPerPixel = 1024;
 static const int kGridTicks = kGridSize*kTicksPerPixel;
+
+static const int kEnemySpeed = 1.1*kTicksPerPixel;
 static const int kPlayerSpeed = 1.4*kTicksPerPixel;
 
 enum Direction {

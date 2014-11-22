@@ -57,10 +57,14 @@ void TileMap::LoadMap(const string& filename) {
          << filename << ", but only read " << file.gcount());
 }
 
-Tile TileMap::GetMapTile(const Point& point) const {
-  if (0 <= point.x && point.x < map_dimensions_.x &&
-      0 <= point.y && point.y < map_dimensions_.y) {
-    return map_tiles_[point.x*map_dimensions_.y + point.y];
+bool TileMap::CheckSquare(const Point& square) const {
+  return GetMapTile(square) < 4;
+}
+
+Tile TileMap::GetMapTile(const Point& square) const {
+  if (0 <= square.x && square.x < map_dimensions_.x &&
+      0 <= square.y && square.y < map_dimensions_.y) {
+    return map_tiles_[square.x*map_dimensions_.y + square.y];
   }
   return map_default_tile_;
 }

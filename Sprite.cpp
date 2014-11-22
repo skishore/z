@@ -35,11 +35,6 @@ inline int divround(int a, int b) {
   return (a + (a > 0 ? b/2 : -b/2))/b;
 }
 
-// Returns true if the given square is free.
-bool CheckSquare(const TileMap& map, const Point& square) {
-  return map.GetMapTile(square) != 4;
-}
-
 // Takes a move and applies static map constraints to it.
 void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
   if (move->zero()) {
@@ -68,11 +63,11 @@ void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
   // If we cross a horizontal boundary, check that the next square is open.
   if (offset.y != 0) {
     offset.x = (overlap.x > 0 ? 1 : -1);
-    if (!CheckSquare(map, Point(square.x, square.y + offset.y))) {
+    if (!map.CheckSquare(Point(square.x, square.y + offset.y))) {
       collided = true;
     // Also check for collisions for the square diagonally adjacent to us.
     } else if (abs(overlap.x) > kTolerance &&
-               !CheckSquare(map, square + offset)) {
+               !map.CheckSquare(square + offset)) {
       collided = true;
       if (abs(overlap.x) < kPushAway && offset.x*move->x <= 0) {
         move->x = -offset.x*speed;
@@ -97,18 +92,18 @@ void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
   if (offset.x != 0) {
     // If we've moved from one square to another in the y direction (that is,
     // if offset.y != 0 && !collided) then run an extra check in the x direction.
-    collided = offset.y != 0 && !collided && !CheckSquare(map, square + offset);
+    collided = offset.y != 0 && !collided && !map.CheckSquare(square + offset);
     offset.y = (overlap.y > 0 ? 1 : -1);
-    if (!CheckSquare(map, Point(square.x + offset.x, square.y))) {
+    if (!map.CheckSquare(Point(square.x + offset.x, square.y))) {
       collided = true;
     } else if ((overlap.y > 0 || -overlap.y > kTolerance) &&
-               !CheckSquare(map, square + offset)) {
+               !map.CheckSquare(square + offset)) {
       collided = true;
       if (abs(overlap.y) < kPushAway && offset.y*move->y <= 0) {
         // Check that we have space to shove in the y direction.
         // We skip this check when shoving in the x direction above because
         // the full x check was after it.
-        move->y = (CheckSquare(map, Point(square.x, square.y + offset.y)) ?
+        move->y = (map.CheckSquare(Point(square.x, square.y + offset.y)) ?
                    -offset.y*speed : 0);
       }
     }
@@ -126,7 +121,7 @@ void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
 
 Sprite::Sprite(bool is_player, const Point& square,
                const Image& image, SpriteState* state)
-    : is_player_(is_player), direction_(Direction::DOWN), image_(image) {
+    : is_player_(is_player), dir_(Direction::DOWN), image_(image) {
   ASSERT(state != nullptr, "Got NULL SpriteState!");
   SetPosition(kGridTicks*square);
   SetState(state);

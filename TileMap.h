@@ -19,7 +19,9 @@ class TileMap {
   };
 
   void LoadMap(const std::string& filename);
-  Tile GetMapTile(const Point& point) const;
+  bool CheckSquare(const Point& square) const;
+  Tile GetMapTile(const Point& square) const;
+
   const std::vector<Room>& GetRooms() const { return rooms_; }
   const Point& GetStartingSquare() const { return starting_square_; }
 

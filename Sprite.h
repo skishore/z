@@ -38,7 +38,7 @@ class Sprite {
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;
   Point frame_;
-  Direction direction_;
+  Direction dir_;
   std::unique_ptr<SpriteState> state_;
 
  private:

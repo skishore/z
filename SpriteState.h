@@ -32,6 +32,30 @@ class SpriteState {
   Sprite* sprite_ = nullptr;
 };
 
+class PausedState : public SpriteState {
+ public:
+  PausedState(int steps=0) : steps_(steps) {};
+
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  int steps_;
+};
+
+class RandomWalkState : public SpriteState {
+ public:
+  RandomWalkState(Direction dir, int steps) : dir_(dir), steps_(steps) {};
+
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  Direction dir_;
+  int steps_;
+  int anim_num_ = 0;
+};
+
 class WalkingState : public SpriteState {
  public:
   SpriteState* MaybeTransition(const GameState& game_state) const override;

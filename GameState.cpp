@@ -57,7 +57,7 @@ void GameState::CreateSprite(const Point& square, bool is_player) {
     player_ = sprite;
   } else {
     const Image* image = cache_->LoadImage(size, "zombie.bmp");
-    sprite = new Sprite(is_player, square, *image, new WalkingState);
+    sprite = new Sprite(is_player, square, *image, new PausedState);
   }
 
   ASSERT(sprite != nullptr, "CreateSprite failed! is_player = " << is_player);
