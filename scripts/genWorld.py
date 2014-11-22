@@ -186,8 +186,8 @@ def generate_mostly_linear_tree(n, bias=2):
 
 def generate_rooms_map(width, height, tileset):
   map = Map(width, height, tileset)
-  (min_size, max_size) = (6, 12)
-  separation = 3
+  (min_size, max_size) = (6, 8)
+  separation = 2
   tries = width*height/(min_size**2)
   tries_left = tries
 
