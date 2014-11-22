@@ -27,16 +27,27 @@ class Map(object):
     tile = tileset.default_tile
     self.tiles = [[tile for h in xrange(height)] for w in xrange(width)]
     self.rooms = []
+    self.blocks = set()
 
   def add_room(self, room):
     for w in xrange(room.width):
       for h in xrange(room.height):
         self.tiles[room.x + w][room.y + h] = self.tileset.get_free_tile()
     self.rooms.append(room)
+    self.add_block((room.x - 1, room.y - 1))
+    self.add_block((room.x - 1, room.y + room.height))
+    self.add_block((room.x + room.width, room.y - 1))
+    self.add_block((room.x + room.width, room.y + room.height))
+
+  def add_block(self, block):
+    if not (0 <= block[0] < self.width and 0 <= block[1] < self.height):
+      return
+    self.blocks.add(block)
+    self.tiles[block[0]][block[1]] = 4
 
   def dig_corridor(self, index1, index2):
-    source = self.rooms[index1].midpoint()
-    target = self.rooms[index2].midpoint()
+    source = self.rooms[index1].random_square()
+    target = self.rooms[index2].random_square()
     frontier = {source: 0}
     parents = {source: None}
     visited = set()
@@ -51,10 +62,10 @@ class Map(object):
         child = (best_node[0] + step[0], best_node[1] + step[1])
         if not (0 <= child[0] < self.width and 0 <= child[1] < self.height):
           continue
-        if child in visited:
+        if child in visited or child in self.blocks:
           continue
         tile = self.tiles[child[0]][child[1]]
-        step_length = (1.0 if self.tileset.blocked(tile) else 2.0)
+        step_length = (1.0 if self.tileset.blocked(tile) else 4.0)
         distance = best_distance + (1 + random.random())*step_length
         if distance < frontier.get(child, float('Infinity')):
           frontier[child] = distance
@@ -64,6 +75,16 @@ class Map(object):
       if self.tileset.blocked(self.tiles[node[0]][node[1]]):
         self.tiles[node[0]][node[1]] = self.tileset.get_free_tile()
       node = parents[node]
+
+  def add_walls(self):
+    for w in xrange(self.width):
+      for h in xrange(self.height):
+        if not self.tileset.blocked(self.tiles[w][h]):
+          for dw in (-1, 0, 1):
+            for dh in (-1, 0, 1):
+              if (0 <= w + dw < self.width and 0 <= h + dh < self.height and
+                  self.tiles[w + dw][h + dh] == self.tileset.default_tile):
+                self.tiles[w + dw][h + dh] = 4
 
   def get_header(self):
     lines = []
@@ -79,10 +100,10 @@ class Map(object):
       [self.tileset.chars[tile] for tile in column]
       for column in self.tiles
     ]
-    for (i, room) in enumerate(self.rooms):
-      for w in xrange(room.width):
-        for h in xrange(room.height):
-          tiles[room.x + w][room.y + h] = room_labels[i % len(room_labels)]
+    #for (i, room) in enumerate(self.rooms):
+    #  for w in xrange(room.width):
+    #    for h in xrange(room.height):
+    #      tiles[room.x + w][room.y + h] = room_labels[i % len(room_labels)]
     for h in xrange(self.height):
       result.append(''.join(tiles[w][h] for w in xrange(self.width)))
     return '\n'.join(result)
@@ -110,8 +131,11 @@ class Room(object):
       (self.y - room.y - room.height), 0)
     return math.sqrt(x_distance**2 + y_distance**2)
 
-  def midpoint(self):
-    return (self.x + self.width/2, self.y + self.height/2)
+  def random_square(self):
+    return (
+      self.x + random.randint(0, self.width - 1),
+      self.y + random.randint(0, self.height - 1),
+    )
 
   def place(self, map, tolerance):
     self.x = random.randint(0, map.width - self.width)
@@ -201,6 +225,8 @@ def generate_rooms_map(width, height, tileset):
           tree_distances[i,edge[0]] + room_graph[edge[0]][edge[1]] + tree_distances[edge[1],j],
           tree_distances[i,edge[1]] + room_graph[edge[1]][edge[0]] + tree_distances[edge[0],j],
         )
+
+  map.add_walls()
 
   return map
 
