@@ -1,5 +1,6 @@
 import math
 import random
+import string
 import struct
 import sys
 
@@ -23,6 +24,13 @@ class Map(object):
     self.tileset = tileset
     tile = tileset.default_tile
     self.tiles = [[tile for h in xrange(height)] for w in xrange(width)]
+    self.rooms = []
+
+  def add_room(self, room):
+    for w in xrange(room.width):
+      for h in xrange(room.height):
+        self.tiles[room.x + w][room.y + h] = self.tileset.get_free_tile()
+    self.rooms.append(room)
 
   def get_header(self):
     lines = []
@@ -32,12 +40,22 @@ class Map(object):
     return '\n'.join(lines)
 
   def __str__(self):
+    if self.rooms:
+      block = ' '
+      room_labels = string.digits + string.letters
+    else:
+      block = 'X'
     result = [self.get_header()]
+    tiles = [
+      [block if self.tileset.blocked(tile) else '.' for tile in column]
+      for column in self.tiles
+    ]
+    for (i, room) in enumerate(self.rooms):
+      for w in xrange(room.width):
+        for h in xrange(room.height):
+          tiles[room.x + w][room.y + h] = room_labels[i % len(room_labels)]
     for h in xrange(self.height):
-      result.append(''.join(
-        ('X' if self.tileset.blocked(self.tiles[w][h]) else '.')
-        for w in xrange(self.width)
-      ))
+      result.append(''.join(tiles[w][h] for w in xrange(self.width)))
     return '\n'.join(result)
 
   def print_to_file(self, filename):
@@ -63,15 +81,12 @@ class Room(object):
       (self.y - room.y - room.height), 0)
     return math.sqrt(x_distance**2 + y_distance**2)
 
-  def place(self, map, rooms, tolerance):
+  def place(self, map, tolerance):
     self.x = random.randint(0, map.width - self.width)
     self.y = random.randint(0, map.height - self.height)
-    for room in rooms:
+    for room in map.rooms:
       if self.distance(room) <= tolerance:
         return False
-    for w in xrange(self.width):
-      for h in xrange(self.height):
-        map.tiles[self.x + w][self.y + h] = map.tileset.get_free_tile()
     return True
 
 
@@ -113,20 +128,19 @@ def generate_rooms_map(width, height, tileset):
   (min_size, max_size) = (2, 4)
   tries = width*height/(min_size**2)
 
-  rooms = []
   while tries > 0:
     width = random.randint(min_size, max_size)
     height = random.randint(min_size, max_size)
     room = Room(width, height)
-    if room.place(map, rooms, tolerance=min_size):
-      rooms.append(room)
+    if room.place(map, tolerance=min_size):
+      map.add_room(room)
     else:
       tries -= 1
 
   room_graph = []
-  for room in rooms:
+  for room in map.rooms:
     room_graph.append([])
-    for other in rooms:
+    for other in map.rooms:
       room_graph[-1].append(room.distance(other))
   print room_graph
 
@@ -136,5 +150,5 @@ def generate_rooms_map(width, height, tileset):
 if __name__ == '__main__':
   random.seed()
   map = generate_rooms_map(32, 32, Tileset())
-  print map
   #map.print_to_file('world.dat')
+  print map
