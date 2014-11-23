@@ -26,6 +26,20 @@ Direction GetFreeDirection(const Point& square, const TileMap& map) {
   return (Direction)dir;
 }
 
+SpriteState* MoveSprite(
+    const vector<Sprite*>& sprites, const TileMap& map,
+    Sprite* sprite, Point* move, int* anim_num) {
+  sprite->AvoidOthers(sprites, move);
+  if (sprite->Move(map, move)) {
+    int animation_frames = kWalkingAnimationFrames*kPlayerSpeed/move->length();
+    if (*anim_num % (2*animation_frames) >= animation_frames) {
+      sprite->frame_.x += 4;
+    }
+    *anim_num = (*anim_num + 1) % (2*animation_frames);
+  }
+  return nullptr;
+}
+
 }  // namespace
 
 void SpriteState::Register(Sprite* sprite) {
@@ -63,16 +77,8 @@ SpriteState* RandomWalkState::Update(const GameState& game_state) {
   sprite_->frame_.x = sprite_->dir_;
   steps_ -= 1;
 
-  Point move = kShift[dir_];
-  move.set_length(kEnemySpeed);
-  sprite_->AvoidOthers(game_state.sprites_, &move);
-  if (sprite_->Move(game_state.map_, &move)) {
-    int animation_frames = kWalkingAnimationFrames*kEnemySpeed/move.length();
-    if (anim_num_ % (2*animation_frames) >= animation_frames) {
-      sprite_->frame_.x += 4;
-    }
-    anim_num_ = (anim_num_ + 1) % (2*animation_frames);
-  }
+  Point move = kEnemySpeed*kShift[dir_];
+  MoveSprite(game_state.sprites_, game_state.map_, sprite_, &move, &anim_num_);
   return nullptr;
 }
 
@@ -97,14 +103,7 @@ SpriteState* WalkingState::Update(const GameState& game_state) {
   sprite_->frame_.x = sprite_->dir_;
 
   move.set_length(kPlayerSpeed);
-  sprite_->AvoidOthers(game_state.sprites_, &move);
-  if (sprite_->Move(game_state.map_, &move)) {
-    int animation_frames = kWalkingAnimationFrames*kPlayerSpeed/move.length();
-    if (anim_num_ % (2*animation_frames) >= animation_frames) {
-      sprite_->frame_.x += 4;
-    }
-    anim_num_ = (anim_num_ + 1) % (2*animation_frames);
-  }
+  MoveSprite(game_state.sprites_, game_state.map_, sprite_, &move, &anim_num_);
   return nullptr;
 }
 
