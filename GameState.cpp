@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 
 #include "constants.h"
@@ -11,7 +12,13 @@ using std::vector;
 namespace skishore {
 
 namespace {
+
 static const int kNumEnemies = 96;
+
+bool TopToBottom(const Sprite* a, const Sprite* b) {
+  return a->GetPosition().y < b->GetPosition().y;
+}
+
 }  // namespace
 
 GameState::GameState(
@@ -45,6 +52,7 @@ void GameState::Update() {
   for (Sprite* sprite : sprites_) {
     sprite->SetState(sprite->GetState()->Update(*this));
   }
+  std::sort(sprites_.begin(), sprites_.end(), TopToBottom);
 }
 
 void GameState::CreateSprite(const Point& square, bool is_player) {
