@@ -21,9 +21,24 @@ void TextRenderer::DrawText(int font_size, const Point& position,
     return;
   }
   TTF_Font* font = LoadFont(font_size);
-  SDL_Surface* surface(TTF_RenderText_Solid(font, text.c_str(), color));
+  SDL_Surface* surface(TTF_RenderUTF8_Solid(font, text.c_str(), color));
   ASSERT(surface != nullptr, TTF_GetError());
-  SDL_BlitSurface(surface, nullptr, target_, nullptr);
+  SDL_Rect target{position.x, position.y, 0, 0};
+  SDL_BlitSurface(surface, nullptr, target_, &target);
+  SDL_FreeSurface(surface);
+}
+
+void TextRenderer::DrawTextBox(
+    int font_size, const SDL_Rect& rect, const std::string text,
+    const SDL_Color fg_color, const SDL_Color bg_color) {
+  if (text.size() == 0) {
+    return;
+  }
+  TTF_Font* font = LoadFont(font_size);
+  SDL_Surface* surface(TTF_RenderUTF8_Solid(font, text.c_str(), fg_color));
+  ASSERT(surface != nullptr, TTF_GetError());
+  SDL_Rect target{rect.x + rect.w, rect.y - rect.h, 0, 0};
+  SDL_BlitSurface(surface, nullptr, target_, &target);
   SDL_FreeSurface(surface);
 }
 
