@@ -100,11 +100,6 @@ void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
 void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
   Point offset = camera_ + kGridSize*background_offset_;
   sprite.Draw(offset, foreground_->bounds_, foreground_->surface_);
-  if (sprite.is_player_) {
-    Point position = sprite.GetDrawingPosition() - offset;
-    SDL_Rect rect{position.x, position.y, kGridSize, kGridSize};
-    text_renderer_->DrawTextBox(kGridSize, rect, "शौनक");
-  }
 }
 
 void ScrollingGraphics::RedrawBackground() {
