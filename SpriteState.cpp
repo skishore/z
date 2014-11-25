@@ -30,7 +30,9 @@ SpriteState* MoveSprite(
     const vector<Sprite*>& sprites, const TileMap& map,
     Sprite* sprite, Point* move, int* anim_num) {
   sprite->AvoidOthers(sprites, move);
-  if (sprite->Move(map, move)) {
+  sprite->CheckSquares(move);
+  if (!move->zero()) {
+    sprite->SetPosition(sprite->GetPosition() + *move);
     int animation_frames = kWalkingAnimationFrames*kPlayerSpeed/move->length();
     if (*anim_num % (2*animation_frames) >= animation_frames) {
       sprite->frame_.x += 4;

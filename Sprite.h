@@ -16,8 +16,8 @@ class SpriteState;
 
 class Sprite {
  public:
-  Sprite(bool is_player, const Point& square,
-         const Image& Image, SpriteState* state);
+  Sprite(bool is_player, const Point& square, const Image& Image,
+        const TileMap& map, SpriteState* state);
 
   // Instance methods used by graphics classes to draw the sprite.
   const Point& GetDrawingPosition() const { return drawing_position_; };
@@ -29,11 +29,13 @@ class Sprite {
   const Point& GetSquare() const { return square_; };
   SpriteState* GetState() const;
 
-  // Instance methods used by SpriteStates to update the sprite's data.
-  // Move returns true if the sprite actually moved.
-  void SetState(SpriteState* state);
+  // Instance methods used as utilities when computing the sprite's move.
   void AvoidOthers(const std::vector<Sprite*> sprites, Point* move) const;
-  bool Move(const TileMap& map, Point* move);
+  bool CheckSquare(const Point& square) const;
+  void CheckSquares(Point* move) const;
+
+  void SetPosition(const Point& position);
+  void SetState(SpriteState* state);
 
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;
@@ -42,9 +44,8 @@ class Sprite {
   std::unique_ptr<SpriteState> state_;
 
  private:
-  void SetPosition(const Point& position);
-
   const Image& image_;
+  const TileMap& map_;
 
   // WARNING: position_ is stored in ticks, not in pixels, where each tick is
   // kGridResolution pixels. This makes the collision detection math work well,

@@ -35,93 +35,11 @@ inline int divround(int a, int b) {
   return (a + (a > 0 ? b/2 : -b/2))/b;
 }
 
-// Takes a move and applies static map constraints to it.
-void CheckSquares(const TileMap& map, const Point& pos, Point* move) {
-  if (move->zero()) {
-    return;
-  }
-
-  Point overlap(gmod(pos.x), gmod(pos.y));
-  overlap.x -= 2*overlap.x/kGridTicks*kGridTicks;
-  overlap.y -= 2*overlap.y/kGridTicks*kGridTicks;
-
-  Point square = pos - overlap;
-  ASSERT(square.x % kGridTicks == 0 && square.y % kGridTicks == 0,
-         "Unexpected: " << pos << " " << overlap << " " << " " << kGridTicks);
-  square = square/kGridTicks;
-
-  Point offset;
-  bool collided = false;
-  double speed = move->length();
-
-  // Check if we cross a horizontal grid boundary going up or down.
-  if (move->y < 0 && gmod(pos.y + kTolerance) < -move->y) {
-    offset.y = -1;
-  } else if (move->y > 0 && gmod(-pos.y) < move->y) {
-    offset.y += 1;
-  }
-  // If we cross a horizontal boundary, check that the next square is open.
-  if (offset.y != 0) {
-    offset.x = (overlap.x > 0 ? 1 : -1);
-    if (!map.CheckSquare(Point(square.x, square.y + offset.y))) {
-      collided = true;
-    // Also check for collisions for the square diagonally adjacent to us.
-    } else if (abs(overlap.x) > kTolerance &&
-               !map.CheckSquare(square + offset)) {
-      collided = true;
-      if (abs(overlap.x) < kPushAway && offset.x*move->x <= 0) {
-        move->x = -offset.x*speed;
-      }
-    }
-    if (collided) {
-      if (offset.y < 0) {
-        move->y = kGridTicks - kTolerance - gmod(pos.y);
-      } else {
-        move->y = gmod(-pos.y);
-      }
-    }
-  }
-
-  // Run similar checks for the velocity x-coordinates.
-  offset.x = 0;
-  if (move->x < 0 && gmod(pos.x + kTolerance) < -move->x) {
-    offset.x = -1;
-  } else if (move->x > 0 && gmod(kTolerance - pos.x) < move->x) {
-    offset.x = 1;
-  }
-  if (offset.x != 0) {
-    // If we've moved from one square to another in the y direction (that is,
-    // if offset.y != 0 && !collided) then run an extra check in the x direction.
-    collided = offset.y != 0 && !collided && !map.CheckSquare(square + offset);
-    offset.y = (overlap.y > 0 ? 1 : -1);
-    if (!map.CheckSquare(Point(square.x + offset.x, square.y))) {
-      collided = true;
-    } else if ((overlap.y > 0 || -overlap.y > kTolerance) &&
-               !map.CheckSquare(square + offset)) {
-      collided = true;
-      if (abs(overlap.y) < kPushAway && offset.y*move->y <= 0) {
-        // Check that we have space to shove in the y direction.
-        // We skip this check when shoving in the x direction above because
-        // the full x check was after it.
-        move->y = (map.CheckSquare(Point(square.x, square.y + offset.y)) ?
-                   -offset.y*speed : 0);
-      }
-    }
-    if (collided) {
-      if (offset.x < 0) {
-        move->x = kGridTicks - kTolerance - gmod(pos.x);
-      } else {
-        move->x = kTolerance - gmod(pos.x);
-      }
-    }
-  }
-}
-
 } // namespace
 
-Sprite::Sprite(bool is_player, const Point& square,
-               const Image& image, SpriteState* state)
-    : is_player_(is_player), dir_(Direction::DOWN), image_(image) {
+Sprite::Sprite(bool is_player, const Point& square, const Image& image,
+               const TileMap& map, SpriteState* state)
+    : is_player_(is_player), dir_(Direction::DOWN), image_(image), map_(map) {
   ASSERT(state != nullptr, "Got NULL SpriteState!");
   SetPosition(kGridTicks*square);
   SetState(state);
@@ -134,15 +52,6 @@ void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
 
 SpriteState* Sprite::GetState() const {
   return state_.get();
-}
-
-void Sprite::SetState(SpriteState* state) {
-  if (state == nullptr) {
-    return;
-  }
-  // TODO(skishore): If we add enter/exit methods to states, call them here.
-  state_.reset(state);
-  state_->Register(this);
 }
 
 void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
@@ -180,13 +89,88 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
   }
 }
 
-bool Sprite::Move(const TileMap& map, Point* move) {
-  CheckSquares(map, position_, move);
+bool Sprite::CheckSquare(const Point& square) const {
+  return map_.CheckSquare(square);
+}
+
+void Sprite::CheckSquares(Point* move) const {
   if (move->zero()) {
-    return false;
+    return;
   }
-  SetPosition(position_ + *move);
-  return true;
+
+  Point overlap(gmod(position_.x), gmod(position_.y));
+  overlap.x -= 2*overlap.x/kGridTicks*kGridTicks;
+  overlap.y -= 2*overlap.y/kGridTicks*kGridTicks;
+
+  Point square = position_ - overlap;
+  ASSERT(square.x % kGridTicks == 0 && square.y % kGridTicks == 0,
+         "Unexpected: " << position_ << " " << overlap << " " << kGridTicks);
+  square = square/kGridTicks;
+
+  Point offset;
+  bool collided = false;
+  double speed = move->length();
+
+  // Check if we cross a horizontal grid boundary going up or down.
+  if (move->y < 0 && gmod(position_.y + kTolerance) < -move->y) {
+    offset.y = -1;
+  } else if (move->y > 0 && gmod(-position_.y) < move->y) {
+    offset.y += 1;
+  }
+  // If we cross a horizontal boundary, check that the next square is open.
+  if (offset.y != 0) {
+    offset.x = (overlap.x > 0 ? 1 : -1);
+    if (!CheckSquare(Point(square.x, square.y + offset.y))) {
+      collided = true;
+    // Also check for collisions for the square diagonally adjacent to us.
+    } else if (abs(overlap.x) > kTolerance && !CheckSquare(square + offset)) {
+      collided = true;
+      if (abs(overlap.x) < kPushAway && offset.x*move->x <= 0) {
+        move->x = -offset.x*speed;
+      }
+    }
+    if (collided) {
+      if (offset.y < 0) {
+        move->y = kGridTicks - kTolerance - gmod(position_.y);
+      } else {
+        move->y = gmod(-position_.y);
+      }
+    }
+  }
+
+  // Run similar checks for the velocity x-coordinates.
+  offset.x = 0;
+  if (move->x < 0 && gmod(position_.x + kTolerance) < -move->x) {
+    offset.x = -1;
+  } else if (move->x > 0 && gmod(kTolerance - position_.x) < move->x) {
+    offset.x = 1;
+  }
+  if (offset.x != 0) {
+    // If we've moved from one square to another in the y direction (that is,
+    // if offset.y != 0 && !collided) then run an extra check in the x direction.
+    collided = offset.y != 0 && !collided && !CheckSquare(square + offset);
+    offset.y = (overlap.y > 0 ? 1 : -1);
+    if (!CheckSquare(Point(square.x + offset.x, square.y))) {
+      collided = true;
+    } else if ((overlap.y > 0 || -overlap.y > kTolerance) &&
+               !CheckSquare(square + offset)) {
+      collided = true;
+      if (abs(overlap.y) < kPushAway && offset.y*move->y <= 0) {
+        // Check that we have space to shove in the y direction.
+        // We skip this check when shoving in the x direction above because
+        // the full x check was after it.
+        move->y = (CheckSquare(Point(square.x, square.y + offset.y)) ?
+                   -offset.y*speed : 0);
+      }
+    }
+    if (collided) {
+      if (offset.x < 0) {
+        move->x = kGridTicks - kTolerance - gmod(position_.x);
+      } else {
+        move->x = kTolerance - gmod(position_.x);
+      }
+    }
+  }
 }
 
 void Sprite::SetPosition(const Point& position) {
@@ -195,6 +179,14 @@ void Sprite::SetPosition(const Point& position) {
   drawing_position_.y  = divround(position_.y, kTicksPerPixel);
   square_.x  = divround(position_.x, kGridTicks);
   square_.y  = divround(position_.y, kGridTicks);
+}
+
+void Sprite::SetState(SpriteState* state) {
+  if (state == nullptr) {
+    return;
+  }
+  state_.reset(state);
+  state_->Register(this);
 }
 
 }  // namespace skishore
