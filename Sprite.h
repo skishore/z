@@ -17,7 +17,7 @@ class SpriteState;
 class Sprite {
  public:
   Sprite(bool is_player, const Point& square, const Image& Image,
-        const TileMap& map, SpriteState* state);
+        const TileMap& map, const TileMap::Room* room, SpriteState* state);
 
   // Instance methods used by graphics classes to draw the sprite.
   const Point& GetDrawingPosition() const { return drawing_position_; };
@@ -46,6 +46,7 @@ class Sprite {
  private:
   const Image& image_;
   const TileMap& map_;
+  const TileMap::Room* room_;
 
   // WARNING: position_ is stored in ticks, not in pixels, where each tick is
   // kGridResolution pixels. This makes the collision detection math work well,

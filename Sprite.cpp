@@ -37,9 +37,11 @@ inline int divround(int a, int b) {
 
 } // namespace
 
-Sprite::Sprite(bool is_player, const Point& square, const Image& image,
-               const TileMap& map, SpriteState* state)
-    : is_player_(is_player), dir_(Direction::DOWN), image_(image), map_(map) {
+Sprite::Sprite(
+    bool is_player, const Point& square, const Image& image,
+    const TileMap& map, const TileMap::Room* room, SpriteState* state)
+    : is_player_(is_player), dir_(Direction::DOWN), image_(image),
+      map_(map), room_(room) {
   ASSERT(state != nullptr, "Got NULL SpriteState!");
   SetPosition(kGridTicks*square);
   SetState(state);
@@ -90,6 +92,9 @@ void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
 }
 
 bool Sprite::CheckSquare(const Point& square) const {
+  if (room_ != nullptr && !room_->Contains(square)) {
+    return false;
+  }
   return map_.CheckSquare(square);
 }
 

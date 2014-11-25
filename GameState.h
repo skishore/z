@@ -32,7 +32,8 @@ class GameState {
   std::vector<Sprite*> sprites_;
 
  private:
-  void CreateSprite(const Point& starting_square, bool is_player);
+  void CreateSprite(
+      const Point& starting_square, bool is_player, const TileMap::Room* room);
 
   ImageCache* cache_;
   std::map<Sprite*, std::unique_ptr<Sprite>> sprite_ownership_;

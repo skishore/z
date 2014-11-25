@@ -12,32 +12,30 @@ using std::vector;
 namespace skishore {
 
 namespace {
-
-static const int kNumEnemies = 96;
-
 bool TopToBottom(const Sprite* a, const Sprite* b) {
   return a->GetPosition().y < b->GetPosition().y;
 }
-
 }  // namespace
 
 GameState::GameState(
     const InputHandler& input, const TileMap& map, ImageCache* cache)
     : input_(input), map_(map), cache_(cache) {
   ASSERT(cache != nullptr, "Initialized with a NULL ImageCache!");
-  CreateSprite(map.GetStartingSquare(), true);
+  CreateSprite(map.GetStartingSquare(), true, nullptr);
 
   const int num_rooms = map.GetRooms().size();
   if (num_rooms <= 1) {
     return;
   }
-  for (int i = 0; i < kNumEnemies; i++) {
-    const int index = (rand() % (num_rooms - 1)) + 1;
-    const TileMap::Room& room = map.GetRooms()[index];
-    Point square = room.position;
-    square.x += rand() % room.size.x;
-    square.y += rand() % room.size.y;
-    CreateSprite(square, false);
+  for (int i = 1; i < map.GetRooms().size() ; i++) {
+    const TileMap::Room& room = map.GetRooms()[i];
+    const int num_enemies = (room.size.x + room.size.y)/2 - 3;
+    for (int j = 0; j < num_enemies; j++) {
+      Point square = room.position;
+      square.x += rand() % room.size.x;
+      square.y += rand() % room.size.y;
+      CreateSprite(square, false, &room);
+    }
   }
 }
 
@@ -55,17 +53,19 @@ void GameState::Update() {
   std::sort(sprites_.begin(), sprites_.end(), TopToBottom);
 }
 
-void GameState::CreateSprite(const Point& square, bool is_player) {
+void GameState::CreateSprite(
+    const Point& square, bool is_player, const TileMap::Room* room) {
   Sprite* sprite = nullptr;
   const Point size(kGridSize, kGridSize);
 
   if (is_player) {
     const Image* image = cache_->LoadImage(size, "player.bmp");
-    sprite = new Sprite(is_player, square, *image, map_, new WalkingState);
+    sprite = new Sprite(
+        is_player, square, *image, map_, room, new WalkingState);
     player_ = sprite;
   } else {
     const Image* image = cache_->LoadImage(size, "zombie.bmp");
-    sprite = new Sprite(is_player, square, *image, map_, new PausedState);
+    sprite = new Sprite(is_player, square, *image, map_, room, new PausedState);
   }
 
   ASSERT(sprite != nullptr, "CreateSprite failed! is_player = " << is_player);
