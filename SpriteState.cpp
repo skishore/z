@@ -26,9 +26,8 @@ Direction GetFreeDirection(const Point& square, const TileMap& map) {
   return (Direction)dir;
 }
 
-SpriteState* MoveSprite(
-    const vector<Sprite*>& sprites, const TileMap& map,
-    Sprite* sprite, Point* move, int* anim_num) {
+SpriteState* MoveSprite(const vector<Sprite*>& sprites, const TileMap& map,
+                        Sprite* sprite, Point* move, int* anim_num) {
   sprite->AvoidOthers(sprites, move);
   sprite->CheckSquares(move);
   if (!move->zero()) {
@@ -51,6 +50,9 @@ void SpriteState::Register(Sprite* sprite) {
 }
 
 SpriteState* PausedState::MaybeTransition(const GameState& game_state) const {
+  if (sprite_->is_player_) {
+    return new WalkingState;
+  }
   if (steps_ > 0) {
     return nullptr;
   }

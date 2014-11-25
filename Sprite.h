@@ -17,7 +17,7 @@ class SpriteState;
 class Sprite {
  public:
   Sprite(bool is_player, const Point& square, const Image& Image,
-        const TileMap& map, const TileMap::Room* room, SpriteState* state);
+         const TileMap& map, const TileMap::Room* room);
 
   // Instance methods used by graphics classes to draw the sprite.
   const Point& GetDrawingPosition() const { return drawing_position_; };

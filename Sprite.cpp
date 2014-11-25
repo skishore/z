@@ -37,14 +37,12 @@ inline int divround(int a, int b) {
 
 } // namespace
 
-Sprite::Sprite(
-    bool is_player, const Point& square, const Image& image,
-    const TileMap& map, const TileMap::Room* room, SpriteState* state)
+Sprite::Sprite(bool is_player, const Point& square, const Image& image,
+               const TileMap& map, const TileMap::Room* room)
     : is_player_(is_player), dir_(Direction::DOWN), image_(image),
       map_(map), room_(room) {
-  ASSERT(state != nullptr, "Got NULL SpriteState!");
   SetPosition(kGridTicks*square);
-  SetState(state);
+  SetState(new PausedState);
 }
 
 void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
