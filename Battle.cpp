@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "hungarian.h"
 
 #include "constants.h"
 #include "debug.h"
@@ -110,24 +111,18 @@ void Battle::ComputePlaces(vector<Point>* places) const {
     options[i] = AdvanceAlongPerimeter(options[i - 1], *room_, distance);
   }
 
-  vector<bool> assigned(n, false);
+  vector<vector<Cost>> distances(n, vector<Cost>(n));
   for (int i = 0; i < n; i++) {
     Point position = sprites_[i]->GetPosition() + half_square;
-    double best_distance = kGridTicks*perimeter;
-    int best_index = -1;
     for (int j = 0; j < n; j++) {
-      if (assigned[j]) {
-        continue;
-      }
       double distance = (position - kGridTicks*options[j]).length();
-      if (distance < best_distance) {
-        best_distance = distance;
-        best_index = j;
-      }
+      distances[i][j] = (int)distance;
     }
-    ASSERT(best_index >= 0, "Failed to find good option for " << i);
-    (*places)[i] = options[best_index];
-    assigned[best_index] = true;
+  }
+  Hungarian hungarian(n, distances);
+
+  for (int i = 0; i < n; i++) {
+    (*places)[i] = options[hungarian.GetXMatch(i)];
   }
 }
 
