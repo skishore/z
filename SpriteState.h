@@ -30,6 +30,7 @@ class SpriteState {
  protected:
   // A pointer to the sprite that owns this state.
   Sprite* sprite_ = nullptr;
+  int anim_num_ = 0;
 };
 
 class PausedState : public SpriteState {
@@ -53,17 +54,16 @@ class RandomWalkState : public SpriteState {
  private:
   Direction dir_;
   int steps_;
-  int anim_num_ = 0;
 };
 
 class WalkingState : public SpriteState {
  public:
   SpriteState* MaybeTransition(const GameState& game_state) const override;
   SpriteState* Update(const GameState& game_state) override;
-
- private:
-  int anim_num_ = 0;
 };
+
+SpriteState* MoveSprite(const GameState& game_state, Sprite* sprite,
+                        Point* move, int* anim_num);
 
 } // namespace skishore
 

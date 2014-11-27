@@ -2,7 +2,6 @@
 #define __SKISHORE_BATTLE_H__
 
 #include "Sprite.h"
-#include "SpriteState.h"
 
 namespace skishore {
 
@@ -17,10 +16,18 @@ class Battle {
   bool Update();
 
  protected:
-  // The list of sprites that are actually in this battle.
+  void ComputePlaces(std::vector<Point>* places) const;
+
+  const TileMap::Room* room_;
+
+  // Convenience accessors for particular classes of sprite in the battle.
   Sprite* player_;
   std::vector<Sprite*> enemies_;
+
+  // The vector of all sprites in the battle and their places within the room.
+  // The places are recorded in grid squares.
   std::vector<Sprite*> sprites_;
+  std::vector<Point> places_;
 };
 
 } // namespace skishore
