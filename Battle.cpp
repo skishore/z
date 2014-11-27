@@ -129,16 +129,37 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
 void Battle::ComputePlaces(vector<Point>* places) const {
   ASSERT(sprites_.size() > 0 && sprites_[0] == player_, "Unexpected sprites!");
   const int n = sprites_.size();
-  vector<bool> assigned(n, false);
+  vector<Point> options(n);
   places->resize(n);
 
-  Point position = player_->GetPosition() + Point(kGridTicks/2, kGridTicks/2);
-  (*places)[0] = ClosestPerimeterSquare(position, *room_);
+  Point half_square(kGridTicks/2, kGridTicks/2);
+  Point position = player_->GetPosition() + half_square;
+  options[0] = ClosestPerimeterSquare(position, *room_);
 
   const int perimeter = 2*(room_->size.x + room_->size.y) - 4;
   for (int i = 1; i < n; i++) {
     const int distance = i*perimeter/n - (i - 1)*perimeter/n;
-    (*places)[i] = AdvanceAlongPerimeter((*places)[i - 1], *room_, distance);
+    options[i] = AdvanceAlongPerimeter(options[i - 1], *room_, distance);
+  }
+
+  vector<bool> assigned(n, false);
+  for (int i = 0; i < n; i++) {
+    Point position = sprites_[i]->GetPosition() + half_square;
+    double best_distance = kGridTicks*perimeter;
+    int best_index = -1;
+    for (int j = 0; j < n; j++) {
+      if (assigned[j]) {
+        continue;
+      }
+      double distance = (position - kGridTicks*options[j]).length();
+      if (distance < best_distance) {
+        best_distance = distance;
+        best_index = j;
+      }
+    }
+    ASSERT(best_index >= 0, "Failed to find good option for " << i);
+    (*places)[i] = options[best_index];
+    assigned[best_index] = true;
   }
 }
 
