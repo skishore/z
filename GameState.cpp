@@ -44,11 +44,18 @@ const vector<Sprite*>& GameState::GetSprites() {
 }
 
 void GameState::Update() {
+  if (battle_ != nullptr && battle_->Update()) {
+    battle_.reset(nullptr);
+  }
   for (Sprite* sprite : sprites_) {
     sprite->SetState(sprite->GetState()->MaybeTransition(*this));
   }
   for (Sprite* sprite : sprites_) {
     sprite->SetState(sprite->GetState()->Update(*this));
+    if (battle_ == nullptr && sprite->GetRoom() != nullptr &&
+        !sprite->is_player_ && sprite->HasLineOfSight(*player_)) {
+      battle_.reset(new Battle(*this, *sprite));
+    }
   }
   std::sort(sprites_.begin(), sprites_.end(), TopToBottom);
 }

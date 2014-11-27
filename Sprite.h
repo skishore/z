@@ -26,8 +26,11 @@ class Sprite {
 
   // Instance methods used by SpriteStates to implement their logic.
   const Point& GetPosition() const { return position_; };
+  const TileMap::Room* GetRoom() const { return room_; };
   const Point& GetSquare() const { return square_; };
   SpriteState* GetState() const;
+
+  bool HasLineOfSight(const Sprite& other) const;
 
   // Instance methods used as utilities when computing the sprite's move.
   void AvoidOthers(const std::vector<Sprite*> sprites, Point* move) const;

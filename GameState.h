@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "Battle.h"
 #include "ImageCache.h"
 #include "InputHandler.h"
 #include "Point.h"
@@ -36,6 +37,7 @@ class GameState {
       const Point& starting_square, bool is_player, const TileMap::Room* room);
 
   ImageCache* cache_;
+  std::unique_ptr<Battle> battle_;
   std::map<Sprite*, std::unique_ptr<Sprite>> sprite_ownership_;
 };
 

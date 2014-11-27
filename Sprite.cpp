@@ -54,6 +54,23 @@ SpriteState* Sprite::GetState() const {
   return state_.get();
 }
 
+bool Sprite::HasLineOfSight(const Sprite& other) const {
+  Point diff = other.square_ - square_;
+  Point shift = kShift[dir_];
+  if ((shift.x == 0 && diff.x != 0) || (shift.x*diff.x < 0) ||
+      (shift.y == 0 && diff.y != 0) || (shift.y*diff.y < 0)) {
+    return false;
+  }
+  Point square = square_;
+  while (square != other.square_) {
+    square += shift;
+    if (!CheckSquare(square)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
   if (move->zero()) {
     return;
