@@ -7,6 +7,8 @@ namespace skishore {
 
 class GameState;
 
+namespace battle {
+
 class Battle {
  public:
   Battle(const GameState& game_state, const Sprite& enemy);
@@ -30,6 +32,7 @@ class Battle {
   std::vector<Point> places_;
 };
 
-} // namespace skishore
+}  // namespace battle
+}  // namespace skishore
 
 #endif  // __SKISHORE_BATTLE_H__

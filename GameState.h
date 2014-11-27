@@ -37,7 +37,7 @@ class GameState {
       const Point& starting_square, bool is_player, const TileMap::Room* room);
 
   ImageCache* cache_;
-  std::unique_ptr<Battle> battle_;
+  std::unique_ptr<battle::Battle> battle_;
   std::map<Sprite*, std::unique_ptr<Sprite>> sprite_ownership_;
 };
 

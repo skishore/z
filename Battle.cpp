@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "debug.h"
 #include "Battle.h"
+#include "BattleState.h"
 #include "GameState.h"
 #include "SpriteState.h"
 
@@ -11,11 +12,9 @@ using std::max;
 using std::vector;
 
 namespace skishore {
+namespace battle {
 
 namespace {
-
-const static int kBattleSpeed = kPlayerSpeed;
-const static int kTolerance = kPlayerSpeed;
 
 // Takes an integer and a divisor and does division and rounding.
 inline int divround(int a, int b) {
@@ -75,37 +74,6 @@ Point AdvanceAlongPerimeter(
   return result;
 }
 
-Direction GetDirection(const Point& move) {
-  if (abs(move.x) > abs(move.y)) {
-    return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
-  }
-  return (move.y < 0 ? Direction::UP : Direction::DOWN);
-}
-
-// SpriteState subclasses that are only used in the Battle mode.
-class BattleWaitState : public SpriteState {
- public:
-  BattleWaitState(const Point& target) : target_(target) {};
-
-  SpriteState* MaybeTransition(const GameState& game_state) const override {
-    return nullptr;
-  }
-
-  SpriteState* Update(const GameState& game_state) override {
-    sprite_->frame_.x = sprite_->dir_;
-    Point move = kGridTicks*target_ - sprite_->GetPosition();
-    if (move.length() > kTolerance) {
-      sprite_->dir_ = GetDirection(move);
-      move.set_length(kBattleSpeed);
-      MoveSprite(game_state, sprite_, &move, &anim_num_);
-    }
-    return nullptr;
-  }
-
- private:
-  Point target_;
-};
-
 }  // namespace
 
 Battle::Battle(const GameState& game_state, const Sprite& enemy) {
@@ -122,7 +90,7 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   ASSERT(enemies_.size() > 0, "Could not find enemies to battle!");
   ComputePlaces(&places_);
   for (int i = 0; i < sprites_.size(); i++) {
-    sprites_[i]->SetState(new BattleWaitState(places_[i]));
+    sprites_[i]->SetState(new WalkToTargetState(places_[i]));
   }
 }
 
@@ -167,4 +135,5 @@ bool Battle::Update() {
   return false;
 }
 
-} // namespace skishore
+}  // namespace battle
+}  // namespace skishore

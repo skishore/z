@@ -54,7 +54,7 @@ void GameState::Update() {
     sprite->SetState(sprite->GetState()->Update(*this));
     if (battle_ == nullptr && sprite->GetRoom() != nullptr &&
         !sprite->is_player_ && sprite->HasLineOfSight(*player_)) {
-      battle_.reset(new Battle(*this, *sprite));
+      battle_.reset(new battle::Battle(*this, *sprite));
     }
   }
   std::sort(sprites_.begin(), sprites_.end(), TopToBottom);
@@ -79,4 +79,4 @@ void GameState::CreateSprite(
   sprite_ownership_[sprite] = std::unique_ptr<Sprite>(sprite);
 }
 
-} // namespace skishore
+}  // namespace skishore
