@@ -3,14 +3,18 @@
 //
 // Implementation of the Hungarian algorithm for finding minimum perfect
 // matchings. Usage:
-//  - Compute Cost** cost_matrix, an nxn array where each entry is non-negative
-//    and where cost_matrix[x][y] is the cost of matching x with y.
+//  - Compute Cost** cost_matrix, an nxn array where cost_matrix[x][y]
+//    is the cost of matching x with y.
 //  - Construct Hungarian(n, cost_matrix). The algorithm runs on construction.
 //  - Use GetTotalCost, GetXMatch, and GetYMatch to read the output.
 //
 // The algorithm will minimize the total cost of the matching by default.
 // If you pass maximize=true in the constructor, it will maximize the total
 // cost instead.
+//
+// Costs in the cost matrix may be arbitrary integers. The first step of the
+// algorithm is to reduce the matrix so that all costs are non-negative, but
+// but this is handled entirely within the solver.
 //
 // We restrict to integer costs because the algorithm is not numerically stable.
 // When all inputs are integers, the intermediate edge weights we compute are
@@ -19,13 +23,11 @@
 #ifndef __HUNGARIAN__
 #define __HUNGARIAN__
 
-#include <cassert>
-
 typedef int Cost;
 
 namespace {
-inline Cost max(Cost a, Cost b) {
-  return (a > b ? a : b);
+inline Cost min(Cost a, Cost b) {
+  return (a < b ? a : b);
 }
 }  // namespace
 
@@ -38,37 +40,60 @@ class Hungarian {
   Hungarian(int n_, const T& cost_matrix_, bool maximize=false)
       : n(n_), cost_matrix(new Cost[n*n]), x_match(new int[n]),
         y_match(new int[n]), x_label(new Cost[n]), y_label(new Cost[n]) {
-    const int sign = (maximize ? 1 : -1);
+    const int sign = (maximize ? -1 : 1);
     for (int x = 0; x < n; x++) {
       for (int y = 0; y < n; y++) {
         cost_matrix[n*x+y] = sign*cost_matrix_[x][y];
       }
-      // Initially, all vertices are unmatched.
-      x_match[x] = -1;
-      y_match[x] = -1;
-    }
-    matched = 0;
-    // We first run heuristics that modify the cost matrix - hence the copy.
-    // These heuristics do not change the optimal solution, but they allow the
-    // algorithm to convert in less than n^2 iterations on easier inputs.
-    ReduceCostMatrix();
-    FindGreedySolution();
-    while (matched < n) {
-      const int last_matched = matched;
-      RunAugmentationStep();
-      assert(matched > last_matched);
-      for (int x = 0; x < n; x++) {
-        assert(x_match[x] == -1 || GetSlack(x, x_match[x]) == 0);
-      }
     }
   }
 
+  enum Status {
+    OK = 0,
+    ERROR_INTEGER_OVERFLOW = 1,
+    ERROR_AUGMENTATION_STEP_FAILED = 2,
+    ERROR_NON_TIGHT_EDGE_MATCHED = 3
+  };
+
+  Status Solve() {
+    for (int i = 0; i < n; i++) {
+      // Initially, all vertices are unmatched.
+      x_match[i] = -1;
+      y_match[i] = -1;
+    }
+    matched = 0;
+    // We first reduce the matrix so that all entries are non-negative.
+    // This step may fail. In particular, it will fail if there are two entries
+    // in the cost matrix that are more than INT_MAX apart.
+    if (!ReduceCostMatrix()) {
+      return ERROR_INTEGER_OVERFLOW;
+    }
+    // Greedily match pairs vertices that are connected by a tight edge.
+    // This step will help the algorithm terminate in fewer than n augmentation
+    // steps on easier inputs.
+    FindGreedySolution();
+    // Run augmentation steps to finish matching the vertices.
+    while (matched < n) {
+      const int last_matched = matched;
+      RunAugmentationStep();
+      if (matched <= last_matched) {
+        return ERROR_AUGMENTATION_STEP_FAILED;
+      }
+      for (int x = 0; x < n; x++) {
+        if (x_match[x] != -1 && GetSlack(x, x_match[x]) != 0) {
+          return ERROR_NON_TIGHT_EDGE_MATCHED;
+        }
+      }
+    }
+    return OK;
+  }
+
   ~Hungarian() {
-    delete cost_matrix;
-    delete x_match;
-    delete y_match;
-    delete x_label;
-    delete y_label;
+    delete[] cost_matrix;
+    delete[] x_match;
+    delete[] y_match;
+    delete[] x_label;
+    delete[] y_label;
   }
 
   // Given the original matrix again, return the total cost of the matching.
@@ -106,10 +131,10 @@ class Hungarian {
 
   // x_label[x] and y_label[y] are dual variables that satisfy the condition:
   //   cost_matrix[n*x+y] >= x_label[x] + y_label[y]
-  // We define the cost of the edge (x, y) to be:
-  //   cost(x, y) = cost_matrix[n*x+y] - x_label[x] - y_label[y]
-  // An edge is tight if its cost is zero. Throughout this algorithm, we will
-  // maintain the invariant that all matched edges have cost zero.
+  // We define the slack of the edge (x, y) to be:
+  //   slack(x, y) = cost_matrix[n*x+y] - x_label[x] - y_label[y]
+  // An edge is tight if its slack is zero. Throughout this algorithm, we will
+  // maintain the invariant that all matched edges are tight.
   Cost* x_label;
   Cost* y_label;
 
@@ -117,7 +142,7 @@ class Hungarian {
   int matched;
 
   Cost GetSlack(int x, int y) const {
-    return x_label[x] + y_label[y] - cost_matrix[n*x+y];
+    return cost_matrix[n*x+y] - x_label[x] - y_label[y];
   }
 
   void Match(int x, int y) {
@@ -125,27 +150,38 @@ class Hungarian {
     y_match[y] = x;
   }
 
-  void ReduceCostMatrix() {
+  bool ReduceCostMatrix() {
+    // Subtract the minimum value in each column from all entries in that column.
+    // After this operation, all entries in the matrix will be non-negative, so
+    // x-labels of 0 will satisfy the slack inequality.
+    //
+    // Returns false if a value in the matrix is still negative after reduction,
+    // which can only occur due to integer underflow.
     for (int x = 0; x < n; x++) {
-      Cost max_cost = 0;
+      Cost min_cost = 0;
       for (int y = 0; y < n; y++) {
-        max_cost = max(max_cost, cost_matrix[n*x+y]);
+        min_cost = min(min_cost, cost_matrix[n*x+y]);
       }
       for (int y = 0; y < n; y++) {
-        cost_matrix[n*x+y] -= max_cost;
+        cost_matrix[n*x+y] -= min_cost;
       }
       x_label[x] = 0;
     }
+    // Do the same for y.
     for (int y = 0; y < n; y++) {
-      Cost max_cost = 0;
+      Cost min_cost = 0;
       for (int x = 0; x < n; x++) {
-        max_cost = max(max_cost, cost_matrix[n*x+y]);
+        min_cost = min(min_cost, cost_matrix[n*x+y]);
       }
       for (int x = 0; x < n; x++) {
-        cost_matrix[n*x+y] -= max_cost;
+        cost_matrix[n*x+y] -= min_cost;
+        if (cost_matrix[n*x+y] < 0) {
+          return false;
+        }
       }
       y_label[y] = 0;
     }
+    return true;
   }
 
   void FindGreedySolution() {
@@ -155,30 +191,6 @@ class Hungarian {
           Match(x, y);
           matched += 1;
         }
-      }
-    }
-  }
-
-  int FindUnmatchedXValue() const {
-    for (int x = 0; x < n; x++) {
-      if (x_match[x] == -1) {
-        return x;
-      }
-    }
-    assert(false);
-  }
-
-  void UpdateLabels(Cost delta, bool* x_in_tree, int* y_parent, Cost* slack) {
-    for (int x = 0; x < n; x++) {
-      if (x_in_tree[x]) {
-        x_label[x] -= delta;
-      }
-    }
-    for (int y = 0; y < n; y++) {
-      if (y_parent[y] == -1) {
-        slack[y] -= delta;
-      } else {
-        y_label[y] += delta;
       }
     }
   }
@@ -200,13 +212,18 @@ class Hungarian {
     }
 
     int root = FindUnmatchedXValue();
+    if (root == -1) {
+      // All x-values are matched. Return early. This should not occur normally;
+      // RunAugmentationStep should only be called if there are unmatched nodes.
+      return;
+    }
+
     // slack[y] will be the minimum currently-known slack between y and any
     // node on the left, and slack_x[y] will be the node that minimizes it.
     Cost* slack = new Cost[n];
     int* slack_x = new int[n];
     for (int y = 0; y < n; y++) {
       slack[y] = GetSlack(root, y);
-      assert(slack[y] >= 0);
       slack_x[y] = root;
     }
     x_in_tree[root] = true;
@@ -250,10 +267,37 @@ class Hungarian {
         }
       }
     }
-    delete x_in_tree;
-    delete y_parent;
-    delete slack;
-    delete slack_x;
+    delete[] x_in_tree;
+    delete[] y_parent;
+    delete[] slack;
+    delete[] slack_x;
+  }
+
+  int FindUnmatchedXValue() const {
+    for (int x = 0; x < n; x++) {
+      if (x_match[x] == -1) {
+        return x;
+      }
+    }
+    // We should NEVER reach this point while running the algorithm.
+    // If all x-values are matched, we should not be in an augmentation step.
+    //assert(false);
+    return -1;
+  }
+
+  void UpdateLabels(Cost delta, bool* x_in_tree, int* y_parent, Cost* slack) {
+    for (int x = 0; x < n; x++) {
+      if (x_in_tree[x]) {
+        x_label[x] += delta;
+      }
+    }
+    for (int y = 0; y < n; y++) {
+      if (y_parent[y] == -1) {
+        slack[y] -= delta;
+      } else {
+        y_label[y] -= delta;
+      }
+    }
   }
 };
 

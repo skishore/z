@@ -99,6 +99,8 @@ void ComputePlaces(const TileMap::Room& room, const vector<Sprite*>& sprites,
     }
   }
   Hungarian hungarian(n, distances);
+  Hungarian::Status status = hungarian.Solve();
+  ASSERT(status == Hungarian::OK, "Hungarian exited with status: " << status);
 
   for (int i = 0; i < n; i++) {
     (*places)[i] = options[hungarian.GetXMatch(i)];
