@@ -1,6 +1,9 @@
 #ifndef __SKISHORE_BATTLE_H__
 #define __SKISHORE_BATTLE_H__
 
+#include <memory>
+
+#include "BattleExecutor.h"
 #include "Sprite.h"
 
 namespace skishore {
@@ -18,18 +21,13 @@ class Battle {
   bool Update();
 
  protected:
-  void ComputePlaces(std::vector<Point>* places) const;
-
   const TileMap::Room* room_;
+  std::unique_ptr<BattleExecutor> executor_;
 
-  // Convenience accessors for particular classes of sprite in the battle.
+  // The player sprite and the list of all sprites in the battle.
+  // The player's sprite will ALWAYS be first in the list.
   Sprite* player_;
-  std::vector<Sprite*> enemies_;
-
-  // The vector of all sprites in the battle and their places within the room.
-  // The places are recorded in grid squares.
   std::vector<Sprite*> sprites_;
-  std::vector<Point> places_;
 };
 
 }  // namespace battle

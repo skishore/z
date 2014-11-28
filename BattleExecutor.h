@@ -6,18 +6,22 @@
 
 namespace skishore {
 
-class GameState;
-
 namespace battle {
+
+class BattleStep;
 
 class BattleExecutor {
  public:
   BattleExecutor(const TileMap::Room& room,
                  const std::vector<Sprite*>& sprites);
 
+  // Moves sprite i to its place, or moves all sprites to their places.
+  void WalkToPlace(int i);
+  void WalkToPlaces();
+
   // Runs the script through a single time-step. If this method returns true,
   // then all current scripts have finished.
-  bool Update(const GameState& game_state);
+  bool Update();
 
  protected:
   const TileMap::Room& room_;

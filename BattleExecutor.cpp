@@ -3,8 +3,8 @@
 
 #include "constants.h"
 #include "debug.h"
+#include "BattleState.h"
 #include "BattleExecutor.h"
-#include "GameState.h"
 
 using std::min;
 using std::max;
@@ -115,7 +115,17 @@ BattleExecutor::BattleExecutor(
   ComputePlaces(room_, sprites_, &places_);
 }
 
-bool BattleExecutor::Update(const GameState& game_state) {
+void BattleExecutor::WalkToPlace(int i) {
+  sprites_[i]->SetState(new WalkToTargetState(places_[i]));
+}
+
+void BattleExecutor::WalkToPlaces() {
+  for (int i = 0; i < sprites_.size(); i++) {
+    sprites_[i]->SetState(new WalkToTargetState(places_[i]));
+  }
+}
+
+bool BattleExecutor::Update() {
   return false;
 }
 
