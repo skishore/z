@@ -7,6 +7,12 @@
 namespace skishore {
 namespace battle {
 
+class WaitingState : public SpriteState {
+ public:
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+};
+
 class WalkToTargetState : public SpriteState {
  public:
   WalkToTargetState(const Point& target) : target_(target) {}; 

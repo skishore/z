@@ -18,6 +18,14 @@ Direction GetDirection(const Point& move) {
 
 }  // namespace
 
+SpriteState* WaitingState::MaybeTransition(const GameState& game_state) const {
+  return nullptr;
+}
+
+SpriteState* WaitingState::Update(const GameState& game_state) {
+  return nullptr;
+}
+
 SpriteState* WalkToTargetState::MaybeTransition(
     const GameState& game_state) const {
   return nullptr;
@@ -30,8 +38,9 @@ SpriteState* WalkToTargetState::Update(const GameState& game_state) {
     sprite_->dir_ = GetDirection(move);
     move.set_length(kBattleSpeed);
     MoveSprite(game_state, sprite_, &move, &anim_num_);
+    return nullptr;
   }
-  return nullptr;
+  return new WaitingState;
 }
 
 } // namespace battle

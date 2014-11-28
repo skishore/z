@@ -107,7 +107,77 @@ void ComputePlaces(const TileMap::Room& room, const vector<Sprite*>& sprites,
   }
 }
 
+namespace script {
+
+class ParallelScript : public BattleScript {
+ public:
+  ParallelScript(BattleScript* script1, BattleScript* script2)
+      : script1_(script1), script2_(script2) {}
+
+  bool Step() override {
+    bool script1_done = script1_->Update();
+    bool script2_done = script2_->Update();
+    return script1_done && script2_done;
+  }
+
+ private:
+  std::unique_ptr<BattleScript> script1_;
+  std::unique_ptr<BattleScript> script2_;
+};
+
+class SerialScript : public BattleScript {
+ public:
+  SerialScript(BattleScript* script1, BattleScript* script2)
+      : script1_(script1), script2_(script2) {}
+
+  bool Step() override {
+    return script1_->Update() && script2_->Update();
+  }
+
+ private:
+  std::unique_ptr<BattleScript> script1_;
+  std::unique_ptr<BattleScript> script2_;
+};
+
+class WalkToTargetScript : public BattleScript {
+ public:
+  WalkToTargetScript(const Point& target, Sprite* sprite)
+      : target_(target), sprite_(sprite) {}
+
+  void Start() override {
+    state_ = new WalkToTargetState(target_);
+    sprite_->SetState(state_);
+  }
+
+  bool Step() override {
+    return sprite_->GetState() != state_;
+  }
+
+ private:
+  const Point& target_;
+  Sprite* sprite_;
+  SpriteState* state_;
+};
+
+}  // namespace script
 }  // namespace
+
+BattleScript* BattleScript::And(BattleScript* other) {
+  return new script::ParallelScript(this, other);
+}
+
+BattleScript* BattleScript::AndThen(BattleScript* other) {
+  return new script::SerialScript(this, other);
+}
+
+bool BattleScript::Update() {
+  if (!started_) {
+    Start();
+    started_ = true;
+  }
+  done_ = done_ || Step();
+  return done_;
+}
 
 BattleExecutor::BattleExecutor(
     const TileMap::Room& room, const vector<Sprite*>& sprites)
@@ -115,18 +185,28 @@ BattleExecutor::BattleExecutor(
   ComputePlaces(room_, sprites_, &places_);
 }
 
-void BattleExecutor::WalkToPlace(int i) {
-  sprites_[i]->SetState(new WalkToTargetState(places_[i]));
+BattleScript* BattleExecutor::AssumePlace(int i) {
+  return new script::WalkToTargetScript(places_[i], sprites_[i]);
 }
 
-void BattleExecutor::WalkToPlaces() {
-  for (int i = 0; i < sprites_.size(); i++) {
-    sprites_[i]->SetState(new WalkToTargetState(places_[i]));
+BattleScript* BattleExecutor::AssumePlaces() {
+  BattleScript* script = AssumePlace(0);
+  for (int i = 1; i < sprites_.size(); i++) {
+    script = script->And(AssumePlace(i));
   }
+  return script;
+}
+
+void BattleExecutor::RunScript(BattleScript* script) {
+  ASSERT(script_ == nullptr, "RunScript called when one was running!");
+  script_.reset(script);
 }
 
 bool BattleExecutor::Update() {
-  return false;
+  if (script_ != nullptr && script_->Update()) {
+    script_.reset(nullptr);
+  }
+  return script_ != nullptr;
 }
 
 }  // namespace battle

@@ -17,10 +17,14 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   }
   ASSERT(sprites_.size() > 1, "Could not find enemies to battle!");
   executor_.reset(new BattleExecutor(*room_, sprites_));
-  executor_->WalkToPlaces();
+  executor_->RunScript(executor_->AssumePlaces());
 }
 
 bool Battle::Update() {
+  if (!executor_->Update()) {
+    // We're running a script. Return early.
+    return false;
+  }
   return false;
 }
 
