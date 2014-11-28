@@ -7,6 +7,18 @@
 namespace skishore {
 namespace battle {
 
+class FaceTargetState : public SpriteState {
+ public:
+  // The target is a position to face.
+  FaceTargetState(const Point& target) : target_(target) {};
+
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  Point target_;
+};
+
 class WaitingState : public SpriteState {
  public:
   SpriteState* MaybeTransition(const GameState& game_state) const override;
@@ -15,7 +27,8 @@ class WaitingState : public SpriteState {
 
 class WalkToTargetState : public SpriteState {
  public:
-  WalkToTargetState(const Point& target) : target_(target) {}; 
+  // The target is a grid square to walk to.
+  WalkToTargetState(const Point& target) : target_(target) {};
 
   SpriteState* MaybeTransition(const GameState& game_state) const override;
   SpriteState* Update(const GameState& game_state) override;

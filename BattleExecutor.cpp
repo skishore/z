@@ -139,14 +139,14 @@ class SerialScript : public BattleScript {
   std::unique_ptr<BattleScript> script2_;
 };
 
-class WalkToTargetScript : public BattleScript {
+class WaitForStateTransitionScript : public BattleScript {
  public:
-  WalkToTargetScript(const Point& target, Sprite* sprite)
-      : target_(target), sprite_(sprite) {}
+  // Takes ownership of the input state.
+  WaitForStateTransitionScript(Sprite* sprite, SpriteState* state)
+      : sprite_(sprite), state_(state), state_ownership_(state) {}
 
   void Start() override {
-    state_ = new WalkToTargetState(target_);
-    sprite_->SetState(state_);
+    sprite_->SetState(state_ownership_.release());
   }
 
   bool Step() override {
@@ -154,12 +154,17 @@ class WalkToTargetScript : public BattleScript {
   }
 
  private:
-  const Point& target_;
   Sprite* sprite_;
   SpriteState* state_;
+  std::unique_ptr<SpriteState> state_ownership_;
 };
 
 }  // namespace script
+
+inline BattleScript* Run(Sprite* sprite, SpriteState* state) {
+  return new script::WaitForStateTransitionScript(sprite, state);
+}
+
 }  // namespace
 
 BattleScript* BattleScript::And(BattleScript* other) {
@@ -183,10 +188,14 @@ BattleExecutor::BattleExecutor(
     const TileMap::Room& room, const vector<Sprite*>& sprites)
     : room_(room), sprites_(sprites) {
   ComputePlaces(room_, sprites_, &places_);
+  center_ = kGridTicks*(2*room.position + room.size - Point(1, 1))/2;
 }
 
 BattleScript* BattleExecutor::AssumePlace(int i) {
-  return new script::WalkToTargetScript(places_[i], sprites_[i]);
+  BattleScript* move = Run(sprites_[i], new WalkToTargetState(places_[i]));
+  const Point& target = (i == 0 ? center_ : kGridTicks*places_[0]);
+  BattleScript* face = Run(sprites_[i], new FaceTargetState(target));
+  return move->AndThen(face);
 }
 
 BattleScript* BattleExecutor::AssumePlaces() {

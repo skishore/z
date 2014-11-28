@@ -18,6 +18,18 @@ Direction GetDirection(const Point& move) {
 
 }  // namespace
 
+SpriteState* FaceTargetState::MaybeTransition(
+    const GameState& game_state) const {
+  return nullptr;
+}
+
+SpriteState* FaceTargetState::Update(const GameState& game_state) {
+  Point move = target_ - sprite_->GetPosition();
+  sprite_->dir_ = GetDirection(move);
+  sprite_->frame_.x = sprite_->dir_;
+  return new WaitingState;
+}
+
 SpriteState* WaitingState::MaybeTransition(const GameState& game_state) const {
   return nullptr;
 }

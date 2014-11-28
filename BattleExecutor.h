@@ -48,6 +48,8 @@ class BattleExecutor {
  protected:
   const TileMap::Room& room_;
   const std::vector<Sprite*>& sprites_;
+
+  Point center_;
   std::vector<Point> places_;
   std::unique_ptr<BattleScript> script_;
 };
