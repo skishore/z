@@ -21,12 +21,17 @@ class TextRenderer {
   ~TextRenderer();
 
   void DrawText(int font_size, const Point& position,
-                const std::string text, const SDL_Color color=kWhite);
+                const std::string& text, const SDL_Color color=kWhite);
   void DrawTextBox(
-      int font_size, const SDL_Rect& rect, const std::string text,
+      int font_size, const SDL_Rect& rect, const std::string& text,
       const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
 
  private:
+  // The callee takes ownership of the rendered surface.
+  SDL_Surface* RenderTextSolid(int font_size, const std::string& text,
+                               SDL_Color color, SDL_Rect* size);
+
+  // The class has ownership of the loaded font.
   TTF_Font* LoadFont(int font_size);
 
   //const SDL_Rect& bounds_;
