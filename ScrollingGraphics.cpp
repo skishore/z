@@ -103,7 +103,7 @@ void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
   if (sprite.is_player_) {
     Point position = sprite.GetDrawingPosition() - offset;
     SDL_Rect rect{position.x, position.y, kGridSize, kGridSize};
-    text_renderer_->DrawTextBox(kGridSize, rect, "शब्दकोश");
+    text_renderer_->DrawTextBox(kGridSize, rect, "\u0924\u094D\u0928");
   }
 }
 
