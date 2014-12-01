@@ -1,0 +1,11 @@
+1. Download the freetype source code.
+2. Enter the freetype directiory, then run:
+    EMSCRIPTEN_JS=1 emconfigure ./configure
+    emmake make
+3. After this step is done, in the objs directory you should see a number of
+   .o and .a files. Open up one of these and verify that it starts with "BC" -
+   that is, that it is bytecode.
+4. Repeat steps 1-3 for any other libraries you need.
+5. Copy all .o and .a files from all libraries into your project.
+6. Edit your Makefile so that when linking your project, all these bytecode
+   files are linked as well.
