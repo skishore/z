@@ -5,13 +5,14 @@ EXECUTABLE := $(BUILD)/main
 
 EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o)))
 HTML := $(BUILD)/main.html
+BASE_FLAGS := -Wall -std=c++11 -stdlib=libc++
 
 CC := clang++
-CC_FLAGS := -Wall -std=c++11 -stdlib=libc++
-LD_FLAGS := $(CC_FLAGS) -lSDL2 -lSDL2_ttf
+CC_FLAGS := ${BASE_FLAGS} -I/usr/local/include/freetype2 -I/usr/local/include/freetype2/config -I/usr/local/include/harfbuzz
+LD_FLAGS := $(CC_FLAGS) -lSDL2 -lSDL2_ttf -lfreetype -lharfbuzz
 
-EMCC_FLAGS := -s USE_SDL=2 $(CC_FLAGS) -Icompiled-bytecode/include
-EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype/* compiled-bytecode/lib/SDL_ttf/*
+EMCC_FLAGS := $(BASE_FLAGS) -s USE_SDL=2 -Icompiled-bytecode/include -Icompiled-bytecode/include/freetype2 -Icompiled-bytecode/include/freetype2/config -Icompiled-bytecode/include/harfbuzz
+EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype/* compiled-bytecode/lib/harfbuzz/* compiled-bytecode/lib/SDL_ttf/*
 
 all:
 	make exe
