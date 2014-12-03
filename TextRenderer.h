@@ -4,16 +4,20 @@
 #include <map>
 #include <string>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include "Point.h"
 
 namespace skishore {
 
-namespace {
 static const SDL_Color kBlack{0, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
-}  // namespace
+
+namespace font {
+class Font;
+}  // namespace font
 
 class TextRenderer {
  public:
@@ -32,12 +36,12 @@ class TextRenderer {
                                SDL_Color color, SDL_Rect* size);
 
   // The class has ownership of the loaded font.
-  TTF_Font* LoadFont(int font_size);
+  font::Font* LoadFont(int font_size);
 
-  //const SDL_Rect& bounds_;
+  FT_Library library_;
   SDL_Surface* target_;
 
-  std::map<int,TTF_Font*> fonts_by_size_;
+  std::map<int,font::Font*> fonts_by_size_;
 };
 
 } // namespace skishore
