@@ -114,7 +114,7 @@ class Font {
   Font(const string& font_name, int font_size, FT_Library library);
   ~Font();
 
-  void Render(const string& text, SDL_Surface* target);
+  void Render(const Point& position, const string& text, SDL_Surface* target);
 
  private:
   int font_size_;
@@ -153,11 +153,11 @@ void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
   }
 }
 
-void Font::Render(const string& text_2, SDL_Surface* surface) {
+void Font::Render(
+    const Point& position, const string& text, SDL_Surface* surface) {
   hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
   hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
   hb_buffer_set_script(buffer_, HB_SCRIPT_DEVANAGARI);
-  const string text = "\u0924\u094D\u0928";
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
   hb_shape(font_, buffer_, nullptr, 0);
 
@@ -217,17 +217,16 @@ void Font::Render(const string& text_2, SDL_Surface* surface) {
   max_b.y = max(size.y, max_b.y);
 
   Point box = max_b - min_b;
-
-  int x = 40;
-  int y = 40;
+  int x = position.x;
+  int y = position.y + max_b.y + 1;
 
   SDL_LockSurface(surface);
 
   HLine(surface, x, x + box.x, y, 0x0000ff00);
-  HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - max_b.y - 1, 0x00ff0000);
-  HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - min_b.y + 1, 0x00ff0000);
-  VLine(surface, x + min_b.x - 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
-  VLine(surface, x + max_b.x + 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
+  HLine(surface, x + min_b.x, x + max_b.x, y - max_b.y, 0x00ff0000);
+  HLine(surface, x + min_b.x, x + max_b.x, y - min_b.y, 0x00ff0000);
+  VLine(surface, x + min_b.x, y - max_b.y, y - min_b.y, 0x00ff0000);
+  VLine(surface, x + max_b.x, y - max_b.y, y - min_b.y, 0x00ff0000);
 
   // Prepare the context for rendering.
   // TODO(skishore): Use a different context for this part.
@@ -289,6 +288,10 @@ void TextRenderer::DrawText(int font_size, const Point& position,
   if (text.size() == 0) {
     return;
   }
+  Font* font = LoadFont(font_size);
+  font->Render(position, text, target_);
+  return;
+
   SDL_Rect size;
   SDL_Surface* surface = RenderTextSolid(font_size, text, color, &size);
   SDL_Rect target{position.x, position.y, 0, 0};
@@ -303,7 +306,7 @@ void TextRenderer::DrawTextBox(
     return;
   }
   Font* font = LoadFont(font_size);
-  font->Render(text, target_);
+  font->Render(Point(rect.x + rect.w, rect.y - rect.h), text, target_);
   return;
 
   SDL_Rect size;
