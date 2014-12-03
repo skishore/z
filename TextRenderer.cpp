@@ -133,8 +133,6 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   ASSERT(!ForceUCS2Charmap(face_), "Failed to set charmap for " << font_name);
   font_ = hb_ft_font_create(face_, nullptr);
   buffer_ = hb_buffer_create();
-  hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
-  hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
 }
 
 void HLine(SDL_Surface* surface, int min_x, int max_x, int y, uint32_t color) {
@@ -155,9 +153,11 @@ void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
   }
 }
 
-void Font::Render(const string& text, SDL_Surface* surface) {
+void Font::Render(const string& text_2, SDL_Surface* surface) {
+  hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
+  hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
   hb_buffer_set_script(buffer_, HB_SCRIPT_DEVANAGARI);
-  //const string kTestText = "\u0924\u094D\u0928";
+  const string text = "\u0924\u094D\u0928";
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
   hb_shape(font_, buffer_, nullptr, 0);
 
@@ -189,29 +189,30 @@ void Font::Render(const string& text, SDL_Surface* surface) {
     int x = size.x + glyph_pos[i].x_offset/kScale;
     int y = size.y + glyph_pos[i].y_offset/kScale;
     context.min_span_x = INT_MAX;
-    context.min_span_x = INT_MIN;
+    context.max_span_x = INT_MIN;
     context.min_y = INT_MAX;
     context.max_y = INT_MIN;
     ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer),
            "Failed to render " << glyph_info[i].codepoint);
     if (context.min_span_x != INT_MAX) {
-      min_b.x = min(context.min_span_x, x);
-      max_b.x = max(context.max_span_x, x);
-      min_b.y = min(context.min_y, y);
-      max_b.y = max(context.max_y, y);
+      min_b.x = min(context.min_span_x + x, min_b.x);
+      max_b.x = max(context.max_span_x + x, max_b.x);
+      min_b.y = min(context.min_y + y, min_b.y);
+      max_b.y = max(context.max_y + y, max_b.y);
     } else {
-      min_b.x = min(min_b.x, x);
-      max_b.x = max(max_b.x, x);
-      min_b.y = min(min_b.y, y);
-      max_b.y = max(max_b.y, y);
+      min_b.x = min(x, min_b.x);
+      max_b.x = max(x, max_b.x);
+      min_b.y = min(y, min_b.y);
+      max_b.y = max(y, max_b.y);
     }
     size.x += glyph_pos[i].x_advance/kScale;
     size.y += glyph_pos[i].y_advance/kScale;
   }
-  min_b.x = min(min_b.x, size.x);
-  max_b.x = max(max_b.x, size.x);
-  min_b.y = min(min_b.y, size.y);
-  max_b.y = max(max_b.y, size.y);
+  // TODO(skishore): This extra extension of the bounding box may be unneeded.
+  min_b.x = min(size.x, min_b.x);
+  max_b.x = max(size.x, max_b.x);
+  min_b.y = min(size.y, min_b.y);
+  max_b.y = max(size.y, max_b.y);
 
   Point box = max_b - min_b;
 
@@ -219,10 +220,12 @@ void Font::Render(const string& text, SDL_Surface* surface) {
   int y = 40;
 
   HLine(surface, x, x + box.x, y, 0x0000ff00);
-  HLine(surface, x + min_b.x, x + max_b.x, y - max_b.y, 0x00ff0000);
-  HLine(surface, x + min_b.x, x + max_b.x, y - min_b.y, 0x00ff0000);
-  VLine(surface, x + min_b.x, y - max_b.y, y - min_b.y, 0x00ff0000);
-  VLine(surface, x + max_b.x, y - max_b.y, y - min_b.y, 0x00ff0000);
+  HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - max_b.y - 1, 0x00ff0000);
+  HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - min_b.y + 1, 0x00ff0000);
+  VLine(surface, x + min_b.x - 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
+  VLine(surface, x + max_b.x + 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
+
+  hb_buffer_clear_contents(buffer_);
 }
 
 Font::~Font() {
