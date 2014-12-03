@@ -107,6 +107,43 @@ void SizeSpanner(int y, int count, const FT_Span* spans, void* ctx) {
   }
 }
 
+void HLine(SDL_Surface* surface, int min_x, int max_x, int y, uint32_t color) {
+  uint32_t* pix = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + min_x;
+  uint32_t* end = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + max_x;
+  while (pix - 1 != end) {
+    *pix = color;
+    pix += 1;
+  }
+}
+
+void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
+  uint32_t* pix = (uint32_t*)surface->pixels + (min_y*surface->pitch)/4 + x;
+  uint32_t* end = (uint32_t*)surface->pixels + (max_y*surface->pitch)/4 + x;
+  while (pix - surface->pitch/4 != end) {
+    *pix = color;
+    pix += surface->pitch/4;
+  }
+}
+
+hb_script_t GetHarfbuzzBufferScript(hb_buffer_t* buffer) {
+  // Sets a best-guess value for the script of the given buffer.
+  hb_unicode_funcs_t* unicode_funcs = hb_buffer_get_unicode_funcs(buffer);
+  if (unicode_funcs == nullptr) {
+    return HB_SCRIPT_UNKNOWN;
+  }
+  unsigned int num_glyphs;
+  hb_glyph_info_t* glyph_info = hb_buffer_get_glyph_infos(buffer, &num_glyphs);
+  for (int i = 0; i < num_glyphs; i++) {
+    hb_script_t script = hb_unicode_script(
+        unicode_funcs, glyph_info[i].codepoint);
+    if (script != HB_SCRIPT_COMMON && script != HB_SCRIPT_INHERITED &&
+        script != HB_SCRIPT_UNKNOWN) {
+      return script;
+    }
+  }
+  return HB_SCRIPT_UNKNOWN;
+}
+
 }  // namespace
 
 class Font {
@@ -135,30 +172,12 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   buffer_ = hb_buffer_create();
 }
 
-void HLine(SDL_Surface* surface, int min_x, int max_x, int y, uint32_t color) {
-  uint32_t* pix = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + min_x;
-  uint32_t* end = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + max_x;
-  while (pix - 1 != end) {
-    *pix = color;
-    pix += 1;
-  }
-}
-
-void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
-  uint32_t* pix = (uint32_t*)surface->pixels + (min_y*surface->pitch)/4 + x;
-  uint32_t* end = (uint32_t*)surface->pixels + (max_y*surface->pitch)/4 + x;
-  while (pix - surface->pitch/4 != end) {
-    *pix = color;
-    pix += surface->pitch/4;
-  }
-}
-
 void Font::Render(
     const Point& position, const string& text, SDL_Surface* surface) {
   hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
   hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
-  hb_buffer_set_script(buffer_, HB_SCRIPT_DEVANAGARI);
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
+  hb_buffer_set_script(buffer_, GetHarfbuzzBufferScript(buffer_));
   hb_shape(font_, buffer_, nullptr, 0);
 
   unsigned int glyph_count;
