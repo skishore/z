@@ -186,8 +186,10 @@ void Font::Render(const string& text_2, SDL_Surface* surface) {
            "Failed to load glyph: " << glyph_info[i].codepoint);
     ASSERT(face_->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
            "Got unexpected glyph format: " << (char*)&face_->glyph->format);
-    int x = size.x + glyph_pos[i].x_offset/kScale;
-    int y = size.y + glyph_pos[i].y_offset/kScale;
+    // Compute the glyph's x and y position in CHARACTER coordinates.
+    // Note that in character coordinates, +y is UP.
+    int gx = size.x + glyph_pos[i].x_offset/kScale;
+    int gy = size.y + glyph_pos[i].y_offset/kScale;
     context.min_span_x = INT_MAX;
     context.max_span_x = INT_MIN;
     context.min_y = INT_MAX;
@@ -195,15 +197,15 @@ void Font::Render(const string& text_2, SDL_Surface* surface) {
     ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer),
            "Failed to render " << glyph_info[i].codepoint);
     if (context.min_span_x != INT_MAX) {
-      min_b.x = min(context.min_span_x + x, min_b.x);
-      max_b.x = max(context.max_span_x + x, max_b.x);
-      min_b.y = min(context.min_y + y, min_b.y);
-      max_b.y = max(context.max_y + y, max_b.y);
+      min_b.x = min(context.min_span_x + gx, min_b.x);
+      max_b.x = max(context.max_span_x + gx, max_b.x);
+      min_b.y = min(context.min_y + gy, min_b.y);
+      max_b.y = max(context.max_y + gy, max_b.y);
     } else {
-      min_b.x = min(x, min_b.x);
-      max_b.x = max(x, max_b.x);
-      min_b.y = min(y, min_b.y);
-      max_b.y = max(y, max_b.y);
+      min_b.x = min(gx, min_b.x);
+      max_b.x = max(gx, max_b.x);
+      min_b.y = min(gy, min_b.y);
+      max_b.y = max(gy, max_b.y);
     }
     size.x += glyph_pos[i].x_advance/kScale;
     size.y += glyph_pos[i].y_advance/kScale;
@@ -219,11 +221,45 @@ void Font::Render(const string& text_2, SDL_Surface* surface) {
   int x = 40;
   int y = 40;
 
+  SDL_LockSurface(surface);
+
   HLine(surface, x, x + box.x, y, 0x0000ff00);
   HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - max_b.y - 1, 0x00ff0000);
   HLine(surface, x + min_b.x - 1, x + max_b.x + 1, y - min_b.y + 1, 0x00ff0000);
   VLine(surface, x + min_b.x - 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
   VLine(surface, x + max_b.x + 1, y - max_b.y - 1, y - min_b.y + 1, 0x00ff0000);
+
+  // Prepare the context for rendering.
+  // TODO(skishore): Use a different context for this part.
+  context.pitch = surface->pitch;
+  context.rshift = surface->format->Rshift;
+  context.gshift = surface->format->Gshift;
+  context.bshift = surface->format->Bshift;
+
+  context.first_pixel = (uint32_t*)surface->pixels;
+  context.last_pixel =
+      (uint32_t*)(((uint8_t*)surface->pixels) + surface->pitch*surface->h);
+
+  renderer.gray_spans = SolidSpanner;
+
+  for (int i = 0; i < glyph_count; i++) {
+    ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
+           "Failed to load glyph: " << glyph_info[i].codepoint);
+    ASSERT(face_->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
+           "Got unexpected glyph format: " << (char*)&face_->glyph->format);
+    // Compute the glyph's x and y position in WINDOW coordinates.
+    // Note that in character coordinates, +y is DOWN.
+    int gx = x + glyph_pos[i].x_offset/kScale;
+    int gy = y - glyph_pos[i].y_offset/kScale;
+    context.pixels =
+        (uint32_t*)(((uint8_t*)surface->pixels) + gy*surface->pitch) + gx;
+    ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer),
+           "Failed to render " << glyph_info[i].codepoint);
+    x += glyph_pos[i].x_advance/kScale;
+    y -= glyph_pos[i].y_advance/kScale;
+  }
+
+  SDL_UnlockSurface(surface);
 
   hb_buffer_clear_contents(buffer_);
 }
