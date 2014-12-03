@@ -12,7 +12,7 @@ CC_FLAGS := ${BASE_FLAGS} -I/usr/local/include/freetype2 -I/usr/local/include/fr
 LD_FLAGS := $(CC_FLAGS) -lSDL2 -lfreetype -lharfbuzz
 
 EMCC_FLAGS := $(BASE_FLAGS) -s USE_SDL=2 -Icompiled-bytecode/include -Icompiled-bytecode/include/freetype2 -Icompiled-bytecode/include/freetype2/config -Icompiled-bytecode/include/harfbuzz
-EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype/* compiled-bytecode/lib/harfbuzz/* compiled-bytecode/lib/SDL_ttf/*
+EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype/* compiled-bytecode/lib/harfbuzz/*
 
 all:
 	make exe
