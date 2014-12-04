@@ -50,21 +50,18 @@ int ForceUCS2Charmap(FT_Face face) {
 #endif  // unlikely
 
 struct SpannerContext {
-  // Rendering fields for a 32-bit surface.
+  // Pixels stores a pointer to the surface's top-left pixel.
+  uint32_t* pixels;
+  int width;
+  int height;
   uint32_t pitch;
+
+  // Data about the 32-bit format of the surface's pixels.
   uint32_t rshift;
   uint32_t gshift;
   uint32_t bshift;
-  uint32_t ashift;
 
-  // pixels stores the glyph's origin, while first_pixel and last_pixel
-  // store the surface's bounds.
-  // TODO(skishore): Implement x-coordinate bound-checks as well.
-  uint32_t* pixels;
-  uint32_t* first_pixel;
-  uint32_t* last_pixel;
-  int width;
-  int height;
+  // The current glyph's origin in surface coordinates.
   int gx;
   int gy;
 
@@ -97,7 +94,7 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   if (unlikely(y < 0 || y >= context->height)) {
     return;
   }
-  uint32_t* scanline = context->first_pixel + y*((int)context->pitch/4);
+  uint32_t* scanline = context->pixels + y*((int)context->pitch/4);
   for (int i = 0; i < count; i++) {
     int x = context->gx + spans[i].x;
     if (unlikely(x < 0)) {
@@ -282,16 +279,13 @@ void Font::Render(const Point& position, const string& text,
 
   // Prepare the context for rendering.
   // TODO(skishore): Use a different context for this part.
+  context.pixels = (uint32_t*)surface->pixels;
+  context.width = surface->w;
+  context.height = surface->h;
   context.pitch = surface->pitch;
   context.rshift = surface->format->Rshift;
   context.gshift = surface->format->Gshift;
   context.bshift = surface->format->Bshift;
-
-  context.first_pixel = (uint32_t*)surface->pixels;
-  context.last_pixel =
-      (uint32_t*)(((uint8_t*)surface->pixels) + surface->pitch*surface->h);
-  context.width = surface->w;
-  context.height = surface->h;
 
   renderer.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
 
@@ -304,8 +298,6 @@ void Font::Render(const Point& position, const string& text,
     // Note that in character coordinates, +y is DOWN.
     context.gx = x + glyph_pos[i].x_offset/kScale;
     context.gy = y - glyph_pos[i].y_offset/kScale;
-    context.pixels =
-        (uint32_t*)(((uint8_t*)surface->pixels) + context.gy*surface->pitch) + context.gx;
     ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer),
            "Failed to render " << glyph_info[i].codepoint);
     x += glyph_pos[i].x_advance/kScale;
