@@ -63,6 +63,10 @@ struct SpannerContext {
   uint32_t* pixels;
   uint32_t* first_pixel;
   uint32_t* last_pixel;
+  int width;
+  int height;
+  int gx;
+  int gy;
 
   // Sizing fields.
   int min_span_x;
@@ -75,23 +79,27 @@ struct SpannerContext {
 // This spanner does not blend the glyph with the surface's current contents.
 void SolidSpanner(int y, int count, const FT_Span* spans, void* ctx) {
   SpannerContext* context = (SpannerContext*)ctx;
-  uint32_t* scanline = context->pixels - y*((int)context->pitch/4);
-  if (unlikely scanline < context->first_pixel) {
+  y = context->gy - y;
+  if (unlikely(y < 0 || y >= context->height)) {
     return;
   }
+  uint32_t* scanline = context->first_pixel + y*((int)context->pitch/4);
   for (int i = 0; i < count; i++) {
+    int x = context->gx + spans[i].x;
+    if (unlikely(x < 0)) {
+      break;
+    }
+    uint32_t* start = scanline + x;
     uint32_t color =
       (spans[i].coverage << context->rshift) |
       (spans[i].coverage << context->gshift) |
       (spans[i].coverage << context->bshift);
 
-    uint32_t* start = scanline + spans[i].x;
-    if (unlikely start + spans[i].len > context->last_pixel) {
-      return;
-    }
-    for (int x = 0; x < spans[i].len; x++) {
-      *start = color;
-      start += 1;
+    for (int j = 0; j < spans[i].len; j++) {
+      if (unlikely(x + j >= context->width)) {
+        break;
+      }
+      *(start + j) = color;
     }
   }
 }
@@ -99,23 +107,27 @@ void SolidSpanner(int y, int count, const FT_Span* spans, void* ctx) {
 // Spanner that max-blends the glyph on to the surface.
 void BlendedSpanner(int y, int count, const FT_Span* spans, void* ctx) {
   SpannerContext* context = (SpannerContext*)ctx;
-  uint32_t* scanline = context->pixels - y*((int)context->pitch/4);
-  if (unlikely scanline < context->first_pixel) {
+  y = context->gy - y;
+  if (unlikely(y < 0 || y >= context->height)) {
     return;
   }
+  uint32_t* scanline = context->first_pixel + y*((int)context->pitch/4);
   for (int i = 0; i < count; i++) {
+    int x = context->gx + spans[i].x;
+    if (unlikely(x < 0)) {
+      break;
+    }
+    uint32_t* start = scanline + x;
     uint32_t color =
       (spans[i].coverage << context->rshift) |
       (spans[i].coverage << context->gshift) |
       (spans[i].coverage << context->bshift);
 
-    uint32_t* start = scanline + spans[i].x;
-    if (unlikely start + spans[i].len > context->last_pixel) {
-      return;
-    }
-    for (int x = 0; x < spans[i].len; x++) {
-      *start |= color;
-      start += 1;
+    for (int j = 0; j < spans[i].len; j++) {
+      if (unlikely(x + j >= context->width)) {
+        break;
+      }
+      *(start + j) |= color;
     }
   }
 }
@@ -132,18 +144,28 @@ void SizeSpanner(int y, int count, const FT_Span* spans, void* ctx) {
 }
 
 void HLine(SDL_Surface* surface, int min_x, int max_x, int y, uint32_t color) {
+  if (unlikely(y < 0 || y >= surface->h)) {
+    return;
+  }
+  min_x = max(min_x, 0);
+  max_x = min(max_x, surface->w - 1);
   uint32_t* pix = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + min_x;
   uint32_t* end = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + max_x;
-  while (pix - 1 != end) {
+  while (pix - 1 < end) {
     *pix = color;
     pix += 1;
   }
 }
 
 void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
+  if (unlikely(x < 0 || x >= surface->w)) {
+    return;
+  }
+  min_y = max(min_y, 0);
+  max_y = min(max_y, surface->h - 1);
   uint32_t* pix = (uint32_t*)surface->pixels + (min_y*surface->pitch)/4 + x;
   uint32_t* end = (uint32_t*)surface->pixels + (max_y*surface->pitch)/4 + x;
-  while (pix - surface->pitch/4 != end) {
+  while (pix - surface->pitch/4 < end) {
     *pix = color;
     pix += surface->pitch/4;
   }
@@ -282,6 +304,8 @@ void Font::Render(const Point& position, const string& text,
   context.first_pixel = (uint32_t*)surface->pixels;
   context.last_pixel =
       (uint32_t*)(((uint8_t*)surface->pixels) + surface->pitch*surface->h);
+  context.width = surface->w;
+  context.height = surface->h;
 
   renderer.gray_spans = (blend ? BlendedSpanner : SolidSpanner);
 
@@ -292,10 +316,10 @@ void Font::Render(const Point& position, const string& text,
            "Got unexpected glyph format: " << (char*)&face_->glyph->format);
     // Compute the glyph's x and y position in WINDOW coordinates.
     // Note that in character coordinates, +y is DOWN.
-    int gx = x + glyph_pos[i].x_offset/kScale;
-    int gy = y - glyph_pos[i].y_offset/kScale;
+    context.gx = x + glyph_pos[i].x_offset/kScale;
+    context.gy = y - glyph_pos[i].y_offset/kScale;
     context.pixels =
-        (uint32_t*)(((uint8_t*)surface->pixels) + gy*surface->pitch) + gx;
+        (uint32_t*)(((uint8_t*)surface->pixels) + context.gy*surface->pitch) + context.gx;
     ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer),
            "Failed to render " << glyph_info[i].codepoint);
     x += glyph_pos[i].x_advance/kScale;
