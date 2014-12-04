@@ -75,9 +75,23 @@ struct SpannerContext {
   int max_y;
 };
 
-// Spanner that simply writes the glyph out to the surface.
-// This spanner does not blend the glyph with the surface's current contents.
-void SolidSpanner(int y, int count, const FT_Span* spans, void* ctx) {
+// Render function that simply writes the glyph out to the surface.
+// This method does not blend the glyph with the surface's current contents.
+struct Overwrite {
+  static inline void Render(uint32_t* target, uint32_t color) {
+    *target = color;
+  }
+};
+
+// Render function that max-blends the glyph on to the surface.
+struct Blend {
+  static inline void Render(uint32_t* target, uint32_t color) {
+    *target |= color;
+  }
+};
+
+template <typename T>
+void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   SpannerContext* context = (SpannerContext*)ctx;
   y = context->gy - y;
   if (unlikely(y < 0 || y >= context->height)) {
@@ -99,41 +113,13 @@ void SolidSpanner(int y, int count, const FT_Span* spans, void* ctx) {
       if (unlikely(x + j >= context->width)) {
         break;
       }
-      *(start + j) = color;
-    }
-  }
-}
-
-// Spanner that max-blends the glyph on to the surface.
-void BlendedSpanner(int y, int count, const FT_Span* spans, void* ctx) {
-  SpannerContext* context = (SpannerContext*)ctx;
-  y = context->gy - y;
-  if (unlikely(y < 0 || y >= context->height)) {
-    return;
-  }
-  uint32_t* scanline = context->first_pixel + y*((int)context->pitch/4);
-  for (int i = 0; i < count; i++) {
-    int x = context->gx + spans[i].x;
-    if (unlikely(x < 0)) {
-      break;
-    }
-    uint32_t* start = scanline + x;
-    uint32_t color =
-      (spans[i].coverage << context->rshift) |
-      (spans[i].coverage << context->gshift) |
-      (spans[i].coverage << context->bshift);
-
-    for (int j = 0; j < spans[i].len; j++) {
-      if (unlikely(x + j >= context->width)) {
-        break;
-      }
-      *(start + j) |= color;
+      T::Render(start + j, color);
     }
   }
 }
 
 // Spanner that records the glyph size instead of writing it to the surface.
-void SizeSpanner(int y, int count, const FT_Span* spans, void* ctx) {
+void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
   SpannerContext* context = (SpannerContext*)ctx;
   context->min_y = min(y, context->min_y);
   context->max_y = max(y, context->max_y);
@@ -241,7 +227,7 @@ void Font::Render(const Point& position, const string& text,
   renderer.black_spans = nullptr;
   renderer.bit_set = nullptr;
   renderer.bit_test = nullptr;
-  renderer.gray_spans = SizeSpanner;
+  renderer.gray_spans = Sizer;
 
   Point min_b(INT_MAX, INT_MAX);
   Point max_b(INT_MIN, INT_MIN);
@@ -307,7 +293,7 @@ void Font::Render(const Point& position, const string& text,
   context.width = surface->w;
   context.height = surface->h;
 
-  renderer.gray_spans = (blend ? BlendedSpanner : SolidSpanner);
+  renderer.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
 
   for (int i = 0; i < glyph_count; i++) {
     ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
