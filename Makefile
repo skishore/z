@@ -4,6 +4,9 @@ CPP_FILES := $(wildcard *.cpp)
 OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.obj))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.obj)))
 EXECUTABLE := $(BUILD)/main
 
+INCLUDES := freetype2 freetype2/config harfbuzz
+PRELOADS := data fonts/default_font.ttf images
+
 EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.o)))
 HTML := $(BUILD)/main.html
 BASE_C_FLAGS := -Wall
@@ -11,12 +14,12 @@ BASE_CC_FLAGS := ${BASE_C_FLAGS} -std=c++11 -stdlib=libc++
 
 CC := clang++
 C_FLAGS := ${BASE_C_FLAGS}
-CC_FLAGS := ${BASE_CC_FLAGS} -I/usr/local/include/freetype2 -I/usr/local/include/freetype2/config -I/usr/local/include/harfbuzz
+CC_FLAGS := ${BASE_CC_FLAGS} $(addprefix -I/usr/local/include/,$(INCLUDES))
 LD_FLAGS := $(CC_FLAGS) -lSDL2 -lfreetype -lharfbuzz
 
 EMC_FLAGS := ${BASE_C_FLAGS} -s USE_SDL=2
-EMCC_FLAGS := $(BASE_CC_FLAGS) -s USE_SDL=2 -Icompiled-bytecode/include -Icompiled-bytecode/include/freetype2 -Icompiled-bytecode/include/freetype2/config -Icompiled-bytecode/include/harfbuzz
-EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype/* compiled-bytecode/lib/harfbuzz/*
+EMCC_FLAGS := $(BASE_CC_FLAGS) -s USE_SDL=2 $(addprefix -Icompiled-bytecode/include/,$(INCLUDES))
+EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype2/* compiled-bytecode/lib/harfbuzz/*
 
 all:
 	make exe
@@ -45,7 +48,7 @@ $(BUILD)/%.obj: %.c
 	clang $(C_FLAGS) -c -MD -o $@ $<
 
 $(HTML):	$(EMCC_OBJ_FILES)
-	emcc $(EMCC_LD_FLAGS) -o $@ $^ --preload-file data --preload-file fonts/default_font.ttf --preload-file images
+	emcc $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	cp index.html build/main.html
 
