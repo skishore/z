@@ -31,10 +31,6 @@ class TextRenderer {
       const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
 
  private:
-  // The callee takes ownership of the rendered surface.
-  SDL_Surface* RenderTextSolid(int font_size, const std::string& text,
-                               SDL_Color color, SDL_Rect* size);
-
   // The class has ownership of the loaded font.
   font::Font* LoadFont(int font_size);
 

@@ -96,6 +96,30 @@ void SolidSpanner(int y, int count, const FT_Span* spans, void* ctx) {
   }
 }
 
+// Spanner that max-blends the glyph on to the surface.
+void BlendedSpanner(int y, int count, const FT_Span* spans, void* ctx) {
+  SpannerContext* context = (SpannerContext*)ctx;
+  uint32_t* scanline = context->pixels - y*((int)context->pitch/4);
+  if (unlikely scanline < context->first_pixel) {
+    return;
+  }
+  for (int i = 0; i < count; i++) {
+    uint32_t color =
+      (spans[i].coverage << context->rshift) |
+      (spans[i].coverage << context->gshift) |
+      (spans[i].coverage << context->bshift);
+
+    uint32_t* start = scanline + spans[i].x;
+    if (unlikely start + spans[i].len > context->last_pixel) {
+      return;
+    }
+    for (int x = 0; x < spans[i].len; x++) {
+      *start |= color;
+      start += 1;
+    }
+  }
+}
+
 // Spanner that records the glyph size instead of writing it to the surface.
 void SizeSpanner(int y, int count, const FT_Span* spans, void* ctx) {
   SpannerContext* context = (SpannerContext*)ctx;
@@ -151,7 +175,8 @@ class Font {
   Font(const string& font_name, int font_size, FT_Library library);
   ~Font();
 
-  void Render(const Point& position, const string& text, SDL_Surface* target);
+  void Render(const Point& position, const string& text,
+              SDL_Surface* target, bool blend=true);
 
  private:
   int font_size_;
@@ -172,8 +197,8 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   buffer_ = hb_buffer_create();
 }
 
-void Font::Render(
-    const Point& position, const string& text, SDL_Surface* surface) {
+void Font::Render(const Point& position, const string& text,
+                  SDL_Surface* surface, bool blend) {
   hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
   hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
@@ -258,7 +283,7 @@ void Font::Render(
   context.last_pixel =
       (uint32_t*)(((uint8_t*)surface->pixels) + surface->pitch*surface->h);
 
-  renderer.gray_spans = SolidSpanner;
+  renderer.gray_spans = (blend ? BlendedSpanner : SolidSpanner);
 
   for (int i = 0; i < glyph_count; i++) {
     ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
@@ -309,13 +334,6 @@ void TextRenderer::DrawText(int font_size, const Point& position,
   }
   Font* font = LoadFont(font_size);
   font->Render(position, text, target_);
-  return;
-
-  SDL_Rect size;
-  SDL_Surface* surface = RenderTextSolid(font_size, text, color, &size);
-  SDL_Rect target{position.x, position.y, 0, 0};
-  SDL_BlitSurface(surface, nullptr, target_, &target);
-  SDL_FreeSurface(surface);
 }
 
 void TextRenderer::DrawTextBox(
@@ -326,19 +344,6 @@ void TextRenderer::DrawTextBox(
   }
   Font* font = LoadFont(font_size);
   font->Render(Point(rect.x + rect.w, rect.y - rect.h), text, target_);
-  return;
-
-  SDL_Rect size;
-  SDL_Surface* surface = RenderTextSolid(font_size, text, fg_color, &size);
-  SDL_Rect target{rect.x + rect.w, rect.y - rect.h, 0, 0};
-  SDL_BlitSurface(surface, nullptr, target_, &target);
-  SDL_FreeSurface(surface);
-}
-
-SDL_Surface* TextRenderer::RenderTextSolid(int font_size, const string& text,
-                                           SDL_Color color, SDL_Rect* size) {
-  Font* font = LoadFont(font_size);
-  return nullptr;
 }
 
 Font* TextRenderer::LoadFont(int font_size) {
