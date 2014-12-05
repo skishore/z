@@ -49,7 +49,30 @@ int ForceUCS2Charmap(FT_Face face) {
 #define unlikely
 #endif  // unlikely
 
-struct SpannerContext {
+struct SizerContext {
+  int min_span_x;
+  int max_span_x;
+  int min_y;
+  int max_y;
+};
+
+// Spanner that records the glyph size instead of writing it to the surface.
+void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
+  SizerContext* context = (SizerContext*)ctx;
+  context->min_y = min(y, context->min_y);
+  context->max_y = max(y, context->max_y);
+  for (int i = 0 ; i < count; i++) {
+    context->min_span_x = min((int)spans[i].x, context->min_span_x);
+    context->max_span_x = max(spans[i].x + spans[i].len, context->max_span_x);
+  }
+}
+
+struct RendererContext {
+  RendererContext(const SDL_Surface& surface)
+      : pixels((uint32_t*)surface.pixels), width(surface.w), height(surface.h),
+        pitch(surface.pitch), rshift(surface.format->Rshift),
+        gshift(surface.format->Gshift), bshift(surface.format->Bshift) {}
+
   // Pixels stores a pointer to the surface's top-left pixel.
   uint32_t* pixels;
   int width;
@@ -64,12 +87,6 @@ struct SpannerContext {
   // The current glyph's origin in surface coordinates.
   int gx;
   int gy;
-
-  // Sizing fields.
-  int min_span_x;
-  int max_span_x;
-  int min_y;
-  int max_y;
 };
 
 // Render function that simply writes the glyph out to the surface.
@@ -89,7 +106,7 @@ struct Blend {
 
 template <typename T>
 void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
-  SpannerContext* context = (SpannerContext*)ctx;
+  RendererContext* context = (RendererContext*)ctx;
   y = context->gy - y;
   if (unlikely(y < 0 || y >= context->height)) {
     return;
@@ -112,17 +129,6 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
       }
       T::Render(start + j, color);
     }
-  }
-}
-
-// Spanner that records the glyph size instead of writing it to the surface.
-void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
-  SpannerContext* context = (SpannerContext*)ctx;
-  context->min_y = min(y, context->min_y);
-  context->max_y = max(y, context->max_y);
-  for (int i = 0 ; i < count; i++) {
-    context->min_span_x = min((int)spans[i].x, context->min_span_x);
-    context->max_span_x = max(spans[i].x + spans[i].len, context->max_span_x);
   }
 }
 
@@ -224,7 +230,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   hb_glyph_position_t* glyph_pos =
       hb_buffer_get_glyph_positions(buffer_, &glyph_count);
 
-  SpannerContext context;
+  SizerContext context;
   renderer_.user = &context;
   renderer_.gray_spans = Sizer;
 
@@ -294,19 +300,9 @@ void Font::Render(const Point& position, const Point& size,
   hb_glyph_position_t* glyph_pos =
       hb_buffer_get_glyph_positions(buffer_, &glyph_count);
 
-  SpannerContext context;
+  RendererContext context(*surface);
   renderer_.user = &context;
   renderer_.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
-
-  // Prepare the context for rendering.
-  // TODO(skishore): Use a different context for this part.
-  context.pixels = (uint32_t*)surface->pixels;
-  context.width = surface->w;
-  context.height = surface->h;
-  context.pitch = surface->pitch;
-  context.rshift = surface->format->Rshift;
-  context.gshift = surface->format->Gshift;
-  context.bshift = surface->format->Bshift;
 
   for (int i = 0; i < glyph_count; i++) {
     ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
