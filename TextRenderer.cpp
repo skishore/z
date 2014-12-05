@@ -8,6 +8,9 @@
 #include FT_OUTLINE_H
 
 #include "debug.h"
+extern "C" {
+#include "SDL_prims.h"
+}  // extern "C"
 #include "TextRenderer.h"
 
 using std::max;
@@ -132,34 +135,6 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   }
 }
 
-void HLine(SDL_Surface* surface, int min_x, int max_x, int y, uint32_t color) {
-  if (unlikely(y < 0 || y >= surface->h)) {
-    return;
-  }
-  min_x = max(min_x, 0);
-  max_x = min(max_x, surface->w - 1);
-  uint32_t* pix = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + min_x;
-  uint32_t* end = (uint32_t*)surface->pixels + (y*surface->pitch)/4 + max_x;
-  while (pix - 1 < end) {
-    *pix = color;
-    pix += 1;
-  }
-}
-
-void VLine(SDL_Surface* surface, int x, int min_y, int max_y, uint32_t color) {
-  if (unlikely(x < 0 || x >= surface->w)) {
-    return;
-  }
-  min_y = max(min_y, 0);
-  max_y = min(max_y, surface->h - 1);
-  uint32_t* pix = (uint32_t*)surface->pixels + (min_y*surface->pitch)/4 + x;
-  uint32_t* end = (uint32_t*)surface->pixels + (max_y*surface->pitch)/4 + x;
-  while (pix - surface->pitch/4 < end) {
-    *pix = color;
-    pix += surface->pitch/4;
-  }
-}
-
 hb_script_t GetHarfbuzzBufferScript(hb_buffer_t* buffer) {
   // Sets a best-guess value for the script of the given buffer.
   hb_unicode_funcs_t* unicode_funcs = hb_buffer_get_unicode_funcs(buffer);
@@ -280,19 +255,8 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
 
 void Font::Render(const Point& position, const Point& size,
                   const Point& baseline, SDL_Surface* surface, bool blend) {
-  int x = position.x;
-  int y = position.y;
-
-  SDL_LockSurface(surface);
-
-  HLine(surface, x + baseline.x, x + size.x, y + baseline.y, 0x0000ff00);
-  HLine(surface, x, x + size.x, y, 0x00ff0000);
-  HLine(surface, x, x + size.x, y + size.y, 0x00ff0000);
-  VLine(surface, x, y, y + size.y, 0x00ff0000);
-  VLine(surface, x + size.x, y, y + size.y, 0x00ff0000);
-
-  x += baseline.x;
-  y += baseline.y;
+  int x = position.x + baseline.x;
+  int y = position.y + baseline.y;
 
   unsigned int glyph_count;
   hb_glyph_info_t* glyph_info =
@@ -303,6 +267,8 @@ void Font::Render(const Point& position, const Point& size,
   RendererContext context(*surface);
   renderer_.user = &context;
   renderer_.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
+
+  SDL_LockSurface(surface);
 
   for (int i = 0; i < glyph_count; i++) {
     ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
@@ -362,7 +328,27 @@ void TextRenderer::DrawTextBox(
   Font* font = LoadFont(font_size);
   Point size, baseline;
   font->PrepareToRender(text, &size, &baseline);
-  Point position(rect.x + rect.w, rect.y - rect.h);
+
+  std::unique_ptr<SDL_Point[]> polygon(new SDL_Point[7]);
+  const int kWedge = font_size/3;
+  const Point kPadding(font_size/3, font_size/3);
+  polygon[0].x = rect.x + rect.w/2;
+  polygon[0].y = rect.y - kWedge/2;
+  polygon[1].x = polygon[0].x - kWedge;
+  polygon[1].y = polygon[0].y - kWedge;
+  polygon[2].x = polygon[0].x - size.x/2 - kPadding.x;
+  polygon[2].y = polygon[1].y;
+  polygon[3].x = polygon[2].x;
+  polygon[3].y = polygon[2].y - size.y - 2*kPadding.y;
+  polygon[4].x = polygon[3].x + size.x + 2*kPadding.x;
+  polygon[4].y = polygon[3].y;
+  polygon[5].x = polygon[4].x;
+  polygon[5].y = polygon[1].y;
+  polygon[6].x = polygon[0].x + kWedge;
+  polygon[6].y = polygon[1].y;
+  Point position(polygon[3].x + kPadding.x, polygon[3].y + kPadding.y);
+  SDL_FillPolygon(target_, polygon.get(), 7, 0x00002266);
+  SDL_DrawPolygon(target_, polygon.get(), 7, 0x00ffffff);
   font->Render(position, size, baseline, target_);
 }
 
