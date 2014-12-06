@@ -295,13 +295,24 @@ SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
                           const Point& size, Point* position) {
   const int kWedge = font_size/3;
   const Point kPadding(font_size/3, font_size/3);
-  int top_left;
   SDL_Point* polygon = new SDL_Point[7];
   if (dir == Direction::UP) {
-    ASSERT(false, "Unexpected text direction: " << dir);
+    polygon[0].x = rect.x + rect.w/2;
+    polygon[0].y = rect.y - kWedge/2;
+    polygon[1].x = polygon[0].x - kWedge;
+    polygon[1].y = polygon[0].y - kWedge;
+    polygon[2].x = polygon[0].x - size.x/2 - kPadding.x;
+    polygon[2].y = polygon[1].y;
+    polygon[3].x = polygon[2].x;
+    polygon[3].y = polygon[2].y - size.y - 2*kPadding.y;
+    polygon[4].x = polygon[3].x + size.x + 2*kPadding.x;
+    polygon[4].y = polygon[3].y;
+    polygon[5].x = polygon[4].x;
+    polygon[5].y = polygon[1].y;
+    polygon[6].x = polygon[0].x + kWedge;
+    polygon[6].y = polygon[1].y;
   } else if (dir == Direction::LEFT || dir == Direction::RIGHT) {
-    int sign = (dir == Direction::RIGHT ? 1 : -1);
-    top_left = (dir == Direction::RIGHT ? 2 : 3);
+    const int sign = (dir == Direction::RIGHT ? 1 : -1);
     polygon[0].x = rect.x + (sign + 1)*rect.w/2;
     polygon[0].y = rect.y + rect.h/2 - 1;
     polygon[1].x = polygon[0].x + sign*kWedge;
@@ -319,6 +330,7 @@ SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
   } else {
     ASSERT(false, "Unexpected text direction: " << dir);
   }
+  int top_left = (dir == Direction::RIGHT ? 2 : 3);
   *position = Point(polygon[top_left].x, polygon[top_left].y) + kPadding;
   return polygon;
 }

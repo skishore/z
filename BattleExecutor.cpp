@@ -193,7 +193,7 @@ BattleExecutor::BattleExecutor(
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {
       sprite->battle_->text = "excellent";
-      sprite->battle_->dir = (rand() % 2 ? Direction::LEFT : Direction::RIGHT);
+      sprite->battle_->dir = Direction::LEFT;
     }
   }
 }
