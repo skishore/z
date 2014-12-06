@@ -3,6 +3,7 @@
 
 #include "constants.h"
 #include "debug.h"
+#include "BattleData.h"
 #include "Sprite.h"
 #include "SpriteState.h"
 
@@ -44,6 +45,8 @@ Sprite::Sprite(bool is_player, const Point& square, const Image& image,
   SetPosition(kGridTicks*square);
   SetState(new PausedState);
 }
+
+Sprite::~Sprite() {}
 
 void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
                   SDL_Surface* surface) const {

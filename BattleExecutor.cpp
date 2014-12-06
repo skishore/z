@@ -3,8 +3,9 @@
 
 #include "constants.h"
 #include "debug.h"
-#include "BattleState.h"
+#include "BattleData.h"
 #include "BattleExecutor.h"
+#include "BattleState.h"
 
 using std::min;
 using std::max;
@@ -77,33 +78,32 @@ void ComputePlaces(const TileMap::Room& room, const vector<Sprite*>& sprites,
                    vector<Point>* places) {
   ASSERT(sprites.size() > 0, "Got an empty sprites list!");
   const int n = sprites.size();
-  vector<Point> options(n);
   places->resize(n);
+  vector<Point> options(n - 1);
 
   Point half_square(kGridTicks/2, kGridTicks/2);
-  Point position = sprites[0]->GetPosition() + half_square;
-  options[0] = ClosestPerimeterSquare(position, room);
+  (*places)[0] = Point(room.position.x + room.size.x - 1,
+                       room.position.y + room.size.y/2);
 
-  const int perimeter = 2*(room.size.x + room.size.y) - 4;
-  for (int i = 1; i < n; i++) {
-    const int distance = i*perimeter/n - (i - 1)*perimeter/n;
-    options[i] = AdvanceAlongPerimeter(options[i - 1], room, distance);
+  for (int i = 0; i < n - 1; i++) {
+    const int offset = (i == 0 || i == n - 2 ? 3 : 1);
+    options[i] = Point(room.position.x + offset, room.position.y + 2*i);
   }
 
-  vector<vector<Cost>> distances(n, vector<Cost>(n));
-  for (int i = 0; i < n; i++) {
-    Point position = sprites[i]->GetPosition() + half_square;
-    for (int j = 0; j < n; j++) {
+  vector<vector<Cost>> distances(n - 1, vector<Cost>(n - 1));
+  for (int i = 0; i < n - 1; i++) {
+    Point position = sprites[i + 1]->GetPosition() + half_square;
+    for (int j = 0; j < n - 1; j++) {
       double distance = (position - kGridTicks*options[j]).length();
       distances[i][j] = (int)distance;
     }
   }
-  Hungarian hungarian(n, distances);
+  Hungarian hungarian(n - 1, distances);
   Hungarian::Status status = hungarian.Solve();
   ASSERT(status == Hungarian::OK, "Hungarian exited with status: " << status);
 
-  for (int i = 0; i < n; i++) {
-    (*places)[i] = options[hungarian.GetXMatch(i)];
+  for (int i = 0; i < n - 1; i++) {
+    (*places)[i + 1] = options[hungarian.GetXMatch(i)];
   }
 }
 
@@ -190,7 +190,11 @@ BattleExecutor::BattleExecutor(
   ComputePlaces(room_, sprites_, &places_);
   center_ = kGridTicks*(2*room.position + room.size - Point(1, 1))/2;
   for (Sprite* sprite : sprites_) {
-    sprite->SetText("excellent");
+    sprite->battle_.reset(new BattleData);
+    if (!sprite->is_player_) {
+      sprite->battle_->text = "excellent";
+      sprite->battle_->dir = (rand() % 2 ? Direction::LEFT : Direction::RIGHT);
+    }
   }
 }
 

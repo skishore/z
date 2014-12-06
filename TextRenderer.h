@@ -8,6 +8,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include "constants.h"
 #include "Point.h"
 
 namespace skishore {
@@ -27,8 +28,9 @@ class TextRenderer {
   void DrawText(int font_size, const Point& position,
                 const std::string& text, const SDL_Color color=kWhite);
   void DrawTextBox(
-      int font_size, const SDL_Rect& rect, const std::string& text,
-      const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
+      int font_size, Direction dir, const SDL_Rect& rect,
+      const std::string& text, const SDL_Color fg_color=kWhite,
+      const SDL_Color bg_color=kBlack);
 
  private:
   // The class has ownership of the loaded font.

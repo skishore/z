@@ -1,5 +1,6 @@
 #include "constants.h"
 #include "debug.h"
+#include "BattleData.h"
 #include "ScrollingGraphics.h"
 
 using std::string;
@@ -103,11 +104,12 @@ void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
 }
 
 void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
-  if (!sprite.GetText().empty()) {
+  if (sprite.battle_ != nullptr && !sprite.battle_->text.empty()) {
     Point offset = camera_ + kGridSize*background_offset_;
     Point position = sprite.GetDrawingPosition() - offset;
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
-    text_renderer_->DrawTextBox(7*kGridSize/8, rect, sprite.GetText());
+    text_renderer_->DrawTextBox(
+        3*kGridSize/4, sprite.battle_->dir, rect, sprite.battle_->text);
   }
 }
 

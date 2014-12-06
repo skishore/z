@@ -289,6 +289,42 @@ Font::~Font() {
 
 }  // namespace font
 
+namespace {
+
+SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
+                          const Point& size, Point* position) {
+  const int kWedge = font_size/3;
+  const Point kPadding(font_size/3, font_size/3);
+  int top_left;
+  SDL_Point* polygon = new SDL_Point[7];
+  if (dir == Direction::UP) {
+    ASSERT(false, "Unexpected text direction: " << dir);
+  } else if (dir == Direction::LEFT || dir == Direction::RIGHT) {
+    int sign = (dir == Direction::RIGHT ? 1 : -1);
+    top_left = (dir == Direction::RIGHT ? 2 : 3);
+    polygon[0].x = rect.x + (sign + 1)*rect.w/2;
+    polygon[0].y = rect.y + rect.h/2 - 1;
+    polygon[1].x = polygon[0].x + sign*kWedge;
+    polygon[1].y = polygon[0].y - kWedge;
+    polygon[2].x = polygon[1].x;
+    polygon[2].y = polygon[0].y - size.y/2 - kPadding.y;
+    polygon[3].x = polygon[2].x + sign*(size.x + 2*kPadding.x);
+    polygon[3].y = polygon[2].y;
+    polygon[4].x = polygon[3].x;
+    polygon[4].y = polygon[3].y + size.y + 2*kPadding.y;
+    polygon[5].x = polygon[1].x;
+    polygon[5].y = polygon[4].y;
+    polygon[6].x = polygon[1].x;
+    polygon[6].y = polygon[0].y + kWedge;
+  } else {
+    ASSERT(false, "Unexpected text direction: " << dir);
+  }
+  *position = Point(polygon[top_left].x, polygon[top_left].y) + kPadding;
+  return polygon;
+}
+
+}  // namespace
+
 TextRenderer::TextRenderer(const SDL_Rect& bounds, SDL_Surface* target)
     : target_(target) {
   ASSERT(!FT_Init_FreeType(&library_), "Failed to initialize freetype!");
@@ -313,33 +349,17 @@ void TextRenderer::DrawText(int font_size, const Point& position,
 }
 
 void TextRenderer::DrawTextBox(
-    int font_size, const SDL_Rect& rect, const string& text,
+    int font_size, Direction dir, const SDL_Rect& rect, const string& text,
     const SDL_Color fg_color, const SDL_Color bg_color) {
   if (text.size() == 0) {
     return;
   }
   Font* font = LoadFont(font_size);
-  Point size, baseline;
+  Point size, baseline, position;
   font->PrepareToRender(text, &size, &baseline);
-
-  std::unique_ptr<SDL_Point[]> polygon(new SDL_Point[7]);
-  const int kWedge = font_size/3;
-  const Point kPadding(font_size/3, font_size/3);
-  polygon[0].x = rect.x + rect.w/2;
-  polygon[0].y = rect.y - kWedge/2;
-  polygon[1].x = polygon[0].x - kWedge;
-  polygon[1].y = polygon[0].y - kWedge;
-  polygon[2].x = polygon[0].x - size.x/2 - kPadding.x;
-  polygon[2].y = polygon[1].y;
-  polygon[3].x = polygon[2].x;
-  polygon[3].y = polygon[2].y - size.y - 2*kPadding.y;
-  polygon[4].x = polygon[3].x + size.x + 2*kPadding.x;
-  polygon[4].y = polygon[3].y;
-  polygon[5].x = polygon[4].x;
-  polygon[5].y = polygon[1].y;
-  polygon[6].x = polygon[0].x + kWedge;
-  polygon[6].y = polygon[1].y;
-  Point position(polygon[3].x + kPadding.x, polygon[3].y + kPadding.y);
+  std::unique_ptr<SDL_Point[]> polygon(
+      GetTextPolygon(font_size, dir, rect, size, &position));
+  // TODO(skishore): Convert the fg_ and bg_ colors to Uint32 here.
   SDL_FillPolygon(target_, polygon.get(), 7, 0x00002266);
   SDL_DrawPolygon(target_, polygon.get(), 7, 0x00ffffff);
   font->Render(position, size, baseline, target_);
