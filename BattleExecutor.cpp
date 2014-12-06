@@ -129,7 +129,7 @@ BattleExecutor::BattleExecutor(
     const TileMap::Room& room, const vector<Sprite*>& sprites)
     : room_(room), sprites_(sprites) {
   ComputePlaces(room_, sprites_, &places_);
-  center_ = kGridTicks*(2*room.position + room.size - Point(1, 1))/2;
+  center_ = kGridTicks*(2*room.position + room.size)/2;
   for (Sprite* sprite : sprites_) {
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {

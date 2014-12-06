@@ -12,9 +12,14 @@ using std::vector;
 namespace skishore {
 
 namespace {
-bool TopToBottom(const Sprite* a, const Sprite* b) {
+
+static bool TopToBottom(const Sprite* a, const Sprite* b) {
   return a->GetPosition().y < b->GetPosition().y;
 }
+
+// The maximum distance the camera can move in one step.
+const static int kCameraSpeed = 2*kPlayerSpeed;
+
 }  // namespace
 
 GameState::GameState(
@@ -37,13 +42,7 @@ GameState::GameState(
       CreateSprite(square, false, &room);
     }
   }
-}
-
-const Point GameState::GetCamera() const {
-  if (battle_ != nullptr) {
-    return battle_->GetCenter();
-  }
-  return player_->GetPosition() + Point(kGridTicks/2, kGridTicks/2);
+  ComputeCenter(true /* snap */);
 }
 
 const vector<Sprite*>& GameState::GetSprites() {
@@ -64,7 +63,25 @@ void GameState::Update() {
       battle_.reset(new battle::Battle(*this, *sprite));
     }
   }
+  ComputeCenter();
   std::sort(sprites_.begin(), sprites_.end(), TopToBottom);
+}
+
+void GameState::ComputeCenter(bool snap) {
+  last_center_ = center_;
+  if (battle_ != nullptr) {
+    center_ = battle_->GetCenter();
+  } else {
+    center_ = player_->GetPosition() + Point(kGridTicks/2, kGridTicks/2);
+  }
+  Point diff = center_ - last_center_;
+  if (!snap && abs(diff.x) + abs(diff.y) > kCameraSpeed) {
+    double length = diff.length();
+    if (length > kCameraSpeed) {
+      diff.set_length(kCameraSpeed);
+      center_ = last_center_ + diff;
+    }
+  }
 }
 
 void GameState::CreateSprite(
