@@ -20,7 +20,7 @@ class GameState {
   GameState(const InputHandler& input, const TileMap& map, ImageCache* cache);
 
   // GetSprites is not const because it sorts the sprites in draw order.
-  const Sprite& GetPlayer() const { return *player_; };
+  const Point GetCamera() const;
   const std::vector<Sprite*>& GetSprites();
 
   // Runs all the sprites through a single time step.

@@ -10,8 +10,6 @@ namespace skishore {
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-// The fraction of the view that is contained within the centered box.
-static const double kBoxFraction = 0.125;
 // The scale factor applied to the game when it is rendered to the screen.
 static const int kScale = 2;
 }  // namespace
@@ -50,11 +48,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
 
   text_renderer_.reset(new TextRenderer(
       foreground_->bounds_, foreground_->surface_));
-
-  int box_w = kBoxFraction*dimensions.x;
-  int box_h = kBoxFraction*dimensions.y;
-  centered_ = SDL_Rect{
-      (dimensions.x - box_w)/2, (dimensions.y - box_h)/2, box_w, box_h};
+  centered_ = SDL_Rect{dimensions.x/2, dimensions.y/2, 0, 0};
 }
 
 ScrollingGraphics::~ScrollingGraphics() {
@@ -68,25 +62,24 @@ void ScrollingGraphics::DrawStatusMessage(const string& message) {
   text_renderer_->DrawText(kGridSize, Point(0, 0), message);
 }
 
-void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
-  const Point position =
-      sprite.GetDrawingPosition() - camera_ - kGridSize*background_offset_;
-  const Point dimensions(kGridSize, kGridSize);
+void ScrollingGraphics::CenterCamera(const Point& absolute_position) {
+  const Point position = absolute_position - position_offset_;
   Point diff;
 
   if (position.x < centered_.x) {
     diff.x = position.x - centered_.x;
-  } else if (position.x + dimensions.x > centered_.x + centered_.w) {
-    diff.x = position.x + dimensions.x - (centered_.x + centered_.w);
+  } else if (position.x > centered_.x + centered_.w) {
+    diff.x = position.x - (centered_.x + centered_.w);
   }
   if (position.y < centered_.y) {
     diff.y = position.y - centered_.y;
-  } else if (position.y + dimensions.y > centered_.y + centered_.h) {
-    diff.y = position.y + dimensions.y - (centered_.y + centered_.h);
+  } else if (position.y > centered_.y + centered_.h) {
+    diff.y = position.y - (centered_.y + centered_.h);
   }
 
   if (diff.x != 0 || diff.y != 0) {
     camera_ += diff;
+    position_offset_ += diff;
     const SDL_Rect& fg_bounds = foreground_->bounds_;
     const SDL_Rect& bg_bounds = background_->bounds_;
     if (camera_.x < 0 || camera_.x + fg_bounds.w > bg_bounds.w ||
@@ -101,14 +94,12 @@ void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
 }
 
 void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
-  Point offset = camera_ + kGridSize*background_offset_;
-  sprite.Draw(offset, foreground_->bounds_, foreground_->surface_);
+  sprite.Draw(position_offset_, foreground_->bounds_, foreground_->surface_);
 }
 
 void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
   if (sprite.battle_ != nullptr && !sprite.battle_->text.empty()) {
-    Point offset = camera_ + kGridSize*background_offset_;
-    Point position = sprite.GetDrawingPosition() - offset;
+    Point position = sprite.GetDrawingPosition() - position_offset_;
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
     text_renderer_->DrawTextBox(
         3*kGridSize/4, sprite.battle_->dir, rect, sprite.battle_->text);

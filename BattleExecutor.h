@@ -31,6 +31,8 @@ class BattleExecutor {
   BattleExecutor(const TileMap::Room& room,
                  const std::vector<Sprite*>& sprites);
 
+  const Point& GetCenter() const { return center_; }
+
   // Primitive scripts that can be chained to create larger ones.
   // AssumePlace moves sprite i to its place in the battle,
   // while AssumePlaces moves all sprites to their places.

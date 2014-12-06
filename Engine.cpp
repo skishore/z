@@ -29,7 +29,7 @@ bool Engine::Update(double frame_rate) {
   input_.Poll(kEventsPerFrame);
   game_state_->Update();
 
-  graphics_->CenterCamera(game_state_->GetPlayer());
+  graphics_->CenterCamera(game_state_->GetCamera()/kTicksPerPixel);
   graphics_->EraseForeground();
   for (const Sprite* sprite : game_state_->GetSprites()) {
     graphics_->DrawSprite(*sprite);

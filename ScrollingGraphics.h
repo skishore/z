@@ -20,8 +20,8 @@ class ScrollingGraphics {
   ImageCache* GetImageCache() { return &cache_; };
   void DrawStatusMessage(const std::string& message);
 
-  // CenterCamera centers the camera on the sprite, while DrawSprite draws it.
-  void CenterCamera(const Sprite& sprite);
+  // CenterCamera centers the camera on the given pixel position.
+  void CenterCamera(const Point& position);
   void DrawSprite(const Sprite& sprite);
   void DrawSpriteText(const Sprite& sprite);
 
@@ -69,6 +69,7 @@ class ScrollingGraphics {
   // We also store a rect that must contain a sprite for it to be "centered".
   Point background_offset_;
   Point camera_;
+  Point position_offset_;
   SDL_Rect centered_;
 
   std::unique_ptr<const Image> tileset_;

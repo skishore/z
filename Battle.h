@@ -16,11 +16,14 @@ class Battle {
  public:
   Battle(const GameState& game_state, const Sprite& enemy);
 
+  // Used by GameState to center the camera during a battle.
+  const Point& GetCenter() const { return executor_->GetCenter(); }
+
   // Runs the battle through a single time-step. If this method returns true,
   // the battle is over, and this class instance should be destructed.
   bool Update();
 
- protected:
+ private:
   const TileMap::Room* room_;
   std::unique_ptr<BattleExecutor> executor_;
 

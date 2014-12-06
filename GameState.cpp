@@ -39,6 +39,13 @@ GameState::GameState(
   }
 }
 
+const Point GameState::GetCamera() const {
+  if (battle_ != nullptr) {
+    return battle_->GetCenter();
+  }
+  return player_->GetPosition() + Point(kGridTicks/2, kGridTicks/2);
+}
+
 const vector<Sprite*>& GameState::GetSprites() {
   return sprites_;
 }
