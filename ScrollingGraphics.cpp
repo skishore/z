@@ -100,10 +100,14 @@ void ScrollingGraphics::CenterCamera(const Sprite& sprite) {
 void ScrollingGraphics::DrawSprite(const Sprite& sprite) {
   Point offset = camera_ + kGridSize*background_offset_;
   sprite.Draw(offset, foreground_->bounds_, foreground_->surface_);
-  if (sprite.is_player_) {
+}
+
+void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
+  if (!sprite.GetText().empty()) {
+    Point offset = camera_ + kGridSize*background_offset_;
     Point position = sprite.GetDrawingPosition() - offset;
-    SDL_Rect rect{position.x, position.y, kGridSize, kGridSize};
-    text_renderer_->DrawTextBox(kGridSize, rect, "हिन्दी भारत की राष्ट्रभाषा है");
+    SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
+    text_renderer_->DrawTextBox(7*kGridSize/8, rect, sprite.GetText());
   }
 }
 

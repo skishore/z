@@ -23,6 +23,7 @@ class ScrollingGraphics {
   // CenterCamera centers the camera on the sprite, while DrawSprite draws it.
   void CenterCamera(const Sprite& sprite);
   void DrawSprite(const Sprite& sprite);
+  void DrawSpriteText(const Sprite& sprite);
 
   // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
   // EraseForeground copies the background currently in view to the foreground,

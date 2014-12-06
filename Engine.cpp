@@ -34,6 +34,9 @@ bool Engine::Update(double frame_rate) {
   for (const Sprite* sprite : game_state_->GetSprites()) {
     graphics_->DrawSprite(*sprite);
   }
+  for (const Sprite* sprite : game_state_->GetSprites()) {
+    graphics_->DrawSpriteText(*sprite);
+  }
   graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
   graphics_->Flip();
 

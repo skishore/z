@@ -189,6 +189,9 @@ BattleExecutor::BattleExecutor(
     : room_(room), sprites_(sprites) {
   ComputePlaces(room_, sprites_, &places_);
   center_ = kGridTicks*(2*room.position + room.size - Point(1, 1))/2;
+  for (Sprite* sprite : sprites_) {
+    sprite->SetText("excellent");
+  }
 }
 
 BattleScript* BattleExecutor::AssumePlace(int i) {

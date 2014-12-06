@@ -29,6 +29,7 @@ class Sprite {
   const TileMap::Room* GetRoom() const { return room_; };
   const Point& GetSquare() const { return square_; };
   SpriteState* GetState() const;
+  const std::string& GetText() const { return text_; };
 
   bool HasLineOfSight(const Sprite& other) const;
 
@@ -39,6 +40,7 @@ class Sprite {
 
   void SetPosition(const Point& position);
   void SetState(SpriteState* state);
+  void SetText(const std::string& text) { text_ = text; }
 
   // Members exposed so that SpriteState subclasses can read them.
   const bool is_player_;
@@ -60,6 +62,9 @@ class Sprite {
   // These two members are entirely a function of the precise position.
   Point drawing_position_;
   Point square_;
+
+  // The current text the sprite is saying.
+  std::string text_;
 };
 
 } // namespace skishore
