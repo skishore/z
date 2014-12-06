@@ -8,9 +8,7 @@
 #include FT_OUTLINE_H
 
 #include "debug.h"
-extern "C" {
 #include "SDL_prims.h"
-}  // extern "C"
 #include "TextRenderer.h"
 
 using std::max;
