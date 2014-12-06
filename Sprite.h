@@ -35,12 +35,10 @@ class Sprite {
   const Point& GetSquare() const { return square_; };
   SpriteState* GetState() const;
 
-  bool HasLineOfSight(const Sprite& other) const;
-
   // Instance methods used as utilities when computing the sprite's move.
-  void AvoidOthers(const std::vector<Sprite*> sprites, Point* move) const;
   bool CheckSquare(const Point& square) const;
   void CheckSquares(Point* move) const;
+  bool HasLineOfSight(const Sprite& other) const;
 
   void SetPosition(const Point& position);
   void SetState(SpriteState* state);

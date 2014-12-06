@@ -18,13 +18,6 @@ namespace {
 static const int kTolerance = 0.2*kGridTicks;
 static const int kPushAway = 0.5*kGridTicks;
 
-// Kinematic constraint constants. Can be unitless, in ticks, or in ticks^2.
-static const int kKinematicSeparation = 32*kTicksPerPixel;
-static const int kKinematicSensitivity = 8*kTicksPerPixel*kTicksPerPixel;
-static const double kKinematicMinDist = 2*kTicksPerPixel;
-static const double kKinematicPlayerForce  = 1.1;
-static const double kKinematicBackoff = 0.4;
-
 // Takes an integer and returns it mod kGridSize, in [0, kGridSize).
 inline int gmod(int x) {
   int result = x % kGridTicks;
@@ -55,58 +48,6 @@ void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
 
 SpriteState* Sprite::GetState() const {
   return state_.get();
-}
-
-bool Sprite::HasLineOfSight(const Sprite& other) const {
-  Point diff = other.square_ - square_;
-  Point shift = kShift[dir_];
-  if ((shift.x == 0 && diff.x != 0) || (shift.x*diff.x < 0) ||
-      (shift.y == 0 && diff.y != 0) || (shift.y*diff.y < 0)) {
-    return false;
-  }
-  Point square = square_;
-  while (square != other.square_) {
-    square += shift;
-    if (!CheckSquare(square)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void Sprite::AvoidOthers(const vector<Sprite*> others, Point* move) const {
-  if (move->zero()) {
-    return;
-  }
-
-  Point net;
-  for (Sprite* other : others) {
-    Point diff = position_ - other->position_;
-    if (other->is_player_ || other == this || diff.zero()) {
-      continue;
-    }
-    double length = diff.length();
-    if (length < kKinematicSeparation) {
-      diff.set_length(kKinematicSensitivity/max(length, kKinematicMinDist));
-      if (is_player_) {
-        diff.x = (diff.x*move->x > 0 ? 0 : diff.x);
-        diff.y = (diff.y*move->y > 0 ? 0 : diff.y);
-      }
-      net += diff;
-    }
-  }
-
-  double backoff = (rand() % 2)*kKinematicBackoff;
-  if (is_player_) {
-    net *= kKinematicPlayerForce;
-    backoff = 0;
-  }
-  if (net.x*move->x < 0) {
-    move->x = (abs(move->x) < abs(net.x) ? backoff*net.x : move->x + net.x);
-  }
-  if (net.y*move->y < 0) {
-    move->y = (abs(move->y) < abs(net.y) ? backoff*net.y : move->y + net.y);
-  }
 }
 
 bool Sprite::CheckSquare(const Point& square) const {
@@ -194,6 +135,23 @@ void Sprite::CheckSquares(Point* move) const {
       }
     }
   }
+}
+
+bool Sprite::HasLineOfSight(const Sprite& other) const {
+  Point diff = other.square_ - square_;
+  Point shift = kShift[dir_];
+  if ((shift.x == 0 && diff.x != 0) || (shift.x*diff.x < 0) ||
+      (shift.y == 0 && diff.y != 0) || (shift.y*diff.y < 0)) {
+    return false;
+  }
+  Point square = square_;
+  while (square != other.square_) {
+    square += shift;
+    if (!CheckSquare(square)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void Sprite::SetPosition(const Point& position) {

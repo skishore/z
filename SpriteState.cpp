@@ -30,7 +30,6 @@ Direction GetFreeDirection(const Point& square, const TileMap& map) {
 
 SpriteState* MoveSprite(const GameState& game_state, Sprite* sprite,
                         Point* move, int* anim_num) {
-  sprite->AvoidOthers(game_state.sprites_, move);
   sprite->CheckSquares(move);
   if (!move->zero()) {
     sprite->SetPosition(sprite->GetPosition() + *move);
