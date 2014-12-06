@@ -12,6 +12,8 @@ static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
 // The fraction of the view that is contained within the centered box.
 static const double kBoxFraction = 0.125;
+// The scale factor applied to the game when it is rendered to the screen.
+static const int kScale = 2;
 }  // namespace
 
 ScrollingGraphics::DrawingSurface::DrawingSurface(const Point& size)
@@ -35,7 +37,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
   const Point dimensions(kGridSize*size);
 
   int status = SDL_CreateWindowAndRenderer(
-      dimensions.x, dimensions.y, 0, &window_, &renderer_);
+      kScale*dimensions.x, kScale*dimensions.y, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());
   USE_FOR_DEBUG(status);
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
