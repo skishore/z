@@ -291,6 +291,16 @@ Font::~Font() {
 
 namespace {
 
+// In text boxes, ASCII text is drawn smaller than arbitrary Unicode text.
+int CorrectFontSize(int font_size, const string& text) {
+  for (char ch : text) {
+    if ((uint8_t)ch >= 1 << 7) {
+      return font_size;
+    }
+  }
+  return 3*font_size/4;
+}
+
 SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
                           const Point& size, Point* position) {
   const int kWedge = font_size/3;
@@ -366,6 +376,7 @@ void TextRenderer::DrawTextBox(
   if (text.size() == 0) {
     return;
   }
+  font_size = CorrectFontSize(font_size, text);
   Font* font = LoadFont(font_size);
   Point size, baseline, position;
   font->PrepareToRender(text, &size, &baseline);

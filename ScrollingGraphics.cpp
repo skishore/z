@@ -102,7 +102,7 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
     Point position = sprite.GetDrawingPosition() - position_offset_;
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
     text_renderer_->DrawTextBox(
-        3*kGridSize/4, sprite.battle_->dir, rect, sprite.battle_->text);
+        kGridSize, sprite.battle_->dir, rect, sprite.battle_->text);
   }
 }
 
