@@ -25,14 +25,9 @@ namespace {
 static const int kDPI = 72;
 static const int kScale = 64;
 
-/*  See http://www.microsoft.com/typography/otspec/name.htm
-  for a list of some possible platform-encoding pairs.
-  We're interested in 0-3 aka 3-1 - UCS-2.
-  Otherwise, fail. If a font has some unicode map, but lacks
-  UCS-2 - it is a broken or irrelevant font. What exactly
-  Freetype will select on face load (it promises most wide
-  unicode, and if that will be slower that UCS-2 - left as
-  an excercise to check. */
+// Extract the unicode map based on hacky platform/encoding ids.
+// UCS-2, the Unicode character map, is 0-3 or 3-1.
+// See http://www.microsoft.com/typography/otspec/name.htm for details.
 int ForceUCS2Charmap(FT_Face face) {
   for(int i = 0; i < face->num_charmaps; i++) {
     if (((face->charmaps[i]->platform_id == 0) &&
