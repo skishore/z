@@ -73,28 +73,41 @@ inline BattleScript* Run(Sprite* sprite, SpriteState* state) {
   return new script::WaitForStateTransitionScript(sprite, state);
 }
 
-void ComputePlaces(const TileMap::Room& room, const vector<Sprite*>& sprites,
-                   vector<Point>* places) {
+const static int kMinSpacing = kGridTicks;
+
+void ComputePlaces(const TileMap::Room& room, const Point& center,
+                   const vector<Sprite*>& sprites, vector<Point>* places) {
   ASSERT(sprites.size() > 0, "Got an empty sprites list!");
   const int n = sprites.size();
   places->resize(n);
   vector<Point> options(n - 1);
 
-  Point half_square(kGridTicks/2, kGridTicks/2);
-  (*places)[0] = Point(room.position.x + room.size.x - 1,
-                       room.position.y + room.size.y/2);
+  const int height = kGridTicks*room.size.y;
+  const int max_per_side = (height - kGridTicks)/(kGridTicks + kMinSpacing) + 1;
+  if (n - 1 <= max_per_side) {
+    const int sign =
+        (sprites[0]->GetPosition().x + kGridTicks/2 < center.x ? 1 : -1);
+    (*places)[0].x = center.x + (-sign*min(room.size.x, 3) - 1)*kGridTicks/2;
+    (*places)[0].y = center.y - kGridTicks/2;
 
-  for (int i = 0; i < n - 1; i++) {
-    const int offset = (i == 0 || i == n - 2 ? 3 : 1);
-    options[i] = Point(room.position.x + offset, room.position.y + 2*i);
+    const int spacing = max((height - (n - 1)*kGridTicks)/n, kMinSpacing);
+    const int first_space = (height - (n - 1)*kGridTicks - (n - 2)*spacing)/2;
+    int y = kGridTicks*room.position.y + first_space;
+    for (int i = 0; i < n - 1; i++) {
+      const int off = (n - 1 > 2 && (i == 0 || i == n - 2) ? 2 : 4);
+      options[i].x = center.x + (sign*(min(room.size.x, off)) - 1)*kGridTicks/2;
+      options[i].y = y;
+      y += kGridTicks + spacing;
+    }
+  } else {
+    ASSERT(false, "Got too many sprites!");
   }
 
   vector<vector<Cost>> distances(n - 1, vector<Cost>(n - 1));
   for (int i = 0; i < n - 1; i++) {
-    Point position = sprites[i + 1]->GetPosition() + half_square;
+    const Point& position = sprites[i + 1]->GetPosition();
     for (int j = 0; j < n - 1; j++) {
-      double distance = (position - kGridTicks*options[j]).length();
-      distances[i][j] = (int)distance;
+      distances[i][j] = (int)(position - options[j]).length();
     }
   }
   Hungarian hungarian(n - 1, distances);
@@ -128,8 +141,8 @@ bool BattleScript::Update() {
 BattleExecutor::BattleExecutor(
     const TileMap::Room& room, const vector<Sprite*>& sprites)
     : room_(room), sprites_(sprites) {
-  ComputePlaces(room_, sprites_, &places_);
   center_ = kGridTicks*(2*room.position + room.size)/2;
+  ComputePlaces(room_, center_, sprites_, &places_);
   for (Sprite* sprite : sprites_) {
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {
@@ -141,7 +154,8 @@ BattleExecutor::BattleExecutor(
 
 BattleScript* BattleExecutor::AssumePlace(int i) {
   BattleScript* move = Run(sprites_[i], new WalkToTargetState(places_[i]));
-  const Point& target = (i == 0 ? center_ : kGridTicks*places_[0]);
+  const Point target =
+      (i == 0 ? center_ - Point(kGridTicks/2, kGridTicks/2) : places_[0]);
   BattleScript* face = Run(sprites_[i], new FaceTargetState(target));
   return move->AndThen(face);
 }

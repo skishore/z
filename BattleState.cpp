@@ -45,7 +45,7 @@ SpriteState* WalkToTargetState::MaybeTransition(
 
 SpriteState* WalkToTargetState::Update(const GameState& game_state) {
   sprite_->frame_.x = sprite_->dir_;
-  Point move = kGridTicks*target_ - sprite_->GetPosition();
+  Point move = target_ - sprite_->GetPosition();
   if (move.length() > kTolerance) {
     sprite_->dir_ = GetDirection(move);
     move.set_length(kBattleSpeed);
