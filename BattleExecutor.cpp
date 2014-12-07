@@ -87,7 +87,7 @@ void ComputePlaces(const TileMap::Room& room, const Point& center,
   if (n - 1 <= max_per_side) {
     const int sign =
         (sprites[0]->GetPosition().x + kGridTicks/2 < center.x ? 1 : -1);
-    (*places)[0].x = center.x + (-sign*min(room.size.x, 3) - 1)*kGridTicks/2;
+    (*places)[0].x = center.x + (-sign*min(room.size.x, 4) - 1)*kGridTicks/2;
     (*places)[0].y = center.y - kGridTicks/2;
 
     const int spacing = max((height - (n - 1)*kGridTicks)/n, kMinSpacing);
@@ -143,11 +143,14 @@ BattleExecutor::BattleExecutor(
     : room_(room), sprites_(sprites) {
   center_ = kGridTicks*(2*room.position + room.size)/2;
   ComputePlaces(room_, center_, sprites_, &places_);
-  for (Sprite* sprite : sprites_) {
+  for (int i = 1; i < sprites.size(); i++) {
+    Sprite* sprite = sprites[i];
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {
       sprite->battle_->text = "excellent";
-      sprite->battle_->dir = Direction::LEFT;
+      sprite->battle_->side =
+          (places_[i].x < places_[0].x ? Direction::LEFT : Direction::RIGHT);
+      sprite->battle_->dir = sprite->battle_->side;
     }
   }
 }
