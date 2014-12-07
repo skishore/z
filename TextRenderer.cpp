@@ -263,8 +263,9 @@ void Font::Render(const Point& position, const Point& size,
 
   SDL_LockSurface(surface);
 
+  const Uint32 load_flags = FT_LOAD_FORCE_AUTOHINT;
   for (int i = 0; i < glyph_count; i++) {
-    ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
+    ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, load_flags),
            "Failed to load glyph: " << glyph_info[i].codepoint);
     ASSERT(face_->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
            "Got unexpected glyph format: " << (char*)&face_->glyph->format);
