@@ -75,6 +75,22 @@ inline BattleScript* Run(Sprite* sprite, SpriteState* state) {
 
 const static int kMinSpacing = kGridTicks;
 
+void ComputeSemicircle(
+    const TileMap::Room& room, const Point& center, int height,
+    int n, int offset, int sign, int num_circles, vector<Point>* places) {
+  const int spacing = max((height - n*kGridTicks)/(n + 1), kMinSpacing);
+  const int first_space = (height - n*kGridTicks - (n - 1)*spacing)/2;
+  int y = kGridTicks*room.position.y + first_space;
+  for (int i = 0; i < n; i++) {
+    const bool can_shift = (n > 2 || num_circles == 1);
+    const bool shift_in = can_shift && (i == 0 || i == n - 1);
+    const int shift = min(room.size.x - 1, (shift_in ? 2 : 4));
+    (*places)[i + offset].x = center.x + (sign*shift - 1)*kGridTicks/2;
+    (*places)[i + offset].y = y;
+    y += kGridTicks + spacing;
+  }
+}
+
 void ComputePlaces(const TileMap::Room& room, const Point& center,
                    const vector<Sprite*>& sprites, vector<Point>* places) {
   ASSERT(sprites.size() > 0, "Got an empty sprites list!");
@@ -84,23 +100,18 @@ void ComputePlaces(const TileMap::Room& room, const Point& center,
 
   const int height = kGridTicks*room.size.y;
   const int max_per_side = (height - kGridTicks)/(kGridTicks + kMinSpacing) + 1;
-  if (n - 1 <= max_per_side) {
-    const int sign =
-        (sprites[0]->GetPosition().x + kGridTicks/2 < center.x ? 1 : -1);
-    (*places)[0].x = center.x + (-sign*min(room.size.x, 4) - 1)*kGridTicks/2;
-    (*places)[0].y = center.y - kGridTicks/2;
+  const int sign =
+      (sprites[0]->GetPosition().x + kGridTicks/2 < center.x ? 1 : -1);
 
-    const int spacing = max((height - (n - 1)*kGridTicks)/n, kMinSpacing);
-    const int first_space = (height - (n - 1)*kGridTicks - (n - 2)*spacing)/2;
-    int y = kGridTicks*room.position.y + first_space;
-    for (int i = 0; i < n - 1; i++) {
-      const int off = (n - 1 > 2 && (i == 0 || i == n - 2) ? 2 : 4);
-      options[i].x = center.x + (sign*(min(room.size.x, off)) - 1)*kGridTicks/2;
-      options[i].y = y;
-      y += kGridTicks + spacing;
-    }
+  if (n - 1 <= max_per_side) {
+    (*places)[0].x = center.x + (-sign*min(room.size.x - 1, 2) - 1)*kGridTicks/2;
+    (*places)[0].y = center.y - kGridTicks/2;
+    ComputeSemicircle(room, center, height, n - 1, 0, sign, 1, &options);
   } else {
-    ASSERT(false, "Got too many sprites!");
+    (*places)[0].x = center.x - kGridTicks/2;
+    (*places)[0].y = center.y - kGridTicks/2;
+    ComputeSemicircle(room, center, height, n/2, 0, sign, 2, &options);
+    ComputeSemicircle(room, center, height, (n - 1)/2, n/2, -sign, 2, &options);
   }
 
   vector<vector<Cost>> distances(n - 1, vector<Cost>(n - 1));

@@ -10,10 +10,7 @@ const static int kBattleSpeed = 1.2*kPlayerSpeed;
 const static int kTolerance = kPlayerSpeed;
 
 Direction GetDirection(const Point& move) {
-  if (abs(move.x) > abs(move.y)) {
-    return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
-  }
-  return (move.y < 0 ? Direction::UP : Direction::DOWN);
+  return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
 }
 
 }  // namespace
