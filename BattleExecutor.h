@@ -2,6 +2,7 @@
 #define __SKISHORE_BATTLE_EXECUTOR_H__
 
 #include <memory>
+#include <string>
 
 #include "Sprite.h"
 #include "TileMap.h"
@@ -38,6 +39,8 @@ class BattleExecutor {
   // while AssumePlaces moves all sprites to their places.
   BattleScript* AssumePlace(int i);
   BattleScript* AssumePlaces();
+  BattleScript* Freeze();
+  BattleScript* Speak(int i, const std::string& text);
 
   // Takes ownership and runs the given script. This method should not be
   // called if a script is already running.

@@ -9,6 +9,7 @@
 
 using std::min;
 using std::max;
+using std::string;
 using std::vector;
 
 namespace skishore {
@@ -67,10 +68,20 @@ class WaitForStateTransitionScript : public BattleScript {
   std::unique_ptr<SpriteState> state_ownership_;
 };
 
+class SetStateScript : public WaitForStateTransitionScript {
+ public:
+  using WaitForStateTransitionScript::WaitForStateTransitionScript;
+  bool Step() override { return true; }
+};
+
 }  // namespace script
 
 inline BattleScript* Run(Sprite* sprite, SpriteState* state) {
   return new script::WaitForStateTransitionScript(sprite, state);
+}
+
+inline BattleScript* Set(Sprite* sprite, SpriteState* state) {
+  return new script::SetStateScript(sprite, state);
 }
 
 const static int kMinSpacing = kGridTicks;
@@ -158,10 +169,8 @@ BattleExecutor::BattleExecutor(
     Sprite* sprite = sprites[i];
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {
-      sprite->battle_->text = "excellent";
       sprite->battle_->side =
           (places_[i].x < places_[0].x ? Direction::LEFT : Direction::RIGHT);
-      sprite->battle_->dir = sprite->battle_->side;
     }
   }
 }
@@ -180,6 +189,18 @@ BattleScript* BattleExecutor::AssumePlaces() {
     script = script->And(AssumePlace(i));
   }
   return script;
+}
+
+BattleScript* BattleExecutor::Freeze() {
+  BattleScript* script = Set(sprites_[0], new WaitingState);
+  for (int i = 1; i < sprites_.size(); i++) {
+    script = script->And(Set(sprites_[i], new WaitingState));
+  }
+  return script;
+}
+
+BattleScript* BattleExecutor::Speak(int i, const string& text) {
+  return Run(sprites_[i], new SpeakState(Direction::UP, text));
 }
 
 void BattleExecutor::RunScript(BattleScript* script) {

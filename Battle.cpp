@@ -10,14 +10,22 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   room_ = enemy.GetRoom();
   player_ = game_state.player_;
   sprites_.push_back(player_);
+  int index = 0;
   for (Sprite* sprite : game_state.sprites_) {
     if (sprite != player_ && sprite->GetRoom() == enemy.GetRoom()) {
+      if (sprite == &enemy) {
+        index = sprites_.size();
+      }
       sprites_.push_back(sprite);
     }
   }
   ASSERT(sprites_.size() > 1, "Could not find enemies to battle!");
+  ASSERT(index > 0, "Could not find initial enemy!");
   executor_.reset(new BattleExecutor(*room_, sprites_));
-  executor_->RunScript(executor_->AssumePlaces());
+  executor_->RunScript(
+      executor_->Freeze()->AndThen(
+      executor_->Speak(index, "Got you!")->AndThen(
+      executor_->AssumePlaces())));
 }
 
 bool Battle::Update() {

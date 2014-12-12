@@ -2,6 +2,9 @@
 #ifndef __SKISHORE_BATTLE_STATE_H__
 #define __SKISHORE_BATTLE_STATE_H__
 
+#include <string>
+
+#include "constants.h"
 #include "SpriteState.h"
 
 namespace skishore {
@@ -17,6 +20,20 @@ class FaceTargetState : public SpriteState {
 
  private:
   Point target_;
+};
+
+class SpeakState : public SpriteState {
+ public:
+  SpeakState(Direction dir, const std::string& text)
+      : dir_(dir), text_(text) {};
+
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  Direction dir_;
+  std::string text_;
+  int index_ = 0;
 };
 
 class WaitingState : public SpriteState {

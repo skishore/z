@@ -1,4 +1,5 @@
 #include "constants.h"
+#include "BattleData.h"
 #include "BattleState.h"
 
 namespace skishore {
@@ -25,6 +26,21 @@ SpriteState* FaceTargetState::Update(const GameState& game_state) {
   sprite_->dir_ = GetDirection(move);
   sprite_->frame_.x = sprite_->dir_;
   return new WaitingState;
+}
+
+SpriteState* SpeakState::MaybeTransition(const GameState& game_state) const {
+  return nullptr;
+}
+
+SpriteState* SpeakState::Update(const GameState& game_state) {
+  sprite_->battle_->dir = dir_;
+  sprite_->battle_->text = text_;
+  index_ += 1;
+  if (index_ >= 60) {
+    sprite_->battle_->text = "";
+    return new WaitingState;
+  }
+  return nullptr;
 }
 
 SpriteState* WaitingState::MaybeTransition(const GameState& game_state) const {
