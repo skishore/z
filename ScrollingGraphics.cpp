@@ -10,8 +10,7 @@ namespace skishore {
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-// The scale factor applied to the game when it is rendered to the screen.
-static const int kScale = 2;
+static const int kTextSize = 0.75*kGridSize;
 }  // namespace
 
 ScrollingGraphics::DrawingSurface::DrawingSurface(const Point& size)
@@ -35,7 +34,7 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
   const Point dimensions(kGridSize*size);
 
   int status = SDL_CreateWindowAndRenderer(
-      kScale*dimensions.x, kScale*dimensions.y, 0, &window_, &renderer_);
+      dimensions.x, dimensions.y, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());
   USE_FOR_DEBUG(status);
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
@@ -59,7 +58,7 @@ ScrollingGraphics::~ScrollingGraphics() {
 }
 
 void ScrollingGraphics::DrawStatusMessage(const string& message) {
-  text_renderer_->DrawText(kGridSize, Point(0, 0), message);
+  text_renderer_->DrawText(kTextSize, Point(0, 0), message);
 }
 
 void ScrollingGraphics::CenterCamera(const Point& absolute_position) {
@@ -102,7 +101,7 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
     Point position = sprite.GetDrawingPosition() - position_offset_;
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
     text_renderer_->DrawTextBox(
-        kGridSize, sprite.battle_->dir, rect, sprite.battle_->text);
+        kTextSize, sprite.battle_->dir, rect, sprite.battle_->text);
   }
 }
 

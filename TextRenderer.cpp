@@ -263,7 +263,12 @@ void Font::Render(const Point& position, const Point& size,
 
   SDL_LockSurface(surface);
 
+  #ifdef EMSCRIPTEN
+  // TODO(skishore): Why does auto-hinting crash emscripten?
+  const Uint32 load_flags = 0;
+  #else  // EMSCRIPTEN
   const Uint32 load_flags = FT_LOAD_FORCE_AUTOHINT;
+  #endif // EMSCRIPTEN
   for (int i = 0; i < glyph_count; i++) {
     ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, load_flags),
            "Failed to load glyph: " << glyph_info[i].codepoint);

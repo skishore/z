@@ -13,14 +13,14 @@
 namespace skishore {
 
 // The side length of each grid square, in pixels.
-static const int kGridSize = 16;
+static const int kGridSize = 32;
 
 // All movement calculations are done in ticks.
 static const int kTicksPerPixel = 1024;
 static const int kGridTicks = kGridSize*kTicksPerPixel;
 
-static const int kEnemySpeed = 1.1*kTicksPerPixel;
-static const int kPlayerSpeed = 1.4*kTicksPerPixel;
+static const int kEnemySpeed = 0.06875*kGridTicks;
+static const int kPlayerSpeed = 0.0875*kGridTicks;
 
 enum Direction {
   UP = 0,

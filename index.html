@@ -103,6 +103,7 @@
         }
       };
       Module.setStatus('Downloading...');
+      Module.TOTAL_MEMORY = 32*1024*1024;
       window.onerror = function(event) {
         // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
         Module.setStatus('Exception thrown, see JavaScript console');

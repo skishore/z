@@ -25,7 +25,13 @@ void Image::Draw(const Point& position, const Point& frame,
   }
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
-  SDL_BlitSurface(surface_, &source, surface, &target);
+
+  source.x /= 2;
+  source.y /= 2;
+  source.w /= 2;
+  source.h /= 2;
+
+  SDL_BlitScaled(surface_, &source, surface, &target);
 }
 
 bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
