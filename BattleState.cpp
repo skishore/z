@@ -2,6 +2,8 @@
 #include "BattleData.h"
 #include "BattleState.h"
 
+using std::string;
+
 namespace skishore {
 namespace battle {
 
@@ -10,8 +12,17 @@ namespace {
 const static int kBattleSpeed = 1.2*kPlayerSpeed;
 const static int kTolerance = kPlayerSpeed;
 
+// Constants controlling speaking speed.
+const static int kFramesPerGlyph = kFrameRate/30;
+const static int kFinalDelay = kFrameRate;
+
 Direction GetDirection(const Point& move) {
   return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
+}
+
+void AdvanceTextIndex(const string& text, int* index) {
+  // TODO(skishore): Do some more complex logic here for Devanagari text.
+  *index += 1;
 }
 
 }  // namespace
@@ -33,13 +44,17 @@ SpriteState* SpeakState::MaybeTransition(const GameState& game_state) const {
 }
 
 SpriteState* SpeakState::Update(const GameState& game_state) {
-  sprite_->battle_->dir = dir_;
-  sprite_->battle_->text = text_;
-  index_ += 1;
-  if (index_ >= 60) {
-    sprite_->battle_->text = "";
-    return new WaitingState;
+  if (frame_ <= 0) {
+    if (index_ >= text_.size()) {
+      sprite_->battle_->text = "";
+      return new WaitingState;
+    }
+    AdvanceTextIndex(text_, &index_);
+    frame_ = (index_ >= text_.size() ? kFinalDelay : kFramesPerGlyph);
   }
+  sprite_->battle_->dir = dir_;
+  sprite_->battle_->text = text_.substr(0, index_);
+  frame_ -= 1;
   return nullptr;
 }
 

@@ -365,8 +365,8 @@ TextRenderer::~TextRenderer() {
   FT_Done_FreeType(library_);
 }
 
-void TextRenderer::DrawText(int font_size, const Point& position,
-                            const string& text, const SDL_Color color) {
+void TextRenderer::DrawText(int font_size, const string& text,
+                            const Point& position, const SDL_Color color) {
   if (text.size() == 0) {
     return;
   }
@@ -377,7 +377,7 @@ void TextRenderer::DrawText(int font_size, const Point& position,
 }
 
 void TextRenderer::DrawTextBox(
-    int font_size, Direction dir, const SDL_Rect& rect, const string& text,
+    int font_size, Direction dir, const string& text, const SDL_Rect& rect,
     const SDL_Color fg_color, const SDL_Color bg_color) {
   if (text.size() == 0) {
     return;

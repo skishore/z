@@ -24,7 +24,7 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   executor_.reset(new BattleExecutor(*room_, sprites_));
   executor_->RunScript(
       executor_->Freeze()->AndThen(
-      executor_->Speak(index, "Got you!")->AndThen(
+      executor_->Speak(index, "!")->AndThen(
       executor_->AssumePlaces())));
 }
 

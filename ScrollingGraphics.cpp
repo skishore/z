@@ -58,7 +58,7 @@ ScrollingGraphics::~ScrollingGraphics() {
 }
 
 void ScrollingGraphics::DrawStatusMessage(const string& message) {
-  text_renderer_->DrawText(kTextSize, Point(0, 0), message);
+  text_renderer_->DrawText(kTextSize, message, Point(0, 0));
 }
 
 void ScrollingGraphics::CenterCamera(const Point& absolute_position) {
@@ -101,7 +101,7 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
     Point position = sprite.GetDrawingPosition() - position_offset_;
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
     text_renderer_->DrawTextBox(
-        kTextSize, sprite.battle_->dir, rect, sprite.battle_->text);
+        kTextSize, sprite.battle_->dir, sprite.battle_->text, rect);
   }
 }
 

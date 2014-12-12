@@ -25,11 +25,11 @@ class TextRenderer {
   TextRenderer(const SDL_Rect& bounds, SDL_Surface* target);
   ~TextRenderer();
 
-  void DrawText(int font_size, const Point& position,
-                const std::string& text, const SDL_Color color=kWhite);
+  void DrawText(int font_size, const std::string& text,
+                const Point& position, const SDL_Color color=kWhite);
   void DrawTextBox(
-      int font_size, Direction dir, const SDL_Rect& rect,
-      const std::string& text, const SDL_Color fg_color=kWhite,
+      int font_size, Direction dir, const std::string& text,
+      const SDL_Rect& rect, const SDL_Color fg_color=kWhite,
       const SDL_Color bg_color=kBlack);
 
  private:

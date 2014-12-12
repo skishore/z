@@ -9,12 +9,12 @@ namespace skishore {
 namespace battle {
 
 struct BattleData {
-  std::string text;
   // Whether the sprite is left or right of the player.
   Direction side;
-  // The direction of the sprite's text box. This direction will either
-  // equality the sprite's side, or it will be Direction::UP.
+
+  // Fields used to control the sprite's text box.
   Direction dir;
+  std::string text;
 };
 
 }  // namespace battle

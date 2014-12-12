@@ -12,6 +12,8 @@
 
 namespace skishore {
 
+static const int kFrameRate = 60;
+
 // The side length of each grid square, in pixels.
 static const int kGridSize = 32;
 

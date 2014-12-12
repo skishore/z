@@ -34,6 +34,7 @@ class SpeakState : public SpriteState {
   Direction dir_;
   std::string text_;
   int index_ = 0;
+  int frame_ = 0;
 };
 
 class WaitingState : public SpriteState {

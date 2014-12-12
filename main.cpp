@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "constants.h"
 #include "Engine.h"
 #include "Point.h"
 
@@ -10,10 +11,9 @@ using skishore::Point;
 
 namespace {
 static const Point kScreenSize(16, 16);
-static const int kFrameRate = 60;
 }  // namespace
 
 int main(int argc, char** argv) {
-  Engine(kFrameRate, kScreenSize);
+  Engine(skishore::kFrameRate, kScreenSize);
   return 0;
 }
