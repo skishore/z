@@ -108,16 +108,29 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
 }
 
 void ScrollingGraphics::DrawUI(const vector<string>& lines) {
+  const int border = 2;
   const int font_size = 3*kTextSize/4;
   const int line_height = 4*font_size/3;
-  const int height = line_height*(lines.size() + 1);
-  SDL_Rect rect(foreground_->bounds_);
-  rect.y += rect.h - height;
-  rect.h = height;
-  SDL_FillRect(foreground_->surface_, &rect, 0x00000000);
-  SDL_DrawRect(foreground_->surface_, &rect, 0x00ffffff);
+  const int height = line_height*(lines.size() + 1) + 2*border;
+  const int padding = font_size/4;
 
-  Point position(font_size, rect.y + line_height/2);
+  SDL_Rect rect(foreground_->bounds_);
+
+  rect.x += padding;
+  rect.y += rect.h - height - padding;
+  rect.h = height - 1;
+  rect.w -= 2*padding + 1;
+
+  SDL_FillRect(foreground_->surface_, &rect, 0x00002266);
+  for (int i = 0; i < border; i++) {
+    SDL_DrawRect(foreground_->surface_, &rect, 0x00ffffff);
+    rect.x += 1;
+    rect.y += 1;
+    rect.w -= 2;
+    rect.h -= 2;
+  }
+
+  Point position(line_height, rect.y + line_height/2 - font_size/8);
   for (const string& line : lines) {
     text_renderer_->DrawText(font_size, line, position);
     position.y += line_height;
