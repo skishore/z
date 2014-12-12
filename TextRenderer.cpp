@@ -373,7 +373,9 @@ void TextRenderer::DrawText(int font_size, const string& text,
   Font* font = LoadFont(font_size);
   Point size, baseline;
   font->PrepareToRender(text, &size, &baseline);
-  font->Render(position, size, baseline, target_);
+  Point adjusted_position = position;
+  adjusted_position.y += font_size - baseline.y;
+  font->Render(adjusted_position, size, baseline, target_);
 }
 
 void TextRenderer::DrawTextBox(

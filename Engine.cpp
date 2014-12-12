@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 #include <SDL2/SDL.h>
 
 #include "debug.h"
@@ -7,6 +8,7 @@
 #include "Sprite.h"
 
 using std::string;
+using std::vector;
 
 namespace skishore {
 
@@ -38,6 +40,7 @@ bool Engine::Update(double frame_rate) {
     graphics_->DrawSpriteText(*sprite);
   }
   graphics_->DrawStatusMessage("FPS: " + DoubleToString(frame_rate, 2));
+  graphics_->DrawUI(vector<string>{"Choose an option:", "    a - fight", "    s - item"});
   graphics_->Flip();
 
   return input_.IsExitSignaled();

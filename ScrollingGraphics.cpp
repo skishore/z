@@ -2,8 +2,10 @@
 #include "debug.h"
 #include "BattleData.h"
 #include "ScrollingGraphics.h"
+#include "SDL_prims.h"
 
 using std::string;
+using std::vector;
 
 namespace skishore {
 
@@ -102,6 +104,23 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
     SDL_Rect rect {position.x, position.y, kGridSize, kGridSize};
     text_renderer_->DrawTextBox(
         kTextSize, sprite.battle_->dir, sprite.battle_->text, rect);
+  }
+}
+
+void ScrollingGraphics::DrawUI(const vector<string>& lines) {
+  const int font_size = 3*kTextSize/4;
+  const int line_height = 4*font_size/3;
+  const int height = line_height*(lines.size() + 1);
+  SDL_Rect rect(foreground_->bounds_);
+  rect.y += rect.h - height;
+  rect.h = height;
+  SDL_FillRect(foreground_->surface_, &rect, 0x00000000);
+  SDL_DrawRect(foreground_->surface_, &rect, 0x00ffffff);
+
+  Point position(font_size, rect.y + line_height/2);
+  for (const string& line : lines) {
+    text_renderer_->DrawText(font_size, line, position);
+    position.y += line_height;
   }
 }
 

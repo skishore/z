@@ -1,6 +1,8 @@
 #ifndef __SKISHORE_SCROLLING_GRAPHICS_H__
 #define __SKISHORE_SCROLLING_GRAPHICS_H__
 
+#include <string>
+#include <vector>
 #include <SDL2/SDL.h>
 
 #include "Image.h"
@@ -24,6 +26,7 @@ class ScrollingGraphics {
   void CenterCamera(const Point& position);
   void DrawSprite(const Sprite& sprite);
   void DrawSpriteText(const Sprite& sprite);
+  void DrawUI(const std::vector<std::string>& lines);
 
   // RedrawBackground is called by CenterCamera if the camera is out-of-bounds.
   // EraseForeground copies the background currently in view to the foreground,
