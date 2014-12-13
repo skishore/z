@@ -16,8 +16,11 @@ const static int kTolerance = kPlayerSpeed;
 const static int kFramesPerGlyph = kFrameRate/30;
 const static int kFinalDelay = kFrameRate;
 
-Direction GetDirection(const Point& move) {
-  return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
+Direction GetDirection(const Point& move, bool force_horizontal) {
+  if (abs(move.x) > abs(move.y) || force_horizontal) {
+    return (move.x < 0 ? Direction::LEFT : Direction::RIGHT);
+  }
+  return (move.y < 0 ? Direction::UP : Direction::DOWN);
 }
 
 void AdvanceTextIndex(const string& text, int* index) {
@@ -34,7 +37,7 @@ SpriteState* FaceTargetState::MaybeTransition(
 
 SpriteState* FaceTargetState::Update(const GameState& game_state) {
   Point move = target_ - sprite_->GetPosition();
-  sprite_->dir_ = GetDirection(move);
+  sprite_->dir_ = GetDirection(move, true /* force_horizontal */);
   sprite_->frame_.x = sprite_->dir_;
   return new WaitingState;
 }
@@ -75,7 +78,7 @@ SpriteState* WalkToTargetState::Update(const GameState& game_state) {
   sprite_->frame_.x = sprite_->dir_;
   Point move = target_ - sprite_->GetPosition();
   if (move.length() > kTolerance) {
-    sprite_->dir_ = GetDirection(move);
+    sprite_->dir_ = GetDirection(move, false /* force_horizontal */);
     move.set_length(kBattleSpeed);
     MoveSprite(game_state, sprite_, &move, &anim_num_);
     return nullptr;
