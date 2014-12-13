@@ -8,9 +8,8 @@ namespace skishore {
 
 #ifdef NDEBUG
 
-#define ASSERT(x, y)
+#define ASSERT(x, y) (void)(x)
 #define DEBUG(x)
-#define USE_FOR_DEBUG(x) (void)(x)
 
 #else  // NDEBUG
 
@@ -24,8 +23,6 @@ namespace skishore {
 #define DEBUG(x) do { \
   std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " << x << std::endl; \
 } while(false)
-
-#define USE_FOR_DEBUG(x)
 
 #endif  // NDEBUG
 

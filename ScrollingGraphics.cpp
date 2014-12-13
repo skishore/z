@@ -38,7 +38,6 @@ ScrollingGraphics::ScrollingGraphics(const Point& size, const TileMap& map)
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());
-  USE_FOR_DEBUG(status);
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
                                dimensions.x, dimensions.y);
   ASSERT(texture_ != nullptr, SDL_GetError());
