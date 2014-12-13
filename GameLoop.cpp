@@ -14,7 +14,7 @@ namespace skishore {
 namespace {
 
 static const long long kTicksPerSecond = 1000000;
-static const long long kBreak = 1000;
+static const long long kBreak = 2000;
 static const int kUpdatesPerFrame = 4;
 
 // We store the current frame rate and updatable in static global variables
