@@ -12,7 +12,7 @@ namespace skishore {
 
 namespace {
 
-const int kWalkingAnimationFrames = 6;
+const int kWalkingAnimationFrames = 9;
 
 // Returns a free direction to move to from the given square.
 Direction GetFreeDirection(const Point& square, const TileMap& map) {

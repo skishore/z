@@ -23,7 +23,7 @@ const Image* ImageCache::LoadImage(const Point& size, const string& filename) {
   }
   SDL_Surface* surface = images_by_filename_[filename];
   counts_by_image_[surface] += 1;
-  return new Image(size, surface, this);
+  return new Image(filename, size, surface, this);
 }
 
 void ImageCache::FreeImage(Image* image) {

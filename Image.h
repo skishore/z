@@ -21,12 +21,14 @@ class Image {
   // ImageCache is a factory class used to construct Image instances.
   friend class ImageCache;
 
-  Image(const Point& size, SDL_Surface* surface, ImageCache* cache);
+  Image(const std::string& filename, const Point& size,
+        SDL_Surface* surface, ImageCache* cache);
 
   bool PositionRects(const Point& position, const SDL_Rect& bounds,
                      SDL_Rect* source, SDL_Rect* target) const;
 
   // The Image's surface is owned by the cache that constructed it.
+  const std::string filename_;
   const Point size_;
   mutable SDL_Surface* surface_;
   ImageCache* const cache_;

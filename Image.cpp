@@ -9,8 +9,9 @@ using std::string;
 
 namespace skishore {
 
-Image::Image(const Point& size, SDL_Surface* surface, ImageCache* cache)
-    : size_(size), surface_(surface), cache_(cache) {}
+Image::Image(const string& filename, const Point& size,
+             SDL_Surface* surface, ImageCache* cache)
+    : filename_(filename), size_(size), surface_(surface), cache_(cache) {}
 
 Image::~Image() {
   cache_->FreeImage(this);
@@ -26,10 +27,15 @@ void Image::Draw(const Point& position, const Point& frame,
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
 
-  source.x /= 2;
-  source.y /= 2;
-  source.w /= 2;
-  source.h /= 2;
+  if (filename_ == "player.bmp") {
+    const int new_frame = 2*(frame.x % 4) + (frame.x >= 4 ? 1 : 0);
+    source.x += (new_frame - frame.x)*size_.x;
+  } else {
+    source.x /= 2;
+    source.y /= 2;
+    source.w /= 2;
+    source.h /= 2;
+  }
 
   SDL_BlitScaled(surface_, &source, surface, &target);
 }
