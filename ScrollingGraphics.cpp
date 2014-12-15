@@ -5,7 +5,6 @@
 #include "SDL_prims.h"
 
 using std::string;
-using std::vector;
 
 namespace skishore {
 
@@ -106,11 +105,11 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
   }
 }
 
-void ScrollingGraphics::DrawUI(const vector<string>& lines) {
+void ScrollingGraphics::DrawUI() {
   const int border = 2;
   const int font_size = 3*kTextSize/4;
   const int line_height = 4*font_size/3;
-  const int height = line_height*(lines.size() + 1) + 2*border;
+  const int height = line_height*(2 + 1) + 2*border;
   const int padding = font_size/4;
 
   SDL_Rect rect(foreground_->bounds_);
@@ -130,10 +129,14 @@ void ScrollingGraphics::DrawUI(const vector<string>& lines) {
   }
 
   Point position(line_height, rect.y + line_height/2 - font_size/8);
-  for (const string& line : lines) {
-    text_renderer_->DrawText(font_size, line, position);
-    position.y += line_height;
-  }
+  text_renderer_->DrawText(font_size, "Choose an option:", position);
+  position.x += foreground_->bounds_.w/15;
+  position.y += line_height;
+  text_renderer_->DrawText(font_size, "a - fight", position);
+  position.x += foreground_->bounds_.w/3;
+  text_renderer_->DrawText(font_size, "s - items", position);
+  position.x += foreground_->bounds_.w/3;
+  text_renderer_->DrawText(font_size, "d - run", position);
 }
 
 void ScrollingGraphics::RedrawBackground() {
