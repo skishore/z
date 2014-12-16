@@ -94,7 +94,7 @@ void GameState::CreateSprite(
     sprite = new Sprite(is_player, square, *image, map_, room);
     player_ = sprite;
   } else {
-    const Image* image = cache_->LoadImage(size, "player.bmp");
+    const Image* image = cache_->LoadImage(size, "zombie.bmp");
     sprite = new Sprite(is_player, square, *image, map_, room);
   }
 

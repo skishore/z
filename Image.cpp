@@ -30,12 +30,11 @@ void Image::Draw(const Point& position, const Point& frame,
   if (filename_ == "player.bmp") {
     const int new_frame = 2*(frame.x % 4) + (frame.x >= 4 ? 1 : 0);
     source.x += (new_frame - frame.x)*size_.x;
-  } else if (filename_ != "tileset.bmp") {
-    source.x /= 2;
-    source.y /= 2;
-    source.w /= 2;
-    source.h /= 2;
   }
+  source.x /= 2;
+  source.y /= 2;
+  source.w /= 2;
+  source.h /= 2;
 
   SDL_BlitScaled(surface_, &source, surface, &target);
 }
