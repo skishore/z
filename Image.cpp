@@ -27,7 +27,7 @@ void Image::Draw(const Point& position, const Point& frame,
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
 
-  if (filename_ == "player.bmp") {
+  if (filename_ != "tileset.bmp") {
     const int new_frame = 2*(frame.x % 4) + (frame.x >= 4 ? 1 : 0);
     source.x += (new_frame - frame.x)*size_.x;
   }
