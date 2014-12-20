@@ -15,15 +15,15 @@ const static int kTolerance = kPlayerSpeed;
 // Constants controlling the sprite's attack animations.
 const static int kAttackSpeed = 0.8*kPlayerSpeed;
 const static int kAttackFrames = 3;
-const static int kAttackAnimNum[] = {4, 4, 8};
-const static int kAttackMoveFrames = 6;
+const static int kAttackAnimNum[] = {2, 2, 8};
+const static int kAttackMoveFrames = 4;
 const static int kAttackSpriteFrame[][kAttackFrames] =
-  {{0, 0, 0}, {8, 1, 5}, {2, 2, 2}, {7, 3, 9}};
+  {{0, 0, 0}, {8, 1, 9}, {2, 2, 2}, {7, 3, 10}};
 const static int kAttackItemFrame[][kAttackFrames] =
-  {{0, 0, 0}, {14, 10, 12}, {2, 2, 2}, {11, 13, 15}};
+  {{0, 0, 0}, {15, 11, 13}, {2, 2, 2}, {12, 14, 16}};
 const static Point kAttackItemOffset[][kAttackFrames] =
-  {{{}, {}, {}}, {{-1, 2}, {0, 0}, {16, 6}},
-   {{}, {}, {}}, {{1, 2}, {-4, -1}, {-19, 4}}};
+  {{{}, {}, {}}, {{-1, 2}, {0, 0}, {16, 7}},
+   {{}, {}, {}}, {{1, 2}, {-4, -1}, {-21, 6}}};
 const static ItemData::ItemStatus kAttackStatus[] =
   {ItemData::BACKGROUND, ItemData::FOREGROUND,
    ItemData::FOREGROUND, ItemData::BACKGROUND};
