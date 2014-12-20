@@ -10,6 +10,15 @@
 namespace skishore {
 namespace battle {
 
+class AttackState : public SpriteState {
+ public:
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+
+ private:
+  int frame_ = 0;
+};
+
 class FaceTargetState : public SpriteState {
  public:
   // The target is a position to face.

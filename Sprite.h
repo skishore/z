@@ -18,6 +18,17 @@ struct BattleData;
 
 class SpriteState;
 
+struct ItemData {
+  enum ItemStatus {
+    HIDDEN = 0,
+    FOREGROUND = 1,
+    BACKGROUND = 2
+  };
+  ItemStatus status = HIDDEN;
+  Point frame;
+  Point offset;
+};
+
 class Sprite {
  public:
   Sprite(bool is_player, const Point& square, const Image& Image,
@@ -43,10 +54,11 @@ class Sprite {
   void SetPosition(const Point& position);
   void SetState(SpriteState* state);
 
-  // Members exposed so that SpriteState subclasses can read them.
+  // Members exposed so that SpriteState subclasses can use them.
   const bool is_player_;
   Point frame_;
   Direction dir_;
+  ItemData item_;
   std::unique_ptr<SpriteState> state_;
   std::unique_ptr<battle::BattleData> battle_;
 

@@ -12,6 +12,17 @@ namespace {
 const static int kBattleSpeed = 1.2*kPlayerSpeed;
 const static int kTolerance = kPlayerSpeed;
 
+// Constants controlling the sprite's attack animations.
+const static int kAttackFrames = 3;
+const static int kAttackAnimNum[] = {4, 4, 8};
+const static int kAttackSpriteFrame[][kAttackFrames] =
+  {{0, 0, 0}, {8, 1, 5}, {2, 2, 2}, {7, 3, 9}};
+const static int kAttackItemFrame[][kAttackFrames] =
+  {{0, 0, 0}, {14, 10, 12}, {2, 2, 2}, {11, 13, 15}};
+const static ItemData::ItemStatus kAttackStatus[] =
+  {ItemData::BACKGROUND, ItemData::FOREGROUND,
+   ItemData::FOREGROUND, ItemData::BACKGROUND};
+
 // Constants controlling speaking speed.
 const static int kFramesPerGlyph = kFrameRate/30;
 const static int kFinalDelay = kFrameRate;
@@ -29,6 +40,31 @@ void AdvanceTextIndex(const string& text, int* index) {
 }
 
 }  // namespace
+
+SpriteState* AttackState::MaybeTransition(const GameState& game_state) const {
+  if (sprite_->dir_ == Direction::UP || sprite_->dir_ == Direction::DOWN ||
+      frame_ >= kAttackFrames) {
+    sprite_->item_.status = ItemData::HIDDEN;
+    if (sprite_->battle_ == nullptr) {
+      return new PausedState;
+    }
+    return new WaitingState;
+  }
+  return nullptr;
+}
+
+SpriteState* AttackState::Update(const GameState& game_state) {
+  Direction dir = sprite_->dir_;
+  sprite_->frame_.x = kAttackSpriteFrame[dir][frame_];
+  sprite_->item_.frame.x = kAttackItemFrame[dir][frame_];
+  sprite_->item_.status = kAttackStatus[dir];
+  anim_num_ += 1;
+  if (anim_num_ >= kAttackAnimNum[frame_]) {
+    anim_num_ = 0;
+    frame_ += 1;
+  }
+  return nullptr;
+}
 
 SpriteState* FaceTargetState::MaybeTransition(
     const GameState& game_state) const {

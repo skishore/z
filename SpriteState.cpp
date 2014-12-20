@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "debug.h"
 #include "GameState.h"
+#include "BattleState.h"
 #include "SpriteState.h"
 
 using std::max;
@@ -86,6 +87,9 @@ SpriteState* RandomWalkState::Update(const GameState& game_state) {
 }
 
 SpriteState* WalkingState::MaybeTransition(const GameState& game_state) const {
+  if (game_state.input_.IsKeyPressed(SDLK_a)) {
+    return new battle::AttackState;
+  }
   return nullptr;
 }
 

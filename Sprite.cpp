@@ -43,7 +43,14 @@ Sprite::~Sprite() {}
 
 void Sprite::Draw(const Point& camera, const SDL_Rect& bounds,
                   SDL_Surface* surface) const {
-  image_.Draw(drawing_position_ - camera, frame_, bounds, surface);
+  Point position = drawing_position_ - camera;
+  if (item_.status == ItemData::BACKGROUND) {
+    image_.Draw(position + item_.offset, item_.frame, bounds, surface);
+  }
+  image_.Draw(position, frame_, bounds, surface);
+  if (item_.status == ItemData::FOREGROUND) {
+    image_.Draw(position + item_.offset, item_.frame, bounds, surface);
+  }
 }
 
 SpriteState* Sprite::GetState() const {
