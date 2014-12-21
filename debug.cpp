@@ -29,7 +29,7 @@ void AttachLLDBToCurrentProcess() {
   int child_pid = fork();
   if (!child_pid) {
     fprintf(stdout, "Stack trace for pid %s:\n", pid);
-    execlp("lldb", "lldb", "-p", pid, "--", "backtrace", nullptr);
+    execlp("lldb", "lldb", "-attach-pid", pid, "--one-line", "bt", nullptr);
   } else {
     waitpid(child_pid, nullptr, 0);
   }

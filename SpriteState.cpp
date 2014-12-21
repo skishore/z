@@ -72,8 +72,6 @@ SpriteState* RandomWalkState::MaybeTransition(
     return nullptr;
   }
   int base_steps = kGridTicks/kEnemySpeed;
-  SpriteState** x = (SpriteState**)-1;
-  SpriteState* y = *x;
   return new PausedState((rand() % (2*base_steps)) - base_steps);
 }
 
