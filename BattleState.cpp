@@ -15,8 +15,8 @@ const static int kTolerance = kPlayerSpeed;
 // Constants controlling the sprite's attack animations.
 const static int kAttackSpeed = 0.8*kPlayerSpeed;
 const static int kAttackFrames = 3;
-const static int kAttackAnimNum[] = {2, 2, 8};
-const static int kAttackMoveFrames = 4;
+const static int kAttackAnimNum[] = {4, 4, 16};
+const static int kAttackMoveFrames = 8;
 const static int kAttackSpriteFrame[][kAttackFrames] =
   {{0, 0, 0}, {8, 1, 9}, {2, 2, 2}, {7, 3, 10}};
 const static int kAttackItemFrame[][kAttackFrames] =
@@ -67,12 +67,16 @@ SpriteState* AttackState::Update(const GameState& game_state) {
   }
   if (anim_num_ == 0) {
     Direction dir = sprite_->dir_;
-    sprite_->frame_.x = kAttackSpriteFrame[dir][frame_];
-    sprite_->item_.frame.x = kAttackItemFrame[dir][frame_];
-    sprite_->item_.offset = kAttackItemOffset[dir][frame_];
-    sprite_->item_.status = kAttackStatus[dir];
+    if (sprite_->is_player_) {
+      sprite_->frame_.x = kAttackSpriteFrame[dir][frame_];
+      sprite_->item_.frame.x = kAttackItemFrame[dir][frame_];
+      sprite_->item_.offset = kAttackItemOffset[dir][frame_];
+      sprite_->item_.status = kAttackStatus[dir];
+    } else {
+      sprite_->frame_.x = 8 + frame_ + (dir == Direction::LEFT ? 3 : 0);
+    }
   }
-  anim_num_ += 1;
+  anim_num_ += 1 + (sprite_->is_player_ ? 1 : 0);
   if (anim_num_ >= kAttackAnimNum[frame_]) {
     anim_num_ = 0;
     frame_ += 1;
