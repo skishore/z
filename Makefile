@@ -9,7 +9,7 @@ PRELOADS := data fonts/default_font.ttf images
 
 EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.o)))
 HTML := $(BUILD)/main.html
-BASE_C_FLAGS := -Wall #-O2 -DNDEBUG
+BASE_C_FLAGS := -Wall -g -fno-pie #-O2 -DNDEBUG
 BASE_CC_FLAGS := ${BASE_C_FLAGS} -std=c++11 -stdlib=libc++
 
 CC := clang++

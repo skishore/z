@@ -15,7 +15,6 @@ namespace {
 
 const int kWalkingAnimationFrames = 9;
 
-// Returns a free direction to move to from the given square.
 Direction GetFreeDirection(const Point& square, const TileMap& map) {
   int dir;
   for (int i = 0; i < 4; i++) {
@@ -73,6 +72,8 @@ SpriteState* RandomWalkState::MaybeTransition(
     return nullptr;
   }
   int base_steps = kGridTicks/kEnemySpeed;
+  SpriteState** x = (SpriteState**)-1;
+  SpriteState* y = *x;
   return new PausedState((rand() % (2*base_steps)) - base_steps);
 }
 

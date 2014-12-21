@@ -26,6 +26,8 @@ namespace skishore {
 
 #endif  // NDEBUG
 
+void RegisterCrashHandlers(const char* binary);
+
 }  // namespace skishore
 
 #endif  // __SKISHORE_DEBUG_H__
