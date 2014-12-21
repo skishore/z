@@ -104,9 +104,14 @@ SpriteState* DamageState::Update(const GameState& game_state) {
     int anim_num = 0;
     MoveSprite(game_state, sprite_, &move, &anim_num);
     sprite_->frame_.x = sprite_->dir_;
+    if (anim_num_ % 2 == 0) {
+      const int offset = (sprite_->is_player_ ? 17 : 14);
+      sprite_->frame_.x = (sprite_->frame_.x - 1)/2 + offset;
+    }
   }
   anim_num_ += 1;
   if (anim_num_ >= kDamageFrames) {
+    sprite_->frame_.x = sprite_->dir_;
     return new WaitingState;
   }
   return nullptr;
