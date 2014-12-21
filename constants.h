@@ -31,6 +31,10 @@ enum Direction {
   LEFT = 3
 };
 
+inline Direction OppositeDirection(Direction dir) {
+  return (Direction)(dir ^ 2);
+}
+
 static const Point kShift[4] = {
   Point(0, -1),
   Point(1, 0),

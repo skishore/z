@@ -35,11 +35,11 @@ class BattleExecutor {
   const Point& GetCenter() const { return center_; }
 
   // Primitive scripts that can be chained to create larger ones.
-  // AssumePlace moves sprite i to its place in the battle,
-  // while AssumePlaces moves all sprites to their places.
   BattleScript* AssumePlace(int i);
   BattleScript* AssumePlaces();
+  BattleScript* Attack(int i, int target);
   BattleScript* Freeze();
+  BattleScript* MoveNextTo(int i, int target);
   BattleScript* Speak(int i, const std::string& text);
 
   // Takes ownership and runs the given script. This method should not be
@@ -50,7 +50,7 @@ class BattleExecutor {
   // the script is finished.
   bool Update();
 
- protected:
+ private:
   const TileMap::Room& room_;
   const std::vector<Sprite*>& sprites_;
 

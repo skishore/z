@@ -19,6 +19,13 @@ class AttackState : public SpriteState {
   int frame_ = 0;
 };
 
+class DamageState : public SpriteState {
+ public:
+  DamageState(bool attacked_by_player);
+  SpriteState* MaybeTransition(const GameState& game_state) const override;
+  SpriteState* Update(const GameState& game_state) override;
+};
+
 class FaceTargetState : public SpriteState {
  public:
   // The target is a position to face.

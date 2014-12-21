@@ -165,7 +165,7 @@ BattleExecutor::BattleExecutor(
     : room_(room), sprites_(sprites) {
   center_ = kGridTicks*(2*room.position + room.size)/2;
   ComputePlaces(room_, center_, sprites_, &places_);
-  for (int i = 1; i < sprites.size(); i++) {
+  for (int i = 0; i < sprites.size(); i++) {
     Sprite* sprite = sprites[i];
     sprite->battle_.reset(new BattleData);
     if (!sprite->is_player_) {
@@ -191,12 +191,31 @@ BattleScript* BattleExecutor::AssumePlaces() {
   return script;
 }
 
+BattleScript* BattleExecutor::Attack(int i, int target) {
+  BattleScript* move = MoveNextTo(i, target);
+  BattleScript* attack = Run(sprites_[i], new AttackState);
+  BattleScript* take_damage =
+      Run(sprites_[target], new DamageState(sprites_[i]->is_player_));
+  return move->AndThen(attack->And(take_damage));
+}
+
 BattleScript* BattleExecutor::Freeze() {
   BattleScript* script = Set(sprites_[0], new WaitingState);
   for (int i = 1; i < sprites_.size(); i++) {
     script = script->And(Set(sprites_[i], new WaitingState));
   }
   return script;
+}
+
+BattleScript* BattleExecutor::MoveNextTo(int i, int target) {
+  Direction dir = OppositeDirection(sprites_[target]->battle_->side);
+  if (target == 0) {
+    dir = sprites_[i]->battle_->side;
+  };
+  Point place = places_[target] + kGridTicks*kShift[dir];
+  BattleScript* move = Run(sprites_[i], new WalkToTargetState(place));
+  BattleScript* face = Run(sprites_[i], new FaceTargetState(places_[target]));
+  return move->AndThen(face);
 }
 
 BattleScript* BattleExecutor::Speak(int i, const string& text) {

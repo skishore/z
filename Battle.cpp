@@ -25,7 +25,8 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   executor_->RunScript(
       executor_->Freeze()->AndThen(
       executor_->Speak(index, "!")->AndThen(
-      executor_->AssumePlaces())));
+      executor_->AssumePlaces()->AndThen(
+      executor_->Attack(0, 1)))));
 }
 
 bool Battle::Update() {

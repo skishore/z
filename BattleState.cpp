@@ -12,7 +12,7 @@ namespace {
 const static int kBattleSpeed = 1.2*kPlayerSpeed;
 const static int kTolerance = kPlayerSpeed;
 
-// Constants controlling the sprite's attack animations.
+// Constants controlling sprite attack animations.
 const static int kAttackSpeed = 0.8*kPlayerSpeed;
 const static int kAttackFrames = 3;
 const static int kAttackAnimNum[] = {4, 4, 16};
@@ -27,6 +27,10 @@ const static Point kAttackItemOffset[][kAttackFrames] =
 const static ItemData::ItemStatus kAttackStatus[] =
   {ItemData::BACKGROUND, ItemData::FOREGROUND,
    ItemData::FOREGROUND, ItemData::BACKGROUND};
+
+// Constants controlling sprite damage animations.
+const static int kDamageSpeed = 2.4*kPlayerSpeed;
+const static int kDamageFrames = 4;
 
 // Constants controlling speaking speed.
 const static int kFramesPerGlyph = kFrameRate/30;
@@ -49,6 +53,7 @@ void AdvanceTextIndex(const string& text, int* index) {
 SpriteState* AttackState::MaybeTransition(const GameState& game_state) const {
   if (sprite_->dir_ == Direction::UP || sprite_->dir_ == Direction::DOWN ||
       frame_ >= kAttackFrames) {
+    sprite_->frame_.x = sprite_->dir_;
     sprite_->item_.status = ItemData::HIDDEN;
     if (sprite_->battle_ == nullptr) {
       return new PausedState;
@@ -80,6 +85,29 @@ SpriteState* AttackState::Update(const GameState& game_state) {
   if (anim_num_ >= kAttackAnimNum[frame_]) {
     anim_num_ = 0;
     frame_ += 1;
+  }
+  return nullptr;
+}
+
+DamageState::DamageState(bool attacked_by_player) {
+  anim_num_ = (attacked_by_player ? -4 : -12);
+}
+
+SpriteState* DamageState::MaybeTransition(const GameState& game_state) const {
+  return nullptr;
+}
+
+SpriteState* DamageState::Update(const GameState& game_state) {
+  if (anim_num_ >= 0) {
+    Point move = kShift[OppositeDirection(sprite_->dir_)];
+    move.set_length(kDamageSpeed);
+    int anim_num = 0;
+    MoveSprite(game_state, sprite_, &move, &anim_num);
+    sprite_->frame_.x = sprite_->dir_;
+  }
+  anim_num_ += 1;
+  if (anim_num_ >= kDamageFrames) {
+    return new WaitingState;
   }
   return nullptr;
 }
