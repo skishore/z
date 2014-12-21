@@ -208,6 +208,7 @@ BattleScript* BattleExecutor::Freeze() {
 }
 
 BattleScript* BattleExecutor::MoveNextTo(int i, int target) {
+  ASSERT(i != target, "Sprite " << i << " tried to move next to itself!");
   Direction dir = OppositeDirection(sprites_[target]->battle_->side);
   if (target == 0) {
     dir = sprites_[i]->battle_->side;
@@ -231,7 +232,7 @@ bool BattleExecutor::Update() {
   if (script_ != nullptr && script_->Update()) {
     script_.reset(nullptr);
   }
-  return script_ != nullptr;
+  return script_ == nullptr;
 }
 
 }  // namespace battle

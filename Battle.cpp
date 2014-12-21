@@ -1,9 +1,27 @@
+#include <algorithm>
+
 #include "debug.h"
 #include "Battle.h"
 #include "GameState.h"
 
+using std::swap;
+
 namespace skishore {
 namespace battle {
+namespace {
+
+void RunRandomAttackScript(int n, BattleExecutor* executor) {
+  int i = 0;
+  int target = (rand() % (n - 1)) + 1;
+  if (rand() % 2 == 0) {
+    swap(i, target);
+  }
+  executor->RunScript(
+    executor->Attack(i, target)->AndThen(
+    executor->AssumePlace(i)->And(executor->AssumePlace(target))));
+}
+
+}  // namespace
 
 Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   ASSERT(enemy.GetRoom() != nullptr, "Started battle with enemy w/o room!");
@@ -25,8 +43,7 @@ Battle::Battle(const GameState& game_state, const Sprite& enemy) {
   executor_->RunScript(
       executor_->Freeze()->AndThen(
       executor_->Speak(index, "!")->AndThen(
-      executor_->AssumePlaces()->AndThen(
-      executor_->Attack(0, 1)))));
+      executor_->AssumePlaces())));
 }
 
 bool Battle::Update() {
@@ -34,6 +51,7 @@ bool Battle::Update() {
     // We're running a script. Return early.
     return false;
   }
+  RunRandomAttackScript(sprites_.size(), executor_.get());
   return false;
 }
 
