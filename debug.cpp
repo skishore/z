@@ -8,7 +8,8 @@
 namespace skishore {
 namespace {
 
-const char* kBinary;
+static const char* kBinary;
+static const bool kUseLLDB = true;
 
 inline int addr2line(const char* binary, const void* address) {
   char command[1024] = {0};
@@ -22,14 +23,30 @@ inline int addr2line(const char* binary, const void* address) {
   return system(command);
 }
 
+void AttachLLDBToCurrentProcess() {
+  char pid[64];
+  sprintf(pid, "%d", getpid());
+  int child_pid = fork();
+  if (!child_pid) {
+    fprintf(stdout, "Stack trace for pid %s:\n", pid);
+    execlp("lldb", "lldb", "-p", pid, "--", "backtrace", nullptr);
+  } else {
+    waitpid(child_pid, nullptr, 0);
+  }
+}
+
 inline void SignalHandler(int signal) {
   static const int kTracebackSize = 64;
   void* stack_trace[kTracebackSize];
   size_t size = backtrace(stack_trace, kTracebackSize);
   fprintf(stderr, "Error: caught signal %d:\n", signal);
   backtrace_symbols_fd(stack_trace, size, STDERR_FILENO);
-  for (int i = 3; i < size - 1; i++) {
-    addr2line(kBinary, stack_trace[i]);
+  if (kUseLLDB) {
+    AttachLLDBToCurrentProcess();
+  } else {
+    for (int i = 3; i < size - 1; i++) {
+      addr2line(kBinary, stack_trace[i]);
+    }
   }
   exit(1);
 }
