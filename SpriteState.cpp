@@ -33,7 +33,8 @@ SpriteState* MoveSprite(const GameState& game_state, Sprite* sprite,
   sprite->CheckSquares(move);
   if (!move->zero()) {
     sprite->SetPosition(sprite->GetPosition() + *move);
-    int animation_frames = kWalkingAnimationFrames*kPlayerSpeed/move->length();
+    const int animation_frames =
+        max((int)(kWalkingAnimationFrames*kPlayerSpeed/move->length()), 1);
     if (*anim_num % (2*animation_frames) >= animation_frames) {
       sprite->frame_.x += 4;
     }

@@ -57,6 +57,7 @@ inline void SignalHandler(int signal) {
 void RegisterCrashHandlers(const char* binary) {
   kBinary = binary;
   signal(SIGSEGV, SignalHandler);
+  signal(SIGFPE, SignalHandler);
 }
 
 }  // namespace skishore
