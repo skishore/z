@@ -241,7 +241,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   min_b.y = min(offset.y, min_b.y);
   max_b.y = max(offset.y, max_b.y);
 
-  *size = max_b - min_b;
+  *size = max_b - min_b - 1;
   baseline->x = -min_b.x;
   baseline->y = max_b.y;
 }
@@ -304,7 +304,7 @@ int CorrectFontSize(int font_size, const string& text) {
       return font_size;
     }
   }
-  return 3*font_size/4;
+  return 0.9*font_size;
 }
 
 SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,

@@ -11,7 +11,7 @@ namespace skishore {
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const int kTextSize = 0.75*kGridSize;
+static const int kTextSize = 0.6*kGridSize;
 }  // namespace
 
 ScrollingGraphics::DrawingSurface::DrawingSurface(const Point& size)
@@ -107,7 +107,7 @@ void ScrollingGraphics::DrawSpriteText(const Sprite& sprite) {
 
 void ScrollingGraphics::DrawUI() {
   const int border = 2;
-  const int font_size = 3*kTextSize/4;
+  const int font_size = 0.9*kTextSize;
   const int line_height = 4*font_size/3;
   const int height = line_height*(2 + 1) + 2*border;
   const int padding = font_size/4;
