@@ -115,9 +115,10 @@ void ComputePlaces(const TileMap::Room& room, const Point& center,
       (sprites[0]->GetPosition().x + kGridTicks/2 < center.x ? 1 : -1);
 
   if (n - 1 <= max_per_side) {
-    (*places)[0].x = center.x + (-sign*min(room.size.x - 1, 2) - 1)*kGridTicks/2;
-    (*places)[0].y = center.y - kGridTicks/2;
-    ComputeSemicircle(room, center, height, n - 1, 0, sign, 1, &options);
+    const Point shift = center + Point(-sign*kGridTicks*(room.size.x - 5)/2, 0);
+    (*places)[0].x = shift.x + (-sign*2 - 1)*kGridTicks/2;
+    (*places)[0].y = shift.y - kGridTicks/2;
+    ComputeSemicircle(room, shift, height, n - 1, 0, sign, 1, &options);
   } else {
     (*places)[0].x = center.x - kGridTicks/2;
     (*places)[0].y = center.y - kGridTicks/2;
@@ -171,6 +172,8 @@ BattleExecutor::BattleExecutor(
     if (!sprite->is_player_) {
       sprite->battle_->side =
           (places_[i].x < places_[0].x ? Direction::LEFT : Direction::RIGHT);
+      sprite->battle_->dir = sprite->battle_->side;
+      sprite->battle_->text = "अस्पताल में काम करता है";
     }
   }
 }
