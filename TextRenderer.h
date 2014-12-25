@@ -14,6 +14,7 @@
 namespace skishore {
 
 static const SDL_Color kBlack{0, 0, 0};
+static const SDL_Color kYellow{255, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
 
 namespace font {
@@ -26,7 +27,7 @@ class TextRenderer {
   ~TextRenderer();
 
   void DrawText(int font_size, const std::string& text,
-                const Point& position, const SDL_Color color=kWhite);
+                const Point& position, const SDL_Color color=kYellow);
   void DrawTextBox(
       int font_size, Direction dir, const std::string& text,
       const SDL_Rect& rect, const SDL_Color fg_color=kWhite,

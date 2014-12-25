@@ -64,9 +64,9 @@ void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
 }
 
 struct RendererContext {
-  RendererContext(const SDL_Surface& surface)
+  RendererContext(const SDL_Surface& surface, SDL_Color c)
       : pixels((uint32_t*)surface.pixels), width(surface.w), height(surface.h),
-        pitch(surface.pitch), rshift(surface.format->Rshift),
+        color(c), pitch(surface.pitch), rshift(surface.format->Rshift),
         gshift(surface.format->Gshift), bshift(surface.format->Bshift) {}
 
   // Pixels stores a pointer to the surface's top-left pixel.
@@ -79,6 +79,7 @@ struct RendererContext {
   uint32_t rshift;
   uint32_t gshift;
   uint32_t bshift;
+  SDL_Color color;
 
   // The current glyph's origin in surface coordinates.
   int gx;
@@ -100,6 +101,8 @@ struct Blend {
   }
 };
 
+static const int kMaxChar = (1 << 8) - 1;
+
 template <typename T>
 void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   RendererContext* context = (RendererContext*)ctx;
@@ -115,9 +118,9 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
     }
     uint32_t* start = scanline + x;
     uint32_t color =
-      (spans[i].coverage << context->rshift) |
-      (spans[i].coverage << context->gshift) |
-      (spans[i].coverage << context->bshift);
+      ((int)(context->color.r*spans[i].coverage/kMaxChar) << context->rshift) |
+      ((int)(context->color.g*spans[i].coverage/kMaxChar) << context->gshift) |
+      ((int)(context->color.b*spans[i].coverage/kMaxChar) << context->bshift);
 
     for (int j = 0; j < spans[i].len; j++) {
       if (unlikely(x + j >= context->width)) {
@@ -155,8 +158,8 @@ class Font {
   ~Font();
 
   void PrepareToRender(const string& text, Point* size, Point* baseline);
-  void Render(const Point& position, const Point& size,
-              const Point& baseline, SDL_Surface* target, bool blend=true);
+  void Render(const Point& position, const Point& size, const Point& baseline,
+              SDL_Color color, SDL_Surface* target, bool blend=true);
 
  private:
   int font_size_;
@@ -246,8 +249,9 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   baseline->y = max_b.y;
 }
 
-void Font::Render(const Point& position, const Point& size,
-                  const Point& baseline, SDL_Surface* surface, bool blend) {
+void Font::Render(
+    const Point& position, const Point& size, const Point& baseline,
+    SDL_Color color, SDL_Surface* surface, bool blend) {
   int x = position.x + baseline.x;
   int y = position.y + baseline.y;
 
@@ -257,7 +261,7 @@ void Font::Render(const Point& position, const Point& size,
   hb_glyph_position_t* glyph_pos =
       hb_buffer_get_glyph_positions(buffer_, &glyph_count);
 
-  RendererContext context(*surface);
+  RendererContext context(*surface, color);
   renderer_.user = &context;
   renderer_.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
 
@@ -375,7 +379,7 @@ void TextRenderer::DrawText(int font_size, const string& text,
   font->PrepareToRender(text, &size, &baseline);
   Point adjusted_position = position;
   adjusted_position.y += font_size - baseline.y;
-  font->Render(adjusted_position, size, baseline, target_);
+  font->Render(adjusted_position, size, baseline, color, target_);
 }
 
 void TextRenderer::DrawTextBox(
@@ -393,7 +397,7 @@ void TextRenderer::DrawTextBox(
   // TODO(skishore): Convert the fg_ and bg_ colors to Uint32 here.
   SDL_FillPolygon(target_, polygon.get(), 7, 0x00002266);
   SDL_DrawPolygon(target_, polygon.get(), 7, 0x00ffffff);
-  font->Render(position, size, baseline, target_);
+  font->Render(position, size, baseline, fg_color, target_);
 }
 
 Font* TextRenderer::LoadFont(int font_size) {
