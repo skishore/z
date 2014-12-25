@@ -1,28 +1,14 @@
-// This file contains any constants that are used in multiple places in code.
-// If a constant is only used in one cpp file, it should be defined there.
-//
-// Each constant here may indicate the existence of some leaky abstraction...
-
-#ifndef __SKISHORE_CONSTANTS_H__
-#define __SKISHORE_CONSTANTS_H__
-
-#include <SDL2/SDL.h>
+#ifndef ROGUE_CONSTANTS_H__
+#define ROGUE_CONSTANTS_H__
 
 #include "Point.h"
 
 namespace skishore {
 
-static const int kFrameRate = 60;
-
-// The side length of each grid square, in pixels.
-static const int kGridSize = 32;
-
-// All movement calculations are done in ticks.
-static const int kTicksPerPixel = 1024;
-static const int kGridTicks = kGridSize*kTicksPerPixel;
-
-static const int kEnemySpeed = 0.06875*kGridTicks;
-static const int kPlayerSpeed = 0.0875*kGridTicks;
+static const int NCOLS = 32;
+static const int NROWS = 32;
+// TODO(skishore): Switch everyone over to kWindowSize.
+static const Point kWindowSize(16, 16);
 
 enum Direction {
   UP = 0,
@@ -42,13 +28,8 @@ static const Point kShift[4] = {
   Point(-1, 0)
 };
 
-static SDL_Keycode kDirectionKey[4] = {
-  SDLK_UP,
-  SDLK_RIGHT,
-  SDLK_DOWN,
-  SDLK_LEFT
-};
+static char kDirectionKey[4] = {'k', 'l', 'j', 'h'};
 
-}
+} //  namespace skishore
 
-#endif  // __SKISHORE_CONSTANTS_H__
+#endif  // ROGUE_CONSTANTS_H__

@@ -1,31 +1,29 @@
-#ifndef __SKISHORE_ENGINE_H__
-#define __SKISHORE_ENGINE_H__
+#ifndef ROGUE_ENGINE_H__
+#define ROGUE_ENGINE_H__
 
-#include "GameLoop.h"
-#include "GameState.h"
-#include "InputHandler.h"
+#include "constants.h"
 #include "Point.h"
-#include "ScrollingGraphics.h"
 #include "TileMap.h"
+#include "View.h"
 
 namespace skishore {
 
-class Engine : public GameLoop::Updatable {
+class Engine {
  public:
-  // Automatically starts when constructed.
-  Engine(int frame_rate, const Point& screen_size);
+  Engine();
 
-  bool Update(double frame_rate);
+  // Caller takes ownership of the view.
+  const View* GetView() const;
+
+  // Returns true if the command was valid.
+  // If this method returns false, the view does not need to be redrawn.
+  bool HandleCommand(char command);
 
  private:
-  const Point screen_size_;
-  InputHandler input_;
-  TileMap map_;
-
-  std::unique_ptr<ScrollingGraphics> graphics_;
-  std::unique_ptr<GameState> game_state_;
+  TileMap tiles_;
+  Point player_position_;
 };
 
-} // namespace skishore
+}  // namespace skishore
 
-#endif  // __SKISHORE_ENGINE_H__
+#endif  // ROGUE_ENGINE_H__
