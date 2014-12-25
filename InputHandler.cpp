@@ -1,6 +1,6 @@
 #include "InputHandler.h"
 
-namespace skishore {
+namespace babel {
 
 bool InputHandler::GetChar(char* c) {
   SDL_Event event;
@@ -23,4 +23,4 @@ bool InputHandler::GetChar(char* c) {
   return false;
 }
 
-}  // namespace skishore
+}  // namespace babel

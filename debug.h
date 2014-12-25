@@ -1,10 +1,10 @@
-#ifndef __SKISHORE_DEBUG_H__
-#define __SKISHORE_DEBUG_H__
+#ifndef __BABEL_DEBUG_H__
+#define __BABEL_DEBUG_H__
 
 #include <iostream>
 #include <stdlib.h>
 
-namespace skishore {
+namespace babel {
 
 #ifdef NDEBUG
 
@@ -28,6 +28,6 @@ namespace skishore {
 
 void RegisterCrashHandlers(const char* binary);
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // __SKISHORE_DEBUG_H__
+#endif  // __BABEL_DEBUG_H__

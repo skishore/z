@@ -1,5 +1,5 @@
-#ifndef __SKISHORE_SPRITE_GRAPHICS_H__
-#define __SKISHORE_SPRITE_GRAPHICS_H__
+#ifndef __BABEL_SPRITE_GRAPHICS_H__
+#define __BABEL_SPRITE_GRAPHICS_H__
 
 #include <SDL2/SDL.h>
 
@@ -8,7 +8,7 @@
 #include "Point.h"
 #include "TextRenderer.h"
 
-namespace skishore {
+namespace babel {
 
 class SpriteGraphics {
  public:
@@ -46,6 +46,6 @@ class SpriteGraphics {
   std::unique_ptr<TextRenderer> text_renderer_;
 };
 
-} // namespace skishore
+} // namespace babel
 
-#endif  // __SKISHORE_SPRITE_GRAPHICS_H__
+#endif  // __BABEL_SPRITE_GRAPHICS_H__

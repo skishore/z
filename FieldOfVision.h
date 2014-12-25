@@ -1,12 +1,12 @@
-#ifndef ROGUE_FIELD_OF_VISION_H__
-#define ROGUE_FIELD_OF_VISION_H__
+#ifndef BABEL_FIELD_OF_VISION_H__
+#define BABEL_FIELD_OF_VISION_H__
 
 #include <vector>
 
 #include "Point.h"
 #include "TileMap.h"
 
-namespace skishore {
+namespace babel {
 
 class FieldOfVision {
  public:
@@ -25,6 +25,6 @@ class FieldOfVision {
   std::vector<std::vector<bool>> is_square_visible_;
 };
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // ROGUE_FIELD_OF_VISION_H__
+#endif  // BABEL_FIELD_OF_VISION_H__

@@ -1,5 +1,5 @@
-#ifndef __SKISHORE_IMAGE_CACHE_H__
-#define __SKISHORE_IMAGE_CACHE_H__
+#ifndef __BABEL_IMAGE_CACHE_H__
+#define __BABEL_IMAGE_CACHE_H__
 
 #include <map>
 #include <string>
@@ -8,7 +8,7 @@
 #include "Image.h"
 #include "Point.h"
 
-namespace skishore {
+namespace babel {
 
 class ImageCache {
  public:
@@ -39,6 +39,6 @@ class ImageCache {
   std::map<SDL_Surface*, int> counts_by_image_;
 };
 
-} // namespace skishore
+} // namespace babel
 
-#endif  // __SKISHORE_SPRITE_H__
+#endif  // __BABEL_SPRITE_H__

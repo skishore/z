@@ -1,11 +1,11 @@
-#ifndef __SKISHORE_IMAGE_H__
-#define __SKISHORE_IMAGE_H__
+#ifndef __BABEL_IMAGE_H__
+#define __BABEL_IMAGE_H__
 
 #include <SDL2/SDL.h>
 
 #include "Point.h"
 
-namespace skishore {
+namespace babel {
 
 class ImageCache;
 
@@ -31,6 +31,6 @@ class Image {
   ImageCache* const cache_;
 };
 
-} // namespace skishore
+} // namespace babel
 
-#endif  // __SKISHORE_IMAGE_H__
+#endif  // __BABEL_IMAGE_H__

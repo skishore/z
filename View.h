@@ -1,9 +1,9 @@
-#ifndef ROGUE_VIEW_H__
-#define ROGUE_VIEW_H__
+#ifndef BABEL_VIEW_H__
+#define BABEL_VIEW_H__
 
 #include "constants.h"
 
-namespace skishore {
+namespace babel {
 
 struct View {
  public:
@@ -12,6 +12,6 @@ struct View {
   Point player_position;
 };
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // ROGUE_VIEW_H__
+#endif  // BABEL_VIEW_H__

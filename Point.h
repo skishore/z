@@ -1,10 +1,10 @@
-#ifndef __SKISHORE_POINT_H__
-#define __SKISHORE_POINT_H__
+#ifndef __BABEL_POINT_H__
+#define __BABEL_POINT_H__
 
 #include <complex>
 #include <iostream>
 
-namespace skishore {
+namespace babel {
 
 struct Point {
   int x, y;
@@ -78,6 +78,6 @@ inline std::ostream& operator<<(std::ostream& out, const Point& point) {
   return out << "Point(" << point.x << ", " << point.y << ")";
 }
 
-} // namespace skishore
+} // namespace babel
 
-#endif  // __SKISHORE_POINT_H__
+#endif  // __BABEL_POINT_H__

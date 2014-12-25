@@ -1,11 +1,11 @@
-#ifndef ROGUE_GRAPHICS_H__
-#define ROGUE_GRAPHICS_H__
+#ifndef BABEL_GRAPHICS_H__
+#define BABEL_GRAPHICS_H__
 
 #include "Engine.h"
 #include "InputHandler.h"
 #include "SpriteGraphics.h"
 
-namespace skishore {
+namespace babel {
 
 class Graphics {
  public:
@@ -20,6 +20,6 @@ class Graphics {
   SpriteGraphics sprite_graphics_;
 };
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // ROGUE_GRAPHICS_H__
+#endif  // BABEL_GRAPHICS_H__

@@ -7,7 +7,7 @@
 
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 namespace {
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
@@ -99,4 +99,4 @@ void SpriteGraphics::Flip() {
   SDL_RenderPresent(renderer_);
 }
 
-}  // namespace skishore
+}  // namespace babel

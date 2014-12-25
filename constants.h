@@ -1,13 +1,13 @@
-#ifndef ROGUE_CONSTANTS_H__
-#define ROGUE_CONSTANTS_H__
+#ifndef BABEL_CONSTANTS_H__
+#define BABEL_CONSTANTS_H__
 
 #include "Point.h"
 
-namespace skishore {
+namespace babel {
 
 static const int NCOLS = 24;
 static const int NROWS = 24;
-// TODO(skishore): Switch everyone over to kWindowSize.
+// TODO(babel): Switch everyone over to kWindowSize.
 static const Point kWindowSize(NCOLS, NROWS);
 
 enum Direction {
@@ -30,6 +30,6 @@ static const Point kShift[4] = {
 
 static char kDirectionKey[4] = {'k', 'l', 'j', 'h'};
 
-} //  namespace skishore
+} //  namespace babel
 
-#endif  // ROGUE_CONSTANTS_H__
+#endif  // BABEL_CONSTANTS_H__

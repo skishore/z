@@ -1,16 +1,16 @@
-#ifndef __SKISHORE_UTIL_H__
-#define __SKISHORE_UTIL_H__
+#ifndef __BABEL_UTIL_H__
+#define __BABEL_UTIL_H__
 
 #include "util.h"
 
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 string IntToString(int value);
 
 string DoubleToString(double value, int precision);
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // __SKISHORE_UTIL_H__
+#endif  // __BABEL_UTIL_H__

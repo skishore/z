@@ -1,5 +1,5 @@
-#ifndef __SKISHORE_TEXT_RENDERER_H__
-#define __SKISHORE_TEXT_RENDERER_H__
+#ifndef __BABEL_TEXT_RENDERER_H__
+#define __BABEL_TEXT_RENDERER_H__
 
 #include <map>
 #include <string>
@@ -11,7 +11,7 @@
 #include "constants.h"
 #include "Point.h"
 
-namespace skishore {
+namespace babel {
 
 static const SDL_Color kBlack{0, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
@@ -44,6 +44,6 @@ class TextRenderer {
   std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
 };
 
-} // namespace skishore
+} // namespace babel
 
-#endif  // __SKISHORE_TEXT_RENDERER_H__
+#endif  // __BABEL_TEXT_RENDERER_H__

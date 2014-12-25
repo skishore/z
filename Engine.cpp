@@ -5,7 +5,7 @@
 #include "constants.h"
 #include "FieldOfVision.h"
 
-namespace skishore {
+namespace babel {
 
 namespace {
 char GetRandomTile() {
@@ -49,7 +49,7 @@ const View* Engine::GetView() const {
 
 bool Engine::HandleCommand(char c) {
   Point point = player_position_;
-  // TODO(skishore): Replace this code with a lookup table.
+  // TODO(babel): Replace this code with a lookup table.
   if (c == 'h') {
     point.x -= 1;
   } else if (c == 'j') {
@@ -94,4 +94,4 @@ bool Engine::HandleCommand(char c) {
   return true;
 }
 
-}  // namespace skishore
+}  // namespace babel

@@ -1,5 +1,5 @@
-#ifndef ROGUE_TILE_MAP_H__
-#define ROGUE_TILE_MAP_H__
+#ifndef BABEL_TILE_MAP_H__
+#define BABEL_TILE_MAP_H__
 
 #include <vector>
 
@@ -25,4 +25,4 @@ struct TileMap {
   std::vector<std::vector<char>> tiles;
 };
 
-#endif  // ROGUE_TILE_MAP_H__
+#endif  // BABEL_TILE_MAP_H__

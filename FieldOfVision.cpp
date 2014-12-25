@@ -7,7 +7,7 @@
 
 #include "debug.h"
 
-namespace skishore {
+namespace babel {
 
 FieldOfVision::FieldOfVision(const TileMap& tiles, const Point& source)
     : tiles_(tiles), source_(source), is_square_visible_(tiles.cols) {
@@ -38,4 +38,4 @@ void FieldOfVision::visit(int x, int y) {
   }
 }
 
-}  // namespace skishore
+}  // namespace babel

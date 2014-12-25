@@ -5,7 +5,7 @@
 
 #include "debug.h"
 
-namespace skishore {
+namespace babel {
 namespace {
 
 static const char* kBinary;
@@ -60,4 +60,4 @@ void RegisterCrashHandlers(const char* binary) {
   signal(SIGFPE, SignalHandler);
 }
 
-}  // namespace skishore
+}  // namespace babel

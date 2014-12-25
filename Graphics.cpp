@@ -8,7 +8,7 @@
 #include "Point.h"
 #include "View.h"
 
-namespace skishore {
+namespace babel {
 
 Graphics::Graphics(Engine* engine)
     : engine_(engine), sprite_graphics_(Point(NCOLS, NROWS)) {
@@ -45,7 +45,7 @@ void Graphics::Redraw() {
     }
   }
   const Point& point = view->player_position;
-  // TODO(skishore): This is a major hack.
+  // TODO(babel): This is a major hack.
   sprite_graphics_.DrawTile(point.x, point.y, '@');
   for (int y = 0; y < NROWS; y++) {
     for (int x = 0; x < NCOLS; x++) {
@@ -56,4 +56,4 @@ void Graphics::Redraw() {
   sprite_graphics_.Flip();
 }
 
-}  // namespace skishore
+}  // namespace babel

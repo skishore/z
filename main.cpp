@@ -2,11 +2,11 @@
 #include "Engine.h"
 #include "Graphics.h"
 
-using skishore::Engine;
+using babel::Engine;
 
 int main(int argc, char** argv) {
-  skishore::RegisterCrashHandlers(argv[0]);
-  skishore::Engine engine;
-  skishore::Graphics graphics(&engine);
+  babel::RegisterCrashHandlers(argv[0]);
+  babel::Engine engine;
+  babel::Graphics graphics(&engine);
   return graphics.Start();
 }

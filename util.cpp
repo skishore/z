@@ -5,7 +5,7 @@
 
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 string IntToString(int value) {
   if (value == 0) {
@@ -32,4 +32,4 @@ string DoubleToString(double value, int precision) {
   return IntToString((int)value) + "." + decimal;
 }
 
-}  // namespace skishore
+}  // namespace babel

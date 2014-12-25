@@ -7,7 +7,7 @@ using std::max;
 using std::min;
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 namespace {
 const static int kActualSize = 16;
@@ -70,4 +70,4 @@ bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
   return true;
 }
 
-}  // namespace skishore
+}  // namespace babel

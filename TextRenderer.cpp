@@ -16,7 +16,7 @@ using std::min;
 using std::pair;
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 using font::Font;
 
@@ -257,7 +257,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
     offset.x += glyph_pos[i].x_advance/kScale;
     offset.y += glyph_pos[i].y_advance/kScale;
   }
-  // TODO(skishore): This extra extension of the bounding box may be unneeded.
+  // TODO(babel): This extra extension of the bounding box may be unneeded.
   min_b.x = min(offset.x, min_b.x);
   max_b.x = max(offset.x, max_b.x);
   min_b.y = min(offset.y, min_b.y);
@@ -287,7 +287,7 @@ void Font::Render(
   SDL_LockSurface(surface);
 
   #ifdef EMSCRIPTEN
-  // TODO(skishore): Why does auto-hinting crash emscripten?
+  // TODO(babel): Why does auto-hinting crash emscripten?
   const Uint32 load_flags = 0;
   #else  // EMSCRIPTEN
   const Uint32 load_flags = FT_LOAD_FORCE_AUTOHINT;
@@ -401,7 +401,7 @@ void TextRenderer::DrawTextBox(
   font->PrepareToRender(text, &size, &baseline);
   std::unique_ptr<SDL_Point[]> polygon(
       GetTextPolygon(font_size, dir, rect, size, &position));
-  // TODO(skishore): Convert the fg_ and bg_ colors to Uint32 here.
+  // TODO(babel): Convert the fg_ and bg_ colors to Uint32 here.
   SDL_FillPolygon(target_, polygon.get(), 7, 0x00ffffff);
   font->Render(position, size, baseline, kBlack, target_);
 }
@@ -416,4 +416,4 @@ Font* TextRenderer::LoadFont(const string& font_name, int font_size) {
   return fonts_by_id_[id];
 }
 
-} // namespace skishore
+} // namespace babel

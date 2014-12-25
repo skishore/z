@@ -4,7 +4,7 @@
 using std::map;
 using std::string;
 
-namespace skishore {
+namespace babel {
 
 ImageCache::ImageCache(Uint32 pixel_format, bool clear_cache_eagerly)
     : clear_cache_eagerly_(clear_cache_eagerly), pixel_format_(pixel_format) {}
@@ -47,7 +47,7 @@ void ImageCache::LoadImageInner(const string& filename) {
   ASSERT(surface != nullptr,
          "Failed to format " << filename << ": " << SDL_GetError());
 
-  // TODO(skishore): At some point, we may want to apply the color key to
+  // TODO(babel): At some point, we may want to apply the color key to
   // some images but not to others.
   Uint32 color_key = SDL_MapRGB(surface->format, 255, 0, 255);
   SDL_SetColorKey(surface, SDL_TRUE, color_key);
@@ -67,4 +67,4 @@ void ImageCache::FreeImageInner(SDL_Surface* surface) {
   DEBUG("Eagerly freed " << filename);
 }
 
-} // namespace skishore
+} // namespace babel

@@ -1,12 +1,12 @@
-#ifndef ROGUE_ENGINE_H__
-#define ROGUE_ENGINE_H__
+#ifndef BABEL_ENGINE_H__
+#define BABEL_ENGINE_H__
 
 #include "constants.h"
 #include "Point.h"
 #include "TileMap.h"
 #include "View.h"
 
-namespace skishore {
+namespace babel {
 
 class Engine {
  public:
@@ -25,6 +25,6 @@ class Engine {
   std::vector<Point> enemy_positions_;
 };
 
-}  // namespace skishore
+}  // namespace babel
 
-#endif  // ROGUE_ENGINE_H__
+#endif  // BABEL_ENGINE_H__
