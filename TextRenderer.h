@@ -14,7 +14,6 @@
 namespace skishore {
 
 static const SDL_Color kBlack{0, 0, 0};
-static const SDL_Color kYellow{255, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
 
 namespace font {
@@ -26,21 +25,23 @@ class TextRenderer {
   TextRenderer(const SDL_Rect& bounds, SDL_Surface* target);
   ~TextRenderer();
 
-  void DrawText(int font_size, const std::string& text,
-                const Point& position, const SDL_Color color=kYellow);
+  void DrawText(
+      const std::string& font_name, int font_size,
+      const std::string& text, const SDL_Rect& position,
+      const SDL_Color color=kWhite);
   void DrawTextBox(
-      int font_size, Direction dir, const std::string& text,
-      const SDL_Rect& rect, const SDL_Color fg_color=kWhite,
-      const SDL_Color bg_color=kBlack);
+      const std::string& font_name, int font_size,
+      const std::string& text, const SDL_Rect& rect, Direction dir,
+      const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
 
  private:
   // The class has ownership of the loaded font.
-  font::Font* LoadFont(int font_size);
+  font::Font* LoadFont(const std::string& font_name, int font_size);
 
   FT_Library library_;
   SDL_Surface* target_;
 
-  std::map<int,font::Font*> fonts_by_size_;
+  std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
 };
 
 } // namespace skishore

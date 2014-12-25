@@ -13,6 +13,7 @@
 
 using std::max;
 using std::min;
+using std::pair;
 using std::string;
 
 namespace skishore {
@@ -66,8 +67,19 @@ void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
 struct RendererContext {
   RendererContext(const SDL_Surface& surface, const SDL_Color c)
       : pixels((uint32_t*)surface.pixels), width(surface.w), height(surface.h),
-        color(c), pitch(surface.pitch), rshift(surface.format->Rshift),
-        gshift(surface.format->Gshift), bshift(surface.format->Bshift) {}
+        pitch(surface.pitch), rshift(surface.format->Rshift),
+        gshift(surface.format->Gshift), bshift(surface.format->Bshift),
+        color(c) {
+    invert = color.r + color.g + color.b == 0;
+    if (invert) {
+      color.r = ~color.r;
+      color.g = ~color.g;
+      color.b = ~color.b;
+    }
+  }
+
+  // Used to render on a light background.
+  bool invert;
 
   // Pixels stores a pointer to the surface's top-left pixel.
   uint32_t* pixels;
@@ -79,7 +91,7 @@ struct RendererContext {
   uint32_t rshift;
   uint32_t gshift;
   uint32_t bshift;
-  const SDL_Color color;
+  SDL_Color color;
 
   // The current glyph's origin in surface coordinates.
   int gx;
@@ -126,7 +138,14 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
       if (unlikely(x + j >= context->width)) {
         break;
       }
-      T::Render(start + j, color);
+      uint32_t* target = start + j;
+      if (context->invert) {
+        *target = ~*target;
+        T::Render(target, color);
+        *target = ~*target;
+      } else {
+        T::Render(target, color);
+      }
     }
   }
 }
@@ -314,35 +333,21 @@ int CorrectFontSize(int font_size, const string& text) {
 SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
                           const Point& size, Point* position) {
   const int kWedge = font_size/3;
-  const Point kPadding(font_size/3, font_size/3);
+  const Point kPadding(1, 1);
+  int kVerticalAdjustment = 1;
   SDL_Point* polygon = new SDL_Point[7];
-  if (dir == Direction::UP) {
-    polygon[0].x = rect.x + rect.w/2;
-    polygon[0].y = rect.y - kWedge/2;
-    polygon[1].x = polygon[0].x - kWedge;
-    polygon[1].y = polygon[0].y - kWedge;
-    polygon[2].x = polygon[0].x - size.x/2 - kPadding.x;
-    polygon[2].y = polygon[1].y;
-    polygon[3].x = polygon[2].x;
-    polygon[3].y = polygon[2].y - size.y - 2*kPadding.y;
-    polygon[4].x = polygon[3].x + size.x + 2*kPadding.x;
-    polygon[4].y = polygon[3].y;
-    polygon[5].x = polygon[4].x;
-    polygon[5].y = polygon[1].y;
-    polygon[6].x = polygon[0].x + kWedge;
-    polygon[6].y = polygon[1].y;
-  } else if (dir == Direction::LEFT || dir == Direction::RIGHT) {
+  if (dir == Direction::LEFT || dir == Direction::RIGHT) {
     const int sign = (dir == Direction::RIGHT ? 1 : -1);
     polygon[0].x = rect.x + (sign + 1)*rect.w/2;
     polygon[0].y = rect.y + rect.h/2 - 1;
     polygon[1].x = polygon[0].x + sign*kWedge;
     polygon[1].y = polygon[0].y - kWedge;
     polygon[2].x = polygon[1].x;
-    polygon[2].y = polygon[0].y - size.y/2 - kPadding.y;
+    polygon[2].y = polygon[0].y - size.y/2 - kPadding.y - kVerticalAdjustment;
     polygon[3].x = polygon[2].x + sign*(size.x + 2*kPadding.x);
     polygon[3].y = polygon[2].y;
     polygon[4].x = polygon[3].x;
-    polygon[4].y = polygon[3].y + size.y + 2*kPadding.y;
+    polygon[4].y = polygon[3].y + size.y + 2*kPadding.y + kVerticalAdjustment;
     polygon[5].x = polygon[1].x;
     polygon[5].y = polygon[4].y;
     polygon[6].x = polygon[1].x;
@@ -351,7 +356,8 @@ SDL_Point* GetTextPolygon(int font_size, Direction dir, const SDL_Rect& rect,
     ASSERT(false, "Unexpected text direction: " << dir);
   }
   int top_left = (dir == Direction::RIGHT ? 2 : 3);
-  *position = Point(polygon[top_left].x, polygon[top_left].y) + kPadding;
+  *position = kPadding + Point(polygon[top_left].x,
+                               polygon[top_left].y + kVerticalAdjustment);
   return polygon;
 }
 
@@ -363,50 +369,51 @@ TextRenderer::TextRenderer(const SDL_Rect& bounds, SDL_Surface* target)
 }
 
 TextRenderer::~TextRenderer() {
-  for (auto& pair : fonts_by_size_) {
+  for (auto& pair : fonts_by_id_) {
     delete pair.second;
   }
   FT_Done_FreeType(library_);
 }
 
-void TextRenderer::DrawText(int font_size, const string& text,
-                            const Point& position, const SDL_Color color) {
+void TextRenderer::DrawText(
+    const string& font_name, int font_size,
+    const string& text, const SDL_Rect& rect, const SDL_Color color) {
   if (text.size() == 0) {
     return;
   }
-  Font* font = LoadFont(font_size);
+  Font* font = LoadFont(font_name, font_size);
   Point size, baseline;
   font->PrepareToRender(text, &size, &baseline);
-  Point adjusted_position = position;
-  adjusted_position.y += font_size - baseline.y;
-  font->Render(adjusted_position, size, baseline, color, target_);
+  Point position(rect.x + (rect.w - size.x)/2, rect.y + (rect.h - size.y)/2);
+  font->Render(position, size, baseline, color, target_);
 }
 
 void TextRenderer::DrawTextBox(
-    int font_size, Direction dir, const string& text, const SDL_Rect& rect,
+    const string& font_name, int font_size,
+    const string& text, const SDL_Rect& rect, Direction dir,
     const SDL_Color fg_color, const SDL_Color bg_color) {
   if (text.size() == 0) {
     return;
   }
   font_size = CorrectFontSize(font_size, text);
-  Font* font = LoadFont(font_size);
+  Font* font = LoadFont(font_name, font_size);
   Point size, baseline, position;
   font->PrepareToRender(text, &size, &baseline);
   std::unique_ptr<SDL_Point[]> polygon(
       GetTextPolygon(font_size, dir, rect, size, &position));
   // TODO(skishore): Convert the fg_ and bg_ colors to Uint32 here.
-  SDL_FillPolygon(target_, polygon.get(), 7, 0x00002266);
-  SDL_DrawPolygon(target_, polygon.get(), 7, 0x00ffffff);
-  font->Render(position, size, baseline, fg_color, target_);
+  SDL_FillPolygon(target_, polygon.get(), 7, 0x00ffffff);
+  font->Render(position, size, baseline, kBlack, target_);
 }
 
-Font* TextRenderer::LoadFont(int font_size) {
-  if (fonts_by_size_.count(font_size) == 0) {
-    DEBUG("Loading font with size " << font_size);
-    Font* font = new Font("fonts/default_font.ttf", font_size, library_);
-    fonts_by_size_[font_size] = font;
+Font* TextRenderer::LoadFont(const string& font_name, int font_size) {
+  pair<string,int> id{font_name, font_size};
+  if (fonts_by_id_.count(id) == 0) {
+    DEBUG("Loading " << font_name << " in size " << font_size);
+    Font* font = new Font("fonts/" + font_name, font_size, library_);
+    fonts_by_id_[id] = font;
   }
-  return fonts_by_size_[font_size];
+  return fonts_by_id_[id];
 }
 
 } // namespace skishore
