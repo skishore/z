@@ -1,3 +1,5 @@
+#include <string>
+
 #include "constants.h"
 #include "debug.h"
 #include "SpriteGraphics.h"
@@ -61,6 +63,10 @@ void SpriteGraphics::DrawTile(int x, int y, char tile) {
   }
   image->Draw(Point(kGridSize*x, kGridSize*y), frame,
               buffer_->bounds_, buffer_->surface_);
+  if (tile == '@') {
+    SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
+    text_renderer_->DrawTextBox(0.8*kGridSize, Direction::LEFT, "test", rect);
+  }
 }
 
 void SpriteGraphics::Flip() {
