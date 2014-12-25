@@ -41,7 +41,14 @@ void Graphics::Redraw() {
     }
   }
   const Point& point = view->player_position;
+  // TODO(skishore): This is a major hack.
   sprite_graphics_.DrawTile(point.x, point.y, '@');
+  for (int y = 0; y < NROWS; y++) {
+    for (int x = 0; x < NCOLS; x++) {
+      char tile = view->tiles[x][y];
+      sprite_graphics_.DrawTileText(x, y, (tile ? tile : '#'));
+    }
+  }
   sprite_graphics_.Flip();
 }
 

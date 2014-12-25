@@ -22,6 +22,7 @@ class Engine {
  private:
   TileMap tiles_;
   Point player_position_;
+  std::vector<Point> enemy_positions_;
 };
 
 }  // namespace skishore

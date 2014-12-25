@@ -16,6 +16,7 @@ class SpriteGraphics {
   ~SpriteGraphics();
 
   void DrawTile(int x, int y, char tile);
+  void DrawTileText(int x, int y, char tile);
   void Flip();
 
  private:
@@ -40,6 +41,7 @@ class SpriteGraphics {
   std::unique_ptr<DrawingSurface> buffer_;
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> player_;
+  std::unique_ptr<const Image> enemy_;
   std::unique_ptr<TextRenderer> text_renderer_;
 };
 

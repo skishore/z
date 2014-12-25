@@ -20,6 +20,9 @@ Engine::Engine()
       tiles_.tiles[x][y] = GetRandomTile();
     }
   }
+  for (int i = 0; i < 26; i++) {
+    enemy_positions_.push_back(Point(rand() % NCOLS, rand() % NROWS));
+  }
 }
 
 const View* Engine::GetView() const {
@@ -34,6 +37,13 @@ const View* Engine::GetView() const {
   }
 
   view->player_position = player_position_;
+  for (int i = 0; i < enemy_positions_.size(); i++) {
+    const Point& point = enemy_positions_[i];
+    if (field_of_vision.IsSquareVisible(point.x, point.y)) {
+      view->tiles[point.x][point.y] = (char)((int)'z' - i);
+    }
+  }
+
   return view.release();
 }
 
@@ -61,13 +71,27 @@ bool Engine::HandleCommand(char c) {
     point.x += 1;
     point.y += 1;
   }
+  bool moved = false;
   if (point.x != player_position_.x || point.y != player_position_.y) {
     if (!tiles_.IsSquareBlocked(point.x, point.y)) {
       player_position_ = point;
-      return true;
+      if (enemy_positions_.size() > 0 && enemy_positions_.back() == point) {
+        enemy_positions_.pop_back();
+      }
+      moved = true;
     }
   }
-  return false;
+  if (!moved) {
+    return false;
+  }
+  for (int i = 0; i < enemy_positions_.size(); i++) {
+    Point point =
+        enemy_positions_[i] + Point((rand() % 3) - 1, (rand() % 3) - 1);
+    if (!tiles_.IsSquareBlocked(point.x, point.y)) {
+      enemy_positions_[i] = point;
+    }
+  }
+  return true;
 }
 
 }  // namespace skishore

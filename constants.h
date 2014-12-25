@@ -5,10 +5,10 @@
 
 namespace skishore {
 
-static const int NCOLS = 32;
-static const int NROWS = 32;
+static const int NCOLS = 24;
+static const int NROWS = 24;
 // TODO(skishore): Switch everyone over to kWindowSize.
-static const Point kWindowSize(16, 16);
+static const Point kWindowSize(NCOLS, NROWS);
 
 enum Direction {
   UP = 0,
