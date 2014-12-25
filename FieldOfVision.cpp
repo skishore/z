@@ -7,34 +7,41 @@
 
 #include "debug.h"
 
+using std::vector;
+
 namespace babel {
 
-FieldOfVision::FieldOfVision(const TileMap& tiles, const Point& source)
-    : tiles_(tiles), source_(source), is_square_visible_(tiles.cols) {
-  for (int x = 0; x < tiles_.cols; x++) {
-    for (int y = 0; y < tiles_.rows; y++) {
-      is_square_visible_[x].push_back(false);
-    }
-  }
+FieldOfVision::FieldOfVision(
+    const TileMap& map, const Point& source, int radius)
+    : map_(map), offset_(source - Point(radius, radius)),
+      size_(2*radius + 1), is_square_visible_(size_, vector<bool>(size_)) {
   permissive::squareFov<FieldOfVision>(
-      source_.x, source_.y, tiles_.cols + tiles_.rows, *this);
+      offset_.x + radius, offset_.y + radius, radius, *this);
 }
 
-bool FieldOfVision::IsSquareVisible(int x, int y) const {
-  return is_square_visible_[x][y];
+bool FieldOfVision::IsSquareVisible(const Point& square) const {
+  Point offset_square = square - offset_;
+  if (0 <= offset_square.x && offset_square.x < size_ &&
+      0 <= offset_square.y && offset_square.y < size_) {
+    return is_square_visible_[offset_square.x][offset_square.y];
+  }
+  return false;
 }
 
 bool FieldOfVision::isBlocked(int x, int y) const {
-  return tiles_.IsSquareBlocked(x, y);
+  return map_.IsSquareBlocked(Point(x, y));
 }
 
 void FieldOfVision::visit(int x, int y) {
   // Visibility should never extend outside more than one square outside the
-  // viewport rectangle.
-  ASSERT(-1 <= x && x <= tiles_.cols && -1 <= y && y <= tiles_.rows,
-         "Out of bounds durin visibility calculation: " << x << " " << y);
-  if (0 <= x && x < tiles_.cols && 0 <= y && y < tiles_.rows) {
-    is_square_visible_[x][y] = true;
+  // requested radius.
+  Point offset_square(x - offset_.x, y - offset_.y);
+  ASSERT(-1 <= offset_square.x && offset_square.x <= size_ &&
+         -1 <= offset_square.y && offset_square.y <= size_,
+         "Out of bounds during visibility calculation: " << offset_square);
+  if (0 <= offset_square.x && offset_square.x < size_ &&
+      0 <= offset_square.y && offset_square.y < size_) {
+    is_square_visible_[offset_square.x][offset_square.y] = true;
   }
 }
 

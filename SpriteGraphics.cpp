@@ -84,7 +84,7 @@ void SpriteGraphics::DrawTileText(int x, int y, char tile) {
       dir = Direction::LEFT;
     }
     SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-    const string text = "हिन्दी भारत की राष्ट्रभाषा है ";
+    const string text{tile, tile, tile, tile, tile, tile};
     text_renderer_->DrawTextBox(
         "Google Fonts/Noto_Sans/NotoSans-Regular.ttf", kTextSize,
         text, rect, (Direction)dir);

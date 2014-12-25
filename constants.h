@@ -1,14 +1,18 @@
 #ifndef BABEL_CONSTANTS_H__
 #define BABEL_CONSTANTS_H__
 
+#include <map>
+
 #include "Point.h"
+
+using std::map;
 
 namespace babel {
 
-static const int NCOLS = 24;
-static const int NROWS = 24;
-// TODO(babel): Switch everyone over to kWindowSize.
-static const Point kWindowSize(NCOLS, NROWS);
+// TODO(skishore): Move these constants into a parameter of the View class.
+static const int kVisionRadius = 15;
+static const int NCOLS = 2*kVisionRadius + 1;
+static const int NROWS = 2*kVisionRadius + 1;
 
 enum Direction {
   UP = 0,
@@ -21,14 +25,16 @@ inline Direction OppositeDirection(Direction dir) {
   return (Direction)(dir ^ 2);
 }
 
-static const Point kShift[4] = {
-  Point(0, -1),
-  Point(1, 0),
-  Point(0, 1),
-  Point(-1, 0)
+static const map<char,Point> kShift = {
+  {'h', Point(-1, 0)},
+  {'j', Point(0, 1)},
+  {'k', Point(0, -1)},
+  {'l', Point(1, 0)},
+  {'y', Point(-1, -1)},
+  {'u', Point(1, -1)},
+  {'b', Point(-1, 1)},
+  {'n', Point(1, 1)}
 };
-
-static char kDirectionKey[4] = {'k', 'l', 'j', 'h'};
 
 } //  namespace babel
 

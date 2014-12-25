@@ -32,7 +32,7 @@ int Graphics::Start() {
 }
 
 void Graphics::Redraw() {
-  std::unique_ptr<const View> view(engine_->GetView());
+  std::unique_ptr<const View> view(engine_->GetView(kVisionRadius));
   ASSERT(view, "view == nullptr");
   sprite_graphics_.Clear();
   for (int y = 0; y < NROWS; y++) {

@@ -11,17 +11,18 @@ namespace babel {
 class FieldOfVision {
  public:
   // Computes field-of-vision from the given a tile map and a source point.
-  FieldOfVision(const TileMap& tiles, const Point& source);
+  FieldOfVision(const TileMap& tiles, const Point& source, int radius);
 
-  bool IsSquareVisible(int x, int y) const;
+  bool IsSquareVisible(const Point& square) const;
 
   // Interface methods needed to use this class with the permissive-fov library.
   bool isBlocked(int x, int y) const;
   void visit(int x, int y);
 
  private:
-  const TileMap& tiles_;
-  const Point& source_;
+  const TileMap& map_;
+  const Point offset_;
+  const int size_;
   std::vector<std::vector<bool>> is_square_visible_;
 };
 

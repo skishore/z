@@ -7,39 +7,28 @@
 
 namespace babel {
 
-namespace {
-char GetRandomTile() {
-  return (rand() % 8 == 0 ? 'X' : '.');
-}
+Engine::Engine() {
+  map_.LoadMap("world.dat");
+  player_position_ = map_.GetStartingSquare();
 }
 
-Engine::Engine()
-    : tiles_(NCOLS, NROWS), player_position_((NCOLS + 1)/2, (NROWS + 1)/2) {
+const View* Engine::GetView(int radius) const {
+  std::unique_ptr<View> view(new View(radius));
+
+  const FieldOfVision field_of_vision(map_, player_position_, radius);
+  const Point offset = player_position_ - Point(radius, radius);
   for (int x = 0; x < NCOLS; x++) {
     for (int y = 0; y < NROWS; y++) {
-      tiles_.tiles[x][y] = GetRandomTile();
-    }
-  }
-  for (int i = 0; i < 26; i++) {
-    enemy_positions_.push_back(Point(rand() % NCOLS, rand() % NROWS));
-  }
-}
-
-const View* Engine::GetView() const {
-  std::unique_ptr<View> view(new View);
-
-  const FieldOfVision field_of_vision(tiles_, player_position_);
-  for (int x = 0; x < NCOLS; x++) {
-    for (int y = 0; y < NROWS; y++) {
-      const bool visible = field_of_vision.IsSquareVisible(x, y);
-      view->tiles[x][y] = (visible ? tiles_.tiles[x][y] : '\0');
+      const Point square = Point(x, y) + offset;
+      const bool visible = field_of_vision.IsSquareVisible(square);
+      const bool blocked = map_.IsSquareBlocked(square);
+      view->tiles[x][y] = (visible ? (blocked ? 'X' : '.') : '\0');
     }
   }
 
-  view->player_position = player_position_;
   for (int i = 0; i < enemy_positions_.size(); i++) {
-    const Point& point = enemy_positions_[i];
-    if (field_of_vision.IsSquareVisible(point.x, point.y)) {
+    if (field_of_vision.IsSquareVisible(enemy_positions_[i])) {
+      const Point& point = enemy_positions_[i] - offset;
       view->tiles[point.x][point.y] = (char)((int)'z' - i);
     }
   }
@@ -47,35 +36,14 @@ const View* Engine::GetView() const {
   return view.release();
 }
 
-bool Engine::HandleCommand(char c) {
-  Point point = player_position_;
-  // TODO(babel): Replace this code with a lookup table.
-  if (c == 'h') {
-    point.x -= 1;
-  } else if (c == 'j') {
-    point.y += 1;
-  } else if (c == 'k') {
-    point.y -= 1;
-  } else if (c == 'l') {
-    point.x += 1;
-  } else if (c == 'y') {
-    point.x -= 1;
-    point.y -= 1;
-  } else if (c == 'u') {
-    point.x += 1;
-    point.y -= 1;
-  } else if (c == 'b') {
-    point.x -= 1;
-    point.y += 1;
-  } else if (c == 'n') {
-    point.x += 1;
-    point.y += 1;
-  }
+bool Engine::HandleCommand(char ch) {
   bool moved = false;
-  if (point.x != player_position_.x || point.y != player_position_.y) {
-    if (!tiles_.IsSquareBlocked(point.x, point.y)) {
-      player_position_ = point;
-      if (enemy_positions_.size() > 0 && enemy_positions_.back() == point) {
+  if (kShift.find(ch) != kShift.end()) {
+    Point new_position = player_position_ + kShift.at(ch);
+    if (!map_.IsSquareBlocked(new_position)) {
+      player_position_ = new_position;
+      if (enemy_positions_.size() > 0 &&
+          enemy_positions_.back() == new_position) {
         enemy_positions_.pop_back();
       }
       moved = true;
@@ -85,9 +53,9 @@ bool Engine::HandleCommand(char c) {
     return false;
   }
   for (int i = 0; i < enemy_positions_.size(); i++) {
-    Point point =
-        enemy_positions_[i] + Point((rand() % 3) - 1, (rand() % 3) - 1);
-    if (!tiles_.IsSquareBlocked(point.x, point.y)) {
+    const Point move = Point((rand() % 3) - 1, (rand() % 3) - 1);
+    const Point point = enemy_positions_[i] + move;
+    if (!map_.IsSquareBlocked(point)) {
       enemy_positions_[i] = point;
     }
   }
