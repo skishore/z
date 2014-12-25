@@ -15,6 +15,7 @@ class SpriteGraphics {
   SpriteGraphics(const Point& size);
   ~SpriteGraphics();
 
+  void Clear();
   void DrawTile(int x, int y, char tile);
   void DrawTileText(int x, int y, char tile);
   void Flip();

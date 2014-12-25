@@ -53,7 +53,24 @@ SpriteGraphics::~SpriteGraphics() {
   SDL_Quit();
 }
 
+void SpriteGraphics::Clear() {
+  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x0);
+}
+
 void SpriteGraphics::DrawTile(int x, int y, char tile) {
+  SDL_Color color{31, 31, 31};
+  if (tile == '@') {
+    color = SDL_Color{95, 255, 95};
+  } else if ('a' <= tile && tile <= 'z') {
+    color = SDL_Color{95, 95, 255};
+  } else if (tile == '.') {
+    color = SDL_Color{127, 127, 127};
+  } else if (tile == 'X') {
+    color = SDL_Color{127, 127, 63};
+    tile = '#';
+  }
+  text_renderer_->DrawText(kGridSize, std::string{tile}, kGridSize*Point(x, y), color);
+  return;
   const Image* image = tileset_.get();
   Point frame;
   if (tile == '@') {
@@ -83,7 +100,7 @@ void SpriteGraphics::DrawTileText(int x, int y, char tile) {
       dir = Direction::LEFT;
     }
     SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-    text_renderer_->DrawTextBox(kTextSize, (Direction)dir, std::string({tile, tile, tile, tile, tile, tile, '\0'}), rect);
+    //text_renderer_->DrawTextBox(kTextSize, (Direction)dir, std::string({tile, tile, tile, tile, tile, tile, '\0'}), rect);
   }
 }
 

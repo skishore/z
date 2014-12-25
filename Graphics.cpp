@@ -34,8 +34,12 @@ int Graphics::Start() {
 void Graphics::Redraw() {
   std::unique_ptr<const View> view(engine_->GetView());
   ASSERT(view, "view == nullptr");
+  sprite_graphics_.Clear();
   for (int y = 0; y < NROWS; y++) {
     for (int x = 0; x < NCOLS; x++) {
+      if (Point(x, y) == view->player_position) {
+        continue;
+      }
       char tile = view->tiles[x][y];
       sprite_graphics_.DrawTile(x, y, (tile ? tile : '#'));
     }

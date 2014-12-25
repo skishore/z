@@ -64,7 +64,7 @@ void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
 }
 
 struct RendererContext {
-  RendererContext(const SDL_Surface& surface, SDL_Color c)
+  RendererContext(const SDL_Surface& surface, const SDL_Color c)
       : pixels((uint32_t*)surface.pixels), width(surface.w), height(surface.h),
         color(c), pitch(surface.pitch), rshift(surface.format->Rshift),
         gshift(surface.format->Gshift), bshift(surface.format->Bshift) {}
@@ -79,7 +79,7 @@ struct RendererContext {
   uint32_t rshift;
   uint32_t gshift;
   uint32_t bshift;
-  SDL_Color color;
+  const SDL_Color color;
 
   // The current glyph's origin in surface coordinates.
   int gx;
@@ -159,7 +159,7 @@ class Font {
 
   void PrepareToRender(const string& text, Point* size, Point* baseline);
   void Render(const Point& position, const Point& size, const Point& baseline,
-              SDL_Color color, SDL_Surface* target, bool blend=true);
+              const SDL_Color color, SDL_Surface* target, bool blend=true);
 
  private:
   int font_size_;
@@ -251,7 +251,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
 
 void Font::Render(
     const Point& position, const Point& size, const Point& baseline,
-    SDL_Color color, SDL_Surface* surface, bool blend) {
+    const SDL_Color color, SDL_Surface* surface, bool blend) {
   int x = position.x + baseline.x;
   int y = position.y + baseline.y;
 
