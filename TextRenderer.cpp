@@ -329,7 +329,6 @@ SDL_Point* GetTextPolygon(
     int font_size, Direction dir, const SDL_Rect& rect,
     const Point& size, Point* position) {
   const int kWedge = font_size/3;
-  const Point kPadding(1, (rect.h - size.y)/2);
   SDL_Point* polygon = new SDL_Point[7];
   if (dir == Direction::LEFT || dir == Direction::RIGHT) {
     const int sign = (dir == Direction::RIGHT ? 1 : -1);
@@ -339,7 +338,7 @@ SDL_Point* GetTextPolygon(
     polygon[1].y = polygon[0].y - kWedge;
     polygon[2].x = polygon[1].x;
     polygon[2].y = rect.y;
-    polygon[3].x = polygon[2].x + sign*(size.x + 2*kPadding.x);
+    polygon[3].x = polygon[2].x + sign*size.x;
     polygon[3].y = polygon[2].y;
     polygon[4].x = polygon[3].x;
     polygon[4].y = rect.y + rect.h;
@@ -351,8 +350,16 @@ SDL_Point* GetTextPolygon(
     ASSERT(false, "Unexpected text direction: " << dir);
   }
   int top_left = (dir == Direction::RIGHT ? 2 : 3);
-  *position = kPadding + Point(polygon[top_left].x, polygon[top_left].y + 1);
+  *position = Point(polygon[top_left].x,
+                    polygon[top_left].y + (rect.h - size.y + 1)/2);
   return polygon;
+}
+
+Uint32 ConvertColor(SDL_Color color, float lightness) {
+  unsigned char r = (1 - lightness)*color.r + lightness*255;
+  unsigned char g = (1 - lightness)*color.g + lightness*255;
+  unsigned char b = (1 - lightness)*color.b + lightness*255;
+  return (r << 16) + (g << 8) + b;
 }
 
 }  // namespace
@@ -393,10 +400,25 @@ void TextRenderer::DrawTextBox(
   Font* font = LoadFont(font_name, font_size);
   Point size, baseline, position;
   font->PrepareToRender(text, &size, &baseline);
+
+  const int border = rect.w/8;
+  const int padding = rect.w/8;
+  size.x += border + 2*padding;
   std::unique_ptr<SDL_Point[]> polygon(
       GetTextPolygon(font_size, dir, rect, size, &position));
-  Uint32 background = (bg_color.r << 16) + (bg_color.g << 8) + bg_color.b;
+  Uint32 background = ConvertColor(bg_color, 0);
   SDL_FillPolygon(target_, polygon.get(), 7, background);
+
+  size.x -= border;
+  SDL_Rect text_rect{position.x, rect.y + 1, size.x + 1, rect.h};
+  if (dir == Direction::RIGHT) {
+    text_rect.x += border;
+    position.x += border;
+  }
+  background = ConvertColor(bg_color, 0.75);
+  SDL_FillRect(target_, &text_rect, background);
+
+  position.x += padding;
   font->Render(position, size, baseline, fg_color, target_);
 }
 

@@ -121,7 +121,7 @@ void Graphics::DrawText(int x, int y, Direction dir,
   SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
   text_renderer_->DrawTextBox(
       "Google Fonts/Noto_Sans/NotoSans-Regular.ttf", kTextSize,
-      text, rect, (Direction)dir, kBlack, kWhite);
+      text, rect, (Direction)dir, kBlack, color);
 }
 
 }  // namespace babel

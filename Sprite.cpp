@@ -8,7 +8,7 @@ Sprite::Sprite(const Point& s, int type)
     : square(s), creature(kCreatures[type]) {
   if (type != kPlayerType) {
     text = string{(char)('A' + (rand() % 26))};
-    text = "kaa";
+    text = "यूनिकोड";
   }
 }
 
