@@ -22,8 +22,6 @@ static const TileAppearance kTileset[] = {
   {'#', 0x00907040, 0x00383838}
 };
 
-static const TileView kUnknownTile = {' ', 0x00000000};
-
 }
 
 View::View(int radius, const GameState& game_state)
@@ -39,8 +37,6 @@ View::View(int radius, const GameState& game_state)
       } else if (game_state.IsSquareSeen(square)) {
         tiles[x][y].symbol = kTileset[tile].symbol;
         tiles[x][y].color = kTileset[tile].dark_color;
-      } else {
-        tiles[x][y] = kUnknownTile;
       }
     }
   }
@@ -49,8 +45,20 @@ View::View(int radius, const GameState& game_state)
     int y = sprite->square.y - offset.y;
     if (0 <= x && x < size && 0 <= y && y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square)) {
-      tiles[x][y].symbol = sprite->creature.appearance.symbol;
-      tiles[x][y].color = sprite->creature.appearance.color;
+      tiles[x][y].sprite = new TileView::SpriteView{
+          sprite->creature.appearance.symbol,
+          sprite->creature.appearance.color,
+          sprite->text};
+    }
+  }
+}
+
+View::~View() {
+  for (auto& column : tiles) {
+    for (auto& tile : column) {
+      if (tile.sprite != nullptr) {
+        delete tile.sprite;
+      }
     }
   }
 }

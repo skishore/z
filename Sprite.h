@@ -1,6 +1,7 @@
 #ifndef BABEL_SPRITE_H__
 #define BABEL_SPRITE_H__
 
+#include <string>
 #include <vector>
 
 #include "creature.h"
@@ -18,6 +19,7 @@ class Sprite {
 
   Point square;
   const Creature& creature;
+  std::string text;
 };
 
 }  // namespace babel

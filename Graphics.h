@@ -1,6 +1,8 @@
 #ifndef __BABEL_GRAPHICS_H__
 #define __BABEL_GRAPHICS_H__
 
+#include <string>
+#include <vector>
 #include <SDL2/SDL.h>
 
 #include "Point.h"
@@ -16,7 +18,6 @@ class Graphics {
 
   void Clear();
   void DrawView(const View& view);
-  void DrawTileText(int x, int y, char tile);
   void Flip();
 
  private:
@@ -30,6 +31,12 @@ class Graphics {
     const SDL_Rect bounds_;
     SDL_Surface* surface_;
   };
+
+  void DrawTexts(const std::vector<Point>& positions,
+                 const std::vector<std::string>& texts,
+                 const std::vector<SDL_Color>& colors);
+  void DrawText(int x, int y, Direction direction,
+                const std::string& text, SDL_Color color);
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;

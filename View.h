@@ -1,6 +1,7 @@
 #ifndef BABEL_VIEW_H__
 #define BABEL_VIEW_H__
 
+#include <string>
 #include <vector>
 
 #include "constants.h"
@@ -9,13 +10,21 @@
 namespace babel {
 
 struct TileView {
-  char symbol;
-  uint32_t color;
+  struct SpriteView {
+    char symbol;
+    uint32_t color;
+    std::string text;
+  };
+
+  char symbol = ' ';
+  uint32_t color = 0x00000000;
+  SpriteView* sprite;
 };
 
 class View {
  public:
   View(int radius, const GameState& game_state);
+  ~View();
 
   int size;
   std::vector<std::vector<TileView>> tiles;

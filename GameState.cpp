@@ -20,11 +20,16 @@ GameState::GameState(const string& map_file) {
     const TileMap::Room& room = map.GetRooms()[i];
     const int num_enemies = (room.size.x + room.size.y)/2 - 3;
     for (int j = 0; j < num_enemies; j++) {
-      Point square = room.position;
-      square.x += rand() % room.size.x;
-      square.y += rand() % room.size.y;
-      int type = (rand() % (kCreatures.size() - 1)) + 1;
-      AddNPC(new Sprite(square, type));
+      while (true) {
+        Point square = room.position;
+        square.x += rand() % room.size.x;
+        square.y += rand() % room.size.y;
+        if (!IsSquareOccupied(square)) {
+          int type = (rand() % (kCreatures.size() - 1)) + 1;
+          AddNPC(new Sprite(square, type));
+          break;
+        }
+      }
     }
   }
 }

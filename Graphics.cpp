@@ -6,6 +6,7 @@
 #include "SDL_prims.h"
 
 using std::string;
+using std::vector;
 
 namespace babel {
 
@@ -65,30 +66,34 @@ void Graphics::Clear() {
 }
 
 void Graphics::DrawView(const View& view) {
+  // A collection of texts to draw. Layed out and drawn after all the tiles.
+  vector<Point> positions;
+  vector<string> texts;
+  vector<SDL_Color> colors;
+  // Fields needed to draw each cell.
   SDL_Color color;
+  char symbol;
   for (int x = 0; x < view.size; x++) {
     for (int y = 0; y < view.size; y++) {
       const TileView& tile = view.tiles[x][y];
-      ConvertColor(tile.color, &color);
+      if (tile.sprite == nullptr) {
+        symbol = tile.symbol;
+        ConvertColor(tile.color, &color);
+      } else {
+        symbol = tile.sprite->symbol;
+        ConvertColor(tile.sprite->color, &color);
+        if (!tile.sprite->text.empty()) {
+          positions.push_back(Point(x, y));
+          texts.push_back(tile.sprite->text);
+          colors.push_back(color);
+        }
+      }
       SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
       text_renderer_->DrawText("default_font.ttf", 0.9*kGridSize,
-                               std::string{tile.symbol}, rect, color);
+                               std::string{symbol}, rect, color);
     }
   }
-}
-
-void Graphics::DrawTileText(int x, int y, char tile) {
-  if (tile == '@' || ('a' <= tile && tile <= 'z')) {
-    int dir = (Direction)(abs(tile - 'a') % 2);
-    if (dir == Direction::UP) {
-      dir = Direction::LEFT;
-    }
-    SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-    const string text{tile, tile, tile, tile, tile, tile};
-    text_renderer_->DrawTextBox(
-        "Google Fonts/Noto_Sans/NotoSans-Regular.ttf", kTextSize,
-        text, rect, (Direction)dir);
-  }
+  DrawTexts(positions, texts, colors);
 }
 
 void Graphics::Flip() {
@@ -97,6 +102,26 @@ void Graphics::Flip() {
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
+}
+
+void Graphics::DrawTexts(const vector<Point>& positions,
+                         const vector<string>& texts,
+                         const vector<SDL_Color>& colors) {
+  ASSERT(positions.size() == texts.size(), "Mismatched text size.");
+  ASSERT(positions.size() == colors.size(), "Mismatched color size.");
+  for (int i = 0; i < positions.size(); i++) {
+    Direction dir = (positions[i].x <= kScreenRadius ?
+                     Direction::LEFT : Direction::RIGHT);
+    DrawText(positions[i].x, positions[i].y, dir, texts[i], colors[i]);
+  }
+}
+
+void Graphics::DrawText(int x, int y, Direction dir,
+                        const string& text, SDL_Color color) {
+  SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
+  text_renderer_->DrawTextBox(
+      "Google Fonts/Noto_Sans/NotoSans-Regular.ttf", kTextSize,
+      text, rect, (Direction)dir, kBlack, kWhite);
 }
 
 }  // namespace babel
