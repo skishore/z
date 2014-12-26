@@ -17,7 +17,6 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 
 void MoveSprite(GameState* game_state, Sprite* sprite) {
   const Point move = sprite->GetMove(*game_state);
-  DEBUG(sprite->square << " " << move);
   if (IsSquareFree(*game_state, sprite->square + move)) {
     game_state->MoveSprite(sprite, move);
   }
@@ -40,11 +39,10 @@ const View* Engine::GetView(int radius) const {
     }
   }
 
-  for (auto pair : game_state_.sprites) {
-    const Sprite& sprite = *pair.second;
-    if (game_state_.player_vision->IsSquareVisible(sprite.square)) {
-      const Point& point = sprite.square - offset;
-      view->tiles[point.x][point.y] = sprite.creature->appearance.symbol;
+  for (Sprite* sprite : game_state_.sprites) {
+    if (game_state_.player_vision->IsSquareVisible(sprite->square)) {
+      const Point& point = sprite->square - offset;
+      view->tiles[point.x][point.y] = sprite->creature->appearance.symbol;
     }
   }
 
@@ -54,11 +52,12 @@ const View* Engine::GetView(int radius) const {
 bool Engine::HandleCommand(char ch) {
   if (kShift.find(ch) != kShift.end()) {
     const Point& move = kShift.at(ch);
-    if (IsSquareFree(game_state_, game_state_.player->square + move)) {
+    if ((move.x == 0 && move.y == 0) ||
+        IsSquareFree(game_state_, game_state_.player->square + move)) {
       game_state_.MoveSprite(game_state_.player, move);
-      for (auto pair : game_state_.sprites) {
-        if (pair.second != game_state_.player) {
-          MoveSprite(&game_state_, pair.second);
+      for (Sprite* sprite : game_state_.sprites) {
+        if (sprite != game_state_.player) {
+          MoveSprite(&game_state_, sprite);
         }
       }
       return true;

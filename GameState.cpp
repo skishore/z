@@ -26,8 +26,8 @@ GameState::GameState(const string& map_file) {
 }
 
 GameState::~GameState() {
-  for (auto pair : sprites) {
-    delete pair.second;
+  for (Sprite* sprite : sprites) {
+    delete sprite;
   }
 }
 
@@ -35,18 +35,22 @@ void GameState::AddNPC(Sprite* sprite) {
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(!IsSquareOccupied(sprite->square),
          "Adding sprite at occupied square " << sprite->square);
-  sprites[sprite->square] = sprite;
+  sprites.push_back(sprite);
+  sprite_positions[sprite->square] = sprite;
 }
 
 void GameState::MoveSprite(Sprite* sprite, const Point& move) {
+  if (move.x == 0 && move.y == 0) {
+    return;
+  }
   ASSERT(sprite != nullptr, "sprite == nullptr");
-  ASSERT(sprites[sprite->square] == sprite,
+  ASSERT(sprite_positions[sprite->square] == sprite,
          "Integrity error: unexpected sprite at " << sprite->square);
   Point new_square = sprite->square + move;
   ASSERT(!IsSquareOccupied(new_square),
          "Moving sprite to occupied square " << new_square);
-  sprites.erase(sprite->square);
-  sprites[new_square] = sprite;
+  sprite_positions.erase(sprite->square);
+  sprite_positions[new_square] = sprite;
   sprite->square = new_square;
 
   if (sprite == player) {
@@ -55,7 +59,7 @@ void GameState::MoveSprite(Sprite* sprite, const Point& move) {
 }
 
 bool GameState::IsSquareOccupied(const Point& square) const {
-  return sprites.find(square) != sprites.end();
+  return sprite_positions.find(square) != sprite_positions.end();
 }
 
 void GameState::RecomputePlayerVision() {

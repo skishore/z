@@ -32,7 +32,8 @@ static const map<char,Point> kShift = {
   {'y', Point(-1, -1)},
   {'u', Point(1, -1)},
   {'b', Point(-1, 1)},
-  {'n', Point(1, 1)}
+  {'n', Point(1, 1)},
+  {'.', Point(0, 0)}
 };
 
 } //  namespace babel

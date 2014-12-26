@@ -9,9 +9,10 @@
 #ifndef BABEL_GAME_STATE_H__
 #define BABEL_GAME_STATE_H__
 
-#include <unordered_map>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "Point.h"
 #include "TileMap.h"
@@ -35,11 +36,12 @@ class GameState {
 
   TileMap map;
   Sprite* player;
-  std::unordered_map<Point,Sprite*> sprites;
+  std::vector<Sprite*> sprites;
   std::unique_ptr<FieldOfVision> player_vision;
 
  private:
   void RecomputePlayerVision();
+  std::unordered_map<Point,Sprite*> sprite_positions;
 };
 
 }  // namespace babel

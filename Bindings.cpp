@@ -22,10 +22,8 @@ int Bindings::Start() {
   while (input_.GetChar(&ch)) {
     if (ch == 0x03 || ch == 0x1B /* ctrl-C and escape */) {
       break;
-    } else if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z')) {
-      if (engine_->HandleCommand(ch)) {
-        Redraw();
-      }
+    } else if (engine_->HandleCommand(ch)) {
+      Redraw();
     }
   }
   return 0;
