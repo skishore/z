@@ -4,6 +4,8 @@
 #include <complex>
 #include <iostream>
 
+#include "debug.h"
+
 namespace babel {
 
 struct Point {
@@ -79,5 +81,17 @@ inline std::ostream& operator<<(std::ostream& out, const Point& point) {
 }
 
 } // namespace babel
+
+namespace std {
+
+template<> struct hash<babel::Point> {
+  size_t operator()(const babel::Point& point) const {
+    std::hash<int> hasher;
+    size_t x_hash = hasher(point.x);
+    return hasher(point.y) + 0x9e3779b9 + (x_hash << 6) + (x_hash >> 2);
+  }
+};
+
+}  // namespace std
 
 #endif  // __BABEL_POINT_H__

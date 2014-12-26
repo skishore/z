@@ -1,9 +1,8 @@
 #ifndef BABEL_ENGINE_H__
 #define BABEL_ENGINE_H__
 
-#include "constants.h"
+#include "GameState.h"
 #include "Point.h"
-#include "TileMap.h"
 #include "View.h"
 
 namespace babel {
@@ -20,9 +19,7 @@ class Engine {
   bool HandleCommand(char command);
 
  private:
-  TileMap map_;
-  Point player_position_;
-  std::vector<Point> enemy_positions_;
+  GameState game_state_;
 };
 
 }  // namespace babel

@@ -4,32 +4,47 @@
 
 #include "constants.h"
 #include "FieldOfVision.h"
+#include "Sprite.h"
 
 namespace babel {
 
-Engine::Engine() {
-  map_.LoadMap("world.dat");
-  player_position_ = map_.GetStartingSquare();
+namespace {
+
+bool IsSquareFree(const GameState& game_state, const Point& square) {
+  return (!game_state.map.IsSquareBlocked(square) &&
+          !game_state.IsSquareOccupied(square));
 }
+
+void MoveSprite(GameState* game_state, Sprite* sprite) {
+  const Point move = sprite->GetMove(*game_state);
+  DEBUG(sprite->square << " " << move);
+  if (IsSquareFree(*game_state, sprite->square + move)) {
+    game_state->MoveSprite(sprite, move);
+  }
+}
+
+}
+
+Engine::Engine() : game_state_("world.dat") {}
 
 const View* Engine::GetView(int radius) const {
   std::unique_ptr<View> view(new View(radius));
 
-  const FieldOfVision field_of_vision(map_, player_position_, radius);
-  const Point offset = player_position_ - Point(radius, radius);
-  for (int x = 0; x < NCOLS; x++) {
-    for (int y = 0; y < NROWS; y++) {
+  const Point offset = game_state_.player->square - Point(radius, radius);
+  for (int x = 0; x <= 2*radius; x++) {
+    for (int y = 0; y <= 2*radius; y++) {
       const Point square = Point(x, y) + offset;
-      const bool visible = field_of_vision.IsSquareVisible(square);
-      const bool blocked = map_.IsSquareBlocked(square);
-      view->tiles[x][y] = (visible ? (blocked ? 'X' : '.') : '\0');
+      const bool visible = game_state_.player_vision->IsSquareVisible(square);
+      const bool blocked = game_state_.map.IsSquareBlocked(square);
+      view->tiles[x][y] = (visible ? (blocked ? '#' : '.') : '\0');
     }
   }
 
-  for (int i = 0; i < enemy_positions_.size(); i++) {
-    if (field_of_vision.IsSquareVisible(enemy_positions_[i])) {
-      const Point& point = enemy_positions_[i] - offset;
-      view->tiles[point.x][point.y] = (char)((int)'z' - i);
+  for (auto pair : game_state_.sprites) {
+    const Sprite& sprite = *pair.second;
+    if (game_state_.player_vision->IsSquareVisible(sprite.square)) {
+      const Point& point = sprite.square - offset;
+      view->tiles[point.x][point.y] = sprite.creature->appearance.symbol;
     }
   }
 
@@ -37,29 +52,19 @@ const View* Engine::GetView(int radius) const {
 }
 
 bool Engine::HandleCommand(char ch) {
-  bool moved = false;
   if (kShift.find(ch) != kShift.end()) {
-    Point new_position = player_position_ + kShift.at(ch);
-    if (!map_.IsSquareBlocked(new_position)) {
-      player_position_ = new_position;
-      if (enemy_positions_.size() > 0 &&
-          enemy_positions_.back() == new_position) {
-        enemy_positions_.pop_back();
+    const Point& move = kShift.at(ch);
+    if (IsSquareFree(game_state_, game_state_.player->square + move)) {
+      game_state_.MoveSprite(game_state_.player, move);
+      for (auto pair : game_state_.sprites) {
+        if (pair.second != game_state_.player) {
+          MoveSprite(&game_state_, pair.second);
+        }
       }
-      moved = true;
+      return true;
     }
   }
-  if (!moved) {
-    return false;
-  }
-  for (int i = 0; i < enemy_positions_.size(); i++) {
-    const Point move = Point((rand() % 3) - 1, (rand() % 3) - 1);
-    const Point point = enemy_positions_[i] + move;
-    if (!map_.IsSquareBlocked(point)) {
-      enemy_positions_[i] = point;
-    }
-  }
-  return true;
+  return false;
 }
 
 }  // namespace babel

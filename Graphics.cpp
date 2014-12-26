@@ -62,11 +62,11 @@ void Graphics::DrawTile(int x, int y, char tile) {
     color = SDL_Color{95, 255, 95};
   } else if ('a' <= tile && tile <= 'z') {
     color = SDL_Color{95, 95, 255};
-    tile = 'X';
   } else if (tile == '.') {
     color = SDL_Color{95, 95, 95};
-  } else if (tile == 'X') {
+  } else if (tile == '#') {
     color = SDL_Color{127, 127, 63};
+  } else if (tile == '\0') {
     tile = '#';
   }
   SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};

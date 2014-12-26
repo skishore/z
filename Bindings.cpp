@@ -32,25 +32,17 @@ int Bindings::Start() {
 }
 
 void Bindings::Redraw() {
-  std::unique_ptr<const View> view(engine_->GetView(kVisionRadius));
+  std::unique_ptr<const View> view(engine_->GetView(kScreenRadius));
   ASSERT(view, "view == nullptr");
   graphics_.Clear();
   for (int y = 0; y < NROWS; y++) {
     for (int x = 0; x < NCOLS; x++) {
-      if (Point(x, y) == view->player_position) {
-        continue;
-      }
-      char tile = view->tiles[x][y];
-      graphics_.DrawTile(x, y, (tile ? tile : '#'));
+      graphics_.DrawTile(x, y, view->tiles[x][y]);
     }
   }
-  const Point& point = view->player_position;
-  // TODO(babel): This is a major hack.
-  graphics_.DrawTile(point.x, point.y, '@');
   for (int y = 0; y < NROWS; y++) {
     for (int x = 0; x < NCOLS; x++) {
-      char tile = view->tiles[x][y];
-      graphics_.DrawTileText(x, y, (tile ? tile : '#'));
+      //graphics_.DrawTileText(x, y, view->tiles[x][y]);
     }
   }
   graphics_.Flip();

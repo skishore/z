@@ -9,10 +9,9 @@ using std::map;
 
 namespace babel {
 
-// TODO(skishore): Move these constants into a parameter of the View class.
-static const int kVisionRadius = 15;
-static const int NCOLS = 2*kVisionRadius + 1;
-static const int NROWS = 2*kVisionRadius + 1;
+static const int kScreenRadius = 15;
+static const int NCOLS = 2*kScreenRadius + 1;
+static const int NROWS = 2*kScreenRadius + 1;
 
 enum Direction {
   UP = 0,
