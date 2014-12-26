@@ -3,11 +3,13 @@
 #include "GameState.h"
 #include "Sprite.h"
 
+using std::string;
+
 namespace babel {
 
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
-  player = new Sprite(map.GetStartingSquare(), PLAYER);
+  player = new Sprite(map.GetStartingSquare(), kPlayerType);
   AddNPC(player);
   RecomputePlayerVision();
 
@@ -18,7 +20,7 @@ GameState::GameState(const string& map_file) {
       Point square = room.position;
       square.x += rand() % room.size.x;
       square.y += rand() % room.size.y;
-      CreatureType type = (CreatureType)((rand() % (kNumCreatures - 1)) + 1);
+      int type = (rand() % (kCreatures.size() - 1)) + 1;
       AddNPC(new Sprite(square, type));
     }
   }
@@ -64,7 +66,7 @@ bool GameState::IsSquareOccupied(const Point& square) const {
 void GameState::RecomputePlayerVision() {
   player_vision.reset(
       new FieldOfVision(map, player->square,
-                        player->creature->stats.vision_radius));
+                        player->creature.stats.vision_radius));
 }
 
 }  // namespace babel

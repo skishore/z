@@ -11,13 +11,13 @@ namespace babel {
 
 class Sprite {
  public:
-  Sprite(const Point& square, CreatureType type);
+  Sprite(const Point& square, int type);
 
   // Returns this sprite's move, if the sprite is an NPC.
   Point GetMove(const GameState& game_state);
 
   Point square;
-  const Creature* creature;
+  const Creature& creature;
 };
 
 }  // namespace babel
