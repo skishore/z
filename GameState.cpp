@@ -4,11 +4,14 @@
 #include "Sprite.h"
 
 using std::string;
+using std::vector;
 
 namespace babel {
 
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
+  seen = vector<vector<bool>>(
+      map.GetSize().x, vector<bool>(map.GetSize().y, false));
   player = new Sprite(map.GetStartingSquare(), kPlayerType);
   AddNPC(player);
   RecomputePlayerVision();
@@ -63,10 +66,25 @@ bool GameState::IsSquareOccupied(const Point& square) const {
   return sprite_positions.find(square) != sprite_positions.end();
 }
 
+bool GameState::IsSquareSeen(const Point& square) const {
+  if (0 <= square.x && square.x < map.GetSize().x &&
+      0 <= square.y && square.y < map.GetSize().y) {
+    return seen[square.x][square.y];
+  }
+  return false;
+}
+
 void GameState::RecomputePlayerVision() {
-  player_vision.reset(
-      new FieldOfVision(map, player->square,
-                        player->creature.stats.vision_radius));
+  const int radius = player->creature.stats.vision_radius;
+  player_vision.reset(new FieldOfVision(map, player->square, radius));
+  for (int x = -radius; x <= radius; x++) {
+    for (int y = -radius; y <= radius; y++) {
+      const Point square = player->square + Point(x, y);
+      if (player_vision->IsSquareVisible(square)) {
+        seen[square.x][square.y] = true;
+      }
+    }
+  }
 }
 
 }  // namespace babel

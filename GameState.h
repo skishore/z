@@ -31,8 +31,8 @@ class GameState {
   void AddNPC(Sprite* sprite);
   void MoveSprite(Sprite* sprite, const Point& move);
 
-  // Returns true if the square is occupied by a sprite.
   bool IsSquareOccupied(const Point& square) const;
+  bool IsSquareSeen(const Point& square) const;
 
   TileMap map;
   Sprite* player;
@@ -41,6 +41,7 @@ class GameState {
 
  private:
   void RecomputePlayerVision();
+  std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
 };
 

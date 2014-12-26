@@ -25,6 +25,7 @@ class TileMap {
   bool IsSquareBlocked(const Point& square) const;
 
   const std::vector<Room>& GetRooms() const { return rooms_; }
+  const Point& GetSize() const { return map_dimensions_; };
   const Point& GetStartingSquare() const { return starting_square_; }
 
  private:

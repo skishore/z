@@ -7,13 +7,19 @@ namespace babel {
 
 namespace {
 
-static const TileView kTileset[] = {
-  {'.', 0x005f5f5f},
-  {'.', 0x005f5f5f},
-  {'.', 0x005f5f5f},
-  {'.', 0x005f5f5f},
-  {'#', 0x007f7f3f},
-  {'#', 0x001f1f1f},
+struct TileAppearance {
+  char symbol;
+  uint32_t lit_color;
+  uint32_t dark_color;
+};
+
+static const TileAppearance kTileset[] = {
+  {'.', 0x005f5f5f, 0x00000000},
+  {'.', 0x005f5f5f, 0x00000000},
+  {'.', 0x005f5f5f, 0x00000000},
+  {'.', 0x005f5f5f, 0x00000000},
+  {'#', 0x00907040, 0x00383838},
+  {'#', 0x00907040, 0x00383838}
 };
 
 static const TileView kUnknownTile = {' ', 0x00000000};
@@ -26,8 +32,13 @@ View::View(int radius, const GameState& game_state)
   for (int x = 0; x < size; x++) {
     for (int y = 0; y < size; y++) {
       Point square = Point(x, y) + offset;
+      Tile tile = game_state.map.GetMapTile(square);
       if (game_state.player_vision->IsSquareVisible(square)) {
-        tiles[x][y] = kTileset[game_state.map.GetMapTile(square)];
+        tiles[x][y].symbol = kTileset[tile].symbol;
+        tiles[x][y].color = kTileset[tile].lit_color;
+      } else if (game_state.IsSquareSeen(square)) {
+        tiles[x][y].symbol = kTileset[tile].symbol;
+        tiles[x][y].color = kTileset[tile].dark_color;
       } else {
         tiles[x][y] = kUnknownTile;
       }
