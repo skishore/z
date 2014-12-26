@@ -1,12 +1,12 @@
 #include "debug.h"
+#include "Bindings.h"
 #include "Engine.h"
-#include "Graphics.h"
 
 using babel::Engine;
 
 int main(int argc, char** argv) {
   babel::RegisterCrashHandlers(argv[0]);
   babel::Engine engine;
-  babel::Graphics graphics(&engine);
-  return graphics.Start();
+  babel::Bindings bindings(&engine);
+  return bindings.Start();
 }

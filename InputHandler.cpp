@@ -2,7 +2,7 @@
 
 namespace babel {
 
-bool InputHandler::GetChar(char* c) {
+bool InputHandler::GetChar(char* ch) {
   SDL_Event event;
   while (true) {
     ASSERT(SDL_WaitEvent(&event), SDL_GetError());
@@ -11,10 +11,10 @@ bool InputHandler::GetChar(char* c) {
     } else if (event.type == SDL_KEYDOWN) {
       const SDL_Keycode& key = event.key.keysym.sym;
       if (SDLK_a <= key && key <= SDLK_z) {
-        *c = (char)((int)(key - SDLK_a) + (int)'a');
+        *ch = (char)((int)(key - SDLK_a) + (int)'a');
         return true;
       } else if (key == SDLK_ESCAPE) {
-        *c = 0x1B;
+        *ch = 0x1B;
         return true;
       }
     }

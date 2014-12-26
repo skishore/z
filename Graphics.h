@@ -1,25 +1,44 @@
-#ifndef BABEL_GRAPHICS_H__
-#define BABEL_GRAPHICS_H__
+#ifndef __BABEL_GRAPHICS_H__
+#define __BABEL_GRAPHICS_H__
 
-#include "Engine.h"
-#include "InputHandler.h"
-#include "SpriteGraphics.h"
+#include <SDL2/SDL.h>
+
+#include "Point.h"
+#include "TextRenderer.h"
 
 namespace babel {
 
 class Graphics {
  public:
-  Graphics(Engine* engine);
-  int Start();
+  Graphics(const Point& size);
+  ~Graphics();
+
+  void Clear();
+  void DrawTile(int x, int y, char tile);
+  void DrawTileText(int x, int y, char tile);
+  void Flip();
 
  private:
-  void Redraw();
+  class DrawingSurface {
+   public:
+    DrawingSurface(const Point& size);
+    ~DrawingSurface();
 
-  Engine* engine_;
-  InputHandler input_;
-  SpriteGraphics sprite_graphics_;
+    // size is measured in grid squares, while bounds is measured in pixels.
+    const Point size_;
+    const SDL_Rect bounds_;
+    SDL_Surface* surface_;
+  };
+
+  // These three SDL structures are for drawing to actual video memory.
+  SDL_Window* window_;
+  SDL_Renderer* renderer_;
+  SDL_Texture* texture_;
+
+  std::unique_ptr<DrawingSurface> buffer_;
+  std::unique_ptr<TextRenderer> text_renderer_;
 };
 
-}  // namespace babel
+} // namespace babel
 
-#endif  // BABEL_GRAPHICS_H__
+#endif  // __BABEL_GRAPHICS_H__
