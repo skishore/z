@@ -30,19 +30,9 @@ int Bindings::Start() {
 }
 
 void Bindings::Redraw() {
-  std::unique_ptr<const View> view(engine_->GetView(kScreenRadius));
-  ASSERT(view, "view == nullptr");
   graphics_.Clear();
-  for (int y = 0; y < NROWS; y++) {
-    for (int x = 0; x < NCOLS; x++) {
-      graphics_.DrawTile(x, y, view->tiles[x][y]);
-    }
-  }
-  for (int y = 0; y < NROWS; y++) {
-    for (int x = 0; x < NCOLS; x++) {
-      //graphics_.DrawTileText(x, y, view->tiles[x][y]);
-    }
-  }
+  View view(kScreenRadius, engine_->GetGameState());
+  graphics_.DrawView(view);
   graphics_.Flip();
 }
 

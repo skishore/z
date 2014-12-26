@@ -32,13 +32,13 @@ struct Creature {
 
 static const Creature kCreature[] = {
   Creature{
-    Appearance{"human", '@', 0x00ffffff},
+    Appearance{"human", '@', 0x005fff5f},
     Stats{15}},
   Creature{
-    Appearance{"grid bug", 'x', 0x005f5fff},
+    Appearance{"grid bug", 'X', 0x005f5fff},
     Stats{15}},
   Creature{
-    Appearance{"kobold", 'k', 0x00ff5f5f},
+    Appearance{"kobold", 'K', 0x00ff5f5f},
     Stats{15}}
 };
 

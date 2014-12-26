@@ -1,6 +1,5 @@
 #include "creature.h"
 #include "debug.h"
-#include "FieldOfVision.h"
 #include "GameState.h"
 #include "Sprite.h"
 

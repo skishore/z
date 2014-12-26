@@ -10,10 +10,18 @@ using std::string;
 namespace babel {
 
 namespace {
+
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
 static const int kGridSize = 24;
 static const int kTextSize = 0.8*kGridSize;
+
+inline void ConvertColor(const uint32_t color, SDL_Color* result) {
+  result->r = (color >> 16) & 0xff;
+  result->g = (color >> 8) & 0xff;
+  result->b = color & 0xff;
+}
+
 }  // namespace
 
 Graphics::DrawingSurface::DrawingSurface(const Point& size)
@@ -53,25 +61,20 @@ Graphics::~Graphics() {
 }
 
 void Graphics::Clear() {
-  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x0);
+  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x000000);
 }
 
-void Graphics::DrawTile(int x, int y, char tile) {
-  SDL_Color color{31, 31, 31};
-  if (tile == '@') {
-    color = SDL_Color{95, 255, 95};
-  } else if ('a' <= tile && tile <= 'z') {
-    color = SDL_Color{95, 95, 255};
-  } else if (tile == '.') {
-    color = SDL_Color{95, 95, 95};
-  } else if (tile == '#') {
-    color = SDL_Color{127, 127, 63};
-  } else if (tile == '\0') {
-    tile = '#';
+void Graphics::DrawView(const View& view) {
+  SDL_Color color;
+  for (int x = 0; x < view.size; x++) {
+    for (int y = 0; y < view.size; y++) {
+      const TileView& tile = view.tiles[x][y];
+      ConvertColor(tile.color, &color);
+      SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
+      text_renderer_->DrawText("default_font.ttf", 0.9*kGridSize,
+                               std::string{tile.symbol}, rect, color);
+    }
   }
-  SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-  text_renderer_->DrawText(
-      "default_font.ttf", 0.9*kGridSize, std::string{tile}, rect, color);
 }
 
 void Graphics::DrawTileText(int x, int y, char tile) {

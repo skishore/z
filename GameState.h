@@ -14,12 +14,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "FieldOfVision.h"
 #include "Point.h"
 #include "TileMap.h"
 
 namespace babel {
 
-class FieldOfVision;
 class Sprite;
 
 class GameState {

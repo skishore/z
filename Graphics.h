@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 
 #include "Point.h"
+#include "View.h"
 #include "TextRenderer.h"
 
 namespace babel {
@@ -14,7 +15,7 @@ class Graphics {
   ~Graphics();
 
   void Clear();
-  void DrawTile(int x, int y, char tile);
+  void DrawView(const View& view);
   void DrawTileText(int x, int y, char tile);
   void Flip();
 
