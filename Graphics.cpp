@@ -15,8 +15,8 @@ namespace {
 
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const int kGridSize = 24;
-static const int kTextSize = 0.8*kGridSize;
+static const int kGridSize = 32;
+static const int kTextSize = 0.6*kGridSize;
 
 inline void ConvertColor(const uint32_t color, SDL_Color* result) {
   result->r = (color >> 16) & 0xff;
@@ -127,7 +127,9 @@ void Graphics::DrawTexts(const vector<Point>& positions,
 
 void Graphics::DrawText(int x, int y, Direction dir,
                         const string& text, SDL_Color color) {
-  SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
+  const int margin = kGridSize/8;
+  SDL_Rect rect{kGridSize*x, kGridSize*y + margin,
+                kGridSize, kGridSize - 2*margin};
   text_renderer_->DrawTextBox(
       "default_font.ttf", kTextSize,
       text, rect, (Direction)dir, kBlack, color);

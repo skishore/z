@@ -9,7 +9,7 @@ using std::map;
 
 namespace babel {
 
-static const int kScreenRadius = 15;
+static const int kScreenRadius = 11;
 static const int NCOLS = 2*kScreenRadius + 1;
 static const int NROWS = 2*kScreenRadius + 1;
 

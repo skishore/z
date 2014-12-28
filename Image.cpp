@@ -9,8 +9,11 @@ using std::string;
 namespace babel {
 
 namespace {
+
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
+static const int kActualSize = 16;
+static const int kGridSize = 32;
 
 SDL_Surface* CreateSurface(int w, int h) {
   SDL_Surface* temp = SDL_CreateRGBSurface(0, w, h, kBitDepth, 0, 0, 0, 0);
@@ -20,6 +23,18 @@ SDL_Surface* CreateSurface(int w, int h) {
   ASSERT(surface != nullptr, "Failed to format surface: " << SDL_GetError());
   return surface;
 }
+
+inline void Scale(int& value) {
+  value = kActualSize*value/kGridSize;
+}
+
+inline void Scale(SDL_Rect& rect) {
+  Scale(rect.x);
+  Scale(rect.y);
+  Scale(rect.w);
+  Scale(rect.h);
+}
+
 }
 
 Image::Image(const Point& size, const string& filename)
@@ -62,7 +77,8 @@ void Image::Draw(const Point& position, const Point& frame,
   }
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
-  SDL_BlitSurface(surface_, &source, surface, &target);
+  Scale(source);
+  SDL_BlitScaled(surface_, &source, surface, &target);
 }
 
 bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
