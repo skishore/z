@@ -100,7 +100,7 @@ void Graphics::Draw(const View& view) {
     }
   }
   DrawTexts(positions, texts, colors);
-  DrawUI({"You found a grid bug.", "The grid bug hits!"});
+  DrawUI(view.log);
 }
 
 void Graphics::Flip() {
@@ -132,8 +132,11 @@ void Graphics::DrawText(int x, int y, Direction dir,
 }
 
 void Graphics::DrawUI(const vector<string>& lines) {
+  if (lines.empty()) {
+    return;
+  }
   const int border = 2;
-  const int font_size = 0.9*kTextSize;
+  const int font_size = 0.8*kTextSize;
   const int line_height = 3*font_size/2;
   const int margin = font_size/4;
   const Point padding(font_size, font_size/2);

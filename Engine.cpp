@@ -37,8 +37,9 @@ bool Engine::HandleCommand(char ch) {
 }
 
 void Engine::Attack(Sprite* sprite, Sprite* target) {
-  DEBUG("The " << sprite->creature.appearance.name
-        << " hits the " << target->creature.appearance.name << ".");
+  game_state_.PushLogLine(
+    "The " + sprite->creature.appearance.name +
+    " hits the " + target->creature.appearance.name + ".");
 }
 
 void Engine::Move(const Point& move, Sprite* sprite) {

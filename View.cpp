@@ -1,9 +1,16 @@
+#include <algorithm>
+
 #include "Sprite.h"
 #include "View.h"
 
+using std::max;
 using std::vector;
 
 namespace babel {
+
+namespace {
+const static int kLogLinesToShow = 4;
+}
 
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
@@ -27,6 +34,10 @@ View::View(int radius, const GameState& game_state)
       sprites.push_back(SpriteView{
           appearance.graphic, appearance.color, square, sprite->text});
     }
+  }
+  const int log_start = max((int)(game_state.log.size() - kLogLinesToShow), 0);
+  for (int i = log_start; i < game_state.log.size(); i++) {
+    log.push_back(game_state.log[i]);
   }
 }
 

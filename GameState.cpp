@@ -8,6 +8,10 @@ using std::vector;
 
 namespace babel {
 
+namespace {
+static const int kMaxLogSize = 24;
+}
+
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
   seen = vector<vector<bool>>(
@@ -64,6 +68,13 @@ void GameState::MoveSprite(Sprite* sprite, const Point& move) {
 
   if (sprite == player) {
     RecomputePlayerVision();
+  }
+}
+
+void GameState::PushLogLine(const string& line) {
+  log.push_back(line);
+  if (log.size() > kMaxLogSize) {
+    log.pop_front();
   }
 }
 

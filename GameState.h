@@ -9,6 +9,7 @@
 #ifndef BABEL_GAME_STATE_H__
 #define BABEL_GAME_STATE_H__
 
+#include <deque>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,6 +31,7 @@ class GameState {
   // AddNPC takes ownership of the new sprite.
   void AddNPC(Sprite* sprite);
   void MoveSprite(Sprite* sprite, const Point& move);
+  void PushLogLine(const std::string& line);
 
   bool IsSquareOccupied(const Point& square) const;
   bool IsSquareSeen(const Point& square) const;
@@ -38,6 +40,7 @@ class GameState {
   Sprite* player;
   std::vector<Sprite*> sprites;
   std::unique_ptr<FieldOfVision> player_vision;
+  std::deque<std::string> log;
 
  private:
   void RecomputePlayerVision();

@@ -29,6 +29,7 @@ class View {
   int size;
   std::vector<std::vector<TileView>> tiles;
   std::vector<SpriteView> sprites;
+  std::vector<std::string> log;
 };
 
 }  // namespace babel
