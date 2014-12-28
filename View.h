@@ -4,30 +4,31 @@
 #include <string>
 #include <vector>
 
-#include "constants.h"
 #include "GameState.h"
 
 namespace babel {
 
 struct TileView {
-  struct SpriteView {
-    char symbol;
-    uint32_t color;
-    std::string text;
-  };
+  // graphic will be -1 if the tile is unknown to the player.
+  int graphic;
+  bool visible;
+};
 
-  char symbol = ' ';
-  uint32_t color = 0x00000000;
-  SpriteView* sprite;
+struct SpriteView {
+  // The square is offset within the current view.
+  int graphic;
+  uint32_t color;
+  Point square;
+  std::string text;
 };
 
 class View {
  public:
   View(int radius, const GameState& game_state);
-  ~View();
 
   int size;
   std::vector<std::vector<TileView>> tiles;
+  std::vector<SpriteView> sprites;
 };
 
 }  // namespace babel

@@ -9,7 +9,7 @@ namespace babel {
 struct Creature {
   struct Appearance {
     std::string name;
-    char symbol;
+    int graphic;
     uint32_t color;
   } appearance;
 

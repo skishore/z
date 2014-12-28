@@ -9,16 +9,6 @@ using std::string;
 
 namespace babel {
 
-namespace {
-const static int kActualSize = 16;
-inline void Scale(SDL_Rect* rect) {
-  rect->x = kActualSize*rect->x/rect->w;
-  rect->y = kActualSize*rect->y/rect->h;
-  rect->w = kActualSize;
-  rect->h = kActualSize;
-}
-}
-
 Image::Image(const Point& size, SDL_Surface* surface, ImageCache* cache)
     : size_(size), surface_(surface), cache_(cache) {}
 
@@ -35,10 +25,7 @@ void Image::Draw(const Point& position, const Point& frame,
   }
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
-
-  Scale(&source);
-
-  SDL_BlitScaled(surface_, &source, surface, &target);
+  SDL_BlitSurface(surface_, &source, surface, &target);
 }
 
 bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,

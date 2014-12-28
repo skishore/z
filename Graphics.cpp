@@ -39,10 +39,11 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics(const Point& size) {
+Graphics::Graphics(const Point& size) : cache_(kFormat) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
   const Point dimensions(kGridSize*size);
+  const Point grid(kGridSize, kGridSize);
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());
@@ -51,6 +52,13 @@ Graphics::Graphics(const Point& size) {
   ASSERT(texture_ != nullptr, SDL_GetError());
 
   buffer_.reset(new DrawingSurface(size));
+  tinter_.reset(new DrawingSurface(grid));
+  SDL_FillRect(tinter_->surface_, &tinter_->bounds_, 0x88000000);
+  ASSERT(!SDL_SetSurfaceBlendMode(
+      tinter_->surface_, SDL_BLENDMODE_BLEND), SDL_GetError());
+
+  tileset_.reset(cache_.LoadImage(grid, "tileset.bmp"));
+  sprites_.reset(cache_.LoadImage(grid, "sprites.bmp"));
   text_renderer_.reset(new TextRenderer(buffer_->bounds_, buffer_->surface_));
 }
 
@@ -62,35 +70,39 @@ Graphics::~Graphics() {
 }
 
 void Graphics::Clear() {
-  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x000000);
+  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x00000000);
 }
 
-void Graphics::DrawView(const View& view) {
+void Graphics::Draw(const View& view) {
   // A collection of texts to draw. Layed out and drawn after all the tiles.
   vector<Point> positions;
   vector<string> texts;
   vector<SDL_Color> colors;
   // Fields needed to draw each cell.
-  SDL_Color color;
-  char symbol;
   for (int x = 0; x < view.size; x++) {
     for (int y = 0; y < view.size; y++) {
       const TileView& tile = view.tiles[x][y];
-      if (tile.sprite == nullptr) {
-        symbol = tile.symbol;
-        ConvertColor(tile.color, &color);
-      } else {
-        symbol = tile.sprite->symbol;
-        ConvertColor(tile.sprite->color, &color);
-        if (!tile.sprite->text.empty()) {
-          positions.push_back(Point(x, y));
-          texts.push_back(tile.sprite->text);
-          colors.push_back(color);
+      if (tile.graphic >= 0) {
+        tileset_->Draw(Point(kGridSize*x, kGridSize*y), tile.graphic,
+                       buffer_->bounds_, buffer_->surface_);
+        if (!tile.visible) {
+          SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
+          SDL_BlitSurface(tinter_->surface_, &tinter_->bounds_,
+                          buffer_->surface_, &rect);
         }
       }
-      SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-      text_renderer_->DrawText("default_font.ttf", 0.9*kGridSize,
-                               std::string{symbol}, rect, color);
+    }
+  }
+
+  SDL_Color color;
+  for (const SpriteView& sprite : view.sprites) {
+    sprites_->Draw(kGridSize*sprite.square, sprite.graphic,
+                   buffer_->bounds_, buffer_->surface_);
+    if (!sprite.text.empty()) {
+      ConvertColor(sprite.color, &color);
+      positions.push_back(sprite.square);
+      texts.push_back(sprite.text);
+      colors.push_back(color);
     }
   }
   DrawTexts(positions, texts, colors);

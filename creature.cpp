@@ -7,13 +7,13 @@ namespace babel {
 
 const std::vector<Creature> kCreatures = {
   Creature{
-    Appearance{"human", '@', 0x0060ff60},
+    Appearance{"human", 0, 0x0060ff60},
     Stats{15}},
   Creature{
-    Appearance{"grid bug", 'X', 0x006060ff},
+    Appearance{"grid bug", 1, 0x006060ff},
     Stats{15}},
   Creature{
-    Appearance{"kobold", 'K', 0x00ff6060},
+    Appearance{"troll", 1, 0x00ff6060},
     Stats{15}}
 };
 

@@ -5,60 +5,27 @@ using std::vector;
 
 namespace babel {
 
-namespace {
-
-struct TileAppearance {
-  char symbol;
-  uint32_t lit_color;
-  uint32_t dark_color;
-};
-
-static const TileAppearance kTileset[] = {
-  {'.', 0x005f5f5f, 0x00000000},
-  {'.', 0x005f5f5f, 0x00000000},
-  {'.', 0x005f5f5f, 0x00000000},
-  {'.', 0x005f5f5f, 0x00000000},
-  {'#', 0x00907040, 0x00383838},
-  {'#', 0x00907040, 0x00383838}
-};
-
-}
-
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
   const Point offset = game_state.player->square - Point(radius, radius);
   for (int x = 0; x < size; x++) {
     for (int y = 0; y < size; y++) {
       Point square = Point(x, y) + offset;
-      Tile tile = game_state.map.GetMapTile(square);
-      if (game_state.player_vision->IsSquareVisible(square)) {
-        tiles[x][y].symbol = kTileset[tile].symbol;
-        tiles[x][y].color = kTileset[tile].lit_color;
-      } else if (game_state.IsSquareSeen(square)) {
-        tiles[x][y].symbol = kTileset[tile].symbol;
-        tiles[x][y].color = kTileset[tile].dark_color;
+      if (game_state.IsSquareSeen(square)) {
+        tiles[x][y].graphic = (int)game_state.map.GetMapTile(square);
+        tiles[x][y].visible = game_state.player_vision->IsSquareVisible(square);
+      } else {
+        tiles[x][y].graphic = -1;
       }
     }
   }
   for (const Sprite* sprite : game_state.sprites) {
-    int x = sprite->square.x - offset.x;
-    int y = sprite->square.y - offset.y;
-    if (0 <= x && x < size && 0 <= y && y < size &&
+    Point square = sprite->square - offset;
+    if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square)) {
-      tiles[x][y].sprite = new TileView::SpriteView{
-          sprite->creature.appearance.symbol,
-          sprite->creature.appearance.color,
-          sprite->text};
-    }
-  }
-}
-
-View::~View() {
-  for (auto& column : tiles) {
-    for (auto& tile : column) {
-      if (tile.sprite != nullptr) {
-        delete tile.sprite;
-      }
+      const auto& appearance = sprite->creature.appearance;
+      sprites.push_back(SpriteView{
+          appearance.graphic, appearance.color, square, sprite->text});
     }
   }
 }

@@ -16,6 +16,7 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
       game_state.IsSquareOccupied(square)) {
     return INT_MIN;
   }
+  return 0;
   // Move toward the player if they are visible. Otherwise, move randomly.
   if (game_state.player_vision->IsSquareVisible(sprite.square)) {
     return -(game_state.player->square - square).length();
