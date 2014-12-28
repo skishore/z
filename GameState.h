@@ -32,7 +32,9 @@ class GameState {
   void AddNPC(Sprite* sprite);
   void RemoveNPC(Sprite* sprite);
   void MoveSprite(Sprite* sprite, const Point& move);
-  void PushLogLine(const std::string& line);
+
+  void AddLogLine(const std::string& line);
+  void CoalesceLog();
 
   bool IsSquareOccupied(const Point& square) const;
   bool IsSquareSeen(const Point& square) const;
@@ -48,6 +50,8 @@ class GameState {
   void RecomputePlayerVision();
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
+  // The index up to which the log has been coalesced.
+  int log_index = 0;
 };
 
 }  // namespace babel

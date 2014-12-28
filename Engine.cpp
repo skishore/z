@@ -22,8 +22,9 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 }
 
 Engine::Engine() : game_state_("world.dat") {
-  game_state_.PushLogLine(
+  game_state_.AddLogLine(
       "Welcome to Babel! You are a neutral male human Padawan.");
+  game_state_.CoalesceLog();
 }
 
 bool Engine::HandleCommand(char ch) {
@@ -47,6 +48,7 @@ bool Engine::HandleCommand(char ch) {
         }
       }
     }
+    game_state_.CoalesceLog();
     return true;
   }
   return false;
@@ -65,11 +67,11 @@ void Engine::Attack(Sprite* sprite, Sprite* target) {
   }
   if (sprite->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
-    game_state_.PushLogLine(
+    game_state_.AddLogLine(
         "You " + verb + " the " + target->creature.appearance.name + ".");
   } else if (target->IsPlayer()) {
     const string followup = (killed ? " You die..." : "");
-    game_state_.PushLogLine(
+    game_state_.AddLogLine(
         "The " + sprite->creature.appearance.name + " hits!" + followup);
   }
 }

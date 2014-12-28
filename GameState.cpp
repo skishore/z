@@ -1,8 +1,14 @@
+#include <algorithm>
+#include <map>
+
 #include "creature.h"
 #include "debug.h"
+#include "util.h"
 #include "GameState.h"
 #include "Sprite.h"
 
+using std::map;
+using std::max;
 using std::string;
 using std::vector;
 
@@ -80,11 +86,38 @@ void GameState::MoveSprite(Sprite* sprite, const Point& move) {
   }
 }
 
-void GameState::PushLogLine(const string& line) {
+void GameState::AddLogLine(const string& line) {
   log.push_back(line);
   if (log.size() > kMaxLogSize) {
     log.pop_front();
+    log_index = max(log_index - 1, 0);
   }
+}
+
+void GameState::CoalesceLog() {
+  if (log_index == log.size()) {
+    return;
+  }
+  std::map<string,int> counts;
+  string line;
+  for (int i = log_index; i < log.size(); i++) {
+    counts[log[i]] += 1;
+  }
+  for (int i = log_index; i < log.size(); i++) {
+    const int count = counts[log[i]];
+    if (count > 0) {
+      line += (line.empty() ? "" : " ") + log[i];
+      if (count > 1) {
+        line += " (x" + IntToString(count) + ")";
+      }
+      counts[log[i]] = 0;
+    }
+  }
+  while(log.size() > log_index) {
+    log.pop_back();
+  }
+  log.push_back(line);
+  log_index += 1;
 }
 
 bool GameState::IsSquareOccupied(const Point& square) const {
