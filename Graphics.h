@@ -38,7 +38,9 @@ class Graphics {
                  const std::vector<SDL_Color>& colors);
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
-  void DrawUI(const std::vector<std::string>& lines);
+  void DrawLog(const std::vector<std::string>& log);
+  void DrawStatus(const StatusView& status);
+  void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;

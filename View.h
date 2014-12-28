@@ -22,6 +22,11 @@ struct SpriteView {
   std::string text;
 };
 
+struct StatusView {
+  int cur_health = 12;
+  int max_health = 12;
+};
+
 class View {
  public:
   View(int radius, const GameState& game_state);
@@ -30,6 +35,7 @@ class View {
   std::vector<std::vector<TileView>> tiles;
   std::vector<SpriteView> sprites;
   std::vector<std::string> log;
+  StatusView status;
 };
 
 }  // namespace babel

@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "debug.h"
+#include "util.h"
 #include "Graphics.h"
 #include "SDL_prims.h"
 
@@ -100,7 +101,8 @@ void Graphics::Draw(const View& view) {
     }
   }
   DrawTexts(positions, texts, colors);
-  DrawUI(view.log);
+  DrawLog(view.log);
+  DrawStatus(view.status);
 }
 
 void Graphics::Flip() {
@@ -131,12 +133,24 @@ void Graphics::DrawText(int x, int y, Direction dir,
       text, rect, (Direction)dir, kBlack, color);
 }
 
-void Graphics::DrawUI(const vector<string>& lines) {
+void Graphics::DrawLog(const vector<string>& log) {
+  DrawDialogBox(log, true /* place_at_top */);
+}
+
+void Graphics::DrawStatus(const StatusView& status) {
+  vector<string> lines;
+  lines.push_back(
+      "Health: " + IntToString(status.cur_health) +
+      "/" + IntToString(status.max_health));
+  DrawDialogBox(lines, false /* place_at_top */);
+}
+
+void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
   if (lines.empty()) {
     return;
   }
   const int border = 2;
-  const int font_size = 0.8*kTextSize;
+  const int font_size = 0.9*kTextSize;
   const int line_height = 3*font_size/2;
   const int margin = font_size/4;
   const Point padding(font_size, font_size/2);
@@ -145,7 +159,7 @@ void Graphics::DrawUI(const vector<string>& lines) {
   SDL_Rect rect(buffer_->bounds_);
 
   rect.x += margin;
-  rect.y += rect.h - height - margin;
+  rect.y += (place_at_top ? margin : buffer_->bounds_.h - height - margin);
   rect.h = height - 1;
   rect.w -= 2*margin+ 1;
 

@@ -17,7 +17,10 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 
 }
 
-Engine::Engine() : game_state_("world.dat") {}
+Engine::Engine() : game_state_("world.dat") {
+  game_state_.PushLogLine(
+      "Welcome to Babel! You are a neutral male human Padawan.");
+}
 
 bool Engine::HandleCommand(char ch) {
   if (kShift.find(ch) != kShift.end()) {
