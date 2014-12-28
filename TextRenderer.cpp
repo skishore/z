@@ -385,7 +385,7 @@ void TextRenderer::DrawText(
   Font* font = LoadFont(font_name, font_size);
   Point size, baseline;
   font->PrepareToRender(text, &size, &baseline);
-  Point position(rect.x, rect.y + (rect.h - size.y)/2);
+  Point position(rect.x, rect.y + 3*rect.h/4 - baseline.y);
   font->Render(position, size, baseline, color, target_);
 }
 
