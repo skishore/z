@@ -9,6 +9,8 @@ namespace babel {
 
 namespace {
 
+static const int kFineness = 1 << 8;
+
 bool AreAdjacent(const Sprite& sprite, const Sprite& other) {
   const Point diff = sprite.square - other.square;
   return (abs(diff.x) <= 1 && abs(diff.y) <= 1);
@@ -24,7 +26,7 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
   }
   // Move toward the player if they are visible. Otherwise, move randomly.
   if (game_state.player_vision->IsSquareVisible(sprite.square)) {
-    return -(game_state.player->square - square).length();
+    return -kFineness*(game_state.player->square - square).length();
   }
   return 0;
 }
