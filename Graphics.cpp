@@ -152,7 +152,7 @@ void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
     return;
   }
   const int border = 2;
-  const int font_size = 0.9*kTextSize;
+  const int font_size = 0.8*kTextSize;
   const int line_height = 3*font_size/2;
   const int margin = font_size/4;
   const Point padding(font_size, font_size/2);
