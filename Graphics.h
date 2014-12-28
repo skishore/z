@@ -19,7 +19,6 @@ class Graphics {
 
   void Clear();
   void Draw(const View& view);
-  void DrawUI();
   void Flip();
 
  private:
@@ -39,6 +38,7 @@ class Graphics {
                  const std::vector<SDL_Color>& colors);
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
+  void DrawUI(const std::vector<std::string>& lines);
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;

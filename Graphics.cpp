@@ -100,41 +100,7 @@ void Graphics::Draw(const View& view) {
     }
   }
   DrawTexts(positions, texts, colors);
-}
-
-void Graphics::DrawUI() {
-  const int border = 2;
-  const int font_size = 0.9*kTextSize;
-  const int line_height = 4*font_size/3;
-  const int height = line_height*(2 + 1) + 2*border;
-  const int padding = font_size/4;
-
-  SDL_Rect rect(buffer_->bounds_);
-
-  rect.x += padding;
-  rect.y += rect.h - height - padding;
-  rect.h = height - 1;
-  rect.w -= 2*padding + 1;
-
-  SDL_FillRect(buffer_->surface_, &rect, 0x00002266);
-  for (int i = 0; i < border; i++) {
-    SDL_DrawRect(buffer_->surface_, &rect, 0x00ffffff);
-    rect.x += 1;
-    rect.y += 1;
-    rect.w -= 2;
-    rect.h -= 2;
-  }
-
-  const string font_name = "default_font.ttf";
-  rect = SDL_Rect{line_height, rect.y + line_height/2 - font_size/8, 0, 0};
-  text_renderer_->DrawText(font_name, font_size, "Choose an option:", rect);
-  rect.x += buffer_->bounds_.w/15;
-  rect.y += line_height;
-  text_renderer_->DrawText(font_name, font_size, "a - fight", rect);
-  rect.x += buffer_->bounds_.w/3;
-  text_renderer_->DrawText(font_name, font_size, "s - items", rect);
-  rect.x += buffer_->bounds_.w/3;
-  text_renderer_->DrawText(font_name, font_size, "d - run", rect);
+  DrawUI({"You found a grid bug.", "The grid bug hits!"});
 }
 
 void Graphics::Flip() {
@@ -163,6 +129,39 @@ void Graphics::DrawText(int x, int y, Direction dir,
   text_renderer_->DrawTextBox(
       "default_font.ttf", kTextSize,
       text, rect, (Direction)dir, kBlack, color);
+}
+
+void Graphics::DrawUI(const vector<string>& lines) {
+  const int border = 2;
+  const int font_size = 0.9*kTextSize;
+  const int line_height = 3*font_size/2;
+  const int margin = font_size/4;
+  const Point padding(font_size, font_size/2);
+  const int height = line_height*lines.size() + 2*border + 2*padding.y;
+
+  SDL_Rect rect(buffer_->bounds_);
+
+  rect.x += margin;
+  rect.y += rect.h - height - margin;
+  rect.h = height - 1;
+  rect.w -= 2*margin+ 1;
+
+  SDL_FillRect(buffer_->surface_, &rect, 0x00002266);
+  for (int i = 0; i < border; i++) {
+    SDL_DrawRect(buffer_->surface_, &rect, 0x00ffffff);
+    rect.x += 1;
+    rect.y += 1;
+    rect.w -= 2;
+    rect.h -= 2;
+  }
+
+  rect.x += padding.x;
+  rect.y += padding.y;
+  rect.h = line_height;
+  for (const string& line : lines) {
+    text_renderer_->DrawText("default_font.ttf", font_size, line, rect);
+    rect.y += line_height;
+  }
 }
 
 }  // namespace babel
