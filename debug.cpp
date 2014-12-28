@@ -1,11 +1,12 @@
+#ifndef EMSCRIPTEN
+
 #include <execinfo.h>
+#include <iostream>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
-#include "debug.h"
-
-namespace babel {
 namespace {
 
 static const char* kBinary;
@@ -51,13 +52,20 @@ inline void SignalHandler(int signal) {
   exit(1);
 }
 
-} // namespace
+}  // namespace
 
+#endif  // EMSCRIPTEN
+
+#include "debug.h"
+
+namespace babel {
 
 void RegisterCrashHandlers(const char* binary) {
+  #ifndef EMSCRIPTEN
   kBinary = binary;
   signal(SIGSEGV, SignalHandler);
   signal(SIGFPE, SignalHandler);
+  #endif  // EMSCRIPTEN
 }
 
 }  // namespace babel

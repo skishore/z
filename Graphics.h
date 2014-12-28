@@ -19,6 +19,7 @@ class Graphics {
 
   void Clear();
   void Draw(const View& view);
+  void DrawUI();
   void Flip();
 
  private:

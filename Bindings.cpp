@@ -33,6 +33,7 @@ void Bindings::Redraw() {
   graphics_.Clear();
   View view(kScreenRadius, engine_->GetGameState());
   graphics_.Draw(view);
+  graphics_.DrawUI();
   graphics_.Flip();
 }
 
