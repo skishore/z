@@ -8,10 +8,6 @@ using std::vector;
 
 namespace babel {
 
-namespace {
-const static int kLogLinesToShow = 4;
-}
-
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
   const Point offset = game_state.player->square - Point(radius, radius);
@@ -37,9 +33,8 @@ View::View(int radius, const GameState& game_state)
           appearance.graphic, appearance.color, square, sprite->text});
     }
   }
-  const int log_start = max((int)(game_state.log.size() - kLogLinesToShow), 0);
-  for (int i = log_start; i < game_state.log.size(); i++) {
-    log.push_back(game_state.log[i]);
+  if (game_state.log.IsFresh()) {
+    log = game_state.log.GetLastLines(1);
   }
   status.cur_health = game_state.player->cur_health;
   status.max_health = game_state.player->max_health;

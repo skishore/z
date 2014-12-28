@@ -9,13 +9,13 @@
 #ifndef BABEL_GAME_STATE_H__
 #define BABEL_GAME_STATE_H__
 
-#include <deque>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "FieldOfVision.h"
+#include "Log.h"
 #include "Point.h"
 #include "TileMap.h"
 
@@ -33,9 +33,6 @@ class GameState {
   void RemoveNPC(Sprite* sprite);
   void MoveSprite(Sprite* sprite, const Point& move);
 
-  void AddLogLine(const std::string& line);
-  void CoalesceLog();
-
   bool IsSquareOccupied(const Point& square) const;
   bool IsSquareSeen(const Point& square) const;
   Sprite* SpriteAt(const Point& square) const;
@@ -44,14 +41,12 @@ class GameState {
   Sprite* player;
   std::vector<Sprite*> sprites;
   std::unique_ptr<FieldOfVision> player_vision;
-  std::deque<std::string> log;
+  Log log;
 
  private:
   void RecomputePlayerVision();
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
-  // The index up to which the log has been coalesced.
-  int log_index = 0;
 };
 
 }  // namespace babel

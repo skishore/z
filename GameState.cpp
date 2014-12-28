@@ -14,10 +14,6 @@ using std::vector;
 
 namespace babel {
 
-namespace {
-static const int kMaxLogSize = 24;
-}
-
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
   seen = vector<vector<bool>>(
@@ -84,40 +80,6 @@ void GameState::MoveSprite(Sprite* sprite, const Point& move) {
   if (sprite == player) {
     RecomputePlayerVision();
   }
-}
-
-void GameState::AddLogLine(const string& line) {
-  log.push_back(line);
-  if (log.size() > kMaxLogSize) {
-    log.pop_front();
-    log_index = max(log_index - 1, 0);
-  }
-}
-
-void GameState::CoalesceLog() {
-  if (log_index == log.size()) {
-    return;
-  }
-  std::map<string,int> counts;
-  string line;
-  for (int i = log_index; i < log.size(); i++) {
-    counts[log[i]] += 1;
-  }
-  for (int i = log_index; i < log.size(); i++) {
-    const int count = counts[log[i]];
-    if (count > 0) {
-      line += (line.empty() ? "" : " ") + log[i];
-      if (count > 1) {
-        line += " (x" + IntToString(count) + ")";
-      }
-      counts[log[i]] = 0;
-    }
-  }
-  while(log.size() > log_index) {
-    log.pop_back();
-  }
-  log.push_back(line);
-  log_index += 1;
 }
 
 bool GameState::IsSquareOccupied(const Point& square) const {
