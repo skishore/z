@@ -15,12 +15,14 @@ const static int kLogLinesToShow = 4;
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
   const Point offset = game_state.player->square - Point(radius, radius);
+  const int vision = game_state.player->creature.stats.vision_radius;
   for (int x = 0; x < size; x++) {
     for (int y = 0; y < size; y++) {
       Point square = Point(x, y) + offset;
       if (game_state.IsSquareSeen(square)) {
         tiles[x][y].graphic = (int)game_state.map.GetMapTile(square);
-        tiles[x][y].visible = game_state.player_vision->IsSquareVisible(square);
+        tiles[x][y].visible =
+            game_state.player_vision->IsSquareVisible(square, vision);
       } else {
         tiles[x][y].graphic = -1;
       }
@@ -29,7 +31,7 @@ View::View(int radius, const GameState& game_state)
   for (const Sprite* sprite : game_state.sprites) {
     Point square = sprite->square - offset;
     if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
-        game_state.player_vision->IsSquareVisible(sprite->square)) {
+        game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
       sprites.push_back(SpriteView{
           appearance.graphic, appearance.color, square, sprite->text});

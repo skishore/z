@@ -100,7 +100,7 @@ void GameState::RecomputePlayerVision() {
   for (int x = -radius; x <= radius; x++) {
     for (int y = -radius; y <= radius; y++) {
       const Point square = player->square + Point(x, y);
-      if (player_vision->IsSquareVisible(square)) {
+      if (player_vision->IsSquareVisible(square, radius)) {
         seen[square.x][square.y] = true;
       }
     }
