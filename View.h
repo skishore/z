@@ -23,8 +23,8 @@ struct SpriteView {
 };
 
 struct StatusView {
-  int cur_health = 12;
-  int max_health = 12;
+  int cur_health;
+  int max_health;
 };
 
 class View {

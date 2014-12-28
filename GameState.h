@@ -30,6 +30,7 @@ class GameState {
 
   // AddNPC takes ownership of the new sprite.
   void AddNPC(Sprite* sprite);
+  void RemoveNPC(Sprite* sprite);
   void MoveSprite(Sprite* sprite, const Point& move);
   void PushLogLine(const std::string& line);
 

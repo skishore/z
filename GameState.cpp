@@ -52,6 +52,15 @@ void GameState::AddNPC(Sprite* sprite) {
   sprite_positions[sprite->square] = sprite;
 }
 
+void GameState::RemoveNPC(Sprite* sprite) {
+  ASSERT(sprite != nullptr, "sprite == nullptr");
+  ASSERT(!sprite->IsPlayer(), "Removing player!");
+  const auto& it = remove(sprites.begin(), sprites.end(), sprite);
+  sprites.erase(it, sprites.end());
+  sprite_positions.erase(sprite->square);
+  delete sprite;
+}
+
 void GameState::MoveSprite(Sprite* sprite, const Point& move) {
   if (move.x == 0 && move.y == 0) {
     return;

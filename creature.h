@@ -13,8 +13,14 @@ struct Creature {
     uint32_t color;
   } appearance;
 
+  struct Attack {
+    int dice;
+    int sides;
+  } attack;
+
   struct Stats {
     int vision_radius;
+    int max_health;
   } stats;
 };
 

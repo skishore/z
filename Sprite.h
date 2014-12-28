@@ -23,9 +23,17 @@ class Sprite {
   // Runs the sprite's update logic and calls out to the API to move.
   void Update(const GameState& game_state, SpriteAPI* api);
 
+  bool IsAlive() const;
+  bool IsPlayer() const;
+
   Point square;
   const Creature& creature;
   std::string text;
+  int cur_health;
+  int max_health;
+
+ private:
+  int type;
 };
 
 }  // namespace babel

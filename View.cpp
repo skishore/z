@@ -41,6 +41,8 @@ View::View(int radius, const GameState& game_state)
   for (int i = log_start; i < game_state.log.size(); i++) {
     log.push_back(game_state.log[i]);
   }
+  status.cur_health = game_state.player->cur_health;
+  status.max_health = game_state.player->max_health;
 }
 
 }  // namespace babel

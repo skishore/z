@@ -54,11 +54,10 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
 
 }  // namespace
 
-Sprite::Sprite(const Point& s, int type)
-    : square(s), creature(kCreatures[type]) {
-  if (type != kPlayerType) {
-    text = string{(char)('A' + (rand() % 26))};
-  }
+Sprite::Sprite(const Point& s, int t)
+    : square(s), creature(kCreatures[t]), type(t) {
+  max_health = creature.stats.max_health;
+  cur_health = max_health;
 }
 
 void Sprite::Update(const GameState& game_state, SpriteAPI* api) {
@@ -67,6 +66,14 @@ void Sprite::Update(const GameState& game_state, SpriteAPI* api) {
   } else {
     api->Move(GetBestMove(*this, game_state), this);
   }
+}
+
+bool Sprite::IsAlive() const {
+  return cur_health > 0;
+}
+
+bool Sprite::IsPlayer() const {
+  return type == kPlayerType;
 }
 
 }  // namespace babel
