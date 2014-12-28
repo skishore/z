@@ -3,11 +3,12 @@
 
 #include "GameState.h"
 #include "Point.h"
+#include "Sprite.h"
 #include "View.h"
 
 namespace babel {
 
-class Engine {
+class Engine : public SpriteAPI {
  public:
   Engine();
 
@@ -16,6 +17,10 @@ class Engine {
   // Returns true if the command was valid.
   // If this method returns false, the view does not need to be redrawn.
   bool HandleCommand(char command);
+
+  // SpriteAPI interface methods used to update sprites.
+  void Attack(Sprite* sprite, Sprite* target) override;
+  void Move(const Point& move, Sprite* sprite) override;
 
  private:
   GameState game_state_;

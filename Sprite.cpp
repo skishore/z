@@ -9,14 +9,19 @@ namespace babel {
 
 namespace {
 
+bool AreAdjacent(const Sprite& sprite, const Sprite& other) {
+  const Point diff = sprite.square - other.square;
+  return (abs(diff.x) <= 1 && abs(diff.y) <= 1);
+}
+
 int ScoreMove(const Sprite& sprite, const GameState& game_state,
               const Point& move) {
   Point square = sprite.square + move;
-  if (game_state.map.IsSquareBlocked(square) ||
-      game_state.IsSquareOccupied(square)) {
+  if ((move.x != 0 || move.y != 0) &&
+      (game_state.map.IsSquareBlocked(square) ||
+       game_state.IsSquareOccupied(square))) {
     return INT_MIN;
   }
-  return 0;
   // Move toward the player if they are visible. Otherwise, move randomly.
   if (game_state.player_vision->IsSquareVisible(sprite.square)) {
     return -(game_state.player->square - square).length();
@@ -24,22 +29,13 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
   return 0;
 }
 
-}  // namespace
-
-Sprite::Sprite(const Point& s, int type)
-    : square(s), creature(kCreatures[type]) {
-  if (type != kPlayerType) {
-    text = string{(char)('A' + (rand() % 26))};
-  }
-}
-
-Point Sprite::GetMove(const GameState& game_state) {
+const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
   vector<Point> best_moves;
   int best_score = INT_MIN;
   Point move;
   for (move.x = -1; move.x <= 1; move.x++) {
     for (move.y = -1; move.y <= 1; move.y++) {
-      const int score = ScoreMove(*this, game_state, move);
+      const int score = ScoreMove(sprite, game_state, move);
       if (score > best_score) {
         best_score = score;
         best_moves.clear();
@@ -51,6 +47,23 @@ Point Sprite::GetMove(const GameState& game_state) {
   }
   ASSERT(best_moves.size() > 0, "Could not find a move!");
   return best_moves[rand() % best_moves.size()];
+}
+
+}  // namespace
+
+Sprite::Sprite(const Point& s, int type)
+    : square(s), creature(kCreatures[type]) {
+  if (type != kPlayerType) {
+    text = string{(char)('A' + (rand() % 26))};
+  }
+}
+
+void Sprite::Update(const GameState& game_state, SpriteAPI* api) {
+  if (AreAdjacent(*this, *game_state.player)) {
+    api->Attack(this, game_state.player);
+  } else {
+    api->Move(GetBestMove(*this, game_state), this);
+  }
 }
 
 }  // namespace babel

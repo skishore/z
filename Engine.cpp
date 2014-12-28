@@ -15,13 +15,6 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
           !game_state.IsSquareOccupied(square));
 }
 
-void MoveSprite(GameState* game_state, Sprite* sprite) {
-  const Point move = sprite->GetMove(*game_state);
-  if (IsSquareFree(*game_state, sprite->square + move)) {
-    game_state->MoveSprite(sprite, move);
-  }
-}
-
 }
 
 Engine::Engine() : game_state_("world.dat") {}
@@ -34,13 +27,24 @@ bool Engine::HandleCommand(char ch) {
       game_state_.MoveSprite(game_state_.player, move);
       for (Sprite* sprite : game_state_.sprites) {
         if (sprite != game_state_.player) {
-          MoveSprite(&game_state_, sprite);
+          sprite->Update(game_state_, this);
         }
       }
       return true;
     }
   }
   return false;
+}
+
+void Engine::Attack(Sprite* sprite, Sprite* target) {
+  DEBUG("The " << sprite->creature.appearance.name
+        << " hits the " << target->creature.appearance.name << ".");
+}
+
+void Engine::Move(const Point& move, Sprite* sprite) {
+  if (IsSquareFree(game_state_, sprite->square + move)) {
+    game_state_.MoveSprite(sprite, move);
+  }
 }
 
 }  // namespace babel
