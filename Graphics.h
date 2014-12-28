@@ -6,7 +6,6 @@
 #include <SDL2/SDL.h>
 
 #include "Image.h"
-#include "ImageCache.h"
 #include "Point.h"
 #include "View.h"
 #include "TextRenderer.h"
@@ -46,12 +45,11 @@ class Graphics {
   SDL_Texture* texture_;
 
   std::unique_ptr<DrawingSurface> buffer_;
-  std::unique_ptr<DrawingSurface> tinter_;
-
-  ImageCache cache_;
-  std::unique_ptr<const Image> tileset_;
-  std::unique_ptr<const Image> sprites_;
   std::unique_ptr<TextRenderer> text_renderer_;
+
+  std::unique_ptr<const Image> tileset_;
+  std::unique_ptr<const Image> darkened_tileset_;
+  std::unique_ptr<const Image> sprites_;
 };
 
 } // namespace babel

@@ -39,7 +39,7 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics(const Point& size) : cache_(kFormat) {
+Graphics::Graphics(const Point& size) {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
   const Point dimensions(kGridSize*size);
@@ -52,14 +52,11 @@ Graphics::Graphics(const Point& size) : cache_(kFormat) {
   ASSERT(texture_ != nullptr, SDL_GetError());
 
   buffer_.reset(new DrawingSurface(size));
-  tinter_.reset(new DrawingSurface(grid));
-  SDL_FillRect(tinter_->surface_, &tinter_->bounds_, 0x88000000);
-  ASSERT(!SDL_SetSurfaceBlendMode(
-      tinter_->surface_, SDL_BLENDMODE_BLEND), SDL_GetError());
-
-  tileset_.reset(cache_.LoadImage(grid, "tileset.bmp"));
-  sprites_.reset(cache_.LoadImage(grid, "sprites.bmp"));
   text_renderer_.reset(new TextRenderer(buffer_->bounds_, buffer_->surface_));
+
+  tileset_.reset(new Image(grid, "tileset.bmp"));
+  darkened_tileset_.reset(new Image(*tileset_, 0x88000000));
+  sprites_.reset(new Image(grid, "sprites.bmp"));
 }
 
 Graphics::~Graphics() {
@@ -83,13 +80,10 @@ void Graphics::Draw(const View& view) {
     for (int y = 0; y < view.size; y++) {
       const TileView& tile = view.tiles[x][y];
       if (tile.graphic >= 0) {
-        tileset_->Draw(Point(kGridSize*x, kGridSize*y), tile.graphic,
-                       buffer_->bounds_, buffer_->surface_);
-        if (!tile.visible) {
-          SDL_Rect rect{kGridSize*x, kGridSize*y, kGridSize, kGridSize};
-          SDL_BlitSurface(tinter_->surface_, &tinter_->bounds_,
-                          buffer_->surface_, &rect);
-        }
+        const Image* image =
+            (tile.visible ? tileset_.get() : darkened_tileset_.get());
+        image->Draw(Point(kGridSize*x, kGridSize*y), tile.graphic,
+                    buffer_->bounds_, buffer_->surface_);
       }
     }
   }

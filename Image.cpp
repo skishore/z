@@ -1,7 +1,6 @@
 #include <algorithm>
 
 #include "Image.h"
-#include "ImageCache.h"
 
 using std::max;
 using std::min;
@@ -9,11 +8,49 @@ using std::string;
 
 namespace babel {
 
-Image::Image(const Point& size, SDL_Surface* surface, ImageCache* cache)
-    : size_(size), surface_(surface), cache_(cache) {}
+namespace {
+static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
+static const int kBitDepth = 32;
+
+SDL_Surface* CreateSurface(int w, int h) {
+  SDL_Surface* temp = SDL_CreateRGBSurface(0, w, h, kBitDepth, 0, 0, 0, 0);
+  ASSERT(temp != nullptr, "Failed to create temp: " << SDL_GetError());
+  SDL_Surface* surface = SDL_ConvertSurfaceFormat(temp, kFormat, 0);
+  SDL_FreeSurface(temp);
+  ASSERT(surface != nullptr, "Failed to format surface: " << SDL_GetError());
+  return surface;
+}
+}
+
+Image::Image(const Point& size, const string& filename)
+    : size_(size) {
+  SDL_Surface* temp = SDL_LoadBMP(("images/" + filename).c_str());
+  ASSERT(temp != nullptr,
+         "Failed to load " << filename << ": " << SDL_GetError());
+  surface_ = SDL_ConvertSurfaceFormat(temp, kFormat, 0);
+  SDL_FreeSurface(temp);
+  ASSERT(surface_ != nullptr,
+         "Failed to format " << filename << ": " << SDL_GetError());
+
+  // TODO(babel): At some point, we may want to apply the color key to
+  // some images but not to others.
+  Uint32 color_key = SDL_MapRGB(surface_->format, 255, 0, 255);
+  SDL_SetColorKey(surface_, SDL_TRUE, color_key);
+  DEBUG("Loaded " << filename);
+}
+
+Image::Image(const Image& image, Uint32 tint) : size_(image.size_) {
+  surface_ = CreateSurface(image.surface_->w, image.surface_->h);
+  SDL_BlitSurface(image.surface_, nullptr, surface_, nullptr);
+  SDL_Surface* tinter = CreateSurface(image.surface_->w, image.surface_->h);
+  SDL_FillRect(tinter, nullptr, tint);
+  ASSERT(!SDL_SetSurfaceBlendMode(tinter, SDL_BLENDMODE_BLEND), SDL_GetError());
+  SDL_BlitSurface(tinter, nullptr, surface_, nullptr);
+  SDL_FreeSurface(tinter);
+}
 
 Image::~Image() {
-  cache_->FreeImage(this);
+  SDL_FreeSurface(surface_);
 }
 
 void Image::Draw(const Point& position, const Point& frame,
