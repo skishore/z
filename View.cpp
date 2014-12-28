@@ -25,6 +25,9 @@ View::View(int radius, const GameState& game_state)
     }
   }
   for (const Sprite* sprite : game_state.sprites) {
+    if (!sprite->IsAlive()) {
+      continue;
+    }
     Point square = sprite->square - offset;
     if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
