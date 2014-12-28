@@ -425,7 +425,7 @@ void TextRenderer::DrawTextBox(
 Font* TextRenderer::LoadFont(const string& font_name, int font_size) {
   pair<string,int> id{font_name, font_size};
   if (fonts_by_id_.count(id) == 0) {
-    DEBUG("Loading " << font_name << " in size " << font_size);
+    DEBUG("Loaded " << font_name << " in size " << font_size);
     Font* font = new Font("fonts/" + font_name, font_size, library_);
     fonts_by_id_[id] = font;
   }
