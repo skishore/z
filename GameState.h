@@ -35,6 +35,7 @@ class GameState {
 
   bool IsSquareOccupied(const Point& square) const;
   bool IsSquareSeen(const Point& square) const;
+  Sprite* SpriteAt(const Point& square) const;
 
   TileMap map;
   Sprite* player;

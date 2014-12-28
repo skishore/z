@@ -90,6 +90,10 @@ bool GameState::IsSquareSeen(const Point& square) const {
   return false;
 }
 
+Sprite* GameState::SpriteAt(const Point& square) const {
+  return sprite_positions.at(square);
+}
+
 void GameState::RecomputePlayerVision() {
   const int radius = player->creature.stats.vision_radius;
   player_vision.reset(new FieldOfVision(map, player->square, radius));

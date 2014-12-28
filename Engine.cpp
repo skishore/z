@@ -22,9 +22,14 @@ Engine::Engine() : game_state_("world.dat") {}
 bool Engine::HandleCommand(char ch) {
   if (kShift.find(ch) != kShift.end()) {
     const Point& move = kShift.at(ch);
+    const Point& square = game_state_.player->square + move;
     if ((move.x == 0 && move.y == 0) ||
-        IsSquareFree(game_state_, game_state_.player->square + move)) {
-      game_state_.MoveSprite(game_state_.player, move);
+        !game_state_.map.IsSquareBlocked(square)) {
+      if (game_state_.IsSquareOccupied(square)) {
+        Attack(game_state_.player, game_state_.SpriteAt(square));
+      } else {
+        Move(move, game_state_.player);
+      }
       for (Sprite* sprite : game_state_.sprites) {
         if (sprite != game_state_.player) {
           sprite->Update(game_state_, this);
