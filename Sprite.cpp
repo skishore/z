@@ -1,6 +1,7 @@
 #include <vector>
 
 #include "constants.h"
+#include "hindi_words.h"
 #include "Action.h"
 #include "Sprite.h"
 
@@ -62,6 +63,9 @@ Sprite::Sprite(const Point& s, int t)
   max_health = creature.stats.max_health;
   cur_health = max_health;
   energy = rand() % kEnergyNeededToMove;
+  if (!IsPlayer()) {
+    text = kHindiWords[rand() % kHindiWords.size()];
+  }
 }
 
 bool Sprite::HasEnergyNeededToMove() const {
