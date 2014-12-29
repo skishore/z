@@ -35,9 +35,6 @@ void AttackAction::Execute(GameState* game_state) {
   target_->cur_health = max(target_->cur_health - damage, 0);
   bool killed = !target_->IsAlive();
 
-  if (killed && !target_->IsPlayer()) {
-    game_state->RemoveNPC(target_);
-  }
   if (sprite_->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
     game_state->log.AddLine(
@@ -46,6 +43,9 @@ void AttackAction::Execute(GameState* game_state) {
     const string followup = (killed ? " You die..." : "");
     game_state->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
+  }
+  if (killed && !target_->IsPlayer()) {
+    game_state->RemoveNPC(target_);
   }
 }
 
