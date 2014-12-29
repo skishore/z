@@ -10,18 +10,16 @@
 
 namespace babel {
 
-class SpriteAPI {
- public:
-  virtual void Attack(Sprite* sprite, Sprite* target) = 0;
-  virtual void Move(const Point& move, Sprite* sprite) = 0;
-};
+class Action;
 
 class Sprite {
  public:
   Sprite(const Point& square, int type);
 
-  // Runs the sprite's update logic and calls out to the API to move.
-  void Update(const GameState& game_state, SpriteAPI* api);
+  // Runs the sprite's AI logic and returns an action to take.
+  // If this sprite is the player, it may consume the input character ch,
+  // in which case it will set has_input to false.
+  Action* GetAction(const GameState& game_state, char ch, bool* has_input);
 
   bool IsAlive() const;
   bool IsPlayer() const;
@@ -33,6 +31,9 @@ class Sprite {
   int max_health;
 
  private:
+  Action* GetNPCAction(const GameState& game_state);
+  Action* GetPlayerAction(const GameState& game_state, char ch);
+
   int type;
 };
 

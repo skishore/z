@@ -31,7 +31,10 @@ class GameState {
   // AddNPC takes ownership of the new sprite.
   void AddNPC(Sprite* sprite);
   void RemoveNPC(Sprite* sprite);
-  void MoveSprite(Sprite* sprite, const Point& move);
+  void MoveSprite(const Point& move, Sprite* sprite);
+
+  Sprite* GetCurrentSprite() const;
+  void AdvanceSprite();
 
   bool IsSquareOccupied(const Point& square) const;
   bool IsSquareSeen(const Point& square) const;
@@ -47,6 +50,7 @@ class GameState {
   void RecomputePlayerVision();
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
+  int sprite_index = 0;
 };
 
 }  // namespace babel

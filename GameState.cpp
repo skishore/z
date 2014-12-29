@@ -58,12 +58,19 @@ void GameState::RemoveNPC(Sprite* sprite) {
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(!sprite->IsPlayer(), "Removing player!");
   const auto& it = remove(sprites.begin(), sprites.end(), sprite);
+  const int index = it - sprites.begin();
   sprites.erase(it, sprites.end());
   sprite_positions.erase(sprite->square);
   delete sprite;
+  // Update the current-sprite index, if necessary.
+  if (sprite_index > index) {
+    sprite_index -= 1;
+  } else if (sprite_index == index) {
+    sprite_index = sprite_index % sprites.size();
+  }
 }
 
-void GameState::MoveSprite(Sprite* sprite, const Point& move) {
+void GameState::MoveSprite(const Point& move, Sprite* sprite) {
   if (move.x == 0 && move.y == 0) {
     return;
   }
@@ -80,6 +87,15 @@ void GameState::MoveSprite(Sprite* sprite, const Point& move) {
   if (sprite == player) {
     RecomputePlayerVision();
   }
+}
+
+Sprite* GameState::GetCurrentSprite() const {
+  return sprites[sprite_index];
+}
+
+void GameState::AdvanceSprite() {
+  ASSERT(sprites.size() > 0, "There are no sprites!");
+  sprite_index = (sprite_index + 1) % sprites.size();
 }
 
 bool GameState::IsSquareOccupied(const Point& square) const {

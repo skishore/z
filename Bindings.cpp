@@ -22,7 +22,7 @@ int Bindings::Start() {
   while (input_.GetChar(&ch)) {
     if (ch == 0x03 || ch == 0x1B /* ctrl-C and escape */) {
       break;
-    } else if (engine_->HandleCommand(ch)) {
+    } else if (engine_->Update(true, ch)) {
       Redraw();
     }
   }
