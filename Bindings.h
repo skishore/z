@@ -2,15 +2,17 @@
 #define BABEL_BINDINGS_H__
 
 #include "Engine.h"
+#include "GameLoop.h"
 #include "Graphics.h"
 #include "InputHandler.h"
 
 namespace babel {
 
-class Bindings {
+class Bindings : GameLoop::Updatable {
  public:
   Bindings(Engine* engine);
   int Start();
+  bool Update(double frame_rate) override;
 
  private:
   void Redraw();
