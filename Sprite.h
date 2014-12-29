@@ -16,10 +16,16 @@ class Sprite {
  public:
   Sprite(const Point& square, int type);
 
+  // Methods needed by the game loop to run sprites at the correct speeds.
+  bool HasEnergyNeededToMove() const;
+  bool GainEnergy();
+  void ConsumeEnergy();
+
   // Runs the sprite's AI logic and returns an action to take.
   // If this sprite is the player, it may consume the input character ch,
   // in which case it will set has_input to false.
-  Action* GetAction(const GameState& game_state, char ch, bool* has_input);
+  Action* GetAction(
+      const GameState& game_state, char ch, bool* has_input) const;
 
   bool IsAlive() const;
   bool IsPlayer() const;
@@ -31,10 +37,11 @@ class Sprite {
   int max_health;
 
  private:
-  Action* GetNPCAction(const GameState& game_state);
-  Action* GetPlayerAction(const GameState& game_state, char ch);
+  Action* GetNPCAction(const GameState& game_state) const;
+  Action* GetPlayerAction(const GameState& game_state, char ch) const;
 
   int type;
+  int energy;
 };
 
 }  // namespace babel

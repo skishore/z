@@ -25,14 +25,22 @@ bool Engine::Update(bool has_input, char ch) {
     if (!game_state_.player->IsAlive()) {
       break;
     }
+    // Find the next sprite with enough energy to move.
     Sprite* sprite = game_state_.GetCurrentSprite();
     ASSERT(sprite != nullptr, "Current sprite is NULL!");
+    if (!sprite->HasEnergyNeededToMove() && !sprite->GainEnergy()) {
+      game_state_.AdvanceSprite();
+      continue;
+    }
+    // Retrieve that sprite's next action and bind it.
     action.reset(sprite->GetAction(game_state_, ch, &has_input));
     if (action == nullptr) {
       // The sprite is the player and is waiting on input.
       break;
     }
+    sprite->ConsumeEnergy();
     action->Bind(sprite);
+    // Execute the action and advance the sprite index.
     action->Execute(&game_state_);
     game_state_.AdvanceSprite();
     changed = true; 

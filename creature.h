@@ -19,8 +19,9 @@ struct Creature {
   } attack;
 
   struct Stats {
-    int vision_radius;
     int max_health;
+    int speed;
+    int vision_radius;
   } stats;
 };
 

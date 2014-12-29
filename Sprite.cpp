@@ -12,6 +12,7 @@ namespace babel {
 namespace {
 
 static const int kFineness = 1 << 8;
+static const int kEnergyNeededToMove = 240;
 
 bool AreAdjacent(const Sprite& sprite, const Sprite& other) {
   const Point diff = sprite.square - other.square;
@@ -60,10 +61,24 @@ Sprite::Sprite(const Point& s, int t)
     : square(s), creature(kCreatures[t]), type(t) {
   max_health = creature.stats.max_health;
   cur_health = max_health;
+  energy = rand() % kEnergyNeededToMove;
+}
+
+bool Sprite::HasEnergyNeededToMove() const {
+  return energy >= kEnergyNeededToMove;
+}
+
+bool Sprite::GainEnergy() {
+  energy += creature.stats.speed;
+  return energy >= kEnergyNeededToMove;
+}
+
+void Sprite::ConsumeEnergy() {
+  energy -= kEnergyNeededToMove;
 }
 
 Action* Sprite::GetAction(
-    const GameState& game_state, char ch, bool* has_input) {
+    const GameState& game_state, char ch, bool* has_input) const {
   if (IsPlayer()) {
     if (!(*has_input)) {
       return nullptr;
@@ -82,7 +97,7 @@ bool Sprite::IsPlayer() const {
   return type == kPlayerType;
 }
 
-Action* Sprite::GetNPCAction(const GameState& game_state) {
+Action* Sprite::GetNPCAction(const GameState& game_state) const {
   if (AreAdjacent(*this, *game_state.player)) {
     return new AttackAction(game_state.player);
   } else {
@@ -90,7 +105,7 @@ Action* Sprite::GetNPCAction(const GameState& game_state) {
   }
 }
 
-Action* Sprite::GetPlayerAction(const GameState& game_state, char ch) {
+Action* Sprite::GetPlayerAction(const GameState& game_state, char ch) const {
   if (kShift.find(ch) == kShift.end()) {
     return nullptr;
   }
