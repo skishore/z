@@ -56,11 +56,12 @@ MoveAction::MoveAction(const Point& move) : move_(move) {}
 
 Action* MoveAction::Execute(GameState* game_state, bool* success) {
   Point square = sprite_->square + move_;
-  if (IsSquareFree(*game_state, square)) {
+  if (square == sprite_->square) {
+    *success = true;
+  } else if (IsSquareFree(*game_state, square)) {
     game_state->MoveSprite(move_, sprite_);
     *success = true;
-  } else if ((move_.x != 0 || move_.y != 0) &&
-             game_state->IsSquareOccupied(square)) {
+  } else if (game_state->IsSquareOccupied(square)) {
     return new AttackAction(game_state->SpriteAt(square));
   }
   return nullptr;
