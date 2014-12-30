@@ -2,6 +2,7 @@
 #define __BABEL_GAME_LOOP_H__
 
 namespace babel {
+namespace ui {
 
 class GameLoop {
  public:
@@ -19,6 +20,7 @@ class GameLoop {
   };
 };
 
+} // namespace ui
 } // namespace babel
 
 #endif  // __BABEL_GAME_LOOP_H__

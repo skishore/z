@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <map>
 
-#include "creature.h"
-#include "debug.h"
-#include "util.h"
-#include "GameState.h"
-#include "Sprite.h"
+#include "base/creature.h"
+#include "base/debug.h"
+#include "base/util.h"
+#include "engine/GameState.h"
+#include "engine/Sprite.h"
 
 using std::map;
 using std::max;
@@ -13,6 +13,7 @@ using std::string;
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
@@ -127,4 +128,5 @@ void GameState::RecomputePlayerVision() {
   }
 }
 
+}  // namespace engine
 }  // namespace babel

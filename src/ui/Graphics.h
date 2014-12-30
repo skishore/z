@@ -5,12 +5,13 @@
 #include <vector>
 #include <SDL2/SDL.h>
 
-#include "Image.h"
-#include "Point.h"
-#include "View.h"
-#include "TextRenderer.h"
+#include "base/Point.h"
+#include "engine/View.h"
+#include "ui/Image.h"
+#include "ui/TextRenderer.h"
 
 namespace babel {
+namespace ui {
 
 class Graphics {
  public:
@@ -18,7 +19,7 @@ class Graphics {
   ~Graphics();
 
   void Clear();
-  void Draw(const View& view);
+  void Draw(const engine::View& view);
   void Flip();
 
  private:
@@ -39,7 +40,7 @@ class Graphics {
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
   void DrawLog(const std::vector<std::string>& log);
-  void DrawStatus(const StatusView& status);
+  void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
 
   // These three SDL structures are for drawing to actual video memory.
@@ -55,6 +56,7 @@ class Graphics {
   std::unique_ptr<const Image> sprites_;
 };
 
+} // namespace ui 
 } // namespace babel
 
 #endif  // __BABEL_GRAPHICS_H__

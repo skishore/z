@@ -1,13 +1,14 @@
 #include <fstream>
 #include <iostream>
 
-#include "debug.h"
-#include "TileMap.h"
+#include "base/debug.h"
+#include "engine/TileMap.h"
 
 using std::string;
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 namespace {
 void CheckSkipToken(const string& expected, const string& actual) {
@@ -74,4 +75,5 @@ bool TileMap::IsSquareBlocked(const Point& square) const {
   return GetMapTile(square) > 3;
 }
 
+}  // namespace engine
 } // namespace babel

@@ -1,14 +1,15 @@
 #include <vector>
 
-#include "constants.h"
-#include "hindi_words.h"
-#include "Action.h"
-#include "Sprite.h"
+#include "base/constants.h"
+#include "base/hindi_words.h"
+#include "engine/Action.h"
+#include "engine/Sprite.h"
 
 using std::string;
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 namespace {
 
@@ -128,4 +129,5 @@ Action* Sprite::GetPlayerAction(const GameState& game_state, char ch) const {
   return nullptr;
 }
 
+}  // namespace engine
 }  // namespace babel

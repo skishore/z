@@ -1,15 +1,16 @@
 #include <string>
 
-#include "constants.h"
-#include "debug.h"
-#include "util.h"
-#include "Graphics.h"
-#include "SDL_prims.h"
+#include "base/constants.h"
+#include "base/debug.h"
+#include "base/util.h"
+#include "ui/Graphics.h"
+#include "ui/SDL_prims.h"
 
 using std::string;
 using std::vector;
 
 namespace babel {
+namespace ui {
 
 namespace {
 
@@ -71,7 +72,7 @@ void Graphics::Clear() {
   SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x00000000);
 }
 
-void Graphics::Draw(const View& view) {
+void Graphics::Draw(const engine::View& view) {
   // A collection of texts to draw. Layed out and drawn after all the tiles.
   vector<Point> positions;
   vector<string> texts;
@@ -79,7 +80,7 @@ void Graphics::Draw(const View& view) {
   // Fields needed to draw each cell.
   for (int x = 0; x < view.size; x++) {
     for (int y = 0; y < view.size; y++) {
-      const TileView& tile = view.tiles[x][y];
+      const engine::TileView& tile = view.tiles[x][y];
       if (tile.graphic >= 0) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
@@ -90,7 +91,7 @@ void Graphics::Draw(const View& view) {
   }
 
   SDL_Color color;
-  for (const SpriteView& sprite : view.sprites) {
+  for (const engine::SpriteView& sprite : view.sprites) {
     sprites_->Draw(kGridSize*sprite.square, sprite.graphic,
                    buffer_->bounds_, buffer_->surface_);
     if (!sprite.text.empty()) {
@@ -139,7 +140,7 @@ void Graphics::DrawLog(const vector<string>& log) {
   DrawDialogBox(log, true /* place_at_top */);
 }
 
-void Graphics::DrawStatus(const StatusView& status) {
+void Graphics::DrawStatus(const engine::StatusView& status) {
   vector<string> lines;
   lines.push_back(
       "Health: " + IntToString(status.cur_health) +
@@ -183,4 +184,5 @@ void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
   }
 }
 
+}  // namespace ui 
 }  // namespace babel

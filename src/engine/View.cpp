@@ -1,12 +1,13 @@
 #include <algorithm>
 
-#include "Sprite.h"
-#include "View.h"
+#include "engine/Sprite.h"
+#include "engine/View.h"
 
 using std::max;
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
@@ -43,4 +44,5 @@ View::View(int radius, const GameState& game_state)
   status.max_health = game_state.player->max_health;
 }
 
+}  // namespace engine 
 }  // namespace babel

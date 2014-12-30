@@ -1,12 +1,13 @@
 #include <algorithm>
 
-#include "Image.h"
+#include "ui/Image.h"
 
 using std::max;
 using std::min;
 using std::string;
 
 namespace babel {
+namespace ui {
 
 namespace {
 
@@ -110,4 +111,5 @@ bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,
   return true;
 }
 
+}  // namespace ui
 }  // namespace babel

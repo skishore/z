@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <map>
 
-#include "debug.h"
-#include "util.h"
-#include "Log.h"
+#include "base/debug.h"
+#include "base/util.h"
+#include "engine/Log.h"
 
 using std::map;
 using std::max;
@@ -11,6 +11,7 @@ using std::string;
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 namespace {
 static const int kMaxLogSize = 24;
@@ -62,4 +63,5 @@ vector<string> Log::GetLastLines(int n) const {
   return result;
 }
 
+}  // namespace engine
 }  // namespace babel

@@ -3,9 +3,10 @@
 
 #include <SDL2/SDL.h>
 
-#include "debug.h"
+#include "base/debug.h"
 
 namespace babel {
+namespace ui {
 
 class InputHandler {
  public:
@@ -14,6 +15,7 @@ class InputHandler {
   bool GetChar(char* ch);
 };
 
+} // namespace ui
 } // namespace babel
 
 #endif  // __BABEL_INPUT_HANDLER_H__

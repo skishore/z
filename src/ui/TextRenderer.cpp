@@ -7,9 +7,9 @@
 #include FT_GLYPH_H
 #include FT_OUTLINE_H
 
-#include "debug.h"
-#include "SDL_prims.h"
-#include "TextRenderer.h"
+#include "base/debug.h"
+#include "ui/SDL_prims.h"
+#include "ui/TextRenderer.h"
 
 using std::max;
 using std::min;
@@ -17,6 +17,7 @@ using std::pair;
 using std::string;
 
 namespace babel {
+namespace ui {
 
 using font::Font;
 
@@ -432,4 +433,5 @@ Font* TextRenderer::LoadFont(const string& font_name, int font_size) {
   return fonts_by_id_[id];
 }
 
+} // namespace ui
 } // namespace babel

@@ -1,6 +1,7 @@
-#include "InputHandler.h"
+#include "ui/InputHandler.h"
 
 namespace babel {
+namespace ui {
 
 bool InputHandler::GetChar(char* ch) {
   SDL_Event event;
@@ -25,4 +26,5 @@ bool InputHandler::GetChar(char* ch) {
   return false;
 }
 
+}  // namespace ui
 }  // namespace babel

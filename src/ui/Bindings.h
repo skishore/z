@@ -1,27 +1,29 @@
 #ifndef BABEL_BINDINGS_H__
 #define BABEL_BINDINGS_H__
 
-#include "Engine.h"
-#include "GameLoop.h"
-#include "Graphics.h"
-#include "InputHandler.h"
+#include "engine/Engine.h"
+#include "ui/GameLoop.h"
+#include "ui/Graphics.h"
+#include "ui/InputHandler.h"
 
 namespace babel {
+namespace ui {
 
 class Bindings : GameLoop::Updatable {
  public:
-  Bindings(Engine* engine);
+  Bindings(engine::Engine* engine);
   int Start();
   bool Update(double frame_rate) override;
 
  private:
   void Redraw();
 
-  Engine* engine_;
+  engine::Engine* engine_;
   Graphics graphics_;
   InputHandler input_;
 };
 
+}  // namespace ui
 }  // namespace babel
 
 #endif  // BABEL_BINDINGS_H__

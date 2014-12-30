@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace babel {
+namespace engine {
 
 class Log {
  public:
@@ -23,6 +24,7 @@ class Log {
   bool fresh_ = false;
 };
 
+}  // namespace engine 
 }  // namespace babel
 
 #endif  // BABEL_LOG_H__

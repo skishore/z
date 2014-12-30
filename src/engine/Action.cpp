@@ -1,14 +1,15 @@
 #include <algorithm>
 #include <memory>
 
-#include "Action.h"
-#include "GameState.h"
-#include "Sprite.h"
+#include "engine/Action.h"
+#include "engine/GameState.h"
+#include "engine/Sprite.h"
 
 using std::max;
 using std::string;
 
 namespace babel {
+namespace engine {
 
 namespace {
 
@@ -57,4 +58,5 @@ void MoveAction::Execute(GameState* game_state) {
   }
 }
 
+}  // namespace engine
 }  // namespace babel

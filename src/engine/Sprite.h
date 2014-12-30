@@ -4,11 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "creature.h"
-#include "GameState.h"
-#include "Point.h"
+#include "base/creature.h"
+#include "base/Point.h"
+#include "engine/GameState.h"
 
 namespace babel {
+namespace engine {
 
 class Action;
 
@@ -44,6 +45,7 @@ class Sprite {
   int energy;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_SPRITE_H__

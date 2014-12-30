@@ -3,10 +3,11 @@
 
 #include <vector>
 
-#include "Point.h"
-#include "TileMap.h"
+#include "base/Point.h"
+#include "engine/TileMap.h"
 
 namespace babel {
+namespace engine {
 
 class FieldOfVision {
  public:
@@ -28,6 +29,7 @@ class FieldOfVision {
   std::vector<std::vector<bool>> is_square_visible_;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_FIELD_OF_VISION_H__

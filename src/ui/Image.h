@@ -4,9 +4,10 @@
 #include <string>
 #include <SDL2/SDL.h>
 
-#include "Point.h"
+#include "base/Point.h"
 
 namespace babel {
+namespace ui {
 
 class Image {
  public:
@@ -26,6 +27,7 @@ class Image {
   mutable SDL_Surface* surface_;
 };
 
+} // namespace ui
 } // namespace babel
 
 #endif  // __BABEL_IMAGE_H__

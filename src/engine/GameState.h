@@ -14,12 +14,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "FieldOfVision.h"
-#include "Log.h"
-#include "Point.h"
-#include "TileMap.h"
+#include "base/Point.h"
+#include "engine/FieldOfVision.h"
+#include "engine/Log.h"
+#include "engine/TileMap.h"
 
 namespace babel {
+namespace engine {
 
 class Sprite;
 
@@ -53,6 +54,7 @@ class GameState {
   int sprite_index = 0;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_GAME_STATE_H__

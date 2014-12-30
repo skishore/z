@@ -1,11 +1,12 @@
 #ifndef BABEL_ENGINE_H__
 #define BABEL_ENGINE_H__
 
-#include "GameState.h"
-#include "Point.h"
-#include "Sprite.h"
+#include "base/Point.h"
+#include "engine/GameState.h"
+#include "engine/Sprite.h"
 
 namespace babel {
+namespace engine {
 
 class Engine {
  public:
@@ -21,6 +22,7 @@ class Engine {
   GameState game_state_;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_ENGINE_H__

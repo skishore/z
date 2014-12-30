@@ -5,9 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "Point.h"
+#include "base/Point.h"
 
 namespace babel {
+namespace engine {
 
 typedef unsigned char Tile;
 
@@ -38,6 +39,7 @@ class TileMap {
   std::vector<Room> rooms_;
 };
 
+} // namespace engine
 } // namespace babel
 
 #endif  // __BABEL_TILE_MAP_H__

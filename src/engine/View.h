@@ -7,6 +7,7 @@
 #include "GameState.h"
 
 namespace babel {
+namespace engine {
 
 struct TileView {
   // graphic will be -1 if the tile is unknown to the player.
@@ -38,6 +39,7 @@ class View {
   StatusView status;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_VIEW_H__

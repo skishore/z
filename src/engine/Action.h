@@ -1,9 +1,10 @@
 #ifndef BABEL_ACTION_H__
 #define BABEL_ACTION_H__
 
-#include "Point.h"
+#include "base/Point.h"
 
 namespace babel {
+namespace engine {
 
 class GameState;
 class Sprite;
@@ -35,6 +36,7 @@ class MoveAction : public Action {
   Point move_;
 };
 
+}  // namespace engine
 }  // namespace babel
 
 #endif  // BABEL_ACTION_H__

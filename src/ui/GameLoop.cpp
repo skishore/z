@@ -6,10 +6,11 @@
 #include <emscripten.h>
 #endif
 
-#include "debug.h"
-#include "GameLoop.h"
+#include "base/debug.h"
+#include "ui/GameLoop.h"
 
 namespace babel {
+namespace ui {
 
 namespace {
 
@@ -93,4 +94,5 @@ GameLoop::GameLoop(int frame_rate, GameLoop::Updatable* updatable) {
   #endif
 }
 
+}  // namespace ui
 }  // namespace babel

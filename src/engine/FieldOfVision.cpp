@@ -1,15 +1,15 @@
-#include "FieldOfVision.h"
-
 #include <iostream>
 
 #include "permissive-fov.cc"
 #include "permissive-fov-cpp.h"
 
-#include "debug.h"
+#include "base/debug.h"
+#include "engine/FieldOfVision.h"
 
 using std::vector;
 
 namespace babel {
+namespace engine {
 
 FieldOfVision::FieldOfVision(
     const TileMap& map, const Point& source, int bound)
@@ -45,4 +45,5 @@ void FieldOfVision::visit(int x, int y) {
   }
 }
 
+}  // namespace engine
 }  // namespace babel

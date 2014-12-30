@@ -8,10 +8,11 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include "constants.h"
-#include "Point.h"
+#include "base/constants.h"
+#include "base/Point.h"
 
 namespace babel {
+namespace ui {
 
 static const SDL_Color kBlack{0, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
@@ -44,6 +45,7 @@ class TextRenderer {
   std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
 };
 
+} // namespace ui
 } // namespace babel
 
 #endif  // __BABEL_TEXT_RENDERER_H__

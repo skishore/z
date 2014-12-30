@@ -1,20 +1,19 @@
-#include "Bindings.h"
-
 #include <memory>
 
-#include "constants.h"
-#include "debug.h"
-#include "Engine.h"
-#include "Point.h"
-#include "View.h"
+#include "base/constants.h"
+#include "base/debug.h"
+#include "base/Point.h"
+#include "engine/View.h"
+#include "ui/Bindings.h"
 
 namespace babel {
+namespace ui {
 
 namespace {
 static const int kFrameRate = 60;
 }
 
-Bindings::Bindings(Engine* engine)
+Bindings::Bindings(engine::Engine* engine)
     : engine_(engine), graphics_(Point(NCOLS, NROWS)) {
   ASSERT(engine_, "engine_ == nullptr");
 }
@@ -38,9 +37,10 @@ bool Bindings::Update(double frame_rate) {
 
 void Bindings::Redraw() {
   graphics_.Clear();
-  View view(kScreenRadius, engine_->GetGameState());
+  engine::View view(kScreenRadius, engine_->GetGameState());
   graphics_.Draw(view);
   graphics_.Flip();
 }
 
+}  // namespace ui
 }  // namespace babel

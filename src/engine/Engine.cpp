@@ -1,16 +1,17 @@
 #include <algorithm>
 #include <memory>
 
-#include "Action.h"
-#include "Engine.h"
-#include "FieldOfVision.h"
-#include "Sprite.h"
+#include "engine/Action.h"
+#include "engine/Engine.h"
+#include "engine/FieldOfVision.h"
+#include "engine/Sprite.h"
 
 using std::max;
 using std::string;
 using std::unique_ptr;
 
 namespace babel {
+namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
   game_state_.log.AddLine(
@@ -51,4 +52,5 @@ bool Engine::Update(bool has_input, char ch) {
   return changed;
 }
 
+}  // namespace engine
 }  // namespace babel
