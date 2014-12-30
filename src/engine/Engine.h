@@ -12,11 +12,12 @@ class Engine {
  public:
   Engine();
 
-  const GameState& GetGameState() const { return game_state_; }
+  // Runs a single update step. The player's input action may be null.
+  // If it is, this method will block the first time the player gets to take
+  // a turn; if not, it  will consume the action and block the second time.
+  bool Update(Action* input, bool* used_input);
 
-  // Returns true if the command was valid.
-  // If this method returns false, the view does not need to be redrawn.
-  bool Update(bool has_input, char ch);
+  const GameState& GetGameState() const { return game_state_; }
 
  private:
   GameState game_state_;

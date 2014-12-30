@@ -22,11 +22,9 @@ class Sprite {
   bool GainEnergy();
   void ConsumeEnergy();
 
-  // Runs the sprite's AI logic and returns an action to take.
-  // If this sprite is the player, it may consume the input character ch,
-  // in which case it will set has_input to false.
-  Action* GetAction(
-      const GameState& game_state, char ch, bool* has_input) const;
+  // Runs an NPC's AI logic and returns an action to take.
+  // This method will crash if called on the player.
+  Action* GetAction(const GameState& game_state) const;
 
   bool IsAlive() const;
   bool IsPlayer() const;
@@ -38,9 +36,6 @@ class Sprite {
   int max_health;
 
  private:
-  Action* GetNPCAction(const GameState& game_state) const;
-  Action* GetPlayerAction(const GameState& game_state, char ch) const;
-
   int type;
   int energy;
 };

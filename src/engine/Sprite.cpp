@@ -84,16 +84,13 @@ void Sprite::ConsumeEnergy() {
   energy -= kEnergyNeededToMove;
 }
 
-Action* Sprite::GetAction(
-    const GameState& game_state, char ch, bool* has_input) const {
-  if (IsPlayer()) {
-    if (!(*has_input)) {
-      return nullptr;
-    }
-    *has_input = false;
-    return GetPlayerAction(game_state, ch);
+Action* Sprite::GetAction(const GameState& game_state) const {
+  ASSERT(!IsPlayer(), "GetAction called for player!");
+  if (AreAdjacent(*this, *game_state.player)) {
+    return new AttackAction(game_state.player);
+  } else {
+    return new MoveAction(GetBestMove(*this, game_state));
   }
-  return GetNPCAction(game_state);
 }
 
 bool Sprite::IsAlive() const {
@@ -102,31 +99,6 @@ bool Sprite::IsAlive() const {
 
 bool Sprite::IsPlayer() const {
   return type == kPlayerType;
-}
-
-Action* Sprite::GetNPCAction(const GameState& game_state) const {
-  if (AreAdjacent(*this, *game_state.player)) {
-    return new AttackAction(game_state.player);
-  } else {
-    return new MoveAction(GetBestMove(*this, game_state));
-  }
-}
-
-Action* Sprite::GetPlayerAction(const GameState& game_state, char ch) const {
-  if (kShift.find(ch) == kShift.end()) {
-    return nullptr;
-  }
-  const Point& move = kShift.at(ch);
-  const Point& next = square + move;
-  const bool stay = move.x == 0 && move.y == 0;
-  if (stay || !game_state.map.IsSquareBlocked(next)) {
-    if (!stay && game_state.IsSquareOccupied(next)) {
-      return new AttackAction(game_state.SpriteAt(next));
-    } else {
-      return new MoveAction(move);
-    }
-  }
-  return nullptr;
 }
 
 }  // namespace engine

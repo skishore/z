@@ -19,9 +19,11 @@ Engine::Engine() : game_state_("world.dat") {
   game_state_.log.Coalesce();
 }
 
-bool Engine::Update(bool has_input, char ch) {
+bool Engine::Update(Action* input, bool* used_input) {
+  *used_input = false;
   bool changed = false;
   unique_ptr<Action> action;
+
   while (true) {
     if (!game_state_.player->IsAlive()) {
       break;
@@ -33,19 +35,29 @@ bool Engine::Update(bool has_input, char ch) {
       game_state_.AdvanceSprite();
       continue;
     }
-    // Retrieve that sprite's next action and bind it.
-    action.reset(sprite->GetAction(game_state_, ch, &has_input));
-    if (action == nullptr) {
-      // The sprite is the player and is waiting on input.
-      break;
+    // Retrieve that sprite's next action.
+    if (sprite->IsPlayer()) {
+      if (input == nullptr || *used_input) {
+        break;
+      }
+      action.reset(input);
+      *used_input = true;
+    } else {
+      action.reset(sprite->GetAction(game_state_));
     }
-    sprite->ConsumeEnergy();
-    action->Bind(sprite);
-    // Execute the action and advance the sprite index.
-    action->Execute(&game_state_);
-    game_state_.AdvanceSprite();
-    changed = true; 
+    // Bind and execute the action and advance the sprite index.
+    bool success = false;
+    while (action != nullptr) {
+      action->Bind(sprite);
+      action.reset(action->Execute(&game_state_, &success));
+    }
+    if (success || !sprite->IsPlayer()) {
+      sprite->ConsumeEnergy();
+      game_state_.AdvanceSprite();
+      changed = true; 
+    }
   }
+
   if (changed) {
     game_state_.log.Coalesce();
   }

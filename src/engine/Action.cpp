@@ -28,7 +28,7 @@ void Action::Bind(Sprite* sprite) {
 
 AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
-void AttackAction::Execute(GameState* game_state) {
+Action* AttackAction::Execute(GameState* game_state, bool* success) {
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
@@ -48,14 +48,22 @@ void AttackAction::Execute(GameState* game_state) {
   if (killed && !target_->IsPlayer()) {
     game_state->RemoveNPC(target_);
   }
+  *success = true;
+  return nullptr;
 }
 
 MoveAction::MoveAction(const Point& move) : move_(move) {}
 
-void MoveAction::Execute(GameState* game_state) {
-  if (IsSquareFree(*game_state, sprite_->square + move_)) {
+Action* MoveAction::Execute(GameState* game_state, bool* success) {
+  Point square = sprite_->square + move_;
+  if (IsSquareFree(*game_state, square)) {
     game_state->MoveSprite(move_, sprite_);
+    *success = true;
+  } else if ((move_.x != 0 || move_.y != 0) &&
+             game_state->IsSquareOccupied(square)) {
+    return new AttackAction(game_state->SpriteAt(square));
   }
+  return nullptr;
 }
 
 }  // namespace engine
