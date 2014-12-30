@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/TileMap.h"
 
 namespace babel {

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "base/creature.h"
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/GameState.h"
 
 namespace babel {

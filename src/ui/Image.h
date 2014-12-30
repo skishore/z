@@ -4,7 +4,7 @@
 #include <string>
 #include <SDL2/SDL.h>
 
-#include "base/Point.h"
+#include "base/point.h"
 
 namespace babel {
 namespace ui {

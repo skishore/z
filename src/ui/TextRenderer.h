@@ -9,7 +9,7 @@
 #include FT_FREETYPE_H
 
 #include "base/constants.h"
-#include "base/Point.h"
+#include "base/point.h"
 
 namespace babel {
 namespace ui {

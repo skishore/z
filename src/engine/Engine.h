@@ -1,7 +1,7 @@
 #ifndef BABEL_ENGINE_H__
 #define BABEL_ENGINE_H__
 
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
 

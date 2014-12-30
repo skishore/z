@@ -1,7 +1,7 @@
 #ifndef BABEL_ACTION_H__
 #define BABEL_ACTION_H__
 
-#include "base/Point.h"
+#include "base/point.h"
 
 namespace babel {
 namespace engine {

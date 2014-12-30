@@ -5,7 +5,7 @@
 #include <vector>
 #include <SDL2/SDL.h>
 
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/View.h"
 #include "ui/Image.h"
 #include "ui/TextRenderer.h"

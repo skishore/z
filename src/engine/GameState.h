@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Log.h"
 #include "engine/TileMap.h"

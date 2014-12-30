@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "base/Point.h"
+#include "base/point.h"
 
 namespace babel {
 namespace engine {
