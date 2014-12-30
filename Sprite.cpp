@@ -62,9 +62,11 @@ Sprite::Sprite(const Point& s, int t)
     : square(s), creature(kCreatures[t]), type(t) {
   max_health = creature.stats.max_health;
   cur_health = max_health;
-  energy = rand() % kEnergyNeededToMove;
-  if (!IsPlayer()) {
+  if (IsPlayer()) {
+    energy = kEnergyNeededToMove;
+  } else {
     text = kHindiWords[rand() % kHindiWords.size()];
+    energy = rand() % kEnergyNeededToMove;
   }
 }
 
