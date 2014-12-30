@@ -3,7 +3,7 @@
 
 #include "base/constants.h"
 #include "base/debug.h"
-#include "base/Point.h"
+#include "base/point.h"
 #include "engine/Action.h"
 #include "engine/View.h"
 #include "ui/Bindings.h"
