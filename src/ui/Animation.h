@@ -12,8 +12,12 @@
 namespace babel {
 namespace ui {
 
+class Tween;
+
 class Animation : public engine::EventHandler {
  public:
+  ~Animation();
+
   // EventHandler interface methods.
   void HandleAttack(const engine::Sprite& sprite,
                     const engine::Sprite& target) override;
@@ -28,12 +32,14 @@ class Animation : public engine::EventHandler {
 
  private:
   void Commit();
-  void DrawTweenFrame();
+  void Draw();
+  void Reset();
 
   Graphics graphics_;
   std::unique_ptr<engine::View> last_;
   std::unique_ptr<engine::View> next_;
-  int frame;
+
+  Tween* tween_ = nullptr;
 };
 
 } // namespace ui 

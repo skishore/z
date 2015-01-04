@@ -20,6 +20,8 @@ class Graphics {
 
   void Clear();
   void Draw(const engine::View& view);
+  void DrawTiles(const engine::View& view, const Point& offset);
+  void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
   void Flip();
 
  private:

@@ -76,37 +76,48 @@ void Graphics::Clear() {
 
 void Graphics::Draw(const engine::View& view) {
   // A collection of texts to draw. Layed out and drawn after all the tiles.
-  vector<Point> positions;
-  vector<string> texts;
-  vector<SDL_Color> colors;
-  // Fields needed to draw each cell.
+  //vector<Point> positions;
+  //vector<string> texts;
+  //vector<SDL_Color> colors;
+
+  //SDL_Color color;
+  Point offset;
+  DrawTiles(view, offset);
+  for (const auto& pair : view.sprites) {
+    const engine::SpriteView& sprite = pair.second;
+    DrawSprite(sprite, offset);
+  }
+    //if (!sprite.text.empty()) {
+    //  ConvertColor(sprite.color, &color);
+    //  positions.push_back(sprite.square);
+    //  texts.push_back(sprite.text);
+    //  colors.push_back(color);
+    //}
+  //}
+
+  //DrawTexts(positions, texts, colors);
+  //DrawLog(view.log);
+  //DrawStatus(view.status);
+}
+
+void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
   for (int x = 0; x < view.size; x++) {
     for (int y = 0; y < view.size; y++) {
       const engine::TileView& tile = view.tiles[x][y];
       if (tile.graphic >= 0) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
-        image->Draw(Point(kGridSize*x, kGridSize*y), tile.graphic,
-                    buffer_->bounds_, buffer_->surface_);
+        const Point point = kGridSize*Point(x, y) - offset;
+        image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
       }
     }
   }
+}
 
-  SDL_Color color;
-  for (const auto& pair : view.sprites) {
-    const engine::SpriteView& sprite = pair.second;
-    sprites_->Draw(kGridSize*sprite.square, sprite.graphic,
-                   buffer_->bounds_, buffer_->surface_);
-    if (!sprite.text.empty()) {
-      ConvertColor(sprite.color, &color);
-      positions.push_back(sprite.square);
-      texts.push_back(sprite.text);
-      colors.push_back(color);
-    }
-  }
-  DrawTexts(positions, texts, colors);
-  DrawLog(view.log);
-  DrawStatus(view.status);
+void Graphics::DrawSprite(
+    const engine::SpriteView& sprite, const Point& offset) {
+  const Point point = kGridSize*sprite.square + offset;
+  sprites_->Draw(point, sprite.graphic, buffer_->bounds_, buffer_->surface_);
 }
 
 void Graphics::Flip() {
