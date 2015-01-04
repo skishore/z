@@ -11,7 +11,7 @@ namespace ui {
 
 class Bindings : GameLoop::Updatable {
  public:
-  Bindings();
+  Bindings(bool verbose);
 
   int Start();
   bool Update(double frame_rate) override;
@@ -19,6 +19,7 @@ class Bindings : GameLoop::Updatable {
  private:
   void Redraw();
 
+  bool verbose_;
   Animation animation_;
   engine::Engine engine_;
   InputHandler input_;

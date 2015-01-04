@@ -6,6 +6,6 @@ int main(int argc, char** argv) {
   DEBUG("Using seed " << seed);
   srand(seed);
   babel::RegisterCrashHandlers(argv[0]);
-  babel::ui::Bindings bindings;
+  babel::ui::Bindings bindings(argc > 1);
   return bindings.Start();
 }

@@ -29,7 +29,8 @@ static const std::map<char,Point> kShift = {
 
 }
 
-Bindings::Bindings() : engine_(&animation_) {}
+Bindings::Bindings(bool verbose)
+    : verbose_(verbose), engine_(&animation_) {}
 
 int Bindings::Start() {
   Redraw();
@@ -38,6 +39,12 @@ int Bindings::Start() {
 }
 
 bool Bindings::Update(double frame_rate) {
+  static double last_frame_rate = 0;
+  if (frame_rate != last_frame_rate && verbose_) {
+    last_frame_rate = frame_rate;
+    DEBUG("FPS: " << frame_rate);
+  }
+
   if (!animation_.Update()) {
     return false;
   }
