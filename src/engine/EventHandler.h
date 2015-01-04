@@ -8,8 +8,8 @@ namespace engine {
 
 class EventHandler {
  public:
-  virtual void HandleMove(const Point& source, const Point& target);
   virtual void HandleAttack(const Point& source, const Point& target);
+  virtual void HandleMove(const Point& source, const Point& target);
 };
 
 }  // namespace engine

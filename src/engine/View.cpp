@@ -11,7 +11,7 @@ namespace engine {
 
 View::View(int radius, const GameState& game_state)
     : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
-  const Point offset = game_state.player->square - Point(radius, radius);
+  offset = game_state.player->square - Point(radius, radius);
   const int vision = game_state.player->creature.stats.vision_radius;
   for (int x = 0; x < size; x++) {
     for (int y = 0; y < size; y++) {

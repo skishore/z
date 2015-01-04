@@ -33,6 +33,7 @@ class View {
   View(int radius, const GameState& game_state);
 
   int size;
+  Point offset;
   std::vector<std::vector<TileView>> tiles;
   std::vector<SpriteView> sprites;
   std::vector<std::string> log;

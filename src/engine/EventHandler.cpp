@@ -4,12 +4,12 @@
 namespace babel {
 namespace engine {
 
-void EventHandler::HandleMove(const Point& source, const Point& target) {
-  DEBUG("Move from " << source << " to " << target);
-}
-
 void EventHandler::HandleAttack(const Point& source, const Point& target) {
   DEBUG("Attack from " << source << " to " << target);
+}
+
+void EventHandler::HandleMove(const Point& source, const Point& target) {
+  DEBUG("Move from " << source << " to " << target);
 }
 
 }  // namespace engine
