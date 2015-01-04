@@ -13,7 +13,8 @@ using std::unique_ptr;
 namespace babel {
 namespace engine {
 
-Engine::Engine() : game_state_("world.dat") {
+Engine::Engine(EventHandler* handler)
+    : game_state_("world.dat"), handler_(handler) {
   game_state_.log.AddLine(
       "Welcome to Babel! You are a neutral male human Padawan.");
   game_state_.log.Coalesce();
@@ -48,7 +49,7 @@ bool Engine::Update(Action* input, bool* used_input) {
     // Bind and execute the action and advance the sprite index.
     ActionResult result;
     while (action != nullptr) {
-      action->Bind(sprite, &game_state_, nullptr);
+      action->Bind(sprite, &game_state_, handler_);
       result = action->Execute();
       action.reset(result.alternate);
     }

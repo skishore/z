@@ -41,11 +41,13 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics(const Point& size) {
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_ShowCursor(SDL_DISABLE);
+Graphics::Graphics() {
+  const Point size(2*kScreenRadius + 1, 2*kScreenRadius + 1);
   const Point dimensions(kGridSize*size);
   const Point grid(kGridSize, kGridSize);
+
+  SDL_Init(SDL_INIT_VIDEO);
+  SDL_ShowCursor(SDL_DISABLE);
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());

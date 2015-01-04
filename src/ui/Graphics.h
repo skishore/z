@@ -15,7 +15,7 @@ namespace ui {
 
 class Graphics {
  public:
-  Graphics(const Point& size);
+  Graphics();
   ~Graphics();
 
   void Clear();

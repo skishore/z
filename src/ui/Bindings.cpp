@@ -29,10 +29,7 @@ static const std::map<char,Point> kShift = {
 
 }
 
-Bindings::Bindings(engine::Engine* engine)
-    : engine_(engine), graphics_(Point(NCOLS, NROWS)) {
-  ASSERT(engine_, "engine_ == nullptr");
-}
+Bindings::Bindings() : engine_(&animation_) {}
 
 int Bindings::Start() {
   Redraw();
@@ -41,6 +38,9 @@ int Bindings::Start() {
 }
 
 bool Bindings::Update(double frame_rate) {
+  if (!animation_.Update()) {
+    return false;
+  }
   std::unique_ptr<engine::Action> input;
   char ch;
   if (input_.GetChar(&ch)) {
@@ -51,7 +51,7 @@ bool Bindings::Update(double frame_rate) {
     }
   }
   bool used_input = false;
-  if (engine_->Update(input.get(), &used_input)) {
+  if (engine_.Update(input.get(), &used_input)) {
     Redraw();
   }
   if (used_input) {
@@ -61,10 +61,9 @@ bool Bindings::Update(double frame_rate) {
 }
 
 void Bindings::Redraw() {
-  graphics_.Clear();
-  engine::View view(kScreenRadius, engine_->GetGameState());
-  graphics_.Draw(view);
-  graphics_.Flip();
+  animation_.SetNextView(new engine::View(
+      kScreenRadius, engine_.GetGameState()));
+  animation_.Update();
 }
 
 }  // namespace ui

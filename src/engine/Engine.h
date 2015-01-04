@@ -2,6 +2,7 @@
 #define BABEL_ENGINE_H__
 
 #include "base/point.h"
+#include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
 
@@ -10,7 +11,7 @@ namespace engine {
 
 class Engine {
  public:
-  Engine();
+  Engine(EventHandler* handler);
 
   // Runs a single update step. The player's input action may be null.
   // If it is, this method will block the first time the player gets to take
@@ -21,6 +22,7 @@ class Engine {
 
  private:
   GameState game_state_;
+  EventHandler* handler_;
 };
 
 }  // namespace engine
