@@ -20,15 +20,18 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 
 }
 
-void Action::Bind(Sprite* sprite) {
+void Action::Bind(Sprite* sprite, GameState* game_state) {
   ASSERT(sprite_ == nullptr, "Bind was called twice!");
   ASSERT(sprite != nullptr, "sprite == nullptr");
+  ASSERT(game_state != nullptr, "game_state == nullptr");
   sprite_ = sprite;
+  game_state_ = game_state;
 }
 
 AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
-Action* AttackAction::Execute(GameState* game_state, bool* success) {
+ActionResult AttackAction::Execute() {
+  ActionResult result;
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
@@ -38,33 +41,34 @@ Action* AttackAction::Execute(GameState* game_state, bool* success) {
 
   if (sprite_->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
-    game_state->log.AddLine(
+    game_state_->log.AddLine(
         "You " + verb + " the " + target_->creature.appearance.name + ".");
   } else if (target_->IsPlayer()) {
     const string followup = (killed ? " You die..." : "");
-    game_state->log.AddLine(
+    game_state_->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
   }
   if (killed && !target_->IsPlayer()) {
-    game_state->RemoveNPC(target_);
+    game_state_->RemoveNPC(target_);
   }
-  *success = true;
-  return nullptr;
+  result.success = true;
+  return result;
 }
 
 MoveAction::MoveAction(const Point& move) : move_(move) {}
 
-Action* MoveAction::Execute(GameState* game_state, bool* success) {
+ActionResult MoveAction::Execute() {
+  ActionResult result;
   Point square = sprite_->square + move_;
   if (square == sprite_->square) {
-    *success = true;
-  } else if (IsSquareFree(*game_state, square)) {
-    game_state->MoveSprite(move_, sprite_);
-    *success = true;
-  } else if (game_state->IsSquareOccupied(square)) {
-    return new AttackAction(game_state->SpriteAt(square));
+    result.success = true;
+  } else if (IsSquareFree(*game_state_, square)) {
+    game_state_->MoveSprite(move_, sprite_);
+    result.success = true;
+  } else if (game_state_->IsSquareOccupied(square)) {
+    result.alternate = new AttackAction(game_state_->SpriteAt(square));
   }
-  return nullptr;
+  return result;
 }
 
 }  // namespace engine

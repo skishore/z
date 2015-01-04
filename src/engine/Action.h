@@ -6,27 +6,29 @@
 namespace babel {
 namespace engine {
 
+class Action;
 class GameState;
 class Sprite;
 
+struct ActionResult {
+  bool success = false;
+  Action* alternate = nullptr;
+};
+
 class Action {
  public:
-  void Bind(Sprite* sprite);
-
-  // When an action is executed, it may set success = true, in which case the
-  // sprite actually used its turn. It may also return an alternate action.
-  // For example, if one sprite tries moving onto another sprite's square, the
-  // move will not succeed, but it will return an attack as an alternate.
-  virtual Action* Execute(GameState* game_state, bool* success) = 0;
+  void Bind(Sprite* sprite, GameState* game_state);
+  virtual ActionResult Execute() = 0;
 
  protected:
   Sprite* sprite_ = nullptr;
+  GameState* game_state_ = nullptr;
 };
 
 class AttackAction : public Action {
  public:
   AttackAction(Sprite* target);
-  Action* Execute(GameState* game_state, bool* success) override;
+  ActionResult Execute() override;
 
  private:
   Sprite* target_;
@@ -35,7 +37,7 @@ class AttackAction : public Action {
 class MoveAction : public Action {
  public:
   MoveAction(const Point& move);
-  Action* Execute(GameState* game_state, bool* success) override;
+  ActionResult Execute() override;
 
  private:
   Point move_;

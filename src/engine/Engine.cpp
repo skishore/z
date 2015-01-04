@@ -46,12 +46,13 @@ bool Engine::Update(Action* input, bool* used_input) {
       action.reset(sprite->GetAction(game_state_));
     }
     // Bind and execute the action and advance the sprite index.
-    bool success = false;
+    ActionResult result;
     while (action != nullptr) {
-      action->Bind(sprite);
-      action.reset(action->Execute(&game_state_, &success));
+      action->Bind(sprite, &game_state_);
+      result = action->Execute();
+      action.reset(result.alternate);
     }
-    if (success || !sprite->IsPlayer()) {
+    if (result.success || !sprite->IsPlayer()) {
       sprite->ConsumeEnergy();
       game_state_.AdvanceSprite();
       changed = true; 
