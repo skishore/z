@@ -15,6 +15,8 @@ namespace {
 
 static const int kFineness = 1 << 8;
 static const int kEnergyNeededToMove = 240;
+// Global counter used to assign sprites unique ids.
+static sid gIdCounter;
 
 bool AreAdjacent(const Sprite& sprite, const Sprite& other) {
   const Point diff = sprite.square - other.square;
@@ -60,7 +62,8 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
 }  // namespace
 
 Sprite::Sprite(const Point& s, int t)
-    : square(s), creature(kCreatures[t]), type(t) {
+    : square(s), creature(kCreatures[t]), id(gIdCounter), type(t) {
+  gIdCounter += 1;
   max_health = creature.stats.max_health;
   cur_health = max_health;
   if (IsPlayer()) {

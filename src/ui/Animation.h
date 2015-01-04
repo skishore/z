@@ -5,6 +5,7 @@
 
 #include "base/point.h"
 #include "engine/EventHandler.h"
+#include "engine/Sprite.h"
 #include "engine/View.h"
 #include "ui/Graphics.h"
 
@@ -14,8 +15,10 @@ namespace ui {
 class Animation : public engine::EventHandler {
  public:
   // EventHandler interface methods.
-  void HandleAttack(const Point& source, const Point& target) override;
-  void HandleMove(const Point& source, const Point& target) override;
+  void HandleAttack(const engine::Sprite& sprite,
+                    const engine::Sprite& target) override;
+  void HandleMove(const engine::Sprite& sprite,
+                  const Point& move) override;
 
   // This class takes ownership of the new view.
   void SetNextView(engine::View* view);
@@ -24,9 +27,13 @@ class Animation : public engine::EventHandler {
   bool Update();
 
  private:
+  void Commit();
+  void DrawTweenFrame();
+
   Graphics graphics_;
   std::unique_ptr<engine::View> last_;
   std::unique_ptr<engine::View> next_;
+  int frame;
 };
 
 } // namespace ui 

@@ -1,6 +1,5 @@
 #include <algorithm>
 
-#include "engine/Sprite.h"
 #include "engine/View.h"
 
 using std::max;
@@ -33,8 +32,8 @@ View::View(int radius, const GameState& game_state)
     if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
-      sprites.push_back(SpriteView{
-          appearance.graphic, appearance.color, square, sprite->text});
+      sprites[sprite->Id()] = SpriteView{
+            appearance.graphic, appearance.color, square, sprite->text};
     }
   }
   if (game_state.log.IsFresh()) {

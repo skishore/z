@@ -93,7 +93,8 @@ void Graphics::Draw(const engine::View& view) {
   }
 
   SDL_Color color;
-  for (const engine::SpriteView& sprite : view.sprites) {
+  for (const auto& pair : view.sprites) {
+    const engine::SpriteView& sprite = pair.second;
     sprites_->Draw(kGridSize*sprite.square, sprite.graphic,
                    buffer_->bounds_, buffer_->surface_);
     if (!sprite.text.empty()) {

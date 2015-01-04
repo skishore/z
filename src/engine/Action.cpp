@@ -35,6 +35,10 @@ AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
 ActionResult AttackAction::Execute() {
   ActionResult result;
+  if (handler_ != nullptr) {
+    handler_->HandleAttack(*sprite_, *target_);
+  }
+
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
@@ -50,10 +54,6 @@ ActionResult AttackAction::Execute() {
     const string followup = (killed ? " You die..." : "");
     game_state_->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
-  }
-
-  if (handler_ != nullptr) {
-    handler_->HandleAttack(sprite_->square, target_->square);
   }
   if (killed && !target_->IsPlayer()) {
     game_state_->RemoveNPC(target_);
@@ -71,7 +71,7 @@ ActionResult MoveAction::Execute() {
     result.success = true;
   } else if (IsSquareFree(*game_state_, square)) {
     if (handler_ != nullptr) {
-      handler_->HandleMove(sprite_->square, square);
+      handler_->HandleMove(*sprite_, square);
     }
     game_state_->MoveSprite(move_, sprite_);
     result.success = true;

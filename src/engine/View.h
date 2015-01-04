@@ -1,10 +1,12 @@
 #ifndef BABEL_VIEW_H__
 #define BABEL_VIEW_H__
 
+#include <map>
 #include <string>
 #include <vector>
 
-#include "GameState.h"
+#include "engine/GameState.h"
+#include "engine/Sprite.h"
 
 namespace babel {
 namespace engine {
@@ -35,7 +37,7 @@ class View {
   int size;
   Point offset;
   std::vector<std::vector<TileView>> tiles;
-  std::vector<SpriteView> sprites;
+  std::map<sid,SpriteView> sprites;
   std::vector<std::string> log;
   StatusView status;
 };

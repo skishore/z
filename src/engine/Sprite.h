@@ -12,6 +12,7 @@ namespace babel {
 namespace engine {
 
 class Action;
+typedef uint32_t sid;
 
 class Sprite {
  public:
@@ -26,6 +27,7 @@ class Sprite {
   // This method will crash if called on the player.
   Action* GetAction(const GameState& game_state) const;
 
+  sid Id() const { return id; };
   bool IsAlive() const;
   bool IsPlayer() const;
 
@@ -36,6 +38,7 @@ class Sprite {
   int max_health;
 
  private:
+  sid id;
   int type;
   int energy;
 };
