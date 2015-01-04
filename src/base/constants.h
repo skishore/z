@@ -5,7 +5,7 @@
 
 namespace babel {
 
-static const int kScreenRadius = 11;
+static const int kScreenRadius = 9;
 
 enum Direction {
   UP = 0,

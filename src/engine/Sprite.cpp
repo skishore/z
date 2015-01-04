@@ -31,6 +31,8 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
        game_state.IsSquareOccupied(square))) {
     return INT_MIN;
   }
+  // Move randomly while we're working on animations.
+  return 0;
   // Move toward the player if they are visible. Otherwise, move randomly.
   const int radius = sprite.creature.stats.vision_radius;
   if (game_state.player_vision->IsSquareVisible(sprite.square, radius)) {
@@ -89,7 +91,7 @@ void Sprite::ConsumeEnergy() {
 
 Action* Sprite::GetAction(const GameState& game_state) const {
   ASSERT(!IsPlayer(), "GetAction called for player!");
-  if (AreAdjacent(*this, *game_state.player)) {
+  if (AreAdjacent(*this, *game_state.player) && false) {
     return new AttackAction(game_state.player);
   } else {
     return new MoveAction(GetBestMove(*this, game_state));

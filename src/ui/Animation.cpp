@@ -13,7 +13,7 @@ namespace babel {
 namespace ui {
 
 namespace {
-static const int kGridSize = 16;
+static const int kGridSize = 32;
 static const int kTweenFrames = 3;
 }  // namespace
 

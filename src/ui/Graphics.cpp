@@ -19,6 +19,9 @@ static const int kBitDepth = 32;
 static const int kGridSize = 32;
 static const int kTextSize = 0.6*kGridSize;
 
+// The number of squares around the edge that are NOT drawn.
+static const Point kPadding(1, 1);
+
 inline void ConvertColor(const uint32_t color, SDL_Color* result) {
   result->r = (color >> 16) & 0xff;
   result->g = (color >> 8) & 0xff;
@@ -42,7 +45,8 @@ Graphics::DrawingSurface::~DrawingSurface() {
 }
 
 Graphics::Graphics() {
-  const Point size(2*kScreenRadius + 1, 2*kScreenRadius + 1);
+  const int side = 2*(kScreenRadius - kPadding.x) + 1;
+  const Point size(side, side);
   const Point dimensions(kGridSize*size);
   const Point grid(kGridSize, kGridSize);
 
@@ -107,7 +111,7 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
       if (tile.graphic >= 0) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
-        const Point point = kGridSize*Point(x, y) - offset;
+        const Point point = kGridSize*(Point(x, y) - kPadding) - offset;
         image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
       }
     }
@@ -116,7 +120,7 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
 
 void Graphics::DrawSprite(
     const engine::SpriteView& sprite, const Point& offset) {
-  const Point point = kGridSize*sprite.square + offset;
+  const Point point = kGridSize*(sprite.square - kPadding) + offset;
   sprites_->Draw(point, sprite.graphic, buffer_->bounds_, buffer_->surface_);
 }
 

@@ -10,7 +10,7 @@ const std::vector<Creature> kCreatures = {
   Creature{
     Appearance{"human", 0, 0x0060ff60},
     Attack{1, 6},
-    Stats{12, 60, 8}},
+    Stats{12, 60, 7}},
   Creature{
     Appearance{"grid bug", 1, 0x00ff6060},
     Attack{1, 2},
