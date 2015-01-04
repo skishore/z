@@ -48,7 +48,7 @@ bool Engine::Update(Action* input, bool* used_input) {
     // Bind and execute the action and advance the sprite index.
     ActionResult result;
     while (action != nullptr) {
-      action->Bind(sprite, &game_state_);
+      action->Bind(sprite, &game_state_, nullptr);
       result = action->Execute();
       action.reset(result.alternate);
     }

@@ -7,6 +7,7 @@ namespace babel {
 namespace engine {
 
 class Action;
+class EventHandler;
 class GameState;
 class Sprite;
 
@@ -17,12 +18,14 @@ struct ActionResult {
 
 class Action {
  public:
-  void Bind(Sprite* sprite, GameState* game_state);
+  // Sprite and GameState must not be null. The event handler may be null.
+  void Bind(Sprite* sprite, GameState* game_state, EventHandler* handler);
   virtual ActionResult Execute() = 0;
 
  protected:
   Sprite* sprite_ = nullptr;
   GameState* game_state_ = nullptr;
+  EventHandler* handler_ = nullptr;
 };
 
 class AttackAction : public Action {

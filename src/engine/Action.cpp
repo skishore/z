@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "engine/Action.h"
+#include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
 
@@ -20,12 +21,14 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 
 }
 
-void Action::Bind(Sprite* sprite, GameState* game_state) {
+void Action::Bind(
+    Sprite* sprite, GameState* game_state, EventHandler* handler) {
   ASSERT(sprite_ == nullptr, "Bind was called twice!");
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(game_state != nullptr, "game_state == nullptr");
   sprite_ = sprite;
   game_state_ = game_state;
+  handler_ = handler;
 }
 
 AttackAction::AttackAction(Sprite* target) : target_(target) {}
@@ -48,6 +51,10 @@ ActionResult AttackAction::Execute() {
     game_state_->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
   }
+
+  if (handler_ != nullptr) {
+    handler_->HandleAttack(sprite_->square, target_->square);
+  }
   if (killed && !target_->IsPlayer()) {
     game_state_->RemoveNPC(target_);
   }
@@ -63,6 +70,9 @@ ActionResult MoveAction::Execute() {
   if (square == sprite_->square) {
     result.success = true;
   } else if (IsSquareFree(*game_state_, square)) {
+    if (handler_ != nullptr) {
+      handler_->HandleMove(sprite_->square, square);
+    }
     game_state_->MoveSprite(move_, sprite_);
     result.success = true;
   } else if (game_state_->IsSquareOccupied(square)) {
