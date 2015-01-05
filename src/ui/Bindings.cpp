@@ -30,7 +30,9 @@ static const std::map<char,Point> kShift = {
 }
 
 Bindings::Bindings(bool verbose)
-    : verbose_(verbose), engine_(&animation_) {}
+    : verbose_(verbose), animation_(engine_.GetGameState()) {
+  engine_.AddEventHandler(&animation_);
+}
 
 int Bindings::Start() {
   Redraw();

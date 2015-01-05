@@ -14,7 +14,7 @@ namespace ui {
 
 namespace {
 static const int kGridSize = 32;
-static const int kTweenFrames = 3;
+static const int kTweenFrames = 4;
 }  // namespace
 
 class Event {
@@ -81,17 +81,14 @@ class MoveEvent : public Event {
   Point move_;
 };
 
+Animation::Animation(const engine::GameState& game_state)
+    : game_state_(game_state) {}
+
 Animation::~Animation() {
   if (tween_ != nullptr) {
     delete tween_;
   }
 }
-
-void Animation::HandleAttack(
-    const engine::Sprite& source, const engine::Sprite& target) {}
-
-void Animation::HandleMove(
-    const engine::Sprite& sprite, const Point& square) {}
 
 void Animation::SetNextView(engine::View* view) {
   ASSERT(next_ == nullptr, "SetNextView called with an animation running!");

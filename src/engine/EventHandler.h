@@ -9,9 +9,8 @@ namespace engine {
 
 class EventHandler {
  public:
-  // All event notifications occur right before the actual event.
-  virtual void HandleAttack(const Sprite& sprite, const Sprite& target) = 0;
-  virtual void HandleMove(const Sprite& sprite, const Point& square) = 0;
+  // If the target is killed, AfterAttack is called before it is removed.
+  virtual void AfterAttack(const Sprite& sprite, const Sprite& target) {};
 };
 
 }  // namespace engine

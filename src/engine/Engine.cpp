@@ -13,11 +13,15 @@ using std::unique_ptr;
 namespace babel {
 namespace engine {
 
-Engine::Engine(EventHandler* handler)
-    : game_state_("world.dat"), handler_(handler) {
+Engine::Engine() : game_state_("world.dat") {
   game_state_.log.AddLine(
       "Welcome to Babel! You are a neutral male human Padawan.");
   game_state_.log.Coalesce();
+}
+
+void Engine::AddEventHandler(EventHandler* handler) {
+  ASSERT(handler != nullptr, "Added null EventHandler!");
+  handlers_.push_back(handler);
 }
 
 bool Engine::Update(Action* input, bool* used_input) {
@@ -49,7 +53,7 @@ bool Engine::Update(Action* input, bool* used_input) {
     // Bind and execute the action and advance the sprite index.
     ActionResult result;
     while (action != nullptr) {
-      action->Bind(sprite, &game_state_, handler_);
+      action->Bind(sprite, &game_state_, &handlers_);
       result = action->Execute();
       action.reset(result.alternate);
     }

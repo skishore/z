@@ -8,6 +8,7 @@
 
 using std::max;
 using std::string;
+using std::vector;
 
 namespace babel {
 namespace engine {
@@ -21,24 +22,21 @@ bool IsSquareFree(const GameState& game_state, const Point& square) {
 
 }
 
-void Action::Bind(
-    Sprite* sprite, GameState* game_state, EventHandler* handler) {
+void Action::Bind(Sprite* sprite, GameState* game_state,
+                  vector<EventHandler*>* handlers) {
   ASSERT(sprite_ == nullptr, "Bind was called twice!");
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(game_state != nullptr, "game_state == nullptr");
+  ASSERT(handlers != nullptr, "handlers == nullptr");
   sprite_ = sprite;
   game_state_ = game_state;
-  handler_ = handler;
+  handlers_ = handlers;
 }
 
 AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
 ActionResult AttackAction::Execute() {
   ActionResult result;
-  if (handler_ != nullptr) {
-    handler_->HandleAttack(*sprite_, *target_);
-  }
-
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
@@ -55,6 +53,9 @@ ActionResult AttackAction::Execute() {
     game_state_->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
   }
+  for (EventHandler* handler : *handlers_) {
+    handler->AfterAttack(*sprite_, *target_);
+  }
   if (killed && !target_->IsPlayer()) {
     game_state_->RemoveNPC(target_);
   }
@@ -70,9 +71,6 @@ ActionResult MoveAction::Execute() {
   if (square == sprite_->square) {
     result.success = true;
   } else if (IsSquareFree(*game_state_, square)) {
-    if (handler_ != nullptr) {
-      handler_->HandleMove(*sprite_, square);
-    }
     game_state_->MoveSprite(move_, sprite_);
     result.success = true;
   } else if (game_state_->IsSquareOccupied(square)) {

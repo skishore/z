@@ -1,6 +1,8 @@
 #ifndef BABEL_ENGINE_H__
 #define BABEL_ENGINE_H__
 
+#include <vector>
+
 #include "base/point.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
@@ -11,7 +13,9 @@ namespace engine {
 
 class Engine {
  public:
-  Engine(EventHandler* handler);
+  Engine();
+
+  void AddEventHandler(EventHandler* handler);
 
   // Runs a single update step. The player's input action may be null.
   // If it is, this method will block the first time the player gets to take
@@ -22,7 +26,7 @@ class Engine {
 
  private:
   GameState game_state_;
-  EventHandler* handler_;
+  std::vector<EventHandler*> handlers_;
 };
 
 }  // namespace engine

@@ -1,6 +1,8 @@
 #ifndef BABEL_ACTION_H__
 #define BABEL_ACTION_H__
 
+#include <vector>
+
 #include "base/point.h"
 
 namespace babel {
@@ -18,14 +20,15 @@ struct ActionResult {
 
 class Action {
  public:
-  // Sprite and GameState must not be null. The event handler may be null.
-  void Bind(Sprite* sprite, GameState* game_state, EventHandler* handler);
+  // None of the input arguments may be null.
+  void Bind(Sprite* sprite, GameState* game_state,
+            std::vector<EventHandler*>* handlers);
   virtual ActionResult Execute() = 0;
 
  protected:
   Sprite* sprite_ = nullptr;
   GameState* game_state_ = nullptr;
-  EventHandler* handler_ = nullptr;
+  std::vector<EventHandler*>* handlers_ = nullptr;
 };
 
 class AttackAction : public Action {

@@ -16,13 +16,8 @@ class Tween;
 
 class Animation : public engine::EventHandler {
  public:
+  Animation(const engine::GameState& game_state);
   ~Animation();
-
-  // EventHandler interface methods.
-  void HandleAttack(const engine::Sprite& sprite,
-                    const engine::Sprite& target) override;
-  void HandleMove(const engine::Sprite& sprite,
-                  const Point& move) override;
 
   // This class takes ownership of the new view.
   void SetNextView(engine::View* view);
@@ -38,6 +33,7 @@ class Animation : public engine::EventHandler {
   Graphics graphics_;
   std::unique_ptr<engine::View> last_;
   std::unique_ptr<engine::View> next_;
+  const engine::GameState& game_state_;
 
   Tween* tween_ = nullptr;
 };
