@@ -3,21 +3,17 @@
 
 #include <memory>
 
-#include "base/point.h"
 #include "engine/EventHandler.h"
-#include "engine/Sprite.h"
 #include "engine/View.h"
 #include "ui/Graphics.h"
+#include "ui/Tween.h"
 
 namespace babel {
 namespace ui {
 
-class Tween;
-
 class Animation : public engine::EventHandler {
  public:
   Animation(const engine::GameState& game_state);
-  ~Animation();
 
   // This class takes ownership of the new view.
   void SetNextView(engine::View* view);
@@ -27,15 +23,13 @@ class Animation : public engine::EventHandler {
 
  private:
   void Commit();
-  void Draw();
-  void Reset();
+
+  const engine::GameState& game_state_;
 
   Graphics graphics_;
   std::unique_ptr<engine::View> last_;
   std::unique_ptr<engine::View> next_;
-  const engine::GameState& game_state_;
-
-  Tween* tween_ = nullptr;
+  std::unique_ptr<Tween> tween_;
 };
 
 } // namespace ui 
