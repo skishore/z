@@ -15,30 +15,33 @@ namespace ui {
 Animation::Animation(const engine::GameState& game_state)
     : game_state_(game_state) {}
 
-void Animation::SetNextView(engine::View* view) {
-  ASSERT(next_ == nullptr, "SetNextView called with an animation running!");
-  next_.reset(view);
+void Animation::Checkpoint() {
+  ASSERT(next_ == nullptr, "Checkpoint called while animating!");
+  next_.reset(new engine::View(kScreenRadius, game_state_));
   if (last_ != nullptr) {
     tween_.reset(new Tween(*last_, *next_));
+  }
+  Update();
+}
+
+void Animation::Draw() {
+  if (tween_ != nullptr) {
+    tween_->Draw(&graphics_);
+  } else if (next_ != nullptr) {
+    last_.reset(next_.release());
+    graphics_.Clear();
+    graphics_.Draw(*last_);
+    graphics_.Flip();
   }
 }
 
 bool Animation::Update() {
   if (next_ != nullptr) {
-    if (tween_ != nullptr && !tween_->Update()) {
-      tween_->Draw(&graphics_);
-    } else {
-      Commit();
+    if (tween_ != nullptr && tween_->Update()) {
+      tween_.reset(nullptr);
     }
   }
   return next_ == nullptr;
-}
-
-void Animation::Commit() {
-  last_.reset(next_.release());
-  graphics_.Clear();
-  graphics_.Draw(*last_);
-  graphics_.Flip();
 }
 
 } // namespace ui 

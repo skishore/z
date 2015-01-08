@@ -15,10 +15,10 @@ class Animation : public engine::EventHandler {
  public:
   Animation(const engine::GameState& game_state);
 
-  // This class takes ownership of the new view.
-  void SetNextView(engine::View* view);
+  void Checkpoint();
+  void Draw();
 
-  // Returns true if the animation is complete.
+  // Returns true if the current animation is complete.
   bool Update();
 
  private:

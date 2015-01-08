@@ -48,6 +48,7 @@ bool Bindings::Update(double frame_rate) {
   }
 
   if (!animation_.Update()) {
+    animation_.Draw();
     return false;
   }
   std::unique_ptr<engine::Action> input;
@@ -70,9 +71,8 @@ bool Bindings::Update(double frame_rate) {
 }
 
 void Bindings::Redraw() {
-  animation_.SetNextView(new engine::View(
-      kScreenRadius, engine_.GetGameState()));
-  animation_.Update();
+  animation_.Checkpoint();
+  animation_.Draw();
 }
 
 }  // namespace ui
