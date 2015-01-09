@@ -18,7 +18,7 @@ class AnimationComponent {
 
   // Returns true if this AnimationComponent is complete.
   virtual bool Update() = 0;
-  virtual void Draw(const engine::View& view, Graphics* graphics) = 0;
+  virtual void Draw(const engine::View& view, Graphics* graphics) const = 0;
 };
 
 namespace {
@@ -29,8 +29,8 @@ class CheckpointComponent : public AnimationComponent {
     return true;
   };
 
-  void Draw(const engine::View& view, Graphics* graphics) override {
-    graphics->Draw(view);
+  void Draw(const engine::View& view, Graphics* graphics) const override {
+    ASSERT(false, "CheckpointComponent's Draw should not be called!");
   };
 };
 
@@ -47,12 +47,12 @@ void Animation::Checkpoint() {
   Update();
 }
 
-void Animation::Draw() {
+void Animation::Draw(Graphics* graphics) const {
   if (tween_ != nullptr) {
-    tween_->Draw(&graphics_);
+    tween_->Draw(graphics);
   } else if (!steps_.empty()) {
     const AnimationStep& step = steps_[0];
-    step.component->Draw(*step.view, &graphics_);
+    step.component->Draw(*step.view, graphics);
   } else {
     ASSERT(false, "Draw called when no animation was running!");
   }

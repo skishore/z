@@ -26,7 +26,7 @@ class Tween {
 
   // Update returns true if the tween is complete.
   bool Update();
-  void Draw(Graphics* graphics);
+  void Draw(Graphics* graphics) const;
 
  // Methods below this point are private.
  // TODO(skishore): Figure out a way to encapsulate them.

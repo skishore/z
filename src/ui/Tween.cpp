@@ -75,7 +75,7 @@ bool Tween::Update() {
   return false;
 }
 
-void Tween::Draw(Graphics* graphics) {
+void Tween::Draw(Graphics* graphics) const {
   ASSERT(frame <= kTweenFrames, "Draw called after tween was finished!");
   graphics->Clear();
   if (frame < kTweenFrames && !events.empty()) {

@@ -4,6 +4,7 @@
 #include "engine/Engine.h"
 #include "ui/Animation.h"
 #include "ui/GameLoop.h"
+#include "ui/Graphics.h"
 #include "ui/InputHandler.h"
 
 namespace babel {
@@ -22,6 +23,7 @@ class Bindings : GameLoop::Updatable {
   bool verbose_;
   engine::Engine engine_;
   Animation animation_;
+  Graphics graphics_;
   InputHandler input_;
 };
 

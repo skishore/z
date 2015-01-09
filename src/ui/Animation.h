@@ -24,7 +24,7 @@ class Animation : public engine::EventHandler {
   Animation(const engine::GameState& game_state);
 
   void Checkpoint();
-  void Draw();
+  void Draw(Graphics* graphics_) const;
 
   // Returns true if the current animation is complete.
   bool Update();
@@ -35,7 +35,6 @@ class Animation : public engine::EventHandler {
 
   const engine::GameState& game_state_;
 
-  Graphics graphics_;
   std::unique_ptr<engine::View> last_;
   std::unique_ptr<Tween> tween_;
   std::deque<AnimationStep> steps_;

@@ -48,7 +48,7 @@ bool Bindings::Update(double frame_rate) {
   }
 
   if (!animation_.Update()) {
-    animation_.Draw();
+    animation_.Draw(&graphics_);
     return false;
   }
   std::unique_ptr<engine::Action> input;
@@ -72,7 +72,7 @@ bool Bindings::Update(double frame_rate) {
 
 void Bindings::Redraw() {
   animation_.Checkpoint();
-  animation_.Draw();
+  animation_.Draw(&graphics_);
 }
 
 }  // namespace ui
