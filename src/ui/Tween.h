@@ -24,7 +24,7 @@ class Tween {
  public:
   Tween(const engine::View& start, const engine::View& end);
 
-  // Update returns true if the tween is complete.
+  // Update returns false if the tween is complete.
   bool Update();
   void Draw(Graphics* graphics) const;
 

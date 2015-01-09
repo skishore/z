@@ -16,7 +16,7 @@ class AnimationComponent {
  public:
   virtual ~AnimationComponent() {};
 
-  // Returns true if this AnimationComponent is complete.
+  // Returns false if this AnimationComponent is complete.
   virtual bool Update() = 0;
   virtual void Draw(const engine::View& view, Graphics* graphics) const = 0;
 };
@@ -26,7 +26,7 @@ namespace {
 class CheckpointComponent : public AnimationComponent {
  public:
   bool Update() override {
-    return true;
+    return false;
   };
 
   void Draw(const engine::View& view, Graphics* graphics) const override {
@@ -60,16 +60,16 @@ void Animation::Draw(Graphics* graphics) const {
 
 bool Animation::Update() {
   while (!steps_.empty()) {
-    if (tween_ != nullptr && !tween_->Update()) {
-      return false;
+    if (tween_ != nullptr && tween_->Update()) {
+      return true;
     }
     tween_.reset(nullptr);
-    if (!steps_[0].component->Update()) {
-      return false;
+    if (steps_[0].component->Update()) {
+      return true;
     }
     PopStep();
   }
-  return steps_.empty();
+  return !steps_.empty();
 }
 
 void Animation::PushStep(const AnimationStep& step) {

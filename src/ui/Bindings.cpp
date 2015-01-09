@@ -47,15 +47,15 @@ bool Bindings::Update(double frame_rate) {
     DEBUG("FPS: " << frame_rate);
   }
 
-  if (!animation_.Update()) {
+  if (animation_.Update()) {
     animation_.Draw(&graphics_);
-    return false;
+    return true;
   }
   std::unique_ptr<engine::Action> input;
   char ch;
   if (input_.GetChar(&ch)) {
     if (ch == 0x03 || ch == 0x1B /* ctrl-C, escape */) {
-      return true;
+      return false;
     } else if (kShift.find(ch) != kShift.end()) {
       input.reset(new engine::MoveAction(kShift.at(ch)));
     }
@@ -67,7 +67,7 @@ bool Bindings::Update(double frame_rate) {
   if (used_input) {
     input.release();
   }
-  return false;
+  return true;
 }
 
 void Bindings::Redraw() {

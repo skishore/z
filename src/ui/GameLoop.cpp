@@ -57,7 +57,7 @@ void UpdateLoop() {
     int updates = (cur_time - last_time)/kTicksPerFrame;
     updates = std::max(std::min(updates, kUpdatesPerFrame), 1);
     for (int i = 0; i < updates; i++) {
-      done |= updatable_->Update(frame_rate);
+      done |= !updatable_->Update(frame_rate);
     }
 
     if (cur_time > last_second + kTicksPerSecond) {

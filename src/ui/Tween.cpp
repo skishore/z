@@ -67,12 +67,12 @@ void Tween::AddEvent(TweenEvent* event) {
 bool Tween::Update() {
   frame += 1;
   if (frame > kTweenFrames || (events.empty() && frame > 1)) {
-    return true;
+    return false;
   }
   for (auto& event : events) {
     event->Update(this);
   }
-  return false;
+  return true;
 }
 
 void Tween::Draw(Graphics* graphics) const {

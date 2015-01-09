@@ -26,7 +26,7 @@ class Animation : public engine::EventHandler {
   void Checkpoint();
   void Draw(Graphics* graphics_) const;
 
-  // Returns true if the current animation is complete.
+  // Returns false if the current animation is complete.
   bool Update();
 
  private:
