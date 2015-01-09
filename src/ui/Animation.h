@@ -1,6 +1,7 @@
 #ifndef __BABEL_ANIMATION_H__
 #define __BABEL_ANIMATION_H__
 
+#include <deque>
 #include <memory>
 
 #include "engine/EventHandler.h"
@@ -10,6 +11,13 @@
 
 namespace babel {
 namespace ui {
+
+class AnimationComponent;
+
+struct AnimationStep {
+  AnimationComponent* component;
+  engine::View* view;
+};
 
 class Animation : public engine::EventHandler {
  public:
@@ -22,14 +30,15 @@ class Animation : public engine::EventHandler {
   bool Update();
 
  private:
-  void Commit();
+  void PushStep(const AnimationStep& step);
+  void PopStep();
 
   const engine::GameState& game_state_;
 
   Graphics graphics_;
   std::unique_ptr<engine::View> last_;
-  std::unique_ptr<engine::View> next_;
   std::unique_ptr<Tween> tween_;
+  std::deque<AnimationStep> steps_;
 };
 
 } // namespace ui 

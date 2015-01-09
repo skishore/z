@@ -66,7 +66,7 @@ void Tween::AddEvent(TweenEvent* event) {
 
 bool Tween::Update() {
   frame += 1;
-  if (frame == kTweenFrames || events.empty()) {
+  if (frame > kTweenFrames || (events.empty() && frame > 1)) {
     return true;
   }
   for (auto& event : events) {
@@ -76,12 +76,16 @@ bool Tween::Update() {
 }
 
 void Tween::Draw(Graphics* graphics) {
-  ASSERT(frame < kTweenFrames, "Draw called after tween was finished!");
+  ASSERT(frame <= kTweenFrames, "Draw called after tween was finished!");
   graphics->Clear();
-  graphics->DrawTiles(start, camera_offset);
-  for (const auto& pair : sprite_offsets) {
-    const engine::SpriteView& sprite = start.sprites.at(pair.first);
-    graphics->DrawSprite(sprite, pair.second - camera_offset);
+  if (frame < kTweenFrames && !events.empty()) {
+    graphics->DrawTiles(start, camera_offset);
+    for (const auto& pair : sprite_offsets) {
+      const engine::SpriteView& sprite = start.sprites.at(pair.first);
+      graphics->DrawSprite(sprite, pair.second - camera_offset);
+    }
+  } else {
+    graphics->Draw(end);
   }
   graphics->Flip();
 }

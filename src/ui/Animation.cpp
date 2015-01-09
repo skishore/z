@@ -12,36 +12,81 @@ using std::vector;
 namespace babel {
 namespace ui {
 
+class AnimationComponent {
+ public:
+  virtual ~AnimationComponent() {};
+
+  // Returns true if this AnimationComponent is complete.
+  virtual bool Update() = 0;
+  virtual void Draw(const engine::View& view, Graphics* graphics) = 0;
+};
+
+namespace {
+
+class CheckpointComponent : public AnimationComponent {
+ public:
+  bool Update() override {
+    return true;
+  };
+
+  void Draw(const engine::View& view, Graphics* graphics) override {
+    graphics->Draw(view);
+  };
+};
+
+}
+
 Animation::Animation(const engine::GameState& game_state)
-    : game_state_(game_state) {}
+    : game_state_(game_state) {
+  last_.reset(new engine::View(kScreenRadius, game_state_));
+}
 
 void Animation::Checkpoint() {
-  ASSERT(next_ == nullptr, "Checkpoint called while animating!");
-  next_.reset(new engine::View(kScreenRadius, game_state_));
-  if (last_ != nullptr) {
-    tween_.reset(new Tween(*last_, *next_));
-  }
+  engine::View* view = new engine::View(kScreenRadius, game_state_);
+  PushStep(AnimationStep{new CheckpointComponent, view});
   Update();
 }
 
 void Animation::Draw() {
   if (tween_ != nullptr) {
     tween_->Draw(&graphics_);
-  } else if (next_ != nullptr) {
-    last_.reset(next_.release());
-    graphics_.Clear();
-    graphics_.Draw(*last_);
-    graphics_.Flip();
+  } else if (!steps_.empty()) {
+    const AnimationStep& step = steps_[0];
+    step.component->Draw(*step.view, &graphics_);
+  } else {
+    ASSERT(false, "Draw called when no animation was running!");
   }
 }
 
 bool Animation::Update() {
-  if (next_ != nullptr) {
-    if (tween_ != nullptr && tween_->Update()) {
-      tween_.reset(nullptr);
+  while (!steps_.empty()) {
+    if (tween_ != nullptr && !tween_->Update()) {
+      return false;
     }
+    tween_.reset(nullptr);
+    if (!steps_[0].component->Update()) {
+      return false;
+    }
+    PopStep();
   }
-  return next_ == nullptr;
+  return steps_.empty();
+}
+
+void Animation::PushStep(const AnimationStep& step) {
+  ASSERT(step.component != nullptr, "component was NULL!");
+  ASSERT(step.view != nullptr, "view was NULL!");
+  if (tween_ == nullptr) {
+    tween_.reset(new Tween(*last_, *step.view));
+  }
+  steps_.push_back(step);
+}
+
+void Animation::PopStep() {
+  ASSERT(!steps_.empty(), "PopStep called when steps_ was empty!");
+  const AnimationStep& step = steps_[0];
+  delete step.component;
+  last_.reset(step.view);
+  steps_.pop_front();
 }
 
 } // namespace ui 

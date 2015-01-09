@@ -20,8 +20,8 @@ class Bindings : GameLoop::Updatable {
   void Redraw();
 
   bool verbose_;
-  Animation animation_;
   engine::Engine engine_;
+  Animation animation_;
   InputHandler input_;
 };
 
