@@ -72,6 +72,7 @@ bool Bindings::Update(double frame_rate) {
 
 void Bindings::Redraw() {
   animation_.Checkpoint();
+  animation_.Update();
   animation_.Draw(&graphics_);
 }
 

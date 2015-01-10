@@ -1,4 +1,5 @@
 #include <map>
+#include <string>
 #include <vector>
 
 #include "base/debug.h"
@@ -6,6 +7,7 @@
 
 using std::map;
 using std::move;
+using std::string;
 using std::unique_ptr;
 using std::vector;
 
@@ -23,6 +25,8 @@ class AnimationComponent {
 
 namespace {
 
+static const int kAttackFrames = 4;
+
 class CheckpointComponent : public AnimationComponent {
  public:
   bool Update() override {
@@ -34,17 +38,45 @@ class CheckpointComponent : public AnimationComponent {
   };
 };
 
+class AttackComponent : public AnimationComponent {
+ public:
+  bool Update() override {
+    frame += 1;
+    return frame < kAttackFrames;
+  };
+
+  void Draw(const engine::View& view, Graphics* graphics) const override {
+    graphics->Clear();
+    graphics->Draw(view);
+    graphics->DrawLog(vector<string>{"This is an attack!"});
+    graphics->Flip();
+  };
+
+ private:
+  int frame = 0;
+};
+
 }
 
 Animation::Animation(const engine::GameState& game_state)
     : game_state_(game_state) {
-  last_.reset(new engine::View(kScreenRadius, game_state_));
+  last_.reset(Snapshot());
+}
+
+Animation::~Animation() {
+  for (auto& step : steps_) {
+    delete step.component;
+    delete step.view;
+  }
+}
+
+void Animation::AfterAttack(const engine::Sprite& sprite,
+                            const engine::Sprite& target) {
+  PushStep(AnimationStep{new AttackComponent, Snapshot()});
 }
 
 void Animation::Checkpoint() {
-  engine::View* view = new engine::View(kScreenRadius, game_state_);
-  PushStep(AnimationStep{new CheckpointComponent, view});
-  Update();
+  PushStep(AnimationStep{new CheckpointComponent, Snapshot()});
 }
 
 void Animation::Draw(Graphics* graphics) const {
@@ -72,6 +104,10 @@ bool Animation::Update() {
   return !steps_.empty();
 }
 
+engine::View* Animation::Snapshot() const {
+  return new engine::View(kScreenRadius, game_state_);
+}
+
 void Animation::PushStep(const AnimationStep& step) {
   ASSERT(step.component != nullptr, "component was NULL!");
   ASSERT(step.view != nullptr, "view was NULL!");
@@ -82,11 +118,15 @@ void Animation::PushStep(const AnimationStep& step) {
 }
 
 void Animation::PopStep() {
+  ASSERT(tween_ == nullptr, "PopStep called while a tween was running!");
   ASSERT(!steps_.empty(), "PopStep called when steps_ was empty!");
   const AnimationStep& step = steps_[0];
   delete step.component;
   last_.reset(step.view);
   steps_.pop_front();
+  if (!steps_.empty()) {
+    tween_.reset(new Tween(*last_, *steps_[0].view));
+  }
 }
 
 } // namespace ui 

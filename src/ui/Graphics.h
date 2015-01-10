@@ -24,6 +24,9 @@ class Graphics {
   void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
   void Flip();
 
+  // TODO: This method should be private!
+  void DrawLog(const std::vector<std::string>& log);
+
  private:
   class DrawingSurface {
    public:
@@ -41,7 +44,7 @@ class Graphics {
                  const std::vector<SDL_Color>& colors);
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
-  void DrawLog(const std::vector<std::string>& log);
+  //void DrawLog(const std::vector<std::string>& log);
   void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
 

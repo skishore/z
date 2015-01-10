@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "engine/EventHandler.h"
+#include "engine/Sprite.h"
 #include "engine/View.h"
 #include "ui/Graphics.h"
 #include "ui/Tween.h"
@@ -22,6 +23,11 @@ struct AnimationStep {
 class Animation : public engine::EventHandler {
  public:
   Animation(const engine::GameState& game_state);
+  ~Animation();
+
+  // EventHandler callbacks, used to add to the animation queue.
+  void AfterAttack(const engine::Sprite& sprite,
+                   const engine::Sprite& target) override;
 
   void Checkpoint();
   void Draw(Graphics* graphics_) const;
@@ -30,6 +36,8 @@ class Animation : public engine::EventHandler {
   bool Update();
 
  private:
+  // The caller takes ownership of the new View.
+  inline engine::View* Snapshot() const;
   void PushStep(const AnimationStep& step);
   void PopStep();
 
