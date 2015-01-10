@@ -24,8 +24,9 @@ class Graphics {
   void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
   void Flip();
 
-  // TODO: This method should be private!
-  void DrawLog(const std::vector<std::string>& log);
+  // TODO: This method is a complete hack.
+  void ShadeSquare(const engine::View& view, const Point& square,
+                   Uint32 color, float alpha);
 
  private:
   class DrawingSurface {
@@ -44,7 +45,7 @@ class Graphics {
                  const std::vector<SDL_Color>& colors);
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
-  //void DrawLog(const std::vector<std::string>& log);
+  void DrawLog(const std::vector<std::string>& log);
   void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
 

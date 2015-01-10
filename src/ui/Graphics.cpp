@@ -20,7 +20,7 @@ static const int kGridSize = 32;
 static const int kTextSize = 0.6*kGridSize;
 
 // The number of squares around the edge that are NOT drawn.
-static const Point kPadding(1, 1);
+static const int kPadding = 1;
 
 inline void ConvertColor(const uint32_t color, SDL_Color* result) {
   result->r = (color >> 16) & 0xff;
@@ -45,7 +45,7 @@ Graphics::DrawingSurface::~DrawingSurface() {
 }
 
 Graphics::Graphics() {
-  const int side = 2*(kScreenRadius - kPadding.x) + 1;
+  const int side = 2*(kScreenRadius - kPadding) + 1;
   const Point size(side, side);
   const Point dimensions(kGridSize*size);
   const Point grid(kGridSize, kGridSize);
@@ -111,7 +111,8 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
       if (tile.graphic >= 0) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
-        const Point point = kGridSize*(Point(x, y) - kPadding) - offset;
+        const Point padding(kPadding, kPadding);
+        const Point point = kGridSize*(Point(x, y) - padding) - offset;
         image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
       }
     }
@@ -120,7 +121,8 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
 
 void Graphics::DrawSprite(
     const engine::SpriteView& sprite, const Point& offset) {
-  const Point point = kGridSize*(sprite.square - kPadding) + offset;
+  const Point padding(kPadding, kPadding);
+  const Point point = kGridSize*(sprite.square - padding) + offset;
   sprites_->Draw(point, sprite.graphic, buffer_->bounds_, buffer_->surface_);
 }
 
@@ -130,6 +132,29 @@ void Graphics::Flip() {
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
+}
+
+void Graphics::ShadeSquare(const engine::View& view, const Point& square,
+                           Uint32 color, float alpha) {
+  SDL_Surface* surface = buffer_->surface_;
+  const int x = square.x - view.offset.x - kPadding;
+  const int y = square.y - view.offset.y - kPadding;
+  for (int j = kGridSize*x; j < kGridSize*(x + 1); j++) {
+    for (int k = kGridSize*y; k < kGridSize*(y + 1); k++) {
+      Uint32* pixel =
+          (Uint32*)((char*)surface->pixels + surface->pitch*k + 4*j);
+      Uint32 value = *pixel;
+      #define R(color) ((color >> 16) & 0xff)
+      #define G(color) ((color >> 8) & 0xff)
+      #define B(color) (color & 0xff)
+      *pixel = (((uint8_t)(alpha*R(color) + (1 - alpha)*R(value)) << 16) +
+                ((uint8_t)(alpha*G(color) + (1 - alpha)*G(value)) << 8) +
+                ((uint8_t)(alpha*B(color) + (1 - alpha)*B(value))));
+      #undef R
+      #undef G
+      #undef B
+    }
+  }
 }
 
 void Graphics::DrawTexts(const vector<Point>& positions,

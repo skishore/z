@@ -40,20 +40,23 @@ class CheckpointComponent : public AnimationComponent {
 
 class AttackComponent : public AnimationComponent {
  public:
+  AttackComponent(const Point& square) : square_(square) {}
+
   bool Update() override {
-    frame += 1;
-    return frame < kAttackFrames;
+    frame_ += 1;
+    return frame_ < kAttackFrames;
   };
 
   void Draw(const engine::View& view, Graphics* graphics) const override {
     graphics->Clear();
     graphics->Draw(view);
-    graphics->DrawLog(vector<string>{"This is an attack!"});
+    graphics->ShadeSquare(view, square_, 0x00ff0000, 0.5);
     graphics->Flip();
   };
 
  private:
-  int frame = 0;
+  int frame_ = 0;
+  Point square_;
 };
 
 }
@@ -72,7 +75,7 @@ Animation::~Animation() {
 
 void Animation::AfterAttack(const engine::Sprite& sprite,
                             const engine::Sprite& target) {
-  PushStep(AnimationStep{new AttackComponent, Snapshot()});
+  PushStep(AnimationStep{new AttackComponent(target.square), Snapshot()});
 }
 
 void Animation::Checkpoint() {
