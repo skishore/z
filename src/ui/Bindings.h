@@ -1,6 +1,8 @@
 #ifndef BABEL_BINDINGS_H__
 #define BABEL_BINDINGS_H__
 
+#include <memory>
+
 #include "engine/Engine.h"
 #include "ui/Animation.h"
 #include "ui/GameLoop.h"
@@ -18,13 +20,14 @@ class Bindings : GameLoop::Updatable {
   bool Update(double frame_rate) override;
 
  private:
+  void Reset();
   void Redraw();
 
   bool verbose_;
-  engine::Engine engine_;
-  Animation animation_;
   Graphics graphics_;
   InputHandler input_;
+  std::unique_ptr<Animation> animation_;
+  std::unique_ptr<engine::Engine> engine_;
 };
 
 }  // namespace ui

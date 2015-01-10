@@ -29,13 +29,10 @@ static const std::map<char,Point> kShift = {
 
 }
 
-Bindings::Bindings(bool verbose)
-    : verbose_(verbose), animation_(engine_.GetGameState()) {
-  engine_.AddEventHandler(&animation_);
-}
+Bindings::Bindings(bool verbose) : verbose_(verbose) {}
 
 int Bindings::Start() {
-  Redraw();
+  Reset();
   GameLoop(kFrameRate, this);
   return 0;
 }
@@ -47,8 +44,8 @@ bool Bindings::Update(double frame_rate) {
     DEBUG("FPS: " << frame_rate);
   }
 
-  if (animation_.Update()) {
-    animation_.Draw(&graphics_);
+  if (animation_->Update()) {
+    animation_->Draw(&graphics_);
     return true;
   }
   std::unique_ptr<engine::Action> input;
@@ -56,12 +53,15 @@ bool Bindings::Update(double frame_rate) {
   if (input_.GetChar(&ch)) {
     if (ch == 0x03 || ch == 0x1B /* ctrl-C, escape */) {
       return false;
+    } else if (ch == 'r') {
+      Reset();
+      return true;
     } else if (kShift.find(ch) != kShift.end()) {
       input.reset(new engine::MoveAction(kShift.at(ch)));
     }
   }
   bool used_input = false;
-  if (engine_.Update(input.get(), &used_input)) {
+  if (engine_->Update(input.get(), &used_input)) {
     Redraw();
   }
   if (used_input) {
@@ -70,10 +70,17 @@ bool Bindings::Update(double frame_rate) {
   return true;
 }
 
+void Bindings::Reset() {
+  engine_.reset(new engine::Engine());
+  animation_.reset(new Animation(engine_->GetGameState()));
+  engine_->AddEventHandler(animation_.get());
+  Redraw();
+}
+
 void Bindings::Redraw() {
-  animation_.Checkpoint();
-  animation_.Update();
-  animation_.Draw(&graphics_);
+  animation_->Checkpoint();
+  animation_->Update();
+  animation_->Draw(&graphics_);
 }
 
 }  // namespace ui
