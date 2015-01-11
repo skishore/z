@@ -41,14 +41,14 @@ class Graphics {
   void Flip();
 
   void DrawTiles(const engine::View& view, const Point& offset);
-  void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
-  void DrawShade(const engine::View& view, const Transform::Shade& shade,
-                 const Point& square, const Point& offset);
+  void DrawSprite(const engine::SpriteView& sprite, const Point& position);
+  void DrawShade(const engine::View& view, const Point& offset,
+                 const Point& square, const Transform::Shade& shade);
 
   void DrawTexts(const std::vector<Point>& positions,
                  const std::vector<std::string>& texts,
                  const std::vector<SDL_Color>& colors);
-  void DrawText(int x, int y, Direction direction,
+  void DrawText(const Point& position, Direction direction,
                 const std::string& text, SDL_Color color);
 
   void DrawLog(const std::vector<std::string>& log);
