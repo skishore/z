@@ -13,11 +13,9 @@
 namespace babel {
 namespace ui {
 
-class Tween;
-
 class TweenEvent {
  public:
-  virtual void Update(Tween* tween) = 0;
+  virtual void Update(int frame, Transform* transform) = 0;
 };
 
 class Tween {
@@ -36,9 +34,8 @@ class Tween {
   const engine::View& end;
 
   int frame = 0;
+  Transform transform;
   std::vector<std::unique_ptr<TweenEvent>> events;
-  Point camera_offset;
-  std::map<engine::sid,Point> sprite_offsets;
 };
 
 } // namespace ui 

@@ -40,7 +40,9 @@ class CheckpointComponent : public AnimationComponent {
 
 class AttackComponent : public AnimationComponent {
  public:
-  AttackComponent(const Point& square) : square_(square) {}
+  AttackComponent(const Point& square) {
+    transform_.shaded_squares[square] = Transform::Shade{0x00ff0000, 0.5};
+  }
 
   bool Update() override {
     frame_ += 1;
@@ -48,15 +50,12 @@ class AttackComponent : public AnimationComponent {
   };
 
   void Draw(const engine::View& view, Graphics* graphics) const override {
-    graphics->Clear();
-    graphics->Draw(view);
-    graphics->ShadeSquare(view, square_, 0x00ff0000, 0.5);
-    graphics->Flip();
+    graphics->Draw(view, transform_);
   };
 
  private:
   int frame_ = 0;
-  Point square_;
+  Transform transform_;
 };
 
 }

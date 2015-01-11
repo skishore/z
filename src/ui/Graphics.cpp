@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 
 #include "base/constants.h"
@@ -6,6 +7,8 @@
 #include "ui/Graphics.h"
 #include "ui/SDL_prims.h"
 
+using std::max;
+using std::min;
 using std::string;
 using std::vector;
 
@@ -16,7 +19,6 @@ namespace {
 
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const int kGridSize = 32;
 static const int kTextSize = 0.6*kGridSize;
 
 // The number of squares around the edge that are NOT drawn.
@@ -74,23 +76,51 @@ Graphics::~Graphics() {
   SDL_Quit();
 }
 
-void Graphics::Clear() {
-  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x00000000);
+void Graphics::Draw(const engine::View& view) {
+  DrawInner(view, nullptr);
 }
 
-void Graphics::Draw(const engine::View& view) {
+void Graphics::Draw(const engine::View& view, const Transform& transform) {
+  DrawInner(view, &transform);
+}
+
+void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
+  Clear();
+
+  Point camera_offset(kGridSize*kPadding, kGridSize*kPadding);
+  if (transform != nullptr) {
+    camera_offset += transform->camera_offset;
+  }
+  DrawTiles(view, camera_offset);
+
+  for (const auto& pair : view.sprites) {
+    const engine::SpriteView& sprite = pair.second;
+    Point sprite_offset;
+    if (transform != nullptr) {
+      if (transform->hidden_sprites.find(pair.first) !=
+          transform->hidden_sprites.end()) {
+        continue;
+      }
+      if (transform->sprite_offsets.find(pair.first) !=
+          transform->sprite_offsets.end()) {
+        sprite_offset = transform->sprite_offsets.at(pair.first);
+      }
+    }
+    DrawSprite(sprite, sprite_offset - camera_offset);
+  }
+
+  if (transform != nullptr) {
+    for (const auto& pair : transform->shaded_squares) {
+      DrawShade(view, pair.second, pair.first, camera_offset);
+    }
+  }
+
   // A collection of texts to draw. Layed out and drawn after all the tiles.
   //vector<Point> positions;
   //vector<string> texts;
   //vector<SDL_Color> colors;
 
   //SDL_Color color;
-  Point offset;
-  DrawTiles(view, offset);
-  for (const auto& pair : view.sprites) {
-    const engine::SpriteView& sprite = pair.second;
-    DrawSprite(sprite, offset);
-  }
     //if (!sprite.text.empty()) {
     //  ConvertColor(sprite.color, &color);
     //  positions.push_back(sprite.square);
@@ -102,28 +132,12 @@ void Graphics::Draw(const engine::View& view) {
   //DrawTexts(positions, texts, colors);
   //DrawLog(view.log);
   //DrawStatus(view.status);
+
+  Flip();
 }
 
-void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
-  for (int x = 0; x < view.size; x++) {
-    for (int y = 0; y < view.size; y++) {
-      const engine::TileView& tile = view.tiles[x][y];
-      if (tile.graphic >= 0) {
-        const Image* image =
-            (tile.visible ? tileset_.get() : darkened_tileset_.get());
-        const Point padding(kPadding, kPadding);
-        const Point point = kGridSize*(Point(x, y) - padding) - offset;
-        image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
-      }
-    }
-  }
-}
-
-void Graphics::DrawSprite(
-    const engine::SpriteView& sprite, const Point& offset) {
-  const Point padding(kPadding, kPadding);
-  const Point point = kGridSize*(sprite.square - padding) + offset;
-  sprites_->Draw(point, sprite.graphic, buffer_->bounds_, buffer_->surface_);
+void Graphics::Clear() {
+  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x00000000);
 }
 
 void Graphics::Flip() {
@@ -134,13 +148,37 @@ void Graphics::Flip() {
   SDL_RenderPresent(renderer_);
 }
 
-void Graphics::ShadeSquare(const engine::View& view, const Point& square,
-                           Uint32 color, float alpha) {
+void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
+  for (int x = 0; x < view.size; x++) {
+    for (int y = 0; y < view.size; y++) {
+      const engine::TileView& tile = view.tiles[x][y];
+      if (tile.graphic >= 0) {
+        const Image* image =
+            (tile.visible ? tileset_.get() : darkened_tileset_.get());
+        const Point point = kGridSize*Point(x, y) - offset;
+        image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
+      }
+    }
+  }
+}
+
+void Graphics::DrawSprite(
+    const engine::SpriteView& sprite, const Point& offset) {
+  const Point point = kGridSize*sprite.square + offset;
+  sprites_->Draw(point, sprite.graphic, buffer_->bounds_, buffer_->surface_);
+}
+
+void Graphics::DrawShade(
+    const engine::View& view, const Transform::Shade& shade,
+    const Point& square, const Point& offset) {
   SDL_Surface* surface = buffer_->surface_;
-  const int x = square.x - view.offset.x - kPadding;
-  const int y = square.y - view.offset.y - kPadding;
-  for (int j = kGridSize*x; j < kGridSize*(x + 1); j++) {
-    for (int k = kGridSize*y; k < kGridSize*(y + 1); k++) {
+  const Point point = kGridSize*(square - view.offset) - offset;
+  Uint32 color = shade.color;
+  float alpha = shade.alpha;
+  for (int j = max(point.x, 0);
+       j < min(point.x + kGridSize, buffer_->bounds_.w); j++) {
+    for (int k = max(point.y, 0);
+         k < min(point.y + kGridSize, buffer_->bounds_.h); k++) {
       Uint32* pixel =
           (Uint32*)((char*)surface->pixels + surface->pitch*k + 4*j);
       Uint32 value = *pixel;

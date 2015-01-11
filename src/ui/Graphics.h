@@ -9,6 +9,7 @@
 #include "engine/View.h"
 #include "ui/Image.h"
 #include "ui/TextRenderer.h"
+#include "ui/Transform.h"
 
 namespace babel {
 namespace ui {
@@ -18,15 +19,8 @@ class Graphics {
   Graphics();
   ~Graphics();
 
-  void Clear();
   void Draw(const engine::View& view);
-  void DrawTiles(const engine::View& view, const Point& offset);
-  void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
-  void Flip();
-
-  // TODO: This method is a complete hack.
-  void ShadeSquare(const engine::View& view, const Point& square,
-                   Uint32 color, float alpha);
+  void Draw(const engine::View& view, const Transform& transform);
 
  private:
   class DrawingSurface {
@@ -40,11 +34,23 @@ class Graphics {
     SDL_Surface* surface_;
   };
 
+
+  void DrawInner(const engine::View& view, const Transform* transform);
+
+  void Clear();
+  void Flip();
+
+  void DrawTiles(const engine::View& view, const Point& offset);
+  void DrawSprite(const engine::SpriteView& sprite, const Point& offset);
+  void DrawShade(const engine::View& view, const Transform::Shade& shade,
+                 const Point& square, const Point& offset);
+
   void DrawTexts(const std::vector<Point>& positions,
                  const std::vector<std::string>& texts,
                  const std::vector<SDL_Color>& colors);
   void DrawText(int x, int y, Direction direction,
                 const std::string& text, SDL_Color color);
+
   void DrawLog(const std::vector<std::string>& log);
   void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);

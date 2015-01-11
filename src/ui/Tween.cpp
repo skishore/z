@@ -10,18 +10,16 @@ using std::vector;
 
 namespace babel {
 namespace ui {
-
 namespace {
 
-static const int kGridSize = 32;
 static const int kTweenFrames = 4;
 
 class CameraEvent : public TweenEvent {
  public:
   CameraEvent(const Point& move) : move_(move) {}
 
-  void Update(Tween* tween) override {
-    tween->camera_offset = tween->frame*kGridSize*move_/kTweenFrames;
+  void Update(int frame, Transform* transform) override {
+    transform->camera_offset = frame*kGridSize*move_/kTweenFrames;
   }
 
  private:
@@ -32,8 +30,8 @@ class MoveEvent : public TweenEvent {
  public:
   MoveEvent(engine::sid id, const Point& move) : id_(id), move_(move) {}
 
-  void Update(Tween* tween) override {
-    tween->sprite_offsets[id_] = tween->frame*kGridSize*move_/kTweenFrames;
+  void Update(int frame, Transform* transform) override {
+    transform->sprite_offsets[id_] = frame*kGridSize*move_/kTweenFrames;
   }
 
  private:
@@ -55,7 +53,8 @@ Tween::Tween(const engine::View& s, const engine::View& e) : start(s), end(e) {
       if (next != prev) {
         AddEvent(new MoveEvent(id, next - prev));
       }
-      sprite_offsets[id] = Point(0, 0);
+    } else {
+      transform.hidden_sprites.insert(id);
     }
   }
 }
@@ -70,24 +69,18 @@ bool Tween::Update() {
     return false;
   }
   for (auto& event : events) {
-    event->Update(this);
+    event->Update(frame, &transform);
   }
   return true;
 }
 
 void Tween::Draw(Graphics* graphics) const {
   ASSERT(frame <= kTweenFrames, "Draw called after tween was finished!");
-  graphics->Clear();
   if (frame < kTweenFrames && !events.empty()) {
-    graphics->DrawTiles(start, camera_offset);
-    for (const auto& pair : sprite_offsets) {
-      const engine::SpriteView& sprite = start.sprites.at(pair.first);
-      graphics->DrawSprite(sprite, pair.second - camera_offset);
-    }
+    graphics->Draw(start, transform);
   } else {
     graphics->Draw(end);
   }
-  graphics->Flip();
 }
 
 } // namespace ui 
