@@ -130,8 +130,8 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   //}
 
   //DrawTexts(positions, texts, colors);
-  //DrawLog(view.log);
-  //DrawStatus(view.status);
+  DrawLog(view.log);
+  DrawStatus(view.status);
 
   Flip();
 }
