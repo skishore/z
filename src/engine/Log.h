@@ -11,8 +11,10 @@ namespace engine {
 class Log {
  public:
   void AddLine(const std::string& line);
-  void Coalesce();
+  void Flush(bool changed);
+  void Open();
 
+  std::string GetCurrentLine() const;
   std::vector<std::string> GetLastLines(int n) const;
 
   // Returns true if a line was added the last time the log was coalesced.
@@ -22,6 +24,7 @@ class Log {
   std::deque<std::string> lines_;
   std::deque<std::string> new_lines_;
   bool fresh_ = false;
+  bool open_ = false;
 };
 
 }  // namespace engine 

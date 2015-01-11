@@ -16,7 +16,7 @@ namespace engine {
 Engine::Engine() : game_state_("world.dat") {
   game_state_.log.AddLine(
       "Welcome to Babel! You are a neutral male human Padawan.");
-  game_state_.log.Coalesce();
+  game_state_.log.Flush(true);
 }
 
 void Engine::AddEventHandler(EventHandler* handler) {
@@ -28,6 +28,8 @@ bool Engine::Update(Action* input, bool* used_input) {
   *used_input = false;
   bool changed = false;
   unique_ptr<Action> action;
+
+  game_state_.log.Open();
 
   while (true) {
     if (!game_state_.player->IsAlive()) {
@@ -64,9 +66,7 @@ bool Engine::Update(Action* input, bool* used_input) {
     }
   }
 
-  if (changed) {
-    game_state_.log.Coalesce();
-  }
+  game_state_.log.Flush(changed);
   return changed;
 }
 
