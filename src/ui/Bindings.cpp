@@ -4,6 +4,7 @@
 #include "base/constants.h"
 #include "base/debug.h"
 #include "base/point.h"
+#include "base/timing.h"
 #include "engine/Action.h"
 #include "engine/View.h"
 #include "ui/Bindings.h"
@@ -45,7 +46,9 @@ bool Bindings::Update(double frame_rate) {
   }
 
   if (animation_->Update()) {
+    StartTimer("Animation::Draw");
     animation_->Draw(&graphics_);
+    EndTimer();
     return true;
   }
 
@@ -71,9 +74,13 @@ bool Bindings::Update(double frame_rate) {
   } else if (ch == 'r') {
     Reset();
   } else if (kShift.find(ch) != kShift.end()) {
+    StartTimer("Engine::Update");
     if (engine_->Update(new engine::MoveAction(kShift.at(ch)))) {
+      EndTimer();
       interface_.ClearLines();
       Redraw();
+    } else {
+      EndTimer();
     }
   }
 
@@ -88,9 +95,15 @@ void Bindings::Reset() {
 }
 
 void Bindings::Redraw() {
+  StartTimer("Animation::Checkpoint");
   animation_->Checkpoint();
+  EndTimer();
+  StartTimer("Animation::Update");
   animation_->Update();
+  EndTimer();
+  StartTimer("Animation::Draw");
   animation_->Draw(&graphics_);
+  EndTimer();
 }
 
 }  // namespace ui

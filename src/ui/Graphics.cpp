@@ -3,6 +3,7 @@
 
 #include "base/constants.h"
 #include "base/debug.h"
+#include "base/timing.h"
 #include "base/util.h"
 #include "ui/Graphics.h"
 #include "ui/SDL_prims.h"
@@ -56,6 +57,14 @@ Graphics::Graphics(const Interface& interface) : interface_(interface) {
   SDL_ShowCursor(SDL_DISABLE);
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
+
+  SDL_RendererInfo info;
+  ASSERT(SDL_GetRendererInfo(renderer_, &info) == 0, "Failed to get info!");
+  DEBUG("Software: " << (info.flags & SDL_RENDERER_SOFTWARE));
+  DEBUG("Accelerated: " << (info.flags & SDL_RENDERER_ACCELERATED));
+  DEBUG("vsync: " << (info.flags & SDL_RENDERER_PRESENTVSYNC));
+  DEBUG("Texture: " << (info.flags & SDL_RENDERER_TARGETTEXTURE));
+
   ASSERT(status == 0, SDL_GetError());
   texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
                                dimensions.x, dimensions.y);
@@ -77,22 +86,31 @@ Graphics::~Graphics() {
 }
 
 void Graphics::Draw(const engine::View& view) {
+  StartTimer("Graphics::VanillaDraw");
   DrawInner(view, nullptr);
+  EndTimer();
 }
 
 void Graphics::Draw(const engine::View& view, const Transform& transform) {
+  StartTimer("Graphics::TransformDraw");
   DrawInner(view, &transform);
+  EndTimer();
 }
 
 void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
+  StartTimer("Graphics::Clear");
   Clear();
+  EndTimer();
 
+  StartTimer("Graphics::DrawTiles");
   Point camera_offset(kGridSize*kPadding, kGridSize*kPadding);
   if (transform != nullptr) {
     camera_offset += transform->camera_offset;
   }
   DrawTiles(view, camera_offset);
+  EndTimer();
 
+  StartTimer("Graphics::DrawSprites");
   // A collection of sprite text to draw. Layed out and drawn after the sprites.
   vector<Point> positions;
   vector<string> texts;
@@ -122,13 +140,17 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
       colors.push_back(color);
     }
   }
+  EndTimer();
 
   if (transform != nullptr) {
+    StartTimer("Graphics::DrawShades");
     for (const auto& pair : transform->shaded_squares) {
       DrawShade(view, camera_offset, pair.first, pair.second);
     }
+    EndTimer();
   }
 
+  StartTimer("Graphics::DrawText");
   DrawTexts(positions, texts, colors);
   if (interface_.HasLines()) {
     DrawLog(interface_.GetLines());
@@ -136,8 +158,11 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     DrawLog(view.log);
   }
   DrawStatus(view.status);
+  EndTimer();
 
+  StartTimer("Graphics::Flip");
   Flip();
+  EndTimer();
 }
 
 void Graphics::Clear() {
@@ -146,10 +171,18 @@ void Graphics::Clear() {
 
 void Graphics::Flip() {
   SDL_Surface* surface = buffer_->surface_;
+  StartTimer("SDL::UpdateTexture");
   SDL_UpdateTexture(texture_, nullptr, surface->pixels, surface->pitch);
+  EndTimer();
+  StartTimer("SDL::RenderClear");
   SDL_RenderClear(renderer_);
+  EndTimer();
+  StartTimer("SDL::RenderCopy");
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
+  EndTimer();
+  StartTimer("SDL::RenderPresent");
   SDL_RenderPresent(renderer_);
+  EndTimer();
 }
 
 void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
