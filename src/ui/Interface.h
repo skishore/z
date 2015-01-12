@@ -11,6 +11,8 @@ namespace ui {
 
 class Interface {
  public:
+  void ClearLines();
+
   // Returns true if the input was consumed by the interface.
   // If the input is consumed, this method return an Action to take.
   bool Consume(char ch, engine::Action** action, bool* redraw);
@@ -19,6 +21,7 @@ class Interface {
   std::vector<std::string> GetLines() const;
 
  private:
+  bool has_lines_ = false;
   bool speaking_ = false;
   std::string speech_;
 };

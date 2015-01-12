@@ -131,11 +131,7 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
 
   DrawTexts(positions, texts, colors);
   if (interface_.HasLines()) {
-    vector<string> interface = interface_.GetLines();
-    vector<string> final;
-    final.insert(final.end(), view.log.begin(), view.log.end());
-    final.insert(final.end(), interface.begin(), interface.end());
-    DrawLog(final);
+    DrawLog(interface_.GetLines());
   } else {
     DrawLog(view.log);
   }

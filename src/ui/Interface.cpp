@@ -7,9 +7,14 @@ using std::vector;
 namespace babel {
 namespace ui {
 
+void Interface::ClearLines() {
+  has_lines_ = false;
+}
+
 bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
   if (!speaking_) {
     if (ch == 's') {
+      has_lines_ = true;
       speaking_ = true;
       speech_ = "";
       *redraw = true;
@@ -35,7 +40,7 @@ bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
 }
 
 bool Interface::HasLines() const {
-  return speaking_;
+  return has_lines_;
 }
 
 vector<string> Interface::GetLines() const {
