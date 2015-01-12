@@ -8,6 +8,7 @@
 #include "base/point.h"
 #include "engine/View.h"
 #include "ui/Image.h"
+#include "ui/Interface.h"
 #include "ui/TextRenderer.h"
 #include "ui/Transform.h"
 
@@ -16,7 +17,7 @@ namespace ui {
 
 class Graphics {
  public:
-  Graphics();
+  Graphics(const Interface& interface);
   ~Graphics();
 
   void Draw(const engine::View& view);
@@ -54,6 +55,8 @@ class Graphics {
   void DrawLog(const std::vector<std::string>& log);
   void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
+
+  const Interface& interface_;
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;

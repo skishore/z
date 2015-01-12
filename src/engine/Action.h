@@ -20,6 +20,8 @@ struct ActionResult {
 
 class Action {
  public:
+  virtual ~Action() {};
+
   // None of the input arguments may be null.
   void Bind(Sprite* sprite, GameState* game_state,
             std::vector<EventHandler*>* handlers);

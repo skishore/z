@@ -29,7 +29,7 @@ static const std::map<char,Point> kShift = {
 
 }
 
-Bindings::Bindings(bool verbose) : verbose_(verbose) {}
+Bindings::Bindings(bool verbose) : verbose_(verbose), graphics_(interface_) {}
 
 int Bindings::Start() {
   Reset();
@@ -48,25 +48,31 @@ bool Bindings::Update(double frame_rate) {
     animation_->Draw(&graphics_);
     return true;
   }
-  std::unique_ptr<engine::Action> input;
+
   char ch;
-  if (input_.GetChar(&ch)) {
-    if (ch == 0x03 || ch == 0x1B /* ctrl-C, escape */) {
-      return false;
-    } else if (ch == 'r') {
-      Reset();
-      return true;
-    } else if (kShift.find(ch) != kShift.end()) {
-      input.reset(new engine::MoveAction(kShift.at(ch)));
+  if (!input_.GetChar(&ch)) {
+    return true;
+  } else if (ch == 0x03 || ch == 0x1b /* ctrl-C, escape */) {
+    return false;
+  }
+
+  engine::Action* input = nullptr;
+  bool redraw = false;
+  if (interface_.Consume(ch, &input, &redraw)) {
+    if (input != nullptr) {
+      redraw = redraw || engine_->Update(input);
+    }
+    if (redraw) {
+      Redraw();
+    }
+  } else if (ch == 'r') {
+    Reset();
+  } else if (kShift.find(ch) != kShift.end()) {
+    if (engine_->Update(new engine::MoveAction(kShift.at(ch)))) {
+      Redraw();
     }
   }
-  bool used_input = false;
-  if (engine_->Update(input.get(), &used_input)) {
-    Redraw();
-  }
-  if (used_input) {
-    input.release();
-  }
+
   return true;
 }
 

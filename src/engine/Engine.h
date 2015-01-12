@@ -18,9 +18,8 @@ class Engine {
   void AddEventHandler(EventHandler* handler);
 
   // Runs a single update step. The player's input action may be null.
-  // If it is, this method will block the first time the player gets to take
-  // a turn; if not, it  will consume the action and block the second time.
-  bool Update(Action* input, bool* used_input);
+  // If the input is not null, this method will take ownership of it.
+  bool Update(Action* input);
 
   const GameState& GetGameState() const { return game_state_; }
 

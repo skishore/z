@@ -8,6 +8,7 @@
 #include "ui/GameLoop.h"
 #include "ui/Graphics.h"
 #include "ui/InputHandler.h"
+#include "ui/Interface.h"
 
 namespace babel {
 namespace ui {
@@ -26,6 +27,7 @@ class Bindings : GameLoop::Updatable {
   bool verbose_;
   Graphics graphics_;
   InputHandler input_;
+  Interface interface_;
   std::unique_ptr<Animation> animation_;
   std::unique_ptr<engine::Engine> engine_;
 };

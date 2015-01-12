@@ -1,9 +1,21 @@
+#include <map>
 #include <SDL2/SDL.h>
 
 #include "ui/InputHandler.h"
 
+using std::map;
+
 namespace babel {
 namespace ui {
+
+namespace {
+map<SDL_Keycode,char> key_to_char{
+  {SDLK_BACKSPACE, '\b'},
+  {SDLK_ESCAPE, 0x1b},
+  {SDLK_PERIOD, '.'},
+  {SDLK_RETURN, '\n'}
+};
+}  // namespace
 
 bool InputHandler::GetChar(char* ch) {
   SDL_Event event;
@@ -18,11 +30,8 @@ bool InputHandler::GetChar(char* ch) {
       const char base = (event.key.keysym.mod & KMOD_SHIFT ? 'A' : 'a');
       *ch = (char)((int)(key - SDLK_a) + (int)base);
       return true;
-    } else if (key == SDLK_PERIOD) {
-      *ch = '.';
-      return true;
-    } else if (key == SDLK_ESCAPE) {
-      *ch = 0x1B;
+    } else if (key_to_char.find(key) != key_to_char.end()) {
+      *ch = key_to_char.at(key);
       return true;
     }
   }

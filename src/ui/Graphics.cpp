@@ -46,7 +46,7 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics() {
+Graphics::Graphics(const Interface& interface) : interface_(interface) {
   const int side = 2*(kScreenRadius - kPadding) + 1;
   const Point size(side, side);
   const Point dimensions(kGridSize*size);
@@ -130,7 +130,15 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   }
 
   DrawTexts(positions, texts, colors);
-  DrawLog(view.log);
+  if (interface_.HasLines()) {
+    vector<string> interface = interface_.GetLines();
+    vector<string> final;
+    final.insert(final.end(), view.log.begin(), view.log.end());
+    final.insert(final.end(), interface.begin(), interface.end());
+    DrawLog(final);
+  } else {
+    DrawLog(view.log);
+  }
   DrawStatus(view.status);
 
   Flip();
