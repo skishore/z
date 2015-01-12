@@ -1,5 +1,3 @@
-#include <sys/time.h>
-#include <thread>
 #include <unistd.h>
 
 #ifdef EMSCRIPTEN
@@ -7,15 +5,15 @@
 #endif
 
 #include "base/debug.h"
+#include "base/timing.h"
 #include "ui/GameLoop.h"
 
 namespace babel {
 namespace ui {
-
 namespace {
 
-static const long long kTicksPerSecond = 1000000;
-static const long long kBreak = 4000;
+static const tick kTicksPerSecond = 1000000;
+static const tick kBreak = 4000;
 static const int kUpdatesPerFrame = 2;
 
 // We store the current frame rate and updatable in static global variables
@@ -28,21 +26,11 @@ static const bool emscripten_ = true;
 static const bool emscripten_ = false;
 #endif
 
-long long GetCurrentTick() {
-  // All times are stored ticks, which are in units of microseconds.
-  static long long min_time = 0;
-  static timeval time;
-  gettimeofday(&time, nullptr);
-  long long result = time.tv_sec*kTicksPerSecond+ time.tv_usec - min_time;
-  min_time = std::min(result, min_time);
-  return result;
-}
-
 // This function executes one update when emscripten is false but loops when
 // emscripten is true.
 void UpdateLoop() {
-  static long long cur_time = 0, last_time = 0, last_second = 0;
-  static const long long kTicksPerFrame = kTicksPerSecond/frame_rate_;
+  static tick cur_time = 0, last_time = 0, last_second = 0;
+  static const tick kTicksPerFrame = kTicksPerSecond/frame_rate_;
   static int frames = 0;
   static double frame_rate = 0;
 
@@ -71,7 +59,7 @@ void UpdateLoop() {
     frames++;
 
     if (!emscripten_) {
-      long long delay = cur_time + kTicksPerFrame - GetCurrentTick() - kBreak;
+      tick delay = cur_time + kTicksPerFrame - GetCurrentTick() - kBreak;
       if (delay > 0) {
         usleep(delay);
       }
