@@ -126,7 +126,9 @@ void Animation::PopStep() {
   delete step.component;
   last_.reset(step.view);
   steps_.pop_front();
-  if (!steps_.empty()) {
+  if (steps_.empty()) {
+    last_->log.clear();
+  } else {
     tween_.reset(new Tween(*last_, *steps_[0].view));
   }
 }
