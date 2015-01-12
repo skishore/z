@@ -1,3 +1,5 @@
+#include <SDL2/SDL.h>
+
 #include "ui/InputHandler.h"
 
 namespace babel {
@@ -13,7 +15,8 @@ bool InputHandler::GetChar(char* ch) {
   } else if (event.type == SDL_KEYDOWN) {
     const SDL_Keycode& key = event.key.keysym.sym;
     if (SDLK_a <= key && key <= SDLK_z) {
-      *ch = (char)((int)(key - SDLK_a) + (int)'a');
+      const char base = (event.key.keysym.mod & KMOD_SHIFT ? 'A' : 'a');
+      *ch = (char)((int)(key - SDLK_a) + (int)base);
       return true;
     } else if (key == SDLK_PERIOD) {
       *ch = '.';
