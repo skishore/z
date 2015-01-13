@@ -86,31 +86,22 @@ Graphics::~Graphics() {
 }
 
 void Graphics::Draw(const engine::View& view) {
-  StartTimer("Graphics::VanillaDraw");
   DrawInner(view, nullptr);
-  EndTimer();
 }
 
 void Graphics::Draw(const engine::View& view, const Transform& transform) {
-  StartTimer("Graphics::TransformDraw");
   DrawInner(view, &transform);
-  EndTimer();
 }
 
 void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
-  StartTimer("Graphics::Clear");
   Clear();
-  EndTimer();
 
-  StartTimer("Graphics::DrawTiles");
   Point camera_offset(kGridSize*kPadding, kGridSize*kPadding);
   if (transform != nullptr) {
     camera_offset += transform->camera_offset;
   }
   DrawTiles(view, camera_offset);
-  EndTimer();
 
-  StartTimer("Graphics::DrawSprites");
   // A collection of sprite text to draw. Layed out and drawn after the sprites.
   vector<Point> positions;
   vector<string> texts;
@@ -140,17 +131,13 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
       colors.push_back(color);
     }
   }
-  EndTimer();
 
   if (transform != nullptr) {
-    StartTimer("Graphics::DrawShades");
     for (const auto& pair : transform->shaded_squares) {
       DrawShade(view, camera_offset, pair.first, pair.second);
     }
-    EndTimer();
   }
 
-  StartTimer("Graphics::DrawText");
   DrawTexts(positions, texts, colors);
   if (interface_.HasLines()) {
     DrawLog(interface_.GetLines());
@@ -158,11 +145,8 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     DrawLog(view.log);
   }
   DrawStatus(view.status);
-  EndTimer();
 
-  StartTimer("Graphics::Flip");
   Flip();
-  EndTimer();
 }
 
 void Graphics::Clear() {
@@ -171,15 +155,9 @@ void Graphics::Clear() {
 
 void Graphics::Flip() {
   SDL_Surface* surface = buffer_->surface_;
-  StartTimer("SDL::UpdateTexture");
   SDL_UpdateTexture(texture_, nullptr, surface->pixels, surface->pitch);
-  EndTimer();
-  StartTimer("SDL::RenderClear");
   SDL_RenderClear(renderer_);
-  EndTimer();
-  StartTimer("SDL::RenderCopy");
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
-  EndTimer();
   StartTimer("SDL::RenderPresent");
   SDL_RenderPresent(renderer_);
   EndTimer();
