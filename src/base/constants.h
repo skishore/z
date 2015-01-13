@@ -18,6 +18,17 @@ inline Direction OppositeDirection(Direction dir) {
   return (Direction)(dir ^ 2);
 }
 
+enum Orientation {
+  TT = 0,
+  TR = 1,
+  RR = 2,
+  BR = 3,
+  BB = 4,
+  BL = 5,
+  LL = 6,
+  TL = 7
+};
+
 } //  namespace babel
 
 #endif  // BABEL_CONSTANTS_H__

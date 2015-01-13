@@ -327,12 +327,16 @@ int CorrectFontSize(int font_size, const string& text) {
 }
 
 SDL_Point* GetTextPolygon(
-    int font_size, Direction dir, const SDL_Rect& rect,
-    const Point& size, Point* position) {
+    int font_size, Orientation orientation, const SDL_Rect& rect,
+    const Point& size, Point* position, int* vertices) {
   const int kWedge = font_size/3;
   SDL_Point* polygon = new SDL_Point[7];
-  if (dir == Direction::LEFT || dir == Direction::RIGHT) {
-    const int sign = (dir == Direction::RIGHT ? 1 : -1);
+  *vertices = 7;
+  int top_left = -1;
+  if (orientation == Orientation::LL ||
+      orientation == Orientation::RR) {
+    const int sign = (orientation == Orientation::RR ? 1 : -1);
+    top_left = (orientation == Orientation::RR ? 2 : 3);
     polygon[0].x = rect.x + (sign + 1)*rect.w/2;
     polygon[0].y = rect.y + rect.h/2;
     polygon[1].x = polygon[0].x + sign*kWedge;
@@ -347,12 +351,54 @@ SDL_Point* GetTextPolygon(
     polygon[5].y = polygon[4].y;
     polygon[6].x = polygon[1].x;
     polygon[6].y = polygon[0].y + kWedge;
+  } else if (orientation == Orientation::TT ||
+             orientation == Orientation::BB) {
+    const int sign = (orientation == Orientation::BB ? 1 : -1);
+    top_left = (orientation == Orientation::BB ? 2 : 3);
+    polygon[0].x = rect.x + rect.w/2;
+    polygon[0].y = rect.y + (sign + 1)*rect.h/2;
+    polygon[1].x = polygon[0].x - kWedge;
+    polygon[1].y = polygon[0].y + sign*kWedge;
+    polygon[2].x = polygon[0].x - size.x/2;
+    polygon[2].y = polygon[1].y;
+    polygon[3].x = polygon[2].x;
+    polygon[3].y = polygon[2].y + sign*rect.h;
+    polygon[4].x = polygon[3].x + size.x;
+    polygon[4].y = polygon[3].y;
+    polygon[5].x = polygon[4].x;
+    polygon[5].y = polygon[1].y;
+    polygon[6].x = polygon[0].x + kWedge;
+    polygon[6].y = polygon[1].y;
   } else {
-    ASSERT(false, "Unexpected text direction: " << dir);
+    delete[] polygon;
+    polygon = new SDL_Point[5];
+    *vertices = 5;
+    Point sign;
+    if (orientation == Orientation::TR) {
+      sign = Point(1, -1);
+    } else if (orientation == Orientation::BR) {
+      sign = Point(1, 1);
+    } else if (orientation == Orientation::BL) {
+      sign = Point(-1, 1);
+    } else {
+      sign = Point(-1, -1);
+    }
+    polygon[0].x = rect.x + rect.w/2;
+    polygon[0].y = rect.y + (sign.y + 1)*rect.h/2;
+    polygon[1].x = polygon[0].x + sign.x*kWedge;
+    polygon[1].y = polygon[0].y + sign.y*kWedge;
+    polygon[2].x = polygon[0].x + sign.x*size.x;
+    polygon[2].y = polygon[1].y;
+    polygon[3].x = polygon[2].x;
+    polygon[3].y = polygon[2].y + sign.y*rect.h;
+    polygon[4].x = polygon[0].x;
+    polygon[4].y = polygon[3].y;
+    position->x = (sign.x > 0 ? polygon[0].x : polygon[2].x);
+    position->y = (sign.y > 0 ? polygon[2].y : polygon[3].y);
   }
-  int top_left = (dir == Direction::RIGHT ? 2 : 3);
-  *position = Point(polygon[top_left].x,
-                    polygon[top_left].y + (rect.h - size.y + 1)/2);
+  if (top_left >= 0) {
+    *position = Point(polygon[top_left].x, polygon[top_left].y);
+  }
   return polygon;
 }
 
@@ -392,7 +438,7 @@ void TextRenderer::DrawText(
 
 void TextRenderer::DrawTextBox(
     const string& font_name, int font_size,
-    const string& text, const SDL_Rect& rect, Direction dir,
+    const string& text, const SDL_Rect& rect, Orientation orientation,
     const SDL_Color fg_color, const SDL_Color bg_color) {
   if (text.size() == 0) {
     return;
@@ -405,14 +451,16 @@ void TextRenderer::DrawTextBox(
   const int border = rect.w/8;
   const int padding = rect.w/8;
   size.x += border + 2*padding;
-  std::unique_ptr<SDL_Point[]> polygon(
-      GetTextPolygon(font_size, dir, rect, size, &position));
+
+  int vertices;
+  std::unique_ptr<SDL_Point[]> polygon(GetTextPolygon(
+      font_size, orientation, rect, size, &position, &vertices));
   Uint32 background = ConvertColor(bg_color, 0);
-  SDL_FillPolygon(target_, polygon.get(), 7, background);
+  SDL_FillPolygon(target_, polygon.get(), vertices, background);
 
   size.x -= border;
-  SDL_Rect text_rect{position.x, rect.y + 1, size.x + 1, rect.h};
-  if (dir == Direction::RIGHT) {
+  SDL_Rect text_rect{position.x, position.y + 1, size.x + 1, rect.h};
+  if (orientation == Orientation::RR) {
     text_rect.x += border;
     position.x += border;
   }
@@ -420,6 +468,7 @@ void TextRenderer::DrawTextBox(
   SDL_FillRect(target_, &text_rect, background);
 
   position.x += padding;
+  position.y += (rect.h - size.y + 1)/2;
   font->Render(position, size, baseline, fg_color, target_);
 }
 

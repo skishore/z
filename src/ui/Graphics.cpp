@@ -226,7 +226,7 @@ void Graphics::DrawText(const Point& position, Direction dir,
                 kGridSize, kGridSize - 2*margin};
   text_renderer_->DrawTextBox(
       "default_font.ttf", kTextSize,
-      text, rect, (Direction)dir, kBlack, color);
+      text, rect, Orientation::BB, kBlack, color);
 }
 
 void Graphics::DrawLog(const vector<string>& log) {

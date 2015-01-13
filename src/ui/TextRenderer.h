@@ -28,11 +28,11 @@ class TextRenderer {
 
   void DrawText(
       const std::string& font_name, int font_size,
-      const std::string& text, const SDL_Rect& position,
+      const std::string& text, const SDL_Rect& rect,
       const SDL_Color color=kWhite);
   void DrawTextBox(
       const std::string& font_name, int font_size,
-      const std::string& text, const SDL_Rect& rect, Direction dir,
+      const std::string& text, const SDL_Rect& rect, Orientation orientation,
       const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
 
  private:
