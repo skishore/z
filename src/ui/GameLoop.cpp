@@ -14,7 +14,7 @@ namespace {
 
 static const tick kTicksPerSecond = 1000000;
 static const tick kBreak = 4000;
-static const int kUpdatesPerFrame = 2;
+static const int kUpdatesPerFrame = 1;
 
 // We store the current frame rate and updatable in static global variables
 // because the emscripten main loop must be a global void(void) function.

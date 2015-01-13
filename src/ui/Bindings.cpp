@@ -45,16 +45,17 @@ bool Bindings::Update(double frame_rate) {
     DEBUG("FPS: " << frame_rate);
   }
 
+  char ch;
+  bool has_input = input_.GetChar(&ch);
+  if (has_input && ch == 0x1b) {
+    return false;
+  }
+
   if (animation_->Update()) {
     animation_->Draw(&graphics_);
     return true;
-  }
-
-  char ch;
-  if (!input_.GetChar(&ch)) {
+  } else if (!has_input) {
     return true;
-  } else if (ch == 0x03 || ch == 0x1b /* ctrl-C, escape */) {
-    return false;
   }
 
   engine::Action* input = nullptr;
