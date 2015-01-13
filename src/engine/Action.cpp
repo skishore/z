@@ -12,14 +12,44 @@ using std::vector;
 
 namespace babel {
 namespace engine {
-
 namespace {
+
+static const int kMaxSpeechSize = 16;
+static const float kSpeechRadius = 3.2;
+
+vector<Point> ComputeSquaresInRange(
+    const GameState& game_state, const Sprite& sprite, int radius) {
+  ASSERT(sprite.IsPlayer(), "ComputeSquaresInRange called for an NPC!");
+  vector<Point> result;
+  Point offset;
+  for (offset.x = -kSpeechRadius; offset.x <= kSpeechRadius; offset.x++) {
+    for (offset.y = -kSpeechRadius; offset.y <= kSpeechRadius; offset.y++) {
+      const Point square = sprite.square + offset;
+      if (game_state.player_vision->IsSquareVisible(square, kSpeechRadius)) {
+        result.push_back(square);
+      }
+    }
+  }
+  return result;
+}
 
 bool IsSquareFree(const GameState& game_state, const Point& square) {
   return (!game_state.map.IsSquareBlocked(square) &&
           !game_state.IsSquareOccupied(square));
 }
 
+}  // namespace
+
+bool IsSpeechAllowed(const string& text) {
+  if (text.empty() || text.size() > kMaxSpeechSize) {
+    return false;
+  }
+  for (char ch : text) {
+    if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
@@ -41,8 +71,7 @@ ActionResult AttackAction::Execute() {
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
   }
-  target_->cur_health = max(target_->cur_health - damage, 0);
-  bool killed = !target_->IsAlive();
+  bool killed = damage >= target_->cur_health;
 
   if (sprite_->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
@@ -54,8 +83,10 @@ ActionResult AttackAction::Execute() {
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
   }
   for (EventHandler* handler : *handlers_) {
-    handler->AfterAttack(*sprite_, *target_);
+    handler->BeforeAttack(*sprite_, *target_);
   }
+
+  target_->cur_health = max(target_->cur_health - damage, 0);
   if (killed && !target_->IsPlayer()) {
     game_state_->RemoveNPC(target_);
   }
@@ -76,6 +107,45 @@ ActionResult MoveAction::Execute() {
   } else if (game_state_->IsSquareOccupied(square)) {
     result.alternate = new AttackAction(game_state_->SpriteAt(square));
   }
+  return result;
+}
+
+SpeechAction::SpeechAction(const string& text) : text_(text) {}
+
+ActionResult SpeechAction::Execute() {
+  ActionResult result;
+  ASSERT(sprite_->IsPlayer(), "SpeechAction::Execute called for an NPC!");
+  if (!IsSpeechAllowed(text_)) {
+    return result;
+  }
+  vector<Point> earshot = ComputeSquaresInRange(
+      *game_state_, *sprite_, kSpeechRadius);
+
+  game_state_->log.AddLine("You say: \"" + text_ + "\".");
+  for (EventHandler* handler : *handlers_) {
+    handler->BeforeSpeech(*sprite_, kSpeechRadius, earshot);
+  }
+
+  for (const Point& square : earshot) {
+    if (game_state_->IsSquareOccupied(square) && square != sprite_->square) {
+      Sprite* sprite = game_state_->SpriteAt(square);
+      if (rand() % 4 != 0) {
+        const int damage = (rand() % 6) + 1;
+        const bool killed = damage >= sprite->cur_health;
+        const string verbs = (killed ? "kills" : "hurts");
+        game_state_->log.AddLine("Your speech " + verbs + " the " +
+                                 sprite->creature.appearance.name + "!");
+        for (EventHandler* handler : *handlers_) {
+          handler->BeforeAttack(*sprite_, *sprite);
+        }
+        sprite->cur_health = max(sprite->cur_health - damage, 0);
+        if (killed) {
+          game_state_->RemoveNPC(sprite);
+        }
+      }
+    }
+  }
+  result.success = true;
   return result;
 }
 

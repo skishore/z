@@ -18,7 +18,7 @@ FieldOfVision::FieldOfVision(
   permissive::squareFov<FieldOfVision>(source_.x, source_.y, bound, *this);
 }
 
-bool FieldOfVision::IsSquareVisible(const Point& square, int radius) const {
+bool FieldOfVision::IsSquareVisible(const Point& square, float radius) const {
   Point offset_square = square - offset_;
   if (0 <= offset_square.x && offset_square.x < size_ &&
       0 <= offset_square.y && offset_square.y < size_) {

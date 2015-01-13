@@ -15,7 +15,7 @@ class FieldOfVision {
   // Squares that are more than bound away in x- or y-coordinate are hidden.
   FieldOfVision(const TileMap& tiles, const Point& source, int bound);
 
-  bool IsSquareVisible(const Point& square, int radius) const;
+  bool IsSquareVisible(const Point& square, float radius) const;
 
   // Interface methods needed to use this class with the permissive-fov library.
   bool isBlocked(int x, int y) const;

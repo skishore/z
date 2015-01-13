@@ -25,8 +25,6 @@ class AnimationComponent {
 
 namespace {
 
-static const int kAttackFrames = 4;
-
 class CheckpointComponent : public AnimationComponent {
  public:
   bool Update() override {
@@ -38,24 +36,51 @@ class CheckpointComponent : public AnimationComponent {
   };
 };
 
-class AttackComponent : public AnimationComponent {
+class TransformComponent : public AnimationComponent {
  public:
-  AttackComponent(const Point& square) {
-    transform_.shaded_squares[square] = Transform::Shade{0x00ff0000, 0.5};
-  }
-
   bool Update() override {
-    frame_ += 1;
-    return frame_ < kAttackFrames;
-  };
+    frames_left_ -= 1;
+    return frames_left_ >= 0;
+  }
 
   void Draw(const engine::View& view, Graphics* graphics) const override {
     graphics->Draw(view, transform_);
   };
 
- private:
-  int frame_ = 0;
+ protected:
+  int frames_left_;
   Transform transform_;
+};
+
+class AttackComponent : public TransformComponent {
+ public:
+  AttackComponent(const Point& square) {
+    frames_left_ = 4;
+    transform_.shaded_squares[square] = Transform::Shade{0x00ff0000, 0.5};
+  }
+};
+
+class SpeechComponent : public TransformComponent {
+ public:
+  SpeechComponent(
+      const engine::Sprite& sprite, float radius, const vector<Point>& earshot)
+      : square_(sprite.square), radius_(radius), earshot_(earshot) {
+    frames_left_ = kSpeechFrames;
+  }
+
+  bool Update() override {
+    for (const auto& square : earshot_) {
+      float alpha = 0.2*(1 - (square_ - square).length()/radius_) + 0.2;
+      transform_.shaded_squares[square] = Transform::Shade{0x00ffffff, alpha};
+    }
+    return TransformComponent::Update();
+  }
+
+ private:
+  static const int kSpeechFrames = 8;
+  Point square_;
+  float radius_;
+  const vector<Point> earshot_;
 };
 
 }
@@ -72,9 +97,15 @@ Animation::~Animation() {
   }
 }
 
-void Animation::AfterAttack(const engine::Sprite& sprite,
-                            const engine::Sprite& target) {
+void Animation::BeforeAttack(const engine::Sprite& sprite,
+                             const engine::Sprite& target) {
   PushStep(AnimationStep{new AttackComponent(target.square), Snapshot()});
+}
+
+void Animation::BeforeSpeech(const engine::Sprite& sprite, float radius,
+                             const vector<Point>& earshot) {
+  AnimationComponent* component = new SpeechComponent(sprite, radius, earshot);
+  PushStep(AnimationStep{component, Snapshot()});
 }
 
 void Animation::Checkpoint() {

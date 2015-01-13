@@ -1,6 +1,8 @@
 #ifndef BABEL_EVENT_HANDLER_H__
 #define BABEL_EVENT_HANDLER_H__
 
+#include <vector>
+
 #include "base/point.h"
 #include "engine/Sprite.h"
 
@@ -9,8 +11,9 @@ namespace engine {
 
 class EventHandler {
  public:
-  // If the target is killed, AfterAttack is called before it is removed.
-  virtual void AfterAttack(const Sprite& sprite, const Sprite& target) {};
+  virtual void BeforeAttack(const Sprite& sprite, const Sprite& target) {};
+  virtual void BeforeSpeech(const Sprite& sprite, float radius,
+                            const std::vector<Point>& earshot) {};
 };
 
 }  // namespace engine

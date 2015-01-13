@@ -1,6 +1,7 @@
 #ifndef BABEL_ACTION_H__
 #define BABEL_ACTION_H__
 
+#include <string>
 #include <vector>
 
 #include "base/point.h"
@@ -17,6 +18,8 @@ struct ActionResult {
   bool success = false;
   Action* alternate = nullptr;
 };
+
+bool IsSpeechAllowed(const std::string& text);
 
 class Action {
  public:
@@ -49,6 +52,16 @@ class MoveAction : public Action {
 
  private:
   Point move_;
+};
+
+class SpeechAction : public Action {
+ public:
+  SpeechAction(const std::string& text);
+  ActionResult Execute() override;
+
+ private:
+  Point move_;
+  std::string text_;
 };
 
 }  // namespace engine

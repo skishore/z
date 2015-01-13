@@ -12,6 +12,11 @@ void Interface::ClearLines() {
 }
 
 bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
+  if (ch == 's') {
+    *action = new engine::SpeechAction("ka");
+    return true;
+  }
+
   if (!speaking_) {
     if (ch == 's') {
       has_lines_ = true;
@@ -23,8 +28,9 @@ bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
     return false;
   }
 
-  if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z')) {
-    speech_ += ch;
+  string new_speech = speech_ + ch;
+  if (engine::IsSpeechAllowed(new_speech)) {
+    speech_ = new_speech;
     *redraw = true;
   } else if (ch == '\b') {
     if (!speech_.empty()) {
@@ -32,8 +38,8 @@ bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
       *redraw = true;
     }
   } else if (ch == '\n') {
-    // TODO(skishore): Set an Action here.
     speaking_ = false;
+    *action = new engine::SpeechAction(speech_);
     *redraw = true;
   }
   return true;
