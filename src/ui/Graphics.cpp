@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <string>
 
-#include "base/constants.h"
 #include "base/debug.h"
 #include "base/timing.h"
 #include "base/util.h"
@@ -214,20 +213,20 @@ void Graphics::DrawTexts(const vector<Point>& positions,
   ASSERT(positions.size() == texts.size(), "Mismatched text size.");
   ASSERT(positions.size() == colors.size(), "Mismatched color size.");
   for (int i = 0; i < positions.size(); i++) {
-    Direction dir = (2*positions[i].x + kGridSize <= buffer_->bounds_.w ?
-                     Direction::LEFT : Direction::RIGHT);
+    Point dir = (2*positions[i].x + kGridSize > buffer_->bounds_.w ?
+                 Point(1, 0) : Point(-1, 0));
     DrawText(positions[i], dir, texts[i], colors[i]);
   }
 }
 
-void Graphics::DrawText(const Point& position, Direction dir,
+void Graphics::DrawText(const Point& position, const Point& dir,
                         const string& text, SDL_Color color) {
   const int margin = kGridSize/8;
   SDL_Rect rect{position.x, position.y + margin,
                 kGridSize, kGridSize - 2*margin};
   text_renderer_->DrawTextBox(
       "default_font.ttf", kTextSize,
-      text, rect, Orientation::BB, kBlack, color);
+      text, rect, Point(0, -1), kBlack, color);
 }
 
 void Graphics::DrawLog(const vector<string>& log) {

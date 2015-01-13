@@ -8,7 +8,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include "base/constants.h"
 #include "base/point.h"
 
 namespace babel {
@@ -32,7 +31,7 @@ class TextRenderer {
       const SDL_Color color=kWhite);
   void DrawTextBox(
       const std::string& font_name, int font_size,
-      const std::string& text, const SDL_Rect& rect, Orientation orientation,
+      const std::string& text, const SDL_Rect& rect, const Point& dir,
       const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
 
  private:

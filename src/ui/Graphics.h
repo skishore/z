@@ -49,7 +49,7 @@ class Graphics {
   void DrawTexts(const std::vector<Point>& positions,
                  const std::vector<std::string>& texts,
                  const std::vector<SDL_Color>& colors);
-  void DrawText(const Point& position, Direction direction,
+  void DrawText(const Point& position, const Point& dir,
                 const std::string& text, SDL_Color color);
 
   void DrawLog(const std::vector<std::string>& log);
