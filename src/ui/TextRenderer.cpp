@@ -375,9 +375,9 @@ SDL_Point* GetTextPolygon(
   }
   // Handle the diagonal cases. These cases are identical, up to sign.
   SDL_Point* polygon = new SDL_Point[5];
-  polygon[0].x = rect.x + rect.w/2;
-  polygon[0].y = rect.y + (dir.y + 1)*rect.h/2;
-  polygon[1].x = polygon[0].x + dir.x*kWedge;
+  polygon[0].x = rect.x + rect.w/2 - dir.x*rect.w/6;
+  polygon[0].y = rect.y + (1.2*dir.y + 1)*rect.h/2;
+  polygon[1].x = polygon[0].x + 2*dir.x*kWedge;
   polygon[1].y = polygon[0].y + dir.y*kWedge;
   polygon[2].x = polygon[0].x + dir.x*size.x;
   polygon[2].y = polygon[1].y;

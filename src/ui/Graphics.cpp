@@ -226,7 +226,7 @@ void Graphics::DrawText(const Point& position, const Point& dir,
                 kGridSize, kGridSize - 2*margin};
   text_renderer_->DrawTextBox(
       "default_font.ttf", kTextSize,
-      text, rect, Point(0, -1), kBlack, color);
+      text, rect, Point(1, -1), kBlack, color);
 }
 
 void Graphics::DrawLog(const vector<string>& log) {
