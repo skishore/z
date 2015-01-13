@@ -331,61 +331,63 @@ SDL_Point* GetTextPolygon(
     const Point& size, Point* position, int* vertices) {
   ASSERT(!dir.zero(), "Text box direction was empty!");
   const int kWedge = font_size/3;
-  SDL_Point* polygon = new SDL_Point[7];
-  *vertices = 7;
-  int top_left = -1;
-  if (dir.y == 0) {
-    top_left = (dir.x > 0 ? 2 : 3);
-    polygon[0].x = rect.x + (dir.x + 1)*rect.w/2;
-    polygon[0].y = rect.y + rect.h/2;
-    polygon[1].x = polygon[0].x + dir.x*kWedge;
-    polygon[1].y = polygon[0].y - kWedge;
-    polygon[2].x = polygon[1].x;
-    polygon[2].y = rect.y;
-    polygon[3].x = polygon[2].x + dir.x*size.x;
-    polygon[3].y = polygon[2].y;
-    polygon[4].x = polygon[3].x;
-    polygon[4].y = rect.y + rect.h;
-    polygon[5].x = polygon[1].x;
-    polygon[5].y = polygon[4].y;
-    polygon[6].x = polygon[1].x;
-    polygon[6].y = polygon[0].y + kWedge;
-  } else if (dir.x == 0) {
-    top_left = (dir.y > 0 ? 2 : 3);
-    polygon[0].x = rect.x + rect.w/2;
-    polygon[0].y = rect.y + (dir.y + 1)*rect.h/2;
-    polygon[1].x = polygon[0].x - kWedge;
-    polygon[1].y = polygon[0].y + dir.y*kWedge;
-    polygon[2].x = polygon[0].x - size.x/2;
-    polygon[2].y = polygon[1].y;
-    polygon[3].x = polygon[2].x;
-    polygon[3].y = polygon[2].y + dir.y*rect.h;
-    polygon[4].x = polygon[3].x + size.x;
-    polygon[4].y = polygon[3].y;
-    polygon[5].x = polygon[4].x;
-    polygon[5].y = polygon[1].y;
-    polygon[6].x = polygon[0].x + kWedge;
-    polygon[6].y = polygon[1].y;
-  } else {
-    delete[] polygon;
-    polygon = new SDL_Point[5];
-    *vertices = 5;
-    polygon[0].x = rect.x + rect.w/2;
-    polygon[0].y = rect.y + (dir.y + 1)*rect.h/2;
-    polygon[1].x = polygon[0].x + dir.x*kWedge;
-    polygon[1].y = polygon[0].y + dir.y*kWedge;
-    polygon[2].x = polygon[0].x + dir.x*size.x;
-    polygon[2].y = polygon[1].y;
-    polygon[3].x = polygon[2].x;
-    polygon[3].y = polygon[2].y + dir.y*rect.h;
-    polygon[4].x = polygon[0].x;
-    polygon[4].y = polygon[3].y;
-    position->x = (dir.x > 0 ? polygon[0].x : polygon[2].x);
-    position->y = (dir.y > 0 ? polygon[2].y : polygon[3].y);
+  // Handle the cardinal direction cases first. For these cases, we return
+  // a polygon with 7 vertices: 3 for the wedge and 4 for the actual text.
+  if (dir.x == 0 || dir.y == 0) {
+    int top_left_index;
+    SDL_Point* polygon = new SDL_Point[7];
+    if (dir.y == 0) {
+      top_left_index = (dir.x > 0 ? 2 : 3);
+      polygon[0].x = rect.x + (dir.x + 1)*rect.w/2;
+      polygon[0].y = rect.y + rect.h/2;
+      polygon[1].x = polygon[0].x + dir.x*kWedge;
+      polygon[1].y = polygon[0].y - kWedge;
+      polygon[2].x = polygon[1].x;
+      polygon[2].y = rect.y;
+      polygon[3].x = polygon[2].x + dir.x*size.x;
+      polygon[3].y = polygon[2].y;
+      polygon[4].x = polygon[3].x;
+      polygon[4].y = rect.y + rect.h;
+      polygon[5].x = polygon[1].x;
+      polygon[5].y = polygon[4].y;
+      polygon[6].x = polygon[1].x;
+      polygon[6].y = polygon[0].y + kWedge;
+    } else {
+      top_left_index = (dir.y > 0 ? 2 : 3);
+      polygon[0].x = rect.x + rect.w/2;
+      polygon[0].y = rect.y + (dir.y + 1)*rect.h/2;
+      polygon[1].x = polygon[0].x - kWedge;
+      polygon[1].y = polygon[0].y + dir.y*kWedge;
+      polygon[2].x = polygon[0].x - size.x/2;
+      polygon[2].y = polygon[1].y;
+      polygon[3].x = polygon[2].x;
+      polygon[3].y = polygon[2].y + dir.y*rect.h;
+      polygon[4].x = polygon[3].x + size.x;
+      polygon[4].y = polygon[3].y;
+      polygon[5].x = polygon[4].x;
+      polygon[5].y = polygon[1].y;
+      polygon[6].x = polygon[0].x + kWedge;
+      polygon[6].y = polygon[1].y;
+    }
+    *position = Point(polygon[top_left_index].x, polygon[top_left_index].y);
+    *vertices = 7;
+    return polygon;
   }
-  if (top_left >= 0) {
-    *position = Point(polygon[top_left].x, polygon[top_left].y);
-  }
+  // Handle the diagonal cases. These cases are identical, up to sign.
+  SDL_Point* polygon = new SDL_Point[5];
+  polygon[0].x = rect.x + rect.w/2;
+  polygon[0].y = rect.y + (dir.y + 1)*rect.h/2;
+  polygon[1].x = polygon[0].x + dir.x*kWedge;
+  polygon[1].y = polygon[0].y + dir.y*kWedge;
+  polygon[2].x = polygon[0].x + dir.x*size.x;
+  polygon[2].y = polygon[1].y;
+  polygon[3].x = polygon[2].x;
+  polygon[3].y = polygon[2].y + dir.y*rect.h;
+  polygon[4].x = polygon[0].x;
+  polygon[4].y = polygon[3].y;
+  position->x = (dir.x > 0 ? polygon[0].x : polygon[2].x);
+  position->y = (dir.y > 0 ? polygon[2].y : polygon[3].y);
+  *vertices = 5;
   return polygon;
 }
 
