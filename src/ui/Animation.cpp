@@ -85,8 +85,8 @@ class SpeechComponent : public TransformComponent {
 
 }
 
-Animation::Animation(const engine::GameState& game_state)
-    : game_state_(game_state) {
+Animation::Animation(int radius, const engine::GameState& game_state)
+    : radius_(radius), game_state_(game_state) {
   last_.reset(Snapshot());
 }
 
@@ -138,7 +138,7 @@ bool Animation::Update() {
 }
 
 engine::View* Animation::Snapshot() const {
-  return new engine::View(kScreenRadius, game_state_);
+  return new engine::View(radius_, game_state_);
 }
 
 void Animation::PushStep(const AnimationStep& step) {

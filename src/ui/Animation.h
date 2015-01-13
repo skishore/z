@@ -22,7 +22,7 @@ struct AnimationStep {
 
 class Animation : public engine::EventHandler {
  public:
-  Animation(const engine::GameState& game_state);
+  Animation(int radius, const engine::GameState& game_state);
   ~Animation();
 
   // EventHandler callbacks, used to add to the animation queue.
@@ -43,6 +43,7 @@ class Animation : public engine::EventHandler {
   void PushStep(const AnimationStep& step);
   void PopStep();
 
+  const int radius_;
   const engine::GameState& game_state_;
 
   std::unique_ptr<engine::View> last_;

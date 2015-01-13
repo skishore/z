@@ -17,7 +17,7 @@ namespace ui {
 
 class Graphics {
  public:
-  Graphics(const Interface& interface);
+  Graphics(int radius, const Interface& interface);
   ~Graphics();
 
   void Draw(const engine::View& view);

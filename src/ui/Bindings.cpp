@@ -1,7 +1,6 @@
 #include <map>
 #include <memory>
 
-#include "base/constants.h"
 #include "base/debug.h"
 #include "base/point.h"
 #include "base/timing.h"
@@ -15,6 +14,7 @@ namespace ui {
 namespace {
 
 static const int kFrameRate = 60;
+static const int kScreenRadius = 10;
 
 static const std::map<char,Point> kShift = {
   {'h', Point(-1, 0)},
@@ -30,7 +30,8 @@ static const std::map<char,Point> kShift = {
 
 }
 
-Bindings::Bindings(bool verbose) : verbose_(verbose), graphics_(interface_) {}
+Bindings::Bindings(bool verbose)
+    : verbose_(verbose), graphics_(kScreenRadius, interface_) {}
 
 int Bindings::Start() {
   Reset();
@@ -84,7 +85,7 @@ bool Bindings::Update(double frame_rate) {
 
 void Bindings::Reset() {
   engine_.reset(new engine::Engine());
-  animation_.reset(new Animation(engine_->GetGameState()));
+  animation_.reset(new Animation(kScreenRadius, engine_->GetGameState()));
   engine_->AddEventHandler(animation_.get());
   Redraw();
 }

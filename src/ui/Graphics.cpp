@@ -47,8 +47,9 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics(const Interface& interface) : interface_(interface) {
-  const int side = 2*(kScreenRadius - kPadding) + 1;
+Graphics::Graphics(int radius, const Interface& interface)
+    : interface_(interface) {
+  const int side = 2*(radius - kPadding) + 1;
   const Point size(side, side);
   const Point dimensions(kGridSize*size);
   const Point grid(kGridSize, kGridSize);
