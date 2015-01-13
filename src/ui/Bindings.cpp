@@ -14,7 +14,7 @@ namespace ui {
 
 namespace {
 
-static const int kFrameRate = 64;
+static const int kFrameRate = 60;
 
 static const std::map<char,Point> kShift = {
   {'h', Point(-1, 0)},

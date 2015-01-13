@@ -158,9 +158,7 @@ void Graphics::Flip() {
   SDL_UpdateTexture(texture_, nullptr, surface->pixels, surface->pitch);
   SDL_RenderClear(renderer_);
   SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
-  StartTimer("SDL::RenderPresent");
   SDL_RenderPresent(renderer_);
-  EndTimer();
 }
 
 void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
