@@ -12,10 +12,8 @@ void Interface::ClearLines() {
 }
 
 bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
-  if (ch == 's') {
-    *action = new engine::SpeechAction("ka");
-    return true;
-  }
+  // Temporarily disable the entire extended-command interface.
+  return false;
 
   if (!speaking_) {
     if (ch == 's') {
