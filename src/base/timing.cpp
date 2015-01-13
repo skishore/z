@@ -15,6 +15,7 @@ namespace babel {
 
 namespace {
 static const tick kTicksPerSecond = 1000000;
+bool gBackingOut = true;
 vector<tick> gTimers;
 }  // namespace
 
@@ -30,12 +31,20 @@ tick GetCurrentTick() {
 
 void StartTimer(const std::string& name) {
   gTimers.push_back(GetCurrentTick());
-  cout << string(2*gTimers.size(), ' ') << name << "...";
+  if (!gBackingOut) {
+    cout << endl;
+  }
+  cout << string(2*(gTimers.size() - 1), ' ') << name << ": ";
+  gBackingOut = false;
 }
 
 void EndTimer() {
   const tick now = GetCurrentTick();
+  if (gBackingOut) {
+    cout << string(2*(gTimers.size() - 1), ' ');
+  }
   cout << "done (" << now - gTimers[gTimers.size() - 1] << " us)." << endl;
+  gBackingOut = true;
   gTimers.pop_back();
 }
 
