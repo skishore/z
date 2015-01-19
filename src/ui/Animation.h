@@ -7,7 +7,7 @@
 #include "engine/EventHandler.h"
 #include "engine/Sprite.h"
 #include "engine/View.h"
-#include "ui/Graphics.h"
+#include "render/Graphics.h"
 #include "ui/Tween.h"
 
 namespace babel {
@@ -32,7 +32,7 @@ class Animation : public engine::EventHandler {
                     const std::vector<Point>& earshot) override;
 
   void Checkpoint();
-  void Draw(Graphics* graphics_) const;
+  void Draw(render::Graphics* graphics) const;
 
   // Returns false if the current animation is complete.
   bool Update();

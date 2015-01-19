@@ -4,9 +4,9 @@
 #include <memory>
 
 #include "engine/Engine.h"
+#include "render/Graphics.h"
 #include "ui/Animation.h"
 #include "ui/GameLoop.h"
-#include "ui/Graphics.h"
 #include "ui/InputHandler.h"
 #include "ui/Interface.h"
 
@@ -25,7 +25,7 @@ class Bindings : GameLoop::Updatable {
   void Redraw();
 
   bool verbose_;
-  Graphics graphics_;
+  render::Graphics graphics_;
   InputHandler input_;
   Interface interface_;
   std::unique_ptr<Animation> animation_;

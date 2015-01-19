@@ -7,7 +7,7 @@
 #include "base/point.h"
 
 namespace babel {
-namespace ui {
+namespace render {
 
 class Image {
  public:
@@ -27,7 +27,7 @@ class Image {
   mutable SDL_Surface* surface_;
 };
 
-} // namespace ui
+} // namespace render
 } // namespace babel
 
 #endif  // __BABEL_IMAGE_H__

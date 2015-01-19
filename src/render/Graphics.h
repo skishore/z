@@ -7,17 +7,22 @@
 
 #include "base/point.h"
 #include "engine/View.h"
-#include "ui/Image.h"
-#include "ui/Interface.h"
-#include "ui/TextRenderer.h"
-#include "ui/Transform.h"
+#include "render/Image.h"
+#include "render/TextRenderer.h"
+#include "render/Transform.h"
 
 namespace babel {
-namespace ui {
+namespace render {
+
+class InterfaceView {
+ public:
+  virtual bool HasLines() const = 0;
+  virtual std::vector<std::string> GetLines() const = 0;
+};
 
 class Graphics {
  public:
-  Graphics(int radius, const Interface& interface);
+  Graphics(int radius, const InterfaceView& interface);
   ~Graphics();
 
   void Draw(const engine::View& view);
@@ -56,7 +61,7 @@ class Graphics {
   void DrawStatus(const engine::StatusView& status);
   void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
 
-  const Interface& interface_;
+  const InterfaceView& interface_;
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;
@@ -71,7 +76,7 @@ class Graphics {
   std::unique_ptr<const Image> sprites_;
 };
 
-} // namespace ui 
+} // namespace render 
 } // namespace babel
 
 #endif  // __BABEL_GRAPHICS_H__

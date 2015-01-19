@@ -11,7 +11,7 @@
 #include "base/point.h"
 
 namespace babel {
-namespace ui {
+namespace render {
 
 static const SDL_Color kBlack{0, 0, 0};
 static const SDL_Color kWhite{255, 255, 255};
@@ -44,7 +44,7 @@ class TextRenderer {
   std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
 };
 
-} // namespace ui
+} // namespace render
 } // namespace babel
 
 #endif  // __BABEL_TEXT_RENDERER_H__

@@ -5,11 +5,12 @@
 #include <vector>
 
 #include "engine/Action.h"
+#include "render/Graphics.h"
 
 namespace babel {
 namespace ui {
 
-class Interface {
+class Interface : public render::InterfaceView {
  public:
   void ClearLines();
 
@@ -17,8 +18,8 @@ class Interface {
   // If the input is consumed, this method return an Action to take.
   bool Consume(char ch, engine::Action** action, bool* redraw);
 
-  bool HasLines() const;
-  std::vector<std::string> GetLines() const;
+  bool HasLines() const override;
+  std::vector<std::string> GetLines() const override;
 
  private:
   bool has_lines_ = false;

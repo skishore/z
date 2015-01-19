@@ -8,14 +8,15 @@
 #include "base/point.h"
 #include "engine/Sprite.h"
 #include "engine/View.h"
-#include "ui/Graphics.h"
+#include "render/Graphics.h"
+#include "render/Transform.h"
 
 namespace babel {
 namespace ui {
 
 class TweenEvent {
  public:
-  virtual void Update(int frame, Transform* transform) = 0;
+  virtual void Update(int frame, render::Transform* transform) = 0;
 };
 
 class Tween {
@@ -24,7 +25,7 @@ class Tween {
 
   // Update returns false if the tween is complete.
   bool Update();
-  void Draw(Graphics* graphics) const;
+  void Draw(render::Graphics* graphics) const;
 
  // Methods below this point are private.
  // TODO(skishore): Figure out a way to encapsulate them.
@@ -34,7 +35,7 @@ class Tween {
   const engine::View& end;
 
   int frame = 0;
-  Transform transform;
+  render::Transform transform;
   std::vector<std::unique_ptr<TweenEvent>> events;
 };
 

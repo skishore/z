@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "base/debug.h"
+#include "render/Transform.h"
 #include "ui/Animation.h"
 
 using std::map;
@@ -20,7 +21,8 @@ class AnimationComponent {
 
   // Returns false if this AnimationComponent is complete.
   virtual bool Update() = 0;
-  virtual void Draw(const engine::View& view, Graphics* graphics) const = 0;
+  virtual void Draw(const engine::View& view,
+                    render::Graphics* graphics) const = 0;
 };
 
 namespace {
@@ -31,7 +33,8 @@ class CheckpointComponent : public AnimationComponent {
     return false;
   };
 
-  void Draw(const engine::View& view, Graphics* graphics) const override {
+  void Draw(const engine::View& view,
+            render::Graphics* graphics) const override {
     ASSERT(false, "CheckpointComponent's Draw should not be called!");
   };
 };
@@ -43,20 +46,22 @@ class TransformComponent : public AnimationComponent {
     return frames_left_ >= 0;
   }
 
-  void Draw(const engine::View& view, Graphics* graphics) const override {
+  void Draw(const engine::View& view,
+            render::Graphics* graphics) const override {
     graphics->Draw(view, transform_);
   };
 
  protected:
   int frames_left_;
-  Transform transform_;
+  render::Transform transform_;
 };
 
 class AttackComponent : public TransformComponent {
  public:
   AttackComponent(const Point& square) {
     frames_left_ = 4;
-    transform_.shaded_squares[square] = Transform::Shade{0x00ff0000, 0.5};
+    transform_.shaded_squares[square] =
+        render::Transform::Shade{0x00ff0000, 0.5};
   }
 };
 
@@ -71,7 +76,8 @@ class SpeechComponent : public TransformComponent {
   bool Update() override {
     for (const auto& square : earshot_) {
       float alpha = 0.2*(1 - (square_ - square).length()/radius_) + 0.2;
-      transform_.shaded_squares[square] = Transform::Shade{0x00ffffff, alpha};
+      transform_.shaded_squares[square] =
+          render::Transform::Shade{0x00ffffff, alpha};
     }
     return TransformComponent::Update();
   }
@@ -112,7 +118,7 @@ void Animation::Checkpoint() {
   PushStep(AnimationStep{new CheckpointComponent, Snapshot()});
 }
 
-void Animation::Draw(Graphics* graphics) const {
+void Animation::Draw(render::Graphics* graphics) const {
   if (tween_ != nullptr) {
     tween_->Draw(graphics);
   } else if (!steps_.empty()) {

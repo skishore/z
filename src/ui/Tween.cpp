@@ -18,8 +18,8 @@ class CameraEvent : public TweenEvent {
  public:
   CameraEvent(const Point& move) : move_(move) {}
 
-  void Update(int frame, Transform* transform) override {
-    transform->camera_offset = frame*kGridSize*move_/kTweenFrames;
+  void Update(int frame, render::Transform* transform) override {
+    transform->camera_offset = frame*render::kGridSize*move_/kTweenFrames;
   }
 
  private:
@@ -30,8 +30,8 @@ class MoveEvent : public TweenEvent {
  public:
   MoveEvent(engine::sid id, const Point& move) : id_(id), move_(move) {}
 
-  void Update(int frame, Transform* transform) override {
-    transform->sprite_offsets[id_] = frame*kGridSize*move_/kTweenFrames;
+  void Update(int frame, render::Transform* transform) override {
+    transform->sprite_offsets[id_] = frame*render::kGridSize*move_/kTweenFrames;
   }
 
  private:
@@ -74,7 +74,7 @@ bool Tween::Update() {
   return true;
 }
 
-void Tween::Draw(Graphics* graphics) const {
+void Tween::Draw(render::Graphics* graphics) const {
   ASSERT(frame <= kTweenFrames, "Draw called after tween was finished!");
   if (frame < kTweenFrames && !events.empty()) {
     graphics->Draw(start, transform);

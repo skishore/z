@@ -4,8 +4,8 @@
 #include "base/debug.h"
 #include "base/timing.h"
 #include "base/util.h"
-#include "ui/Graphics.h"
-#include "ui/SDL_prims.h"
+#include "render/Graphics.h"
+#include "render/SDL_prims.h"
 
 using std::max;
 using std::min;
@@ -13,7 +13,7 @@ using std::string;
 using std::vector;
 
 namespace babel {
-namespace ui {
+namespace render {
 
 namespace {
 
@@ -46,7 +46,7 @@ Graphics::DrawingSurface::~DrawingSurface() {
   SDL_FreeSurface(surface_);
 }
 
-Graphics::Graphics(int radius, const Interface& interface)
+Graphics::Graphics(int radius, const InterfaceView& interface)
     : interface_(interface) {
   const int side = 2*(radius - kPadding) + 1;
   const Point size(side, side);
@@ -277,5 +277,5 @@ void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
   }
 }
 
-}  // namespace ui 
+}  // namespace render
 }  // namespace babel

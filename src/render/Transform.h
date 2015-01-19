@@ -9,13 +9,13 @@
 #include "engine/Sprite.h"
 
 namespace babel {
-namespace ui {
+namespace render {
 
 static const int kGridSize = 32;
 
 struct Transform {
   struct Shade {
-    Uint32 color;
+    uint32_t color;
     float alpha;
   };
 
@@ -25,7 +25,7 @@ struct Transform {
   std::unordered_map<Point,Shade> shaded_squares;
 };
 
-} // namespace ui 
+} // namespace render
 } // namespace babel
 
 #endif  // __BABEL_TRANSFORM_H__
