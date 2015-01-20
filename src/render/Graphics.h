@@ -1,6 +1,7 @@
 #ifndef __BABEL_GRAPHICS_H__
 #define __BABEL_GRAPHICS_H__
 
+#include <map>
 #include <string>
 #include <vector>
 #include <SDL2/SDL.h>
@@ -8,6 +9,7 @@
 #include "base/point.h"
 #include "engine/View.h"
 #include "render/Image.h"
+#include "render/Layout.h"
 #include "render/TextRenderer.h"
 #include "render/Transform.h"
 
@@ -51,9 +53,8 @@ class Graphics {
   void DrawShade(const engine::View& view, const Point& offset,
                  const Point& square, const Transform::Shade& shade);
 
-  void DrawTexts(const std::vector<Point>& positions,
-                 const std::vector<std::string>& texts,
-                 const std::vector<SDL_Color>& colors);
+  void DrawTexts(const engine::View& view,
+                 const std::map<engine::sid,Point>& sprite_positions);
   void DrawText(const Point& position, const Point& dir,
                 const std::string& text, SDL_Color color);
 
@@ -70,13 +71,14 @@ class Graphics {
 
   std::unique_ptr<DrawingSurface> buffer_;
   std::unique_ptr<TextRenderer> text_renderer_;
+  Layout layout_;
 
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;
   std::unique_ptr<const Image> sprites_;
 };
 
-} // namespace render 
+} // namespace render
 } // namespace babel
 
 #endif  // __BABEL_GRAPHICS_H__

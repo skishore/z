@@ -7,6 +7,7 @@
 #include "render/Graphics.h"
 #include "render/SDL_prims.h"
 
+using std::map;
 using std::max;
 using std::min;
 using std::string;
@@ -102,12 +103,7 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   }
   DrawTiles(view, camera_offset);
 
-  // A collection of sprite text to draw. Layed out and drawn after the sprites.
-  vector<Point> positions;
-  vector<string> texts;
-  vector<SDL_Color> colors;
-  SDL_Color color;
-
+  map<engine::sid,Point> sprite_positions;
   for (const auto& pair : view.sprites) {
     const engine::SpriteView& sprite = pair.second;
     Point sprite_offset;
@@ -121,15 +117,10 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
         sprite_offset = transform->sprite_offsets.at(pair.first);
       }
     }
-    Point position = kGridSize*sprite.square + sprite_offset - camera_offset;
+    const Point position =
+        kGridSize*sprite.square + sprite_offset - camera_offset;
+    sprite_positions[pair.first] = position;
     DrawSprite(sprite, position);
-
-    if (!sprite.text.empty()) {
-      ConvertColor(sprite.color, &color);
-      positions.push_back(position);
-      texts.push_back(sprite.text);
-      colors.push_back(color);
-    }
   }
 
   if (transform != nullptr) {
@@ -138,7 +129,7 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
   }
 
-  DrawTexts(positions, texts, colors);
+  DrawTexts(view, sprite_positions);
   if (interface_.HasLines()) {
     DrawLog(interface_.GetLines());
   } else {
@@ -207,15 +198,20 @@ void Graphics::DrawShade(
   }
 }
 
-void Graphics::DrawTexts(const vector<Point>& positions,
-                         const vector<string>& texts,
-                         const vector<SDL_Color>& colors) {
-  ASSERT(positions.size() == texts.size(), "Mismatched text size.");
-  ASSERT(positions.size() == colors.size(), "Mismatched color size.");
-  for (int i = 0; i < positions.size(); i++) {
-    Point dir = (2*positions[i].x + kGridSize > buffer_->bounds_.w ?
+void Graphics::DrawTexts(const engine::View& view,
+                         const map<engine::sid,Point>& sprite_positions) {
+  map<engine::sid,Point> directions = layout_.Place(view, sprite_positions);
+
+  SDL_Color color;
+  for (const auto& pair : sprite_positions) {
+    const engine::SpriteView& sprite = view.sprites.at(pair.first);
+    const Point& position = pair.second;
+    if (!sprite.text.empty()) {
+      ConvertColor(sprite.color, &color);
+    }
+    Point dir = (2*position.x + kGridSize > buffer_->bounds_.w ?
                  Point(1, 0) : Point(-1, 0));
-    DrawText(positions[i], dir, texts[i], colors[i]);
+    DrawText(position, dir, sprite.text, color);
   }
 }
 
@@ -225,8 +221,7 @@ void Graphics::DrawText(const Point& position, const Point& dir,
   SDL_Rect rect{position.x, position.y + margin,
                 kGridSize, kGridSize - 2*margin};
   text_renderer_->DrawTextBox(
-      "default_font.ttf", kTextSize,
-      text, rect, Point(1, -1), kBlack, color);
+      "default_font.ttf", kTextSize, text, rect, dir, kBlack, color);
 }
 
 void Graphics::DrawLog(const vector<string>& log) {
