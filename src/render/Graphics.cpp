@@ -73,6 +73,7 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
 
   buffer_.reset(new DrawingSurface(size));
   text_renderer_.reset(new TextRenderer(buffer_->bounds_, buffer_->surface_));
+  layout_.reset(new Layout(kGridSize, dimensions));
 
   tileset_.reset(new Image(grid, "tileset.bmp"));
   darkened_tileset_.reset(new Image(*tileset_, 0x88000000));
@@ -200,18 +201,16 @@ void Graphics::DrawShade(
 
 void Graphics::DrawTexts(const engine::View& view,
                          const map<engine::sid,Point>& sprite_positions) {
-  map<engine::sid,Point> directions = layout_.Place(view, sprite_positions);
-
+  map<engine::sid,Point> dirs = layout_->Place(view, sprite_positions);
   SDL_Color color;
   for (const auto& pair : sprite_positions) {
     const engine::SpriteView& sprite = view.sprites.at(pair.first);
-    const Point& position = pair.second;
-    if (!sprite.text.empty()) {
-      ConvertColor(sprite.color, &color);
+    if (sprite.text.empty()) {
+      continue;
     }
-    Point dir = (2*position.x + kGridSize > buffer_->bounds_.w ?
-                 Point(1, 0) : Point(-1, 0));
-    DrawText(position, dir, sprite.text, color);
+    ASSERT(dirs.find(pair.first) != dirs.end(), "Layout lost " << pair.first);
+    ConvertColor(sprite.color, &color);
+    DrawText(pair.second, dirs.at(pair.first), sprite.text, color);
   }
 }
 

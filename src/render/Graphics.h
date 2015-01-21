@@ -71,7 +71,7 @@ class Graphics {
 
   std::unique_ptr<DrawingSurface> buffer_;
   std::unique_ptr<TextRenderer> text_renderer_;
-  Layout layout_;
+  std::unique_ptr<Layout> layout_;
 
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;
