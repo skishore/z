@@ -201,7 +201,7 @@ void Graphics::DrawShade(
 
 void Graphics::DrawTexts(const engine::View& view,
                          const map<engine::sid,Point>& sprite_positions) {
-  map<engine::sid,Point> dirs = layout_->Place(view, sprite_positions);
+  const map<engine::sid,Point>& dirs = layout_->Place(view, sprite_positions);
   SDL_Color color;
   for (const auto& pair : sprite_positions) {
     const engine::SpriteView& sprite = view.sprites.at(pair.first);

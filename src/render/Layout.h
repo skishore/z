@@ -15,13 +15,14 @@ class Layout {
  public:
   Layout(int grid_size, const Point& center);
 
-  std::map<engine::sid,Point> Place(
+  const std::map<engine::sid,Point>& Place(
       const engine::View& view,
       const std::map<engine::sid,Point>& sprite_positions);
 
  private:
   const int grid_size_;
   const Point dimensions_;
+  std::map<engine::sid,Point> last_places_;
 };
 
 } // namespace render

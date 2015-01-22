@@ -48,15 +48,19 @@ Point PositionRect(int index, const Point& position, BasicRect* rect) {
   return Point(0, 2*(index % 2) - 1);
 }
 
-int GetScore(const Point& direction, const Point& discriminant,
-             const BasicRect& rect, const vector<BasicRect>& sprite_rects,
+int GetScore(const Point& last_direction, const Point& direction,
+             const Point& discriminant, const BasicRect& rect,
+             const vector<BasicRect>& sprite_rects,
              const vector<BasicRect>& text_rects) {
   int score = 0;
-  if (direction.x == discriminant.x) {
+  if (direction == last_direction) {
     score += 1;
   }
+  if (direction.x == discriminant.x) {
+    score += 2;
+  }
   if (direction.y == discriminant.y) {
-    score += 1;
+    score += 2;
   }
   if (direction.y == 0) {
     score += 4;
@@ -71,8 +75,9 @@ int GetScore(const Point& direction, const Point& discriminant,
 }
 
 Point GetBestDirection(
-    int grid_size, const Point& dimensions, const Point& position, int size,
-    const vector<BasicRect>& sprite_rects, vector<BasicRect>* text_rects) {
+    int grid_size, const Point& dimensions, const Point& last_direction,
+    const Point& position, int size, const vector<BasicRect>& sprite_rects,
+    vector<BasicRect>* text_rects) {
   BasicRect rect{0, 0, grid_size*(min(size, 4) + 2)/2, grid_size};
   Point discriminant = 2*position + Point(grid_size, grid_size) - dimensions;
   discriminant.x = sign(discriminant.x);
@@ -83,8 +88,8 @@ Point GetBestDirection(
   Point best_direction;
   for (int i = 0; i < 8; i++) {
     Point direction = PositionRect(i, position, &rect);
-    int score = GetScore(
-        direction, discriminant, rect, sprite_rects, *text_rects);
+    int score = GetScore(last_direction, direction, discriminant,
+                         rect, sprite_rects, *text_rects);
     if (score > best_score) {
       best_score = score;
       best_index = i;
@@ -101,7 +106,7 @@ Point GetBestDirection(
 Layout::Layout(int grid_size, const Point& dimensions)
     : grid_size_(grid_size), dimensions_(dimensions) {}
 
-map<engine::sid,Point> Layout::Place(
+const map<engine::sid,Point>& Layout::Place(
     const engine::View& view, const map<engine::sid,Point>& sprite_positions) {
   map<engine::sid,Point> result;
 
@@ -118,10 +123,12 @@ map<engine::sid,Point> Layout::Place(
       continue;
     }
     result[pair.first] = GetBestDirection(
-        grid_size_, dimensions_, pair.second, sprite.text.size(),
-        sprite_rects, &text_rects);
+        grid_size_, dimensions_, last_places_[pair.first],
+        pair.second, sprite.text.size(), sprite_rects, &text_rects);
   }
-  return result;
+
+  last_places_ = result;
+  return last_places_;
 }
 
 } // namespace render
