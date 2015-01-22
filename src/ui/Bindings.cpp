@@ -3,7 +3,6 @@
 
 #include "base/debug.h"
 #include "base/point.h"
-#include "base/timing.h"
 #include "engine/Action.h"
 #include "engine/View.h"
 #include "ui/Bindings.h"

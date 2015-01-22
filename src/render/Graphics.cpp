@@ -2,7 +2,6 @@
 #include <string>
 
 #include "base/debug.h"
-#include "base/timing.h"
 #include "base/util.h"
 #include "render/Graphics.h"
 #include "render/SDL_prims.h"
