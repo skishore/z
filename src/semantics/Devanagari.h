@@ -1,6 +1,7 @@
 #ifndef __BABEL_SEMANTICS_DEVANAGARI_H__
 #define __BABEL_SEMANTICS_DEVANAGARI_H__
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,8 @@ class Devanagari {
   static const std::vector<std::string> all;
 
   static const std::vector<std::vector<std::string>> consonant_rows;
+  static const std::map<std::string,std::string> vowel_to_sign;
+  static const std::map<std::string,std::string> sign_to_vowel;
 
   static std::string GetRandomConjunct();
 };

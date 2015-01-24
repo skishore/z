@@ -1,13 +1,37 @@
 #include <stdlib.h>
 
-#include "base/util.h"
+#include "base/debug.h"
 #include "semantics/devanagari.h"
 
+using std::map;
 using std::string;
 using std::vector;
 
 namespace babel {
 namespace semantics {
+namespace {
+
+template<typename T> vector<T> Concatenate(const vector<vector<T>>& lists) {
+  vector<T> result;
+  for (const vector<T>& list : lists) {
+    for (const T& element : list) {
+      result.push_back(element);
+    }
+  }
+  return result;
+}
+
+template<typename T> map<T,T> Invert(const map<T,T>& original) {
+  map<T,T> result;
+  for (const auto& pair : original) {
+    ASSERT(result.find(pair.second) == result.end(),
+           "Duplicate item found when computing inverted map: " << pair.second);
+    result[pair.second] = pair.first;
+  }
+  return result;
+}
+
+}  // namespace
 
 const vector<string> Devanagari::vowels{
   "अ",
@@ -45,6 +69,29 @@ const vector<string> Devanagari::digits{
   "९"
 };
 
+const map<string,string> Devanagari::vowel_to_sign{
+  {"अ", ""},
+  {"आ", "\u093E"},
+  {"इ", "\u093F"},
+  {"ई", "\u0940"},
+  {"उ", "\u0941"},
+  {"ऊ", "\u0942"},
+  {"ऋ", "\u0943"},
+  {"ऌ", "\u0962"},
+  {"ऍ", "\u0946"},
+  {"ऍ", "\u0946"},
+  {"ए", "\u0947"},
+  {"ऐ", "\u0948"},
+  {"ऑ", "\u094A"},
+  {"ओ", "\u094B"},
+  {"औ", "\u094C"},
+  {"ॠ", "\u0944"},
+  {"ॡ", "\u0963"},
+  {"ँ", "ँ"},
+  {"ं", "ं"},
+  {"ः", "ः"}
+};
+
 const vector<string> Devanagari::consonants(Concatenate(consonant_rows));
 
 const vector<string> Devanagari::alphabet(
@@ -53,9 +100,11 @@ const vector<string> Devanagari::alphabet(
 const vector<string> Devanagari::all(
     Concatenate(vector<vector<string>>{alphabet, digits}));
 
+const map<string,string> Devanagari::sign_to_vowel(Invert(vowel_to_sign));
+
 string Devanagari::GetRandomConjunct() {
-  return (consonants[rand() % consonants.size()] +
-          vowels[rand() % vowels.size()]);
+  const string vowel = vowels[rand() % vowels.size()];
+  return consonants[rand() % consonants.size()] + vowel_to_sign.at(vowel);
 }
 
 }  // namespace semantics
