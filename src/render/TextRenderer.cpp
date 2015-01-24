@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <vector>
+
 #include <hb.h>
 #include <hb-ft.h>
 
@@ -15,6 +17,7 @@ using std::max;
 using std::min;
 using std::pair;
 using std::string;
+using std::vector;
 
 namespace babel {
 namespace render {
@@ -40,6 +43,15 @@ int ForceUCS2Charmap(FT_Face face) {
     }
   }
   return -1;
+}
+
+void LoadFace(const string& font_name, int font_size,
+              FT_Library library, FT_Face* face) {
+  ASSERT(!FT_New_Face(library, font_name.c_str(), 0, face),
+         "Failed to load " << font_name);
+  ASSERT(!FT_Set_Char_Size(*face, 0, kScale*font_size, kDPI, kDPI),
+         "Failed to set font size for " << font_name);
+  ASSERT(!ForceUCS2Charmap(*face), "Failed to set charmap for " << font_name);
 }
 
 // Point the compiler towards the expected branch of each if.
@@ -151,23 +163,58 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   }
 }
 
-hb_script_t GetHarfbuzzBufferScript(hb_buffer_t* buffer) {
-  // Sets a best-guess value for the script of the given buffer.
-  hb_unicode_funcs_t* unicode_funcs = hb_buffer_get_unicode_funcs(buffer);
-  if (unicode_funcs == nullptr) {
+inline hb_script_t GetScript(
+    hb_codepoint_t codepoint, hb_unicode_funcs_t* unicode_funcs) {
+  if (codepoint == ' ') {
     return HB_SCRIPT_UNKNOWN;
+  } else if (codepoint < 1 << 7) {
+    return HB_SCRIPT_LATIN;
   }
+  return hb_unicode_script(unicode_funcs, codepoint);
+}
+
+hb_buffer_t* CreateBuffer() {
+  hb_buffer_t* result = hb_buffer_create();
+  hb_buffer_clear_contents(result);
+  hb_buffer_set_direction(result, HB_DIRECTION_LTR);
+  hb_buffer_set_language(result, hb_language_from_string("", 0));
+  return result;
+}
+
+void SegmentBuffer(hb_unicode_funcs_t* unicode_funcs, hb_buffer_t* buffer,
+                   vector<hb_buffer_t*>* segments,
+                   vector<hb_script_t>* scripts) {
+  for (auto& segment : *segments) {
+    hb_buffer_destroy(segment);
+  }
+  segments->clear();
+  scripts->clear();
+
   unsigned int num_glyphs;
   hb_glyph_info_t* glyph_info = hb_buffer_get_glyph_infos(buffer, &num_glyphs);
-  for (int i = 0; i < num_glyphs; i++) {
-    hb_script_t script = hb_unicode_script(
-        unicode_funcs, glyph_info[i].codepoint);
-    if (script != HB_SCRIPT_COMMON && script != HB_SCRIPT_INHERITED &&
-        script != HB_SCRIPT_UNKNOWN) {
-      return script;
-    }
+  if (num_glyphs == 0) {
+    return;
   }
-  return HB_SCRIPT_UNKNOWN;
+
+  segments->push_back(CreateBuffer());
+  hb_script_t segment_script = HB_SCRIPT_UNKNOWN;
+  scripts->push_back(HB_SCRIPT_UNKNOWN);
+
+  for (int i = 0; i < num_glyphs; i++) {
+    hb_script_t script = GetScript(glyph_info[i].codepoint, unicode_funcs);
+    if (script != HB_SCRIPT_UNKNOWN && script != segment_script) {
+      if (segment_script == HB_SCRIPT_UNKNOWN) {
+        (*scripts)[scripts->size() - 1] = script;
+      } else {
+        segments->push_back(CreateBuffer());
+        scripts->push_back(script);
+      }
+      segment_script = script;
+    }
+    hb_buffer_add_codepoints((*segments)[segments->size() - 1],
+                             &glyph_info[i].codepoint, 1, 0, 1);
+  }
+  ASSERT(scripts->size() == segments->size(), "Mismatch segment sizes!");
 }
 
 }  // namespace
@@ -182,23 +229,29 @@ class Font {
               const SDL_Color color, SDL_Surface* target, bool blend=true);
 
  private:
-  int font_size_;
   FT_Library library_;
   FT_Face face_;
+  FT_Face big_face_;
   FT_Raster_Params renderer_;
   hb_font_t* font_;
+  hb_font_t* big_font_;
   hb_buffer_t* buffer_;
+  hb_unicode_funcs_t* unicode_funcs_;
+  vector<hb_buffer_t*> segments_;
+  vector<hb_script_t> scripts_;
 };
 
 Font::Font(const string& font_name, int font_size, FT_Library library)
-    : font_size_(font_size), library_(library) {
-  ASSERT(!FT_New_Face(library_, font_name.c_str(), 0, &face_),
-         "Failed to load " << font_name);
-  ASSERT(!FT_Set_Char_Size(face_, 0, kScale*font_size_, kDPI, kDPI),
-         "Failed to set font size for " << font_name);
-  ASSERT(!ForceUCS2Charmap(face_), "Failed to set charmap for " << font_name);
+    : library_(library) {
+  LoadFace(font_name, font_size, library, &face_);
+  LoadFace(font_name, 1.15*font_size, library, &big_face_);
   font_ = hb_ft_font_create(face_, nullptr);
+  big_font_ = hb_ft_font_create(big_face_, nullptr);
+
   buffer_ = hb_buffer_create();
+  unicode_funcs_ = hb_buffer_get_unicode_funcs(buffer_);
+  ASSERT(unicode_funcs_ != nullptr,
+         "Failed to get unicode_funcs for " << font_name);
 
   renderer_.target = nullptr;
   renderer_.flags = FT_RASTER_FLAG_DIRECT | FT_RASTER_FLAG_AA;
@@ -207,19 +260,23 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   renderer_.bit_test = nullptr;
 }
 
+Font::~Font() {
+  hb_buffer_destroy(buffer_);
+  for (auto& segment : segments_) {
+    hb_buffer_destroy(segment);
+  }
+  hb_font_destroy(font_);
+  hb_font_destroy(big_font_);
+  FT_Done_Face(face_);
+  FT_Done_Face(big_face_);
+}
+
 void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   hb_buffer_clear_contents(buffer_);
   hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
   hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
-  hb_buffer_set_script(buffer_, GetHarfbuzzBufferScript(buffer_));
-  hb_shape(font_, buffer_, nullptr, 0);
-
-  unsigned int glyph_count;
-  hb_glyph_info_t* glyph_info =
-      hb_buffer_get_glyph_infos(buffer_, &glyph_count);
-  hb_glyph_position_t* glyph_pos =
-      hb_buffer_get_glyph_positions(buffer_, &glyph_count);
+  SegmentBuffer(unicode_funcs_, buffer_, &segments_, &scripts_);
 
   SizerContext context;
   renderer_.user = &context;
@@ -229,34 +286,47 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   Point max_b(INT_MIN, INT_MIN);
   Point offset;
 
-  for (int i = 0; i < glyph_count; i++) {
-    ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, 0),
-           "Failed to load glyph: " << glyph_info[i].codepoint);
-    ASSERT(face_->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
-           "Got unexpected glyph format: " << (char*)&face_->glyph->format);
-    // Compute the glyph's x and y position in CHARACTER coordinates.
-    // Note that in character coordinates, +y is UP.
-    int gx = offset.x + glyph_pos[i].x_offset/kScale;
-    int gy = offset.y + glyph_pos[i].y_offset/kScale;
-    context.min_span_x = INT_MAX;
-    context.max_span_x = INT_MIN;
-    context.min_y = INT_MAX;
-    context.max_y = INT_MIN;
-    ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer_),
-           "Failed to render " << glyph_info[i].codepoint);
-    if (context.min_span_x != INT_MAX) {
-      min_b.x = min(context.min_span_x + gx, min_b.x);
-      max_b.x = max(context.max_span_x + gx, max_b.x);
-      min_b.y = min(context.min_y + gy, min_b.y);
-      max_b.y = max(context.max_y + gy, max_b.y);
-    } else {
-      min_b.x = min(gx, min_b.x);
-      max_b.x = max(gx, max_b.x);
-      min_b.y = min(gy, min_b.y);
-      max_b.y = max(gy, max_b.y);
+  for (int j = 0; j < segments_.size(); j++) {
+    FT_Face face = (scripts_[j] == HB_SCRIPT_LATIN ? face_ : big_face_);
+    hb_font_t* font = (scripts_[j] == HB_SCRIPT_LATIN ? font_ : big_font_);
+    hb_buffer_set_script(segments_[j], scripts_[j]);
+    hb_shape(font, segments_[j], nullptr, 0);
+
+    unsigned int glyph_count;
+    hb_glyph_info_t* glyph_info =
+        hb_buffer_get_glyph_infos(segments_[j], &glyph_count);
+    hb_glyph_position_t* glyph_pos =
+        hb_buffer_get_glyph_positions(segments_[j], &glyph_count);
+
+    for (int i = 0; i < glyph_count; i++) {
+      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, 0),
+             "Failed to load glyph: " << glyph_info[i].codepoint);
+      ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
+             "Got unexpected glyph format: " << (char*)&face->glyph->format);
+      // Compute the glyph's x and y position in CHARACTER coordinates.
+      // Note that in character coordinates, +y is UP.
+      int gx = offset.x + glyph_pos[i].x_offset/kScale;
+      int gy = offset.y + glyph_pos[i].y_offset/kScale;
+      context.min_span_x = INT_MAX;
+      context.max_span_x = INT_MIN;
+      context.min_y = INT_MAX;
+      context.max_y = INT_MIN;
+      ASSERT(!FT_Outline_Render(library_, &face->glyph->outline, &renderer_),
+             "Failed to render " << glyph_info[i].codepoint);
+      if (context.min_span_x != INT_MAX) {
+        min_b.x = min(context.min_span_x + gx, min_b.x);
+        max_b.x = max(context.max_span_x + gx, max_b.x);
+        min_b.y = min(context.min_y + gy, min_b.y);
+        max_b.y = max(context.max_y + gy, max_b.y);
+      } else {
+        min_b.x = min(gx, min_b.x);
+        max_b.x = max(gx, max_b.x);
+        min_b.y = min(gy, min_b.y);
+        max_b.y = max(gy, max_b.y);
+      }
+      offset.x += glyph_pos[i].x_advance/kScale;
+      offset.y += glyph_pos[i].y_advance/kScale;
     }
-    offset.x += glyph_pos[i].x_advance/kScale;
-    offset.y += glyph_pos[i].y_advance/kScale;
   }
 
   *size = max_b - min_b - 1;
@@ -270,12 +340,6 @@ void Font::Render(
   int x = position.x + baseline.x;
   int y = position.y + baseline.y;
 
-  unsigned int glyph_count;
-  hb_glyph_info_t* glyph_info =
-      hb_buffer_get_glyph_infos(buffer_, &glyph_count);
-  hb_glyph_position_t* glyph_pos =
-      hb_buffer_get_glyph_positions(buffer_, &glyph_count);
-
   RendererContext context(*surface, color);
   renderer_.user = &context;
   renderer_.gray_spans = (blend ? Renderer<Blend> : Renderer<Overwrite>);
@@ -288,43 +352,38 @@ void Font::Render(
   #else  // EMSCRIPTEN
   const Uint32 load_flags = FT_LOAD_FORCE_AUTOHINT;
   #endif // EMSCRIPTEN
-  for (int i = 0; i < glyph_count; i++) {
-    ASSERT(!FT_Load_Glyph(face_, glyph_info[i].codepoint, load_flags),
-           "Failed to load glyph: " << glyph_info[i].codepoint);
-    ASSERT(face_->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
-           "Got unexpected glyph format: " << (char*)&face_->glyph->format);
-    // Compute the glyph's x and y position in WINDOW coordinates.
-    // Note that in character coordinates, +y is DOWN.
-    context.gx = x + glyph_pos[i].x_offset/kScale;
-    context.gy = y - glyph_pos[i].y_offset/kScale;
-    ASSERT(!FT_Outline_Render(library_, &face_->glyph->outline, &renderer_),
-           "Failed to render " << glyph_info[i].codepoint);
-    x += glyph_pos[i].x_advance/kScale;
-    y -= glyph_pos[i].y_advance/kScale;
+
+  for (int j = 0; j < segments_.size(); j++) {
+    FT_Face face = (scripts_[j] == HB_SCRIPT_LATIN ? face_ : big_face_);
+
+    unsigned int glyph_count;
+    hb_glyph_info_t* glyph_info =
+        hb_buffer_get_glyph_infos(segments_[j], &glyph_count);
+    hb_glyph_position_t* glyph_pos =
+        hb_buffer_get_glyph_positions(segments_[j], &glyph_count);
+
+    for (int i = 0; i < glyph_count; i++) {
+      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, load_flags),
+             "Failed to load glyph: " << glyph_info[i].codepoint);
+      ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
+             "Got unexpected glyph format: " << (char*)&face->glyph->format);
+      // Compute the glyph's x and y position in WINDOW coordinates.
+      // Note that in character coordinates, +y is DOWN.
+      context.gx = x + glyph_pos[i].x_offset/kScale;
+      context.gy = y - glyph_pos[i].y_offset/kScale;
+      ASSERT(!FT_Outline_Render(library_, &face->glyph->outline, &renderer_),
+             "Failed to render " << glyph_info[i].codepoint);
+      x += glyph_pos[i].x_advance/kScale;
+      y -= glyph_pos[i].y_advance/kScale;
+    }
   }
 
   SDL_UnlockSurface(surface);
 }
 
-Font::~Font() {
-  hb_buffer_destroy(buffer_);
-  hb_font_destroy(font_);
-  FT_Done_Face(face_);
-}
-
 }  // namespace font
 
 namespace {
-
-// In text boxes, ASCII text is drawn smaller than arbitrary Unicode text.
-int CorrectFontSize(int font_size, const string& text) {
-  for (char ch : text) {
-    if ((uint8_t)ch >= 1 << 7) {
-      return font_size;
-    }
-  }
-  return 0.9*font_size;
-}
 
 SDL_Point* GetTextPolygon(
     int font_size, const SDL_Rect& rect, const Point& dir,
@@ -432,7 +491,6 @@ void TextRenderer::DrawTextBox(
   if (text.size() == 0) {
     return;
   }
-  font_size = CorrectFontSize(font_size, text);
   Font* font = LoadFont(font_name, font_size);
   Point size, baseline, position;
   font->PrepareToRender(text, &size, &baseline);
