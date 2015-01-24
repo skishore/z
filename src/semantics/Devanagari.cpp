@@ -11,6 +11,30 @@ namespace babel {
 namespace semantics {
 namespace {
 
+map<string,string> gHindiToEnglish;
+map<string,string> gEnglishToHindi;
+
+const vector<string> kAlphabetZip{
+  "a", "aa", "i", "ee", "u", "oo", "e", "ai", "o", "au",
+  "k", "kh", "g", "gh", "NG",
+  "ch", "Ch", "j", "jh", "NY",
+  "T", "Th", "D", "Dh", "N",
+  "t", "th", "d", "dh", "n",
+  "p", "ph", "b", "bh", "m",
+  "y", "r", "l", "v",
+  "sh", "Sh", "s", "h"
+};
+
+void InitializeHax() {
+  if (gEnglishToHindi.size() > 0) {
+    return;
+  }
+  ASSERT(Devanagari::alphabet.size() == kAlphabetZip.size(), "");
+  for (int i = 0; i < Devanagari::alphabet.size(); i++) {
+    gHindiToEnglish[Devanagari::alphabet[i]] = kAlphabetZip[i];
+  }
+}
+
 template<typename T> vector<T> Concatenate(const vector<vector<T>>& lists) {
   vector<T> result;
   for (const vector<T>& list : lists) {
@@ -103,8 +127,21 @@ const vector<string> Devanagari::all(
 const map<string,string> Devanagari::sign_to_vowel(Invert(vowel_to_sign));
 
 string Devanagari::GetRandomConjunct() {
-  const string vowel = vowels[rand() % vowels.size()];
-  return consonants[rand() % consonants.size()] + vowel_to_sign.at(vowel);
+  InitializeHax();
+  const string& consonant = consonants[rand() % consonants.size()];
+  const string& vowel = vowels[rand() % vowels.size()];
+  const string& sign = vowel_to_sign.at(vowel);
+  const string en = gHindiToEnglish.at(consonant) + gHindiToEnglish.at(vowel);
+  gEnglishToHindi[en] = consonant + sign;
+  return consonant + sign;
+}
+
+string Devanagari::EnglishToHindi(const string& english) {
+  // TODO(skishore): Actually implement a transliterator here.
+  if (gEnglishToHindi.find(english) != gEnglishToHindi.end()) {
+    return gEnglishToHindi.at(english);
+  }
+  return "";
 }
 
 }  // namespace semantics

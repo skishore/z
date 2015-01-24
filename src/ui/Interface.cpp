@@ -8,7 +8,7 @@ namespace babel {
 namespace ui {
 
 void Interface::ClearLines() {
-  has_lines_ = false;
+  //has_lines_ = false;
 }
 
 bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
@@ -32,10 +32,15 @@ bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
       speech_.erase(speech_.size() - 1);
       *redraw = true;
     }
-  } else if (ch == '\n') {
-    speaking_ = false;
+  } else if (ch == ' ' || ch == '\n') {
     *action = new engine::SpeechAction(speech_);
     *redraw = true;
+    if (ch == ' ') {
+      speech_ = "";
+    } else {
+      has_lines_ = false;
+      speaking_ = false;
+    }
   }
   return true;
 }

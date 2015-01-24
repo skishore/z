@@ -5,6 +5,7 @@
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
+#include "semantics/Devanagari.h"
 
 using std::max;
 using std::string;
@@ -15,27 +16,22 @@ namespace engine {
 namespace {
 
 static const int kMaxSpeechSize = 16;
-static const float kSpeechRadius = 3.2;
 
 vector<Point> ComputeSquaresInRange(
-    const GameState& game_state, const Sprite& sprite, int radius) {
+    const GameState& game_state, const Sprite& sprite) {
   ASSERT(sprite.IsPlayer(), "ComputeSquaresInRange called for an NPC!");
+  const int radius = sprite.creature.stats.vision_radius;
   vector<Point> result;
   Point offset;
-  for (offset.x = -kSpeechRadius; offset.x <= kSpeechRadius; offset.x++) {
-    for (offset.y = -kSpeechRadius; offset.y <= kSpeechRadius; offset.y++) {
+  for (offset.x = -radius; offset.x <= radius; offset.x++) {
+    for (offset.y = -radius; offset.y <= radius; offset.y++) {
       const Point square = sprite.square + offset;
-      if (game_state.player_vision->IsSquareVisible(square, kSpeechRadius)) {
+      if (game_state.player_vision->IsSquareVisible(square, radius)) {
         result.push_back(square);
       }
     }
   }
   return result;
-}
-
-bool IsSquareFree(const GameState& game_state, const Point& square) {
-  return (!game_state.map.IsSquareBlocked(square) &&
-          !game_state.IsSquareOccupied(square));
 }
 
 }  // namespace
@@ -44,13 +40,8 @@ bool IsSpeechAllowed(const string& text) {
   if (text.empty() || text.size() > kMaxSpeechSize) {
     return false;
   }
-  for (int i = 0; i < text.size(); i++) {
-    const char ch = text[i];
-    if (ch == ' ') {
-      if (i == 0 || text[i - 1] == ' ') {
-        return false;
-      }
-    } else if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))) {
+  for (char ch : text) {
+    if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))) {
       return false;
     }
   }
@@ -104,13 +95,21 @@ MoveAction::MoveAction(const Point& move) : move_(move) {}
 ActionResult MoveAction::Execute() {
   ActionResult result;
   Point square = sprite_->square + move_;
+  if (game_state_->map.IsSquareBlocked(square)) {
+    return result;
+  }
+
+  if (sprite_->IsPlayer()) {
+    sprite_->text = "";
+  }
+
   if (square == sprite_->square) {
-    result.success = true;
-  } else if (IsSquareFree(*game_state_, square)) {
-    game_state_->MoveSprite(move_, sprite_);
     result.success = true;
   } else if (game_state_->IsSquareOccupied(square)) {
     result.alternate = new AttackAction(game_state_->SpriteAt(square));
+  } else {
+    game_state_->MoveSprite(move_, sprite_);
+    result.success = true;
   }
   return result;
 }
@@ -129,27 +128,25 @@ ActionResult SpeechAction::Execute() {
   for (EventHandler* handler : *handlers_) {
     handler->BeforeSpeech(*sprite_);
   }
-  result.success = true;
-  return result;
 
-  vector<Point> earshot = ComputeSquaresInRange(
-      *game_state_, *sprite_, kSpeechRadius);
+  vector<Point> earshot = ComputeSquaresInRange(*game_state_, *sprite_);
   for (const Point& square : earshot) {
     if (game_state_->IsSquareOccupied(square) && square != sprite_->square) {
       Sprite* sprite = game_state_->SpriteAt(square);
-      if (rand() % 4 != 0) {
-        const int damage = (rand() % 6) + 1;
-        const bool killed = damage >= sprite->cur_health;
-        const string verbs = (killed ? "kills" : "hurts");
-        game_state_->log.AddLine("Your speech " + verbs + " the " +
-                                 sprite->creature.appearance.name + "!");
-        for (EventHandler* handler : *handlers_) {
-          handler->BeforeAttack(*sprite_, *sprite);
-        }
-        sprite->cur_health = max(sprite->cur_health - damage, 0);
-        if (killed) {
-          game_state_->RemoveNPC(sprite);
-        }
+      if (sprite->text != semantics::Devanagari::EnglishToHindi(text_)) {
+        continue;
+      }
+      const int damage = (rand() % 12) + 1;
+      const bool killed = damage >= sprite->cur_health;
+      const string verbs = (killed ? "kills" : "hurts");
+      game_state_->log.AddLine("Your speech " + verbs + " the " +
+                               sprite->creature.appearance.name + "!");
+      for (EventHandler* handler : *handlers_) {
+        handler->BeforeAttack(*sprite_, *sprite);
+      }
+      sprite->cur_health = max(sprite->cur_health - damage, 0);
+      if (killed) {
+        game_state_->RemoveNPC(sprite);
       }
     }
   }

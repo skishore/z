@@ -23,6 +23,7 @@ class Devanagari {
   static const std::map<std::string,std::string> sign_to_vowel;
 
   static std::string GetRandomConjunct();
+  static std::string EnglishToHindi(const std::string& english);
 };
 
 }  // namespace semantics
