@@ -19,7 +19,7 @@ namespace {
 
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const int kTextSize = 0.6*kGridSize;
+static const int kTextSize = 0.48*kGridSize;
 
 // The number of squares around the edge that are NOT drawn.
 static const int kPadding = 1;
@@ -239,10 +239,9 @@ void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
     return;
   }
   const int border = 2;
-  const int font_size = 0.8*kTextSize;
-  const int line_height = 3*font_size/2;
-  const int margin = font_size/4;
-  const Point padding(font_size, font_size/2);
+  const int line_height = 3*kTextSize/2;
+  const int margin = kTextSize/4;
+  const Point padding(kTextSize, kTextSize/2);
   const int height = line_height*lines.size() + 2*border + 2*padding.y;
 
   SDL_Rect rect(buffer_->bounds_);
@@ -265,7 +264,7 @@ void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
   rect.y += padding.y;
   rect.h = line_height;
   for (const string& line : lines) {
-    text_renderer_->DrawText("default_font.ttf", font_size, line, rect);
+    text_renderer_->DrawText("default_font.ttf", kTextSize, line, rect);
     rect.y += line_height;
   }
 }

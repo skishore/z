@@ -67,26 +67,12 @@ class AttackComponent : public TransformComponent {
 
 class SpeechComponent : public TransformComponent {
  public:
-  SpeechComponent(
-      const engine::Sprite& sprite, float radius, const vector<Point>& earshot)
-      : square_(sprite.square), radius_(radius), earshot_(earshot) {
+  SpeechComponent() {
     frames_left_ = kSpeechFrames;
   }
 
-  bool Update() override {
-    for (const auto& square : earshot_) {
-      float alpha = 0.2*(1 - (square_ - square).length()/radius_) + 0.2;
-      transform_.shaded_squares[square] =
-          render::Transform::Shade{0x00ffffff, alpha};
-    }
-    return TransformComponent::Update();
-  }
-
  private:
-  static const int kSpeechFrames = 8;
-  Point square_;
-  float radius_;
-  const vector<Point> earshot_;
+  static const int kSpeechFrames = 4;
 };
 
 }
@@ -108,10 +94,8 @@ void Animation::BeforeAttack(const engine::Sprite& sprite,
   PushStep(AnimationStep{new AttackComponent(target.square), Snapshot()});
 }
 
-void Animation::BeforeSpeech(const engine::Sprite& sprite, float radius,
-                             const vector<Point>& earshot) {
-  AnimationComponent* component = new SpeechComponent(sprite, radius, earshot);
-  PushStep(AnimationStep{component, Snapshot()});
+void Animation::BeforeSpeech(const engine::Sprite& sprite) {
+  PushStep(AnimationStep{new SpeechComponent, Snapshot()});
 }
 
 void Animation::Checkpoint() {

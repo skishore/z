@@ -12,8 +12,7 @@ namespace engine {
 class EventHandler {
  public:
   virtual void BeforeAttack(const Sprite& sprite, const Sprite& target) {};
-  virtual void BeforeSpeech(const Sprite& sprite, float radius,
-                            const std::vector<Point>& earshot) {};
+  virtual void BeforeSpeech(const Sprite& sprite) {};
 };
 
 }  // namespace engine

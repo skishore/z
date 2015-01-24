@@ -13,7 +13,8 @@ map<SDL_Keycode,char> key_to_char{
   {SDLK_BACKSPACE, '\b'},
   {SDLK_ESCAPE, 0x1b},
   {SDLK_PERIOD, '.'},
-  {SDLK_RETURN, '\n'}
+  {SDLK_RETURN, '\n'},
+  {SDLK_SPACE, ' '}
 };
 }  // namespace
 

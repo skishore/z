@@ -12,9 +12,6 @@ void Interface::ClearLines() {
 }
 
 bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
-  // Temporarily disable the entire extended-command interface.
-  return false;
-
   if (!speaking_) {
     if (ch == 's') {
       has_lines_ = true;
@@ -51,7 +48,7 @@ vector<string> Interface::GetLines() const {
   ASSERT(HasLines(), "GetLines called when HasLines is false!");
   vector<string> result;
   if (speaking_) {
-    result.push_back("What do you want to say? " + speech_);
+    result.push_back("What do you want to say? " + speech_ + "\u25AF");
   }
   return result;
 }

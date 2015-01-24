@@ -44,8 +44,13 @@ bool IsSpeechAllowed(const string& text) {
   if (text.empty() || text.size() > kMaxSpeechSize) {
     return false;
   }
-  for (char ch : text) {
-    if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))) {
+  for (int i = 0; i < text.size(); i++) {
+    const char ch = text[i];
+    if (ch == ' ') {
+      if (i == 0 || text[i - 1] == ' ') {
+        return false;
+      }
+    } else if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))) {
       return false;
     }
   }
@@ -118,14 +123,17 @@ ActionResult SpeechAction::Execute() {
   if (!IsSpeechAllowed(text_)) {
     return result;
   }
-  vector<Point> earshot = ComputeSquaresInRange(
-      *game_state_, *sprite_, kSpeechRadius);
 
   game_state_->log.AddLine("You say: \"" + text_ + "\".");
+  sprite_->text = text_;
   for (EventHandler* handler : *handlers_) {
-    handler->BeforeSpeech(*sprite_, kSpeechRadius, earshot);
+    handler->BeforeSpeech(*sprite_);
   }
+  result.success = true;
+  return result;
 
+  vector<Point> earshot = ComputeSquaresInRange(
+      *game_state_, *sprite_, kSpeechRadius);
   for (const Point& square : earshot) {
     if (game_state_->IsSquareOccupied(square) && square != sprite_->square) {
       Sprite* sprite = game_state_->SpriteAt(square);

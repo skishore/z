@@ -15,7 +15,7 @@ namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
   game_state_.log.AddLine(
-      "Welcome to Babel! You are a neutral male human Padawan.");
+      "Welcome to Babel! खाना test.");
   game_state_.log.Flush(true);
 }
 
