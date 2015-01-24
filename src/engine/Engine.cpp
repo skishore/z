@@ -15,7 +15,7 @@ namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
   game_state_.log.AddLine(
-      "Welcome to Babel! खाना test.");
+      "Welcome to Babel! हिन्दी भारत की राष्ट्रभाषा है");
   game_state_.log.Flush(true);
 }
 

@@ -169,20 +169,6 @@ inline hb_script_t GetGlyphScript(const hb_glyph_info_t& glyph_info,
   return script;
 }
 
-hb_script_t GetBufferScript(hb_buffer_t* buffer,
-                            hb_unicode_funcs_t* unicode_funcs) {
-  // Sets a best-guess value for the script of the given buffer.
-  unsigned int num_glyphs;
-  hb_glyph_info_t* glyph_info = hb_buffer_get_glyph_infos(buffer, &num_glyphs);
-  for (int i = 0; i < num_glyphs; i++) {
-    hb_script_t script = GetGlyphScript(glyph_info[i], unicode_funcs);
-    if (script != HB_SCRIPT_UNKNOWN) {
-      return script;
-    }
-  }
-  return HB_SCRIPT_UNKNOWN;
-}
-
 }  // namespace
 
 class Font {
@@ -195,6 +181,8 @@ class Font {
               const SDL_Color color, SDL_Surface* target, bool blend=true);
 
  private:
+  inline bool UseBigGlyph(const hb_glyph_info_t& glyph_info);
+
   FT_Library library_;
   FT_Face face_;
   FT_Face big_face_;
@@ -207,7 +195,7 @@ class Font {
 Font::Font(const string& font_name, int font_size, FT_Library library)
     : library_(library) {
   LoadFace(font_name, font_size, library, &face_);
-  LoadFace(font_name, font_size, library, &big_face_);
+  LoadFace(font_name, 1.15*font_size, library, &big_face_);
   font_ = hb_ft_font_create(face_, nullptr);
   buffer_ = hb_buffer_create();
   unicode_funcs_ = hb_buffer_get_unicode_funcs(buffer_);
@@ -218,17 +206,22 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   renderer_.black_spans = nullptr;
   renderer_.bit_set = nullptr;
   renderer_.bit_test = nullptr;
-  DEBUG("HB_SCRIPT_UNKNOWN: " << HB_SCRIPT_UNKNOWN);
-  DEBUG("HB_SCRIPT_COMMON: " << HB_SCRIPT_COMMON);
-  DEBUG("HB_SCRIPT_DEVANAGARI: " << HB_SCRIPT_DEVANAGARI);
+}
+
+Font::~Font() {
+  hb_buffer_destroy(buffer_);
+  hb_font_destroy(font_);
+  FT_Done_Face(big_face_);
+  FT_Done_Face(face_);
 }
 
 void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
+  DEBUG(text);
   hb_buffer_clear_contents(buffer_);
   hb_buffer_set_direction(buffer_, HB_DIRECTION_LTR);
   hb_buffer_set_language(buffer_, hb_language_from_string("", 0));
   hb_buffer_add_utf8(buffer_, text.c_str(), text.size(), 0, text.size());
-  //hb_buffer_set_script(buffer_, GetBufferScript(buffer_, unicode_funcs_));
+  hb_buffer_set_script(buffer_, HB_SCRIPT_DEVANAGARI);
   hb_shape(font_, buffer_, nullptr, 0);
 
   unsigned int glyph_count;
@@ -246,8 +239,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
   Point offset;
 
   for (int i = 0; i < glyph_count; i++) {
-    hb_script_t script = GetGlyphScript(glyph_info[i], unicode_funcs_);
-    FT_Face face = (script == HB_SCRIPT_UNKNOWN ? face_ : big_face_);
+    FT_Face face = (UseBigGlyph(glyph_info[i]) ? big_face_ : face_);
     ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, 0),
            "Failed to load glyph: " << glyph_info[i].codepoint);
     ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
@@ -309,7 +301,9 @@ void Font::Render(
   #endif // EMSCRIPTEN
   for (int i = 0; i < glyph_count; i++) {
     hb_script_t script = GetGlyphScript(glyph_info[i], unicode_funcs_);
-    FT_Face face = (script == HB_SCRIPT_UNKNOWN ? face_ : big_face_);
+    DEBUG((glyph_info[i].codepoint));
+    DEBUG((char)(script >> 24) << (char)(script >> 16) << (char)(script >> 8) << (char)(script));
+    FT_Face face = (UseBigGlyph(glyph_info[i]) ? big_face_ : face_);
     ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, load_flags),
            "Failed to load glyph: " << glyph_info[i].codepoint);
     ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
@@ -328,11 +322,11 @@ void Font::Render(
   SDL_UnlockSurface(surface);
 }
 
-Font::~Font() {
-  hb_buffer_destroy(buffer_);
-  hb_font_destroy(font_);
-  FT_Done_Face(big_face_);
-  FT_Done_Face(face_);
+bool Font::UseBigGlyph(const hb_glyph_info_t& glyph_info) {
+  // TODO(skishore): This check is a complete hack.
+  // We should split the string into English and Hindi components and render
+  // each component separately.
+  return glyph_info.codepoint > (1 << 8) && glyph_info.codepoint < 3065;
 }
 
 }  // namespace font
