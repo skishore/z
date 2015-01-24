@@ -33,6 +33,8 @@ static const std::vector<std::string> kHindiVerbs = {
   "खटखटाना"
 };
 
+static const std::string kTrickyCase = "की राष्ट्रभाषा है";
+
 inline std::string GetRandomHindiVerb() {
   return kHindiVerbs[rand() % kHindiVerbs.size()];
 }
