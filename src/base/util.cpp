@@ -1,9 +1,9 @@
 #include <cmath>
-#include <string>
 
 #include "util.h"
 
 using std::string;
+using std::vector;
 
 namespace babel {
 

@@ -1,8 +1,8 @@
 #include <vector>
 
-#include "base/hindi_words.h"
 #include "engine/Action.h"
 #include "engine/Sprite.h"
+#include "semantics/Devanagari.h"
 
 using std::string;
 using std::vector;
@@ -68,7 +68,7 @@ Sprite::Sprite(const Point& s, int t)
   if (IsPlayer()) {
     energy = kEnergyNeededToMove;
   } else {
-    text = kHindiWords[rand() % kHindiWords.size()];
+    text = semantics::Devanagari::GetRandomConjunct();
     energy = rand() % kEnergyNeededToMove;
   }
 }

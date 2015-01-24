@@ -1,15 +1,27 @@
 #ifndef __BABEL_UTIL_H__
 #define __BABEL_UTIL_H__
 
-#include "util.h"
+#include <string>
+#include <vector>
 
-using std::string;
+#include "util.h"
 
 namespace babel {
 
-string IntToString(int value);
+std::string IntToString(int value);
 
-string DoubleToString(double value, int precision);
+std::string DoubleToString(double value, int precision);
+
+template<typename T>
+std::vector<T> Concatenate(const std::vector<std::vector<T>>& nested_list) {
+  std::vector<T> result;
+  for (const std::vector<T>& sublist : nested_list) {
+    for (const T& element : sublist) {
+      result.push_back(element);
+    }
+  }
+  return result;
+}
 
 }  // namespace babel
 
