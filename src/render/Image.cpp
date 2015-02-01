@@ -25,6 +25,22 @@ SDL_Surface* CreateSurface(int w, int h) {
   return surface;
 }
 
+void ApplyColorKey(uint32_t color, SDL_Surface* surface) {
+  for (int x = 0; x < surface->w; x++) {
+    for (int y = 0; y < surface->h; y++) {
+      uint32_t* pixel =
+          (uint32_t*)(((uint8_t*)surface->pixels) + y*surface->pitch + 4*x);
+      if ((*pixel & 0x00ffffff) == color) {
+        *pixel = *pixel & 0x00ffffff;
+      }
+    }
+  }
+  // Strangely, we still need to call SetColorKey.
+  Uint32 color_key = SDL_MapRGB(surface->format, (color >> 16) & 0xff,
+                                (color >> 8) & 0xff, color & 0xff);
+  SDL_SetColorKey(surface, SDL_TRUE, color_key);
+}
+
 inline void Scale(int& value) {
   value = kActualSize*value/kGridSize;
 }
@@ -36,9 +52,9 @@ inline void Scale(SDL_Rect& rect) {
   Scale(rect.h);
 }
 
-}
+}  // namespace
 
-Image::Image(const Point& size, const string& filename)
+Image::Image(const Point& size, const string& filename, SDL_Renderer* renderer)
     : size_(size) {
   SDL_Surface* temp = SDL_LoadBMP(("images/" + filename).c_str());
   ASSERT(temp != nullptr,
@@ -50,12 +66,14 @@ Image::Image(const Point& size, const string& filename)
 
   // TODO(babel): At some point, we may want to apply the color key to
   // some images but not to others.
-  Uint32 color_key = SDL_MapRGB(surface_->format, 255, 0, 255);
-  SDL_SetColorKey(surface_, SDL_TRUE, color_key);
+  ApplyColorKey(0x00ff00ff, surface_);
+  texture_ = SDL_CreateTextureFromSurface(renderer, surface_);
+  ASSERT(texture_ != nullptr, "Failed to load " << filename);
   DEBUG("Loaded " << filename);
 }
 
-Image::Image(const Image& image, Uint32 tint) : size_(image.size_) {
+Image::Image(const Image& image, Uint32 tint, SDL_Renderer* renderer)
+    : size_(image.size_) {
   surface_ = CreateSurface(image.surface_->w, image.surface_->h);
   SDL_BlitSurface(image.surface_, nullptr, surface_, nullptr);
   SDL_Surface* tinter = CreateSurface(image.surface_->w, image.surface_->h);
@@ -63,14 +81,18 @@ Image::Image(const Image& image, Uint32 tint) : size_(image.size_) {
   ASSERT(!SDL_SetSurfaceBlendMode(tinter, SDL_BLENDMODE_BLEND), SDL_GetError());
   SDL_BlitSurface(tinter, nullptr, surface_, nullptr);
   SDL_FreeSurface(tinter);
+
+  texture_ = SDL_CreateTextureFromSurface(renderer, surface_);
+  ASSERT(texture_ != nullptr, "Failed to create tint texture.");
 }
 
 Image::~Image() {
+  SDL_DestroyTexture(texture_);
   SDL_FreeSurface(surface_);
 }
 
 void Image::Draw(const Point& position, const Point& frame,
-                 const SDL_Rect& bounds, SDL_Surface* surface) const {
+                 const SDL_Rect& bounds, SDL_Renderer* renderer) const {
   SDL_Rect source;
   SDL_Rect target;
   if (!PositionRects(position, bounds, &source, &target)) {
@@ -79,7 +101,7 @@ void Image::Draw(const Point& position, const Point& frame,
   source.x += frame.x*size_.x;
   source.y += frame.y*size_.y;
   Scale(source);
-  SDL_BlitScaled(surface_, &source, surface, &target);
+  SDL_RenderCopy(renderer, texture_, &source, &target);
 }
 
 bool Image::PositionRects(const Point& position, const SDL_Rect& bounds,

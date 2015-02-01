@@ -14,29 +14,25 @@ using std::vector;
 
 namespace babel {
 namespace render {
-
 namespace {
 
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
-static const int kBitDepth = 32;
 
 // The number of squares around the edge that are NOT drawn.
 static const int kPadding = 1;
 
 }  // namespace
 
-Graphics::DrawingSurface::DrawingSurface(const Point& size)
-    : size_(size), bounds_{0, 0, size.x*kGridSize, size.y*kGridSize} {
-  SDL_Surface* temp = SDL_CreateRGBSurface(
-      0, bounds_.w, bounds_.h, kBitDepth, 0, 0, 0, 0);
-  ASSERT(temp != nullptr, SDL_GetError());
-  surface_ = SDL_ConvertSurfaceFormat(temp, kFormat, 0);
-  ASSERT(surface_ != nullptr, SDL_GetError());
-  SDL_FreeSurface(temp);
+Graphics::DrawingSurface::DrawingSurface(
+    const Point& size, SDL_Renderer* renderer)
+    : size(size), bounds{0, 0, size.x*kGridSize, size.y*kGridSize} {
+  texture = SDL_CreateTexture(renderer, kFormat, SDL_TEXTUREACCESS_STREAMING,
+                              bounds.w, bounds.h);
+  ASSERT(texture != nullptr, SDL_GetError());
 }
 
 Graphics::DrawingSurface::~DrawingSurface() {
-  SDL_FreeSurface(surface_);
+  SDL_DestroyTexture(texture);
 }
 
 Graphics::Graphics(int radius, const InterfaceView& interface)
@@ -50,6 +46,7 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
   SDL_ShowCursor(SDL_DISABLE);
   int status = SDL_CreateWindowAndRenderer(
       dimensions.x, dimensions.y, 0, &window_, &renderer_);
+  ASSERT(status == 0, SDL_GetError());
 
   SDL_RendererInfo info;
   ASSERT(SDL_GetRendererInfo(renderer_, &info) == 0, "Failed to get info!");
@@ -58,20 +55,13 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
   DEBUG("vsync: " << (info.flags & SDL_RENDERER_PRESENTVSYNC));
   DEBUG("Texture: " << (info.flags & SDL_RENDERER_TARGETTEXTURE));
 
-  ASSERT(status == 0, SDL_GetError());
-  texture_ = SDL_CreateTexture(renderer_, kFormat, SDL_TEXTUREACCESS_STREAMING,
-                               dimensions.x, dimensions.y);
-  ASSERT(texture_ != nullptr, SDL_GetError());
-
-  buffer_.reset(new DrawingSurface(size));
-
-  tileset_.reset(new Image(grid, "tileset.bmp"));
-  darkened_tileset_.reset(new Image(*tileset_, 0x88000000));
-  sprites_.reset(new Image(grid, "sprites.bmp"));
+  buffer_.reset(new DrawingSurface(size, renderer_));
+  tileset_.reset(new Image(grid, "tileset.bmp", renderer_));
+  darkened_tileset_.reset(new Image(*tileset_, 0x88000000, renderer_));
+  sprites_.reset(new Image(grid, "sprites.bmp", renderer_));
 }
 
 Graphics::~Graphics() {
-  SDL_DestroyTexture(texture_);
   SDL_DestroyRenderer(renderer_);
   SDL_DestroyWindow(window_);
   SDL_Quit();
@@ -86,7 +76,8 @@ void Graphics::Draw(const engine::View& view, const Transform& transform) {
 }
 
 void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
-  Clear();
+  SDL_SetRenderDrawColor(renderer_, 0x00, 0x00, 0x00, 0xff);
+  SDL_RenderClear(renderer_);
 
   Point camera_offset(kGridSize*kPadding, kGridSize*kPadding);
   if (transform != nullptr) {
@@ -109,7 +100,7 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
     const Point position =
         kGridSize*sprite.square + sprite_offset - camera_offset;
-    DrawSprite(sprite, position);
+    sprites_->Draw(position, sprite.graphic, buffer_->bounds, renderer_);
   }
 
   if (transform != nullptr) {
@@ -122,18 +113,6 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     DEBUG("Not drawing interface lines.");
   }
 
-  Flip();
-}
-
-void Graphics::Clear() {
-  SDL_FillRect(buffer_->surface_, &buffer_->bounds_, 0x00000000);
-}
-
-void Graphics::Flip() {
-  SDL_Surface* surface = buffer_->surface_;
-  SDL_UpdateTexture(texture_, nullptr, surface->pixels, surface->pitch);
-  SDL_RenderClear(renderer_);
-  SDL_RenderCopy(renderer_, texture_, nullptr, nullptr);
   SDL_RenderPresent(renderer_);
 }
 
@@ -145,42 +124,28 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
         const Point point = kGridSize*Point(x, y) - offset;
-        image->Draw(point, tile.graphic, buffer_->bounds_, buffer_->surface_);
+        image->Draw(point, tile.graphic, buffer_->bounds, renderer_);
       }
     }
   }
 }
 
-void Graphics::DrawSprite(const engine::SpriteView& sprite,
-                          const Point& position) {
-  sprites_->Draw(position, sprite.graphic, buffer_->bounds_, buffer_->surface_);
-}
-
 void Graphics::DrawShade(
     const engine::View& view, const Point& offset,
     const Point& square, const Transform::Shade& shade) {
-  SDL_Surface* surface = buffer_->surface_;
   const Point point = kGridSize*(square - view.offset) - offset;
-  Uint32 color = shade.color;
-  float alpha = shade.alpha;
-  for (int j = max(point.x, 0);
-       j < min(point.x + kGridSize, buffer_->bounds_.w); j++) {
-    for (int k = max(point.y, 0);
-         k < min(point.y + kGridSize, buffer_->bounds_.h); k++) {
-      Uint32* pixel =
-          (Uint32*)((char*)surface->pixels + surface->pitch*k + 4*j);
-      Uint32 value = *pixel;
-      #define R(color) ((color >> 16) & 0xff)
-      #define G(color) ((color >> 8) & 0xff)
-      #define B(color) (color & 0xff)
-      *pixel = (((uint8_t)(alpha*R(color) + (1 - alpha)*R(value)) << 16) +
-                ((uint8_t)(alpha*G(color) + (1 - alpha)*G(value)) << 8) +
-                ((uint8_t)(alpha*B(color) + (1 - alpha)*B(value))));
-      #undef R
-      #undef G
-      #undef B
-    }
-  }
+  const SDL_Rect rect{
+      max(point.x, 0), max(point.y, 0),
+      max(min(kGridSize, buffer_->bounds.w - point.x), 0),
+      max(min(kGridSize, buffer_->bounds.h - point.y), 0)};
+  SDL_SetRenderDrawColor(
+      renderer_, (shade.color >> 16) & 0xff, (shade.color >> 8) & 0xff,
+      shade.color & 0xff, 0xff*shade.alpha);
+  ASSERT(SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND) == 0,
+         SDL_GetError());
+  SDL_RenderFillRect(renderer_, &rect);
+  ASSERT(SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_NONE) == 0,
+         SDL_GetError());
 }
 
 }  // namespace render

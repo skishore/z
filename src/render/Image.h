@@ -11,12 +11,12 @@ namespace render {
 
 class Image {
  public:
-  Image(const Point& size, const std::string& filename);
-  Image(const Image& image, Uint32 tint);
+  Image(const Point& size, const std::string& filename, SDL_Renderer* renderer);
+  Image(const Image& image, Uint32 tint, SDL_Renderer* renderer);
   ~Image();
 
   void Draw(const Point& position, const Point& frame,
-            const SDL_Rect& bounds, SDL_Surface* surface) const;
+            const SDL_Rect& bounds, SDL_Renderer* renderer) const;
 
  private:
   bool PositionRects(const Point& position, const SDL_Rect& bounds,
@@ -24,7 +24,8 @@ class Image {
 
   // The Image's surface is owned by the cache that constructed it.
   const Point size_;
-  mutable SDL_Surface* surface_;
+  SDL_Surface* surface_;
+  SDL_Texture* texture_;
 };
 
 } // namespace render

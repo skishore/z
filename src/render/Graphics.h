@@ -31,23 +31,18 @@ class Graphics {
  private:
   class DrawingSurface {
    public:
-    DrawingSurface(const Point& size);
+    DrawingSurface(const Point& size, SDL_Renderer* renderer);
     ~DrawingSurface();
 
     // size is measured in grid squares, while bounds is measured in pixels.
-    const Point size_;
-    const SDL_Rect bounds_;
-    SDL_Surface* surface_;
+    const Point size;
+    const SDL_Rect bounds;
+    SDL_Texture* texture;
   };
 
 
   void DrawInner(const engine::View& view, const Transform* transform);
-
-  void Clear();
-  void Flip();
-
   void DrawTiles(const engine::View& view, const Point& offset);
-  void DrawSprite(const engine::SpriteView& sprite, const Point& position);
   void DrawShade(const engine::View& view, const Point& offset,
                  const Point& square, const Transform::Shade& shade);
 
@@ -56,10 +51,8 @@ class Graphics {
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;
   SDL_Renderer* renderer_;
-  SDL_Texture* texture_;
 
   std::unique_ptr<DrawingSurface> buffer_;
-
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;
   std::unique_ptr<const Image> sprites_;
