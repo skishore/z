@@ -19,8 +19,6 @@ struct ActionResult {
   Action* alternate = nullptr;
 };
 
-bool IsSpeechAllowed(const std::string& text);
-
 class Action {
  public:
   virtual ~Action() {};
@@ -52,16 +50,6 @@ class MoveAction : public Action {
 
  private:
   Point move_;
-};
-
-class SpeechAction : public Action {
- public:
-  SpeechAction(const std::string& text);
-  ActionResult Execute() override;
-
- private:
-  Point move_;
-  std::string text_;
 };
 
 }  // namespace engine

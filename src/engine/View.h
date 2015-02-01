@@ -22,7 +22,6 @@ struct SpriteView {
   int graphic;
   uint32_t color;
   Point square;
-  std::string text;
 };
 
 struct StatusView {

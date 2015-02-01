@@ -33,7 +33,7 @@ View::View(int radius, const GameState& game_state)
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
       sprites[sprite->Id()] = SpriteView{
-            appearance.graphic, appearance.color, square, sprite->text};
+            appearance.graphic, appearance.color, square};
     }
   }
   if (game_state.log.IsFresh()) {

@@ -4,7 +4,7 @@ CPP_FILES := $(wildcard src/*/*.cpp) main.cpp
 OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.obj))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.obj)))
 EXECUTABLE := $(BUILD)/main
 
-INCLUDES := freetype2 freetype2/config harfbuzz
+INCLUDES := #freetype2 freetype2/config harfbuzz
 PRELOADS := data fonts/default_font.ttf images
 VPATH := src:$(subst $(eval) ,:,$(wildcard src/*))
 
@@ -27,7 +27,7 @@ all:
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
-	rm -f $(HTML) $(BUILD)/*.js $(BUILD)/*.data $(BUILD)/*.o
+	rm -f $(HTML) $(HTML).mem $(BUILD)/*.js $(BUILD)/*.data $(BUILD)/*.o
 	rm -f $(BUILD)/*.d $(BUILD)/*.ccd $(BUILD)/*.emccd
 	rmdir -p $(BUILD)
 

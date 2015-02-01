@@ -9,8 +9,6 @@
 #include "base/point.h"
 #include "engine/View.h"
 #include "render/Image.h"
-#include "render/Layout.h"
-#include "render/TextRenderer.h"
 #include "render/Transform.h"
 
 namespace babel {
@@ -53,15 +51,6 @@ class Graphics {
   void DrawShade(const engine::View& view, const Point& offset,
                  const Point& square, const Transform::Shade& shade);
 
-  void DrawTexts(const engine::View& view,
-                 const std::map<engine::sid,Point>& sprite_positions);
-  void DrawText(const Point& position, const Point& dir,
-                const std::string& text, SDL_Color color);
-
-  void DrawLog(const std::vector<std::string>& log);
-  void DrawStatus(const engine::StatusView& status);
-  void DrawDialogBox(const std::vector<std::string>& lines, bool place_at_top);
-
   const InterfaceView& interface_;
 
   // These three SDL structures are for drawing to actual video memory.
@@ -70,8 +59,6 @@ class Graphics {
   SDL_Texture* texture_;
 
   std::unique_ptr<DrawingSurface> buffer_;
-  std::unique_ptr<TextRenderer> text_renderer_;
-  std::unique_ptr<Layout> layout_;
 
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;

@@ -19,16 +19,9 @@ namespace {
 
 static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
 static const int kBitDepth = 32;
-static const int kTextSize = 0.48*kGridSize;
 
 // The number of squares around the edge that are NOT drawn.
 static const int kPadding = 1;
-
-inline void ConvertColor(const uint32_t color, SDL_Color* result) {
-  result->r = (color >> 16) & 0xff;
-  result->g = (color >> 8) & 0xff;
-  result->b = color & 0xff;
-}
 
 }  // namespace
 
@@ -71,8 +64,6 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
   ASSERT(texture_ != nullptr, SDL_GetError());
 
   buffer_.reset(new DrawingSurface(size));
-  text_renderer_.reset(new TextRenderer(buffer_->bounds_, buffer_->surface_));
-  layout_.reset(new Layout(kGridSize, dimensions));
 
   tileset_.reset(new Image(grid, "tileset.bmp"));
   darkened_tileset_.reset(new Image(*tileset_, 0x88000000));
@@ -103,7 +94,6 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   }
   DrawTiles(view, camera_offset);
 
-  map<engine::sid,Point> sprite_positions;
   for (const auto& pair : view.sprites) {
     const engine::SpriteView& sprite = pair.second;
     Point sprite_offset;
@@ -119,7 +109,6 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
     const Point position =
         kGridSize*sprite.square + sprite_offset - camera_offset;
-    sprite_positions[pair.first] = position;
     DrawSprite(sprite, position);
   }
 
@@ -129,17 +118,9 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
   }
 
-  DrawTexts(view, sprite_positions);
   if (interface_.HasLines()) {
-    vector<string> log_plus_interface = view.log;
-    for (const string& line : interface_.GetLines()) {
-      log_plus_interface.push_back(line);
-    }
-    DrawLog(log_plus_interface);
-  } else {
-    DrawLog(view.log);
+    DEBUG("Not drawing interface lines.");
   }
-  DrawStatus(view.status);
 
   Flip();
 }
@@ -199,77 +180,6 @@ void Graphics::DrawShade(
       #undef G
       #undef B
     }
-  }
-}
-
-void Graphics::DrawTexts(const engine::View& view,
-                         const map<engine::sid,Point>& sprite_positions) {
-  const map<engine::sid,Point>& dirs = layout_->Place(view, sprite_positions);
-  SDL_Color color;
-  for (const auto& pair : sprite_positions) {
-    const engine::SpriteView& sprite = view.sprites.at(pair.first);
-    if (sprite.text.empty()) {
-      continue;
-    }
-    ASSERT(dirs.find(pair.first) != dirs.end(), "Layout lost " << pair.first);
-    ConvertColor(sprite.color, &color);
-    DrawText(pair.second, dirs.at(pair.first), sprite.text, color);
-  }
-}
-
-void Graphics::DrawText(const Point& position, const Point& dir,
-                        const string& text, SDL_Color color) {
-  const int margin = kGridSize/8;
-  SDL_Rect rect{position.x, position.y + margin,
-                kGridSize, kGridSize - 2*margin};
-  text_renderer_->DrawTextBox(
-      "default_font.ttf", kTextSize, text, rect, dir, kBlack, color);
-}
-
-void Graphics::DrawLog(const vector<string>& log) {
-  DrawDialogBox(log, true /* place_at_top */);
-}
-
-void Graphics::DrawStatus(const engine::StatusView& status) {
-  vector<string> lines;
-  lines.push_back(
-      "Health: " + IntToString(status.cur_health) +
-      "/" + IntToString(status.max_health));
-  DrawDialogBox(lines, false /* place_at_top */);
-}
-
-void Graphics::DrawDialogBox(const vector<string>& lines, bool place_at_top) {
-  if (lines.empty()) {
-    return;
-  }
-  const int border = 2;
-  const int line_height = 3*kTextSize/2;
-  const int margin = kTextSize/4;
-  const Point padding(kTextSize, kTextSize/2);
-  const int height = line_height*lines.size() + 2*border + 2*padding.y;
-
-  SDL_Rect rect(buffer_->bounds_);
-
-  rect.x += margin;
-  rect.y += (place_at_top ? margin : buffer_->bounds_.h - height - margin);
-  rect.h = height - 1;
-  rect.w -= 2*margin+ 1;
-
-  SDL_FillRect(buffer_->surface_, &rect, 0x00002266);
-  for (int i = 0; i < border; i++) {
-    SDL_DrawRect(buffer_->surface_, &rect, 0x00ffffff);
-    rect.x += 1;
-    rect.y += 1;
-    rect.w -= 2;
-    rect.h -= 2;
-  }
-
-  rect.x += padding.x;
-  rect.y += padding.y;
-  rect.h = line_height;
-  for (const string& line : lines) {
-    text_renderer_->DrawText("default_font.ttf", kTextSize, line, rect);
-    rect.y += line_height;
   }
 }
 

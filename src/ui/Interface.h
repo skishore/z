@@ -23,8 +23,6 @@ class Interface : public render::InterfaceView {
 
  private:
   bool has_lines_ = false;
-  bool speaking_ = false;
-  std::string speech_;
 };
 
 } // namespace ui

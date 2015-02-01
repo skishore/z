@@ -68,7 +68,6 @@ Sprite::Sprite(const Point& s, int t)
   if (IsPlayer()) {
     energy = kEnergyNeededToMove;
   } else {
-    text = semantics::Devanagari::GetRandomConjunct();
     energy = rand() % kEnergyNeededToMove;
   }
 }

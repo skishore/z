@@ -33,7 +33,6 @@ class Sprite {
 
   Point square;
   const Creature& creature;
-  std::string text;
   int cur_health;
   int max_health;
 
