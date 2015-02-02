@@ -13,34 +13,33 @@
 namespace babel {
 namespace render {
 
-static const SDL_Color kBlack{0, 0, 0};
-static const SDL_Color kWhite{255, 255, 255};
+static const uint32_t kBlack = 0x00000000;
+static const uint32_t kWhite = 0x00ffffff;
 
 namespace font {
 class Font;
 }  // namespace font
 
+struct Text {
+  Point size;
+  Point baseline;
+  SDL_Surface* surface;
+};
+
 class TextRenderer {
  public:
-  TextRenderer(const SDL_Rect& bounds, SDL_Surface* target);
+  TextRenderer();
   ~TextRenderer();
 
-  void DrawText(
-      const std::string& font_name, int font_size,
-      const std::string& text, const SDL_Rect& rect,
-      const SDL_Color color=kWhite);
-  void DrawTextBox(
-      const std::string& font_name, int font_size,
-      const std::string& text, const SDL_Rect& rect, const Point& dir,
-      const SDL_Color fg_color=kWhite, const SDL_Color bg_color=kBlack);
+  // The caller takes ownership of the SDL_Surface in the returned Text.
+  Text DrawText(const std::string& font_name, int font_size,
+                const std::string& text, uint32_t color=kWhite);
 
  private:
-  // The class has ownership of the loaded font.
+  // This class owns the loaded font.
   font::Font* LoadFont(const std::string& font_name, int font_size);
 
   FT_Library library_;
-  SDL_Surface* target_;
-
   std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
 };
 
