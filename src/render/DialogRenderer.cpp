@@ -14,7 +14,7 @@ namespace render {
 namespace {
 
 static const int kTextSize = 16;
-static const int kMaxCacheSize = 4;
+static const int kMaxCacheSize = 16;
 
 }  // namespace
 

@@ -97,10 +97,15 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   }
 
   if (interface_.HasLines()) {
-    DEBUG("Not drawing interface lines.");
+    dialog_renderer_->DrawLines(interface_.GetLines(), true /* place_at_top */);
+  } else {
+    dialog_renderer_->DrawLines(view.log, true /* place_at_top */);
   }
-
-  dialog_renderer_->DrawLines(view.log, true);
+  vector<string> status;
+  status.push_back(
+      "Health: " + IntToString(view.status.cur_health) +
+      "/" + IntToString(view.status.max_health));
+  dialog_renderer_->DrawLines(status, false /* place_at_top */);
 
   SDL_RenderPresent(renderer_);
 }
