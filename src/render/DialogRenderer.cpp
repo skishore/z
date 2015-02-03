@@ -9,7 +9,7 @@ namespace babel {
 namespace render {
 namespace {
 
-static const int kTextSize = 15;
+static const int kTextSize = 16;
 
 }  // namespace
 
@@ -30,7 +30,7 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
 
   rect.x += margin;
   rect.y += (place_at_top ? margin : bounds_.h - height - margin);
-  rect.h = height - 1;
+  rect.h = height;
   rect.w -= 2*margin + 1;
 
   SDL_SetRenderDrawColor(renderer_, 0x00, 0x22, 0x66, 0xff);
@@ -45,7 +45,7 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   }
 
   rect.x += padding.x;
-  rect.y += padding.y + 3*line_height/4;
+  rect.y += padding.y + kTextSize;
   for (const string& line : lines) {
     Text text = text_renderer_.DrawText("default_font.ttf", kTextSize, line);
     const SDL_Rect dest{rect.x - text.baseline.x, rect.y - text.baseline.y,

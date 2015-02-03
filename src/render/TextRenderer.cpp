@@ -219,7 +219,7 @@ class Font {
 Font::Font(const string& font_name, int font_size, FT_Library library)
     : library_(library) {
   LoadFace(font_name, font_size, library, &face_);
-  LoadFace(font_name, 1.28*font_size, library, &big_face_);
+  LoadFace(font_name, 1.125*font_size, library, &big_face_);
   font_ = hb_ft_font_create(face_, nullptr);
   big_font_ = hb_ft_font_create(big_face_, nullptr);
 
@@ -304,7 +304,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
     }
   }
 
-  *size = max_b - min_b - 1;
+  *size = max_b - min_b + Point(1, 1);
   baseline->x = -min_b.x;
   baseline->y = max_b.y;
 }
