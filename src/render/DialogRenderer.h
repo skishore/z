@@ -12,16 +12,13 @@ namespace render {
 
 class DialogRenderer {
  public:
-  DialogRenderer(
-      const SDL_Rect& bounds, SDL_Renderer* renderer, SDL_Texture* target);
+  DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer);
 
   void DrawLines(const std::vector<std::string>& lines, bool place_at_top);
 
  private:
   const SDL_Rect bounds_;
   SDL_Renderer* renderer_;
-  SDL_Texture* target_;
-
   TextRenderer text_renderer_;
 };
 

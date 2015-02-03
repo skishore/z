@@ -16,36 +16,23 @@ namespace babel {
 namespace render {
 namespace {
 
-static const Uint32 kFormat = SDL_PIXELFORMAT_ARGB8888;
-
 // The number of squares around the edge that are NOT drawn.
 static const int kPadding = 1;
 
 }  // namespace
 
-Graphics::DrawingSurface::DrawingSurface(
-    const Point& size, SDL_Renderer* renderer)
-    : size(size), bounds{0, 0, size.x*kGridSize, size.y*kGridSize} {
-  texture = SDL_CreateTexture(renderer, kFormat, SDL_TEXTUREACCESS_STREAMING,
-                              bounds.w, bounds.h);
-  ASSERT(texture != nullptr, SDL_GetError());
-}
-
-Graphics::DrawingSurface::~DrawingSurface() {
-  SDL_DestroyTexture(texture);
-}
-
 Graphics::Graphics(int radius, const InterfaceView& interface)
-    : interface_(interface) {
+    : interface_(interface), bounds_{0, 0, 0, 0} {
   const int side = 2*(radius - kPadding) + 1;
   const Point size(side, side);
-  const Point dimensions(kGridSize*size);
   const Point grid(kGridSize, kGridSize);
+  bounds_.w = kGridSize*side;
+  bounds_.h = kGridSize*side;
 
   SDL_Init(SDL_INIT_VIDEO);
   SDL_ShowCursor(SDL_DISABLE);
   int status = SDL_CreateWindowAndRenderer(
-      dimensions.x, dimensions.y, 0, &window_, &renderer_);
+      bounds_.w, bounds_.h, 0, &window_, &renderer_);
   ASSERT(status == 0, SDL_GetError());
 
   SDL_RendererInfo info;
@@ -55,9 +42,7 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
   DEBUG("vsync: " << (info.flags & SDL_RENDERER_PRESENTVSYNC));
   DEBUG("Texture: " << (info.flags & SDL_RENDERER_TARGETTEXTURE));
 
-  buffer_.reset(new DrawingSurface(size, renderer_));
-  dialog_renderer_.reset(
-      new DialogRenderer(buffer_->bounds, renderer_, buffer_->texture));
+  dialog_renderer_.reset(new DialogRenderer(bounds_, renderer_));
   tileset_.reset(new Image(grid, "tileset.bmp", renderer_));
   darkened_tileset_.reset(new Image(*tileset_, 0x88000000, renderer_));
   sprites_.reset(new Image(grid, "sprites.bmp", renderer_));
@@ -102,7 +87,7 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
     const Point position =
         kGridSize*sprite.square + sprite_offset - camera_offset;
-    sprites_->Draw(position, sprite.graphic, buffer_->bounds, renderer_);
+    sprites_->Draw(position, sprite.graphic, bounds_, renderer_);
   }
 
   if (transform != nullptr) {
@@ -128,7 +113,7 @@ void Graphics::DrawTiles(const engine::View& view, const Point& offset) {
         const Image* image =
             (tile.visible ? tileset_.get() : darkened_tileset_.get());
         const Point point = kGridSize*Point(x, y) - offset;
-        image->Draw(point, tile.graphic, buffer_->bounds, renderer_);
+        image->Draw(point, tile.graphic, bounds_, renderer_);
       }
     }
   }
@@ -140,16 +125,14 @@ void Graphics::DrawShade(
   const Point point = kGridSize*(square - view.offset) - offset;
   const SDL_Rect rect{
       max(point.x, 0), max(point.y, 0),
-      max(min(kGridSize, buffer_->bounds.w - point.x), 0),
-      max(min(kGridSize, buffer_->bounds.h - point.y), 0)};
+      max(min(kGridSize, bounds_.w - point.x), 0),
+      max(min(kGridSize, bounds_.h - point.y), 0)};
   SDL_SetRenderDrawColor(
       renderer_, (shade.color >> 16) & 0xff, (shade.color >> 8) & 0xff,
       shade.color & 0xff, 0xff*shade.alpha);
-  ASSERT(SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND) == 0,
-         SDL_GetError());
+  SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
   SDL_RenderFillRect(renderer_, &rect);
-  ASSERT(SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_NONE) == 0,
-         SDL_GetError());
+  SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_NONE);
 }
 
 }  // namespace render

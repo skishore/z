@@ -30,18 +30,6 @@ class Graphics {
   void Draw(const engine::View& view, const Transform& transform);
 
  private:
-  class DrawingSurface {
-   public:
-    DrawingSurface(const Point& size, SDL_Renderer* renderer);
-    ~DrawingSurface();
-
-    // size is measured in grid squares, while bounds is measured in pixels.
-    const Point size;
-    const SDL_Rect bounds;
-    SDL_Texture* texture;
-  };
-
-
   void DrawInner(const engine::View& view, const Transform* transform);
   void DrawTiles(const engine::View& view, const Point& offset);
   void DrawShade(const engine::View& view, const Point& offset,
@@ -53,7 +41,7 @@ class Graphics {
   SDL_Window* window_;
   SDL_Renderer* renderer_;
 
-  std::unique_ptr<DrawingSurface> buffer_;
+  SDL_Rect bounds_;
   std::unique_ptr<DialogRenderer> dialog_renderer_;
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;

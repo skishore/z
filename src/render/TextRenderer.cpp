@@ -125,8 +125,9 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
     if (unlikely(x < 0)) {
       break;
     }
+    // TODO(skishore): We really need to use the window format here.
+    uint32_t color = (context->color << 8) | spans[i].coverage;
     uint32_t* start = scanline + x;
-    uint32_t color = (spans[i].coverage << 24) | context->color;
 
     for (int j = 0; j < spans[i].len; j++) {
       if (unlikely(x + j >= context->width)) {
@@ -365,7 +366,7 @@ const static uint32_t kGMask = 0x0000ff00;
 const static uint32_t kBMask = 0x000000ff;
 }  // namespace
 
-TextRenderer::TextRenderer() {
+TextRenderer::TextRenderer(SDL_Renderer* renderer) : renderer_(renderer) {
   ASSERT(!FT_Init_FreeType(&library_), "Failed to initialize freetype!");
 }
 
@@ -383,16 +384,17 @@ Text TextRenderer::DrawText(const string& font_name, int font_size,
   font->PrepareToRender(text, &result.size, &result.baseline);
 
   // Create an appropriately-sized surface to render the text in.
-  result.surface = SDL_CreateRGBSurface(
+  SDL_Surface* surface = SDL_CreateRGBSurface(
       0, result.size.x, result.size.y, kBitDepth,
       kAMask, kRMask, kGMask, kBMask);
-  ASSERT(result.surface != nullptr, SDL_GetError());
-  SDL_FillRect(result.surface, nullptr, 0x00000000);
-  ASSERT(SDL_SetSurfaceBlendMode(result.surface, SDL_BLENDMODE_BLEND),
-         SDL_GetError());
+  ASSERT(surface != nullptr, SDL_GetError());
+  SDL_FillRect(surface, nullptr, 0x000000);
 
-  font->Render(Point(0, 0), result.size, result.baseline,
-               color, result.surface);
+  font->Render(Point(0, 0), result.size, result.baseline, color, surface);
+
+  result.texture = SDL_CreateTextureFromSurface(renderer_, surface);
+  ASSERT(result.texture != nullptr, SDL_GetError());
+  SDL_FreeSurface(surface);
   return result;
 }
 

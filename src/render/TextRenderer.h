@@ -23,12 +23,12 @@ class Font;
 struct Text {
   Point size;
   Point baseline;
-  SDL_Surface* surface;
+  SDL_Texture* texture;
 };
 
 class TextRenderer {
  public:
-  TextRenderer();
+  TextRenderer(SDL_Renderer* renderer);
   ~TextRenderer();
 
   // The caller takes ownership of the SDL_Surface in the returned Text.
@@ -41,6 +41,7 @@ class TextRenderer {
 
   FT_Library library_;
   std::map<std::pair<std::string,int> ,font::Font*> fonts_by_id_;
+  SDL_Renderer* renderer_;
 };
 
 } // namespace render

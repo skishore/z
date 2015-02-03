@@ -9,13 +9,12 @@ namespace babel {
 namespace render {
 namespace {
 
-static const int kTextSize = 19;
+static const int kTextSize = 15;
 
 }  // namespace
 
-DialogRenderer::DialogRenderer(
-    const SDL_Rect& bounds, SDL_Renderer* renderer, SDL_Texture* target)
-    : bounds_(bounds), renderer_(renderer), target_(target) {}
+DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
+    : bounds_(bounds), renderer_(renderer), text_renderer_(renderer) {}
 
 void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   if (lines.empty()) {
@@ -51,8 +50,11 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
     Text text = text_renderer_.DrawText("default_font.ttf", kTextSize, line);
     const SDL_Rect dest{rect.x - text.baseline.x, rect.y - text.baseline.y,
                         text.size.x, text.size.y};
-    SDL_UpdateTexture(target_, &dest, text.surface->pixels, text.surface->pitch);
-    SDL_FreeSurface(text.surface);
+    SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
+    SDL_RenderCopy(renderer_, text.texture, nullptr, &dest);
+    SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_NONE);
+    SDL_DestroyTexture(text.texture);
+
     rect.y += line_height;
   }
 }
