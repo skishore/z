@@ -80,21 +80,7 @@ void Sizer(int y, int count, const FT_Span* spans, void* ctx) {
 struct RendererContext {
   RendererContext(const SDL_Surface& surface, uint32_t c)
       : pixels((uint32_t*)surface.pixels), width(surface.w), height(surface.h),
-        pitch(surface.pitch), rshift(surface.format->Rshift),
-        gshift(surface.format->Gshift), bshift(surface.format->Bshift) {
-    color.r = (c >> 16) & 0xff;
-    color.g = (c >> 8) & 0xff;
-    color.b = c & 0xff;
-    invert = color.r + color.g + color.b == 0;
-    if (invert) {
-      color.r = ~color.r;
-      color.g = ~color.g;
-      color.b = ~color.b;
-    }
-  }
-
-  // Used to render on a light background.
-  bool invert;
+        pitch(surface.pitch), color(c) {}
 
   // Pixels stores a pointer to the surface's top-left pixel.
   uint32_t* pixels;
@@ -102,11 +88,9 @@ struct RendererContext {
   int height;
   uint32_t pitch;
 
-  // Data about the 32-bit format of the surface's pixels.
-  uint32_t rshift;
-  uint32_t gshift;
-  uint32_t bshift;
-  SDL_Color color;
+  // TODO(skishore): Make this renderer work for non-ARGB surfaces by reading
+  // and storing the color format here.
+  uint32_t color;
 
   // The current glyph's origin in surface coordinates.
   int gx;
@@ -128,8 +112,6 @@ struct Blend {
   }
 };
 
-static const int kMaxChar = (1 << 8) - 1;
-
 template <typename T>
 void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   RendererContext* context = (RendererContext*)ctx;
@@ -144,23 +126,13 @@ void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
       break;
     }
     uint32_t* start = scanline + x;
-    uint32_t color =
-      ((int)(context->color.r*spans[i].coverage/kMaxChar) << context->rshift) |
-      ((int)(context->color.g*spans[i].coverage/kMaxChar) << context->gshift) |
-      ((int)(context->color.b*spans[i].coverage/kMaxChar) << context->bshift);
+    uint32_t color = (spans[i].coverage << 24) | context->color;
 
     for (int j = 0; j < spans[i].len; j++) {
       if (unlikely(x + j >= context->width)) {
         break;
       }
-      uint32_t* target = start + j;
-      if (context->invert) {
-        *target = ~*target;
-        T::Render(target, color);
-        *target = ~*target;
-      } else {
-        T::Render(target, color);
-      }
+      T::Render(start + j, color);
     }
   }
 }

@@ -56,6 +56,8 @@ Graphics::Graphics(int radius, const InterfaceView& interface)
   DEBUG("Texture: " << (info.flags & SDL_RENDERER_TARGETTEXTURE));
 
   buffer_.reset(new DrawingSurface(size, renderer_));
+  dialog_renderer_.reset(
+      new DialogRenderer(buffer_->bounds, renderer_, buffer_->texture));
   tileset_.reset(new Image(grid, "tileset.bmp", renderer_));
   darkened_tileset_.reset(new Image(*tileset_, 0x88000000, renderer_));
   sprites_.reset(new Image(grid, "sprites.bmp", renderer_));
@@ -112,6 +114,8 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   if (interface_.HasLines()) {
     DEBUG("Not drawing interface lines.");
   }
+
+  dialog_renderer_->DrawLines(view.log, true);
 
   SDL_RenderPresent(renderer_);
 }

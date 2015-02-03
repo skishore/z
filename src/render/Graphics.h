@@ -8,6 +8,7 @@
 
 #include "base/point.h"
 #include "engine/View.h"
+#include "render/DialogRenderer.h"
 #include "render/Image.h"
 #include "render/Transform.h"
 
@@ -53,6 +54,7 @@ class Graphics {
   SDL_Renderer* renderer_;
 
   std::unique_ptr<DrawingSurface> buffer_;
+  std::unique_ptr<DialogRenderer> dialog_renderer_;
   std::unique_ptr<const Image> tileset_;
   std::unique_ptr<const Image> darkened_tileset_;
   std::unique_ptr<const Image> sprites_;

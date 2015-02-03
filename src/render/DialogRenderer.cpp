@@ -1,0 +1,61 @@
+#include "render/DialogRenderer.h"
+
+#include "base/point.h"
+
+using std::string;
+using std::vector;
+
+namespace babel {
+namespace render {
+namespace {
+
+static const int kTextSize = 19;
+
+}  // namespace
+
+DialogRenderer::DialogRenderer(
+    const SDL_Rect& bounds, SDL_Renderer* renderer, SDL_Texture* target)
+    : bounds_(bounds), renderer_(renderer), target_(target) {}
+
+void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
+  if (lines.empty()) {
+    return;
+  }
+  const int border = 2;
+  const int line_height = 3*kTextSize/2;
+  const int margin = kTextSize/4;
+  const Point padding(kTextSize, kTextSize/2);
+  const int height = line_height*lines.size() + 2*border + 2*padding.y;
+
+  SDL_Rect rect(bounds_);
+
+  rect.x += margin;
+  rect.y += (place_at_top ? margin : bounds_.h - height - margin);
+  rect.h = height - 1;
+  rect.w -= 2*margin + 1;
+
+  SDL_SetRenderDrawColor(renderer_, 0x00, 0x22, 0x66, 0xff);
+  SDL_RenderFillRect(renderer_, &rect);
+  SDL_SetRenderDrawColor(renderer_, 0xff, 0xff, 0xff, 0xff);
+  for (int i = 0; i < border; i++) {
+    SDL_RenderDrawRect(renderer_, &rect);
+    rect.x += 1;
+    rect.y += 1;
+    rect.w -= 2;
+    rect.h -= 2;
+  }
+
+  rect.x += padding.x;
+  rect.y += padding.y + 3*line_height/4;
+  for (const string& line : lines) {
+    Text text = text_renderer_.DrawText("default_font.ttf", kTextSize, line);
+    const SDL_Rect dest{rect.x - text.baseline.x, rect.y - text.baseline.y,
+                        text.size.x, text.size.y};
+    SDL_UpdateTexture(target_, &dest, text.surface->pixels, text.surface->pitch);
+    SDL_FreeSurface(text.surface);
+    rect.y += line_height;
+  }
+}
+
+} // namespace render
+} // namespace babel
