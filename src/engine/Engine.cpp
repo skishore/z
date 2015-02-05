@@ -25,7 +25,6 @@ void Engine::AddEventHandler(EventHandler* handler) {
 }
 
 bool Engine::Update(Action* input) {
-  bool used_input = false;
   bool changed = false;
   unique_ptr<Action> action;
 
@@ -44,11 +43,11 @@ bool Engine::Update(Action* input) {
     }
     // Retrieve that sprite's next action.
     if (sprite->IsPlayer()) {
-      if (input == nullptr || used_input) {
+      if (input == nullptr) {
         break;
       }
       action.reset(input);
-      used_input = true;
+      input = nullptr;
     } else {
       action.reset(sprite->GetAction(game_state_));
     }
@@ -66,7 +65,7 @@ bool Engine::Update(Action* input) {
     }
   }
 
-  if (input != nullptr && !used_input) {
+  if (input != nullptr) {
     delete input;
   }
   game_state_.log.Flush(changed);

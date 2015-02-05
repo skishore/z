@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "base/point.h"
+#include "engine/Action.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
