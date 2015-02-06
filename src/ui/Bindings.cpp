@@ -86,6 +86,7 @@ void Bindings::Reset() {
   engine_.reset(new engine::Engine());
   animation_.reset(new Animation(kScreenRadius, engine_->GetGameState()));
   engine_->AddEventHandler(animation_.get());
+  interface_.Register(engine_.get());
   Redraw();
 }
 

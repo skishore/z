@@ -24,6 +24,10 @@ void Engine::AddEventHandler(EventHandler* handler) {
   handlers_.push_back(handler);
 }
 
+interface::Dialog* Engine::GetDialog() {
+  return (interrupt_ == nullptr ? nullptr : interrupt_->dialog_.get());
+}
+
 bool Engine::Update(Action* input) {
   bool changed = false;
   unique_ptr<Action> action;
@@ -63,6 +67,7 @@ bool Engine::Update(Action* input) {
       result = action->Execute();
       if (result.stalled) {
         ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");
+        ASSERT(action->dialog_  != nullptr, "Stalled Action has no dialog!");
         interrupt_.reset(action.release());
         break;
       }

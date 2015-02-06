@@ -2,6 +2,7 @@
 #define __BABEL_INTERFACE_H__
 
 #include "engine/Action.h"
+#include "engine/Engine.h"
 #include "interface/Dialog.h"
 
 namespace babel {
@@ -9,6 +10,8 @@ namespace ui {
 
 class Interface : public interface::Dialog {
  public:
+  void Register(engine::Engine* engine);
+
   void Clear() override;
   bool Consume(char ch, engine::Action** action, bool* redraw) override;
 
@@ -17,6 +20,7 @@ class Interface : public interface::Dialog {
 
  private:
   bool active_ = false;
+  engine::Engine* engine_;
 };
 
 } // namespace ui
