@@ -1,28 +1,22 @@
 #ifndef __BABEL_INTERFACE_H__
 #define __BABEL_INTERFACE_H__
 
-#include <string>
-#include <vector>
-
 #include "engine/Action.h"
-#include "render/Graphics.h"
+#include "interface/Dialog.h"
 
 namespace babel {
 namespace ui {
 
-class Interface : public render::InterfaceView {
+class Interface : public interface::Dialog {
  public:
-  void ClearLines();
+  void Clear() override;
+  bool Consume(char ch, engine::Action** action, bool* redraw) override;
 
-  // Returns true if the input was consumed by the interface.
-  // If the input is consumed, this method return an Action to take.
-  bool Consume(char ch, engine::Action** action, bool* redraw);
-
-  bool HasLines() const override;
-  std::vector<std::string> GetLines() const override;
+  bool Active() const override;
+  void Draw(render::DialogRenderer* renderer) const override;
 
  private:
-  bool has_lines_ = false;
+  bool active_ = false;
 };
 
 } // namespace ui

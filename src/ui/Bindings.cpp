@@ -64,7 +64,7 @@ bool Bindings::Update(double frame_rate) {
     if (input != nullptr) {
       if (engine_->Update(input)) {
         redraw = true;
-        interface_.ClearLines();
+        interface_.Clear();
       }
     }
     if (redraw) {
@@ -74,7 +74,7 @@ bool Bindings::Update(double frame_rate) {
     Reset();
   } else if (kShift.find(ch) != kShift.end()) {
     if (engine_->Update(new engine::MoveAction(kShift.at(ch)))) {
-      interface_.ClearLines();
+      interface_.Clear();
       Redraw();
     }
   }

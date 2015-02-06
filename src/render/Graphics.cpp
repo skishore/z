@@ -21,8 +21,8 @@ static const int kPadding = 1;
 
 }  // namespace
 
-Graphics::Graphics(int radius, const InterfaceView& interface)
-    : interface_(interface), bounds_{0, 0, 0, 0} {
+Graphics::Graphics(int radius, const interface::Dialog& dialog)
+    : dialog_(dialog), bounds_{0, 0, 0, 0} {
   const int side = 2*(radius - kPadding) + 1;
   const Point size(side, side);
   const Point grid(kGridSize, kGridSize);
@@ -96,8 +96,8 @@ void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
     }
   }
 
-  if (interface_.HasLines()) {
-    dialog_renderer_->DrawLines(interface_.GetLines(), true /* place_at_top */);
+  if (dialog_.Active()) {
+    dialog_.Draw(dialog_renderer_.get());
   } else {
     dialog_renderer_->DrawLines(view.log, true /* place_at_top */);
   }

@@ -31,7 +31,8 @@ bool Engine::Update(Action* input) {
   game_state_.log.Open();
 
   while (true) {
-    if (!game_state_.player->IsAlive()) {
+    if (!game_state_.player->IsAlive() ||
+        (interrupt_ != nullptr && interrupt_->dialog_->Active())) {
       break;
     }
     // Find the next sprite with enough energy to move.
@@ -41,8 +42,12 @@ bool Engine::Update(Action* input) {
       game_state_.AdvanceSprite();
       continue;
     }
-    // Retrieve that sprite's next action.
-    if (sprite->IsPlayer()) {
+    // Retrieve that sprite's next action. If we have a stored action that
+    // triggered a UI-layer interrupt, use it; else, use the input action for
+    // the player or an AI action for an NPC.
+    if (interrupt_ != nullptr) {
+      action.reset(interrupt_.release());
+    } else if (sprite->IsPlayer()) {
       if (input == nullptr) {
         break;
       }
@@ -56,8 +61,15 @@ bool Engine::Update(Action* input) {
     while (action != nullptr) {
       action->Bind(sprite, &game_state_, &handlers_);
       result = action->Execute();
+      if (result.stalled) {
+        ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");
+        interrupt_.reset(action.release());
+        break;
+      }
       action.reset(result.alternate);
     }
+    // Using the action costs the sprite energy, unless it was a player action
+    // that failed (such as a move into a blocked square).
     if (result.success || !sprite->IsPlayer()) {
       sprite->ConsumeEnergy();
       game_state_.AdvanceSprite();

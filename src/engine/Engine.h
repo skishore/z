@@ -1,6 +1,7 @@
 #ifndef BABEL_ENGINE_H__
 #define BABEL_ENGINE_H__
 
+#include <memory>
 #include <vector>
 
 #include "base/point.h"
@@ -27,6 +28,7 @@ class Engine {
  private:
   GameState game_state_;
   std::vector<EventHandler*> handlers_;
+  std::unique_ptr<Action> interrupt_;
 };
 
 }  // namespace engine

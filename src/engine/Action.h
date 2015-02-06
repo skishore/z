@@ -1,10 +1,12 @@
 #ifndef BABEL_ACTION_H__
 #define BABEL_ACTION_H__
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/point.h"
+#include "interface/Dialog.h"
 
 namespace babel {
 namespace engine {
@@ -16,6 +18,7 @@ class Sprite;
 
 struct ActionResult {
   bool success = false;
+  bool stalled = false;
   Action* alternate = nullptr;
 };
 
@@ -27,6 +30,8 @@ class Action {
   void Bind(Sprite* sprite, GameState* game_state,
             std::vector<EventHandler*>* handlers);
   virtual ActionResult Execute() = 0;
+
+  std::unique_ptr<interface::Dialog> dialog_;
 
  protected:
   Sprite* sprite_ = nullptr;

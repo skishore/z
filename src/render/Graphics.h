@@ -8,6 +8,7 @@
 
 #include "base/point.h"
 #include "engine/View.h"
+#include "interface/Dialog.h"
 #include "render/DialogRenderer.h"
 #include "render/Image.h"
 #include "render/Transform.h"
@@ -15,15 +16,9 @@
 namespace babel {
 namespace render {
 
-class InterfaceView {
- public:
-  virtual bool HasLines() const = 0;
-  virtual std::vector<std::string> GetLines() const = 0;
-};
-
 class Graphics {
  public:
-  Graphics(int radius, const InterfaceView& interface);
+  Graphics(int radius, const interface::Dialog& dialog);
   ~Graphics();
 
   void Draw(const engine::View& view);
@@ -35,7 +30,7 @@ class Graphics {
   void DrawShade(const engine::View& view, const Point& offset,
                  const Point& square, const Transform::Shade& shade);
 
-  const InterfaceView& interface_;
+  const interface::Dialog& dialog_;
 
   // These three SDL structures are for drawing to actual video memory.
   SDL_Window* window_;
