@@ -1,5 +1,5 @@
-#ifndef BABEL_VIEW_H__
-#define BABEL_VIEW_H__
+#ifndef __BABEL_ENGINE_VIEW_H__
+#define __BABEL_ENGINE_VIEW_H__
 
 #include <map>
 #include <string>
@@ -44,4 +44,4 @@ class View {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_VIEW_H__
+#endif  // __BABEL_ENGINE_VIEW_H__

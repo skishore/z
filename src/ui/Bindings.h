@@ -1,5 +1,5 @@
-#ifndef BABEL_BINDINGS_H__
-#define BABEL_BINDINGS_H__
+#ifndef __BABEL_UI_BINDINGS_H__
+#define __BABEL_UI_BINDINGS_H__
 
 #include <memory>
 
@@ -35,4 +35,4 @@ class Bindings : GameLoop::Updatable {
 }  // namespace ui
 }  // namespace babel
 
-#endif  // BABEL_BINDINGS_H__
+#endif  // __BABEL_UI_BINDINGS_H__

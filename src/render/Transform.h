@@ -1,5 +1,5 @@
-#ifndef __BABEL_TRANSFORM_H__
-#define __BABEL_TRANSFORM_H__
+#ifndef __BABEL_RENDER_TRANSFORM_H__
+#define __BABEL_RENDER_TRANSFORM_H__
 
 #include <map>
 #include <set>
@@ -28,4 +28,4 @@ struct Transform {
 } // namespace render
 } // namespace babel
 
-#endif  // __BABEL_TRANSFORM_H__
+#endif  // __BABEL_RENDER_TRANSFORM_H__

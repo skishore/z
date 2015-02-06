@@ -1,5 +1,5 @@
-#ifndef __BABEL_DEBUG_H__
-#define __BABEL_DEBUG_H__
+#ifndef __BABEL_BASE_DEBUG_H__
+#define __BABEL_BASE_DEBUG_H__
 
 #include <iostream>
 #include <stdlib.h>
@@ -30,4 +30,4 @@ void RegisterCrashHandlers(const char* binary);
 
 }  // namespace babel
 
-#endif  // __BABEL_DEBUG_H__
+#endif  // __BABEL_BASE_DEBUG_H__

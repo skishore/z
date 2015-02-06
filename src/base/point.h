@@ -1,5 +1,5 @@
-#ifndef __BABEL_POINT_H__
-#define __BABEL_POINT_H__
+#ifndef __BABEL_BASE_POINT_H__
+#define __BABEL_BASE_POINT_H__
 
 #include <complex>
 #include <iostream>
@@ -94,4 +94,4 @@ template<> struct hash<babel::Point> {
 
 }  // namespace std
 
-#endif  // __BABEL_POINT_H__
+#endif  // __BABEL_BASE_POINT_H__

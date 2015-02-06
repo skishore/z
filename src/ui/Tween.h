@@ -1,5 +1,5 @@
-#ifndef __BABEL_TWEEN_H__
-#define __BABEL_TWEEN_H__
+#ifndef __BABEL_UI_TWEEN_H__
+#define __BABEL_UI_TWEEN_H__
 
 #include <map>
 #include <memory>
@@ -42,4 +42,4 @@ class Tween {
 } // namespace ui 
 } // namespace babel
 
-#endif  // __BABEL_TWEEN_H__
+#endif  // __BABEL_UI_TWEEN_H__

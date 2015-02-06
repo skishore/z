@@ -1,5 +1,5 @@
-#ifndef __BABEL_TEXT_RENDERER_H__
-#define __BABEL_TEXT_RENDERER_H__
+#ifndef __BABEL_RENDER_TEXT_RENDERER_H__
+#define __BABEL_RENDER_TEXT_RENDERER_H__
 
 #include <map>
 #include <string>
@@ -47,4 +47,4 @@ class TextRenderer {
 } // namespace render
 } // namespace babel
 
-#endif  // __BABEL_TEXT_RENDERER_H__
+#endif  // __BABEL_RENDER_TEXT_RENDERER_H__

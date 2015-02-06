@@ -1,5 +1,5 @@
-#ifndef __BABEL_TIMING_H__
-#define __BABEL_TIMING_H__
+#ifndef __BABEL_BASE_TIMING_H__
+#define __BABEL_BASE_TIMING_H__
 
 #include <string>
 
@@ -15,4 +15,4 @@ void EndTimer();
 
 }  // namespace babel
 
-#endif  // __BABEL_TIMING_H__
+#endif  // __BABEL_BASE_TIMING_H__

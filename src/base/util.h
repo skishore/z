@@ -1,5 +1,5 @@
-#ifndef __BABEL_UTIL_H__
-#define __BABEL_UTIL_H__
+#ifndef __BABEL_BASE_UTIL_H__
+#define __BABEL_BASE_UTIL_H__
 
 #include <string>
 #include <vector>
@@ -25,4 +25,4 @@ std::vector<T> Concatenate(const std::vector<std::vector<T>>& nested_list) {
 
 }  // namespace babel
 
-#endif  // __BABEL_UTIL_H__
+#endif  // __BABEL_BASE_UTIL_H__

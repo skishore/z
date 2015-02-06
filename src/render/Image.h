@@ -1,5 +1,5 @@
-#ifndef __BABEL_IMAGE_H__
-#define __BABEL_IMAGE_H__
+#ifndef __BABEL_RENDER_IMAGE_H__
+#define __BABEL_RENDER_IMAGE_H__
 
 #include <string>
 #include <SDL2/SDL.h>
@@ -31,4 +31,4 @@ class Image {
 } // namespace render
 } // namespace babel
 
-#endif  // __BABEL_IMAGE_H__
+#endif  // __BABEL_RENDER_IMAGE_H__

@@ -1,5 +1,5 @@
-#ifndef __BABEL_INPUT_HANDLER_H__
-#define __BABEL_INPUT_HANDLER_H__
+#ifndef __BABEL_UI_INPUT_HANDLER_H__
+#define __BABEL_UI_INPUT_HANDLER_H__
 
 namespace babel {
 namespace ui {
@@ -14,4 +14,4 @@ class InputHandler {
 } // namespace ui
 } // namespace babel
 
-#endif  // __BABEL_INPUT_HANDLER_H__
+#endif  // __BABEL_UI_INPUT_HANDLER_H__

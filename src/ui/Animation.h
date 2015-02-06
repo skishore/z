@@ -1,5 +1,5 @@
-#ifndef __BABEL_ANIMATION_H__
-#define __BABEL_ANIMATION_H__
+#ifndef __BABEL_UI_ANIMATION_H__
+#define __BABEL_UI_ANIMATION_H__
 
 #include <deque>
 #include <memory>
@@ -53,4 +53,4 @@ class Animation : public engine::EventHandler {
 } // namespace ui 
 } // namespace babel
 
-#endif  // __BABEL_ANIMATION_H__
+#endif  // __BABEL_UI_ANIMATION_H__

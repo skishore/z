@@ -1,5 +1,5 @@
-#ifndef BABEL_CREATURE_H__
-#define BABEL_CREATURE_H__
+#ifndef __BABEL_BASE_CREATURE_H__
+#define __BABEL_BASE_CREATURE_H__
 
 #include <string>
 #include <vector>
@@ -30,4 +30,4 @@ extern const std::vector<Creature> kCreatures;
 
 }  // namespace babel
 
-#endif  // BABEL_CREATURE_H__
+#endif  // __BABEL_BASE_CREATURE_H__

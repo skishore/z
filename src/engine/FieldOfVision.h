@@ -1,5 +1,5 @@
-#ifndef BABEL_FIELD_OF_VISION_H__
-#define BABEL_FIELD_OF_VISION_H__
+#ifndef __BABEL_ENGINE_FIELD_OF_VISION_H__
+#define __BABEL_ENGINE_FIELD_OF_VISION_H__
 
 #include <vector>
 
@@ -32,4 +32,4 @@ class FieldOfVision {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_FIELD_OF_VISION_H__
+#endif  // __BABEL_ENGINE_FIELD_OF_VISION_H__

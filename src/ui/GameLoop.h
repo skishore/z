@@ -1,5 +1,5 @@
-#ifndef __BABEL_GAME_LOOP_H__
-#define __BABEL_GAME_LOOP_H__
+#ifndef __BABEL_UI_GAME_LOOP_H__
+#define __BABEL_UI_GAME_LOOP_H__
 
 namespace babel {
 namespace ui {
@@ -23,4 +23,4 @@ class GameLoop {
 } // namespace ui
 } // namespace babel
 
-#endif  // __BABEL_GAME_LOOP_H__
+#endif  // __BABEL_UI_GAME_LOOP_H__

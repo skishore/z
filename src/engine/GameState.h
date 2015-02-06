@@ -6,8 +6,8 @@
 // error if the sprite moves onto another sprite's square, because this
 // would violate the data structure's integrity.
 
-#ifndef BABEL_GAME_STATE_H__
-#define BABEL_GAME_STATE_H__
+#ifndef __BABEL_ENGINE_GAME_STATE_H__
+#define __BABEL_ENGINE_GAME_STATE_H__
 
 #include <memory>
 #include <string>
@@ -57,4 +57,4 @@ class GameState {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_GAME_STATE_H__
+#endif  // __BABEL_ENGINE_GAME_STATE_H__

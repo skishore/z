@@ -1,5 +1,5 @@
-#ifndef BABEL_ACTION_H__
-#define BABEL_ACTION_H__
+#ifndef __BABEL_ENGINE_ACTION_H__
+#define __BABEL_ENGINE_ACTION_H__
 
 #include <memory>
 #include <string>
@@ -60,4 +60,4 @@ class MoveAction : public Action {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_ACTION_H__
+#endif  // __BABEL_ENGINE_ACTION_H__

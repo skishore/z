@@ -1,5 +1,5 @@
-#ifndef BABEL_EVENT_HANDLER_H__
-#define BABEL_EVENT_HANDLER_H__
+#ifndef __BABEL_ENGINE_EVENT_HANDLER_H__
+#define __BABEL_ENGINE_EVENT_HANDLER_H__
 
 #include <vector>
 
@@ -18,4 +18,4 @@ class EventHandler {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_EVENT_HANDLER_H__
+#endif  // __BABEL_ENGINE_EVENT_HANDLER_H__

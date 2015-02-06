@@ -1,5 +1,5 @@
-#ifndef BABEL_ENGINE_H__
-#define BABEL_ENGINE_H__
+#ifndef __BABEL_ENGINE_ENGINE_H__
+#define __BABEL_ENGINE_ENGINE_H__
 
 #include <memory>
 #include <vector>
@@ -38,4 +38,4 @@ class Engine {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_ENGINE_H__
+#endif  // __BABEL_ENGINE_ENGINE_H__

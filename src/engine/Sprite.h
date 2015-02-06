@@ -1,5 +1,5 @@
-#ifndef BABEL_SPRITE_H__
-#define BABEL_SPRITE_H__
+#ifndef __BABEL_ENGINE_SPRITE_H__
+#define __BABEL_ENGINE_SPRITE_H__
 
 #include <string>
 #include <vector>
@@ -45,4 +45,4 @@ class Sprite {
 }  // namespace engine
 }  // namespace babel
 
-#endif  // BABEL_SPRITE_H__
+#endif  // __BABEL_ENGINE_SPRITE_H__

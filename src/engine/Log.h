@@ -1,5 +1,5 @@
-#ifndef BABEL_LOG_H__
-#define BABEL_LOG_H__
+#ifndef __BABEL_ENGINE_LOG_H__
+#define __BABEL_ENGINE_LOG_H__
 
 #include <deque>
 #include <string>
@@ -30,4 +30,4 @@ class Log {
 }  // namespace engine 
 }  // namespace babel
 
-#endif  // BABEL_LOG_H__
+#endif  // __BABEL_ENGINE_LOG_H__

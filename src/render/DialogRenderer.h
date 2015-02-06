@@ -1,5 +1,5 @@
-#ifndef __BABEL_DIALOG_RENDERER_H__
-#define __BABEL_DIALOG_RENDERER_H__
+#ifndef __BABEL_RENDER_DIALOG_RENDERER_H__
+#define __BABEL_RENDER_DIALOG_RENDERER_H__
 
 #include <list>
 #include <map>
@@ -32,4 +32,4 @@ class DialogRenderer {
 } // namespace render
 } // namespace babel
 
-#endif  // __BABEL_DIALOG_RENDERER_H__
+#endif  // __BABEL_RENDER_DIALOG_RENDERER_H__

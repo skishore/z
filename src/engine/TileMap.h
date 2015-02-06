@@ -1,5 +1,5 @@
-#ifndef __BABEL_TILE_MAP_H__
-#define __BABEL_TILE_MAP_H__
+#ifndef __BABEL_ENGINE_TILE_MAP_H__
+#define __BABEL_ENGINE_TILE_MAP_H__
 
 #include <iostream>
 #include <string>
@@ -42,4 +42,4 @@ class TileMap {
 } // namespace engine
 } // namespace babel
 
-#endif  // __BABEL_TILE_MAP_H__
+#endif  // __BABEL_ENGINE_TILE_MAP_H__

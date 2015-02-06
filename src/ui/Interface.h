@@ -1,5 +1,5 @@
-#ifndef __BABEL_INTERFACE_H__
-#define __BABEL_INTERFACE_H__
+#ifndef __BABEL_UI_INTERFACE_H__
+#define __BABEL_UI_INTERFACE_H__
 
 #include "engine/Action.h"
 #include "engine/Engine.h"
@@ -26,4 +26,4 @@ class Interface : public interface::Dialog {
 } // namespace ui
 } // namespace babel
 
-#endif  // __BABEL_INTERFACE_H__
+#endif  // __BABEL_UI_INTERFACE_H__

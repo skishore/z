@@ -1,5 +1,5 @@
-#ifndef __BABEL_GRAPHICS_H__
-#define __BABEL_GRAPHICS_H__
+#ifndef __BABEL_RENDER_GRAPHICS_H__
+#define __BABEL_RENDER_GRAPHICS_H__
 
 #include <map>
 #include <string>
@@ -46,4 +46,4 @@ class Graphics {
 } // namespace render
 } // namespace babel
 
-#endif  // __BABEL_GRAPHICS_H__
+#endif  // __BABEL_RENDER_GRAPHICS_H__
