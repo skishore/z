@@ -14,12 +14,12 @@ void Interface::Clear() {
   active_ = false;
 }
 
-bool Interface::Consume(char ch, engine::Action** action, bool* redraw) {
+interface::DialogResult Interface::Consume(char ch) {
   interface::Dialog* dialog = engine_->GetDialog();
   if (dialog != nullptr) {
-    return dialog->Consume(ch, action, redraw);
+    return dialog->Consume(ch);
   }
-  return false;
+  return interface::DialogResult();
 }
 
 bool Interface::Active() const {

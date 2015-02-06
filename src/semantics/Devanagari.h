@@ -24,6 +24,7 @@ class Devanagari {
 
   static std::string GetRandomConjunct();
   static std::string EnglishToHindi(const std::string& english);
+  static std::string HindiToEnglish(const std::string& hindi);
 };
 
 }  // namespace semantics

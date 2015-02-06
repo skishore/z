@@ -69,6 +69,7 @@ bool Engine::Update(Action* input) {
         ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");
         ASSERT(action->dialog_  != nullptr, "Stalled Action has no dialog!");
         interrupt_.reset(action.release());
+        changed = true;
         break;
       }
       action.reset(result.alternate);

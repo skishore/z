@@ -13,7 +13,7 @@ class Interface : public interface::Dialog {
   void Register(engine::Engine* engine);
 
   void Clear() override;
-  bool Consume(char ch, engine::Action** action, bool* redraw) override;
+  interface::DialogResult Consume(char ch) override;
 
   bool Active() const override;
   void Draw(render::DialogRenderer* renderer) const override;

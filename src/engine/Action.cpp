@@ -5,7 +5,7 @@
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
-#include "semantics/Devanagari.h"
+#include "interface/TransliterationGame.h"
 
 using std::max;
 using std::string;
@@ -29,6 +29,12 @@ AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
 ActionResult AttackAction::Execute() {
   ActionResult result;
+  if (sprite_->IsPlayer() && dialog_ == nullptr) {
+    dialog_.reset(new interface::TransliterationGame());
+    result.stalled = true;
+    return result;
+  }
+
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;

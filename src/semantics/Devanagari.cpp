@@ -144,5 +144,13 @@ string Devanagari::EnglishToHindi(const string& english) {
   return "";
 }
 
+string Devanagari::HindiToEnglish(const string& hindi) {
+  // TODO(skishore): Actually implement a transliterator here.
+  if (gHindiToEnglish.find(hindi) != gHindiToEnglish.end()) {
+    return gHindiToEnglish.at(hindi);
+  }
+  return "";
+}
+
 }  // namespace semantics
 }  // namespace babel

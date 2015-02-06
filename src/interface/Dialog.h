@@ -6,8 +6,6 @@
 #ifndef __BABEL_INTERFACE_DIALOG_H__
 #define __BABEL_INTERFACE_DIALOG_H__
 
-struct SDL_Renderer;
-
 namespace babel {
 
 namespace engine {
@@ -20,17 +18,23 @@ class DialogRenderer;
 
 namespace interface {
 
+// success is set to true if the input is consumed.
+// update is set to true if the engine should be updated, in which case action
+// may be null or non-null. If non-null, the engine will take ownership of it.
+struct DialogResult {
+  bool success = false;
+  bool redraw = false;
+  bool update = false;
+  engine::Action* action = nullptr;
+};
+
 class Dialog {
  public:
   virtual ~Dialog() {};
 
-  // Used when the player makes a move. Renders this dialog inactive.
-  virtual void Clear() = 0;
-
-  // Used for input. Returns true if the input was consumed.
-  // If this method returns a non-null action, the caller takes ownership of it
-  // and should pass it to the engine's Update method.
-  virtual bool Consume(char ch, engine::Action** action, bool* redraw) = 0;
+  // Methods used to update the dialog and possibly close it.
+  virtual void Clear() {};
+  virtual DialogResult Consume(char ch) = 0;
 
   // Const methods used to render the dialog in the UI.
   virtual bool Active() const = 0;

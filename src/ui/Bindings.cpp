@@ -58,16 +58,15 @@ bool Bindings::Update(double frame_rate) {
     return true;
   }
 
-  engine::Action* input = nullptr;
-  bool redraw = false;
-  if (interface_.Consume(ch, &input, &redraw)) {
-    if (input != nullptr) {
-      if (engine_->Update(input)) {
-        redraw = true;
+  interface::DialogResult result = interface_.Consume(ch);
+  if (result.success) {
+    if (result.update) {
+      if (engine_->Update(result.action)) {
+        result.redraw = true;
         interface_.Clear();
       }
     }
-    if (redraw) {
+    if (result.redraw) {
       Redraw();
     }
   } else if (ch == 'r') {
