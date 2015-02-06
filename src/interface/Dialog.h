@@ -18,11 +18,10 @@ class DialogRenderer;
 
 namespace interface {
 
-// success is set to true if the input is consumed.
-// update is set to true if the engine should be updated, in which case action
-// may be null or non-null. If non-null, the engine will take ownership of it.
+// The engine will be updated if action is not null OR if update is true.
+// If the action is not null, the engine will take ownership of it.
 struct DialogResult {
-  bool success = false;
+  bool reset = false;
   bool redraw = false;
   bool update = false;
   engine::Action* action = nullptr;

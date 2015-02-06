@@ -1,33 +1,13 @@
-#include <map>
-#include <memory>
-
 #include "base/debug.h"
-#include "base/point.h"
-#include "engine/Action.h"
-#include "engine/View.h"
 #include "ui/Bindings.h"
 
 namespace babel {
 namespace ui {
 
 namespace {
-
 static const int kFrameRate = 60;
 static const int kScreenRadius = 10;
-
-static const std::map<char,Point> kShift = {
-  {'h', Point(-1, 0)},
-  {'j', Point(0, 1)},
-  {'k', Point(0, -1)},
-  {'l', Point(1, 0)},
-  {'y', Point(-1, -1)},
-  {'u', Point(1, -1)},
-  {'b', Point(-1, 1)},
-  {'n', Point(1, 1)},
-  {'.', Point(0, 0)}
-};
-
-}
+}  // namespace
 
 Bindings::Bindings(bool verbose)
     : verbose_(verbose), graphics_(kScreenRadius, interface_) {}
@@ -59,25 +39,17 @@ bool Bindings::Update(double frame_rate) {
   }
 
   interface::DialogResult result = interface_.Consume(ch);
-  if (result.success) {
-    if (result.update) {
-      if (engine_->Update(result.action)) {
-        result.redraw = true;
-        interface_.Clear();
-      }
-    }
-    if (result.redraw) {
-      Redraw();
-    }
-  } else if (ch == 'r') {
+  if (result.reset) {
     Reset();
-  } else if (kShift.find(ch) != kShift.end()) {
-    if (engine_->Update(new engine::MoveAction(kShift.at(ch)))) {
+  } else if (result.action != nullptr || result.update) {
+    if (engine_->Update(result.action)) {
+      result.redraw = true;
       interface_.Clear();
-      Redraw();
     }
   }
-
+  if (result.redraw) {
+    Redraw();
+  }
   return true;
 }
 

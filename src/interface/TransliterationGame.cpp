@@ -25,7 +25,6 @@ DialogResult TransliterationGame::Consume(char ch) {
     input_ = input_.substr(0, input_.size() - 1);
     result.redraw = true;
   }
-  result.success = true;
   return result;
 }
 
