@@ -6,6 +6,7 @@
 #include "base/point.h"
 
 using std::find;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -53,7 +54,7 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   rect.x += padding.x;
   rect.y += padding.y + kTextSize;
   for (const string& line : lines) {
-    Text* text = DrawText(line);
+    Text* text = DrawText(kTextSize, line);
     const SDL_Rect dest{rect.x - text->baseline.x, rect.y - text->baseline.y,
                         text->size.x, text->size.y};
     SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
@@ -64,11 +65,12 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   }
 }
 
-Text* DialogRenderer::DrawText(const string& text) {
-  Text* result = text_cache_.Get(text);
+Text* DialogRenderer::DrawText(int font_size, const string& text) {
+  pair<int,string> key{font_size, text};
+  Text* result = text_cache_.Get(key);
   if (result == nullptr) {
-    result = text_renderer_.DrawText("default_font.ttf", kTextSize, text);
-    text_cache_.Set(text, result);
+    result = text_renderer_.DrawText("default_font.ttf", font_size, text);
+    text_cache_.Set(key, result);
   }
   return result;
 }

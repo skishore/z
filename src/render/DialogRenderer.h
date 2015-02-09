@@ -1,8 +1,6 @@
 #ifndef __BABEL_RENDER_DIALOG_RENDERER_H__
 #define __BABEL_RENDER_DIALOG_RENDERER_H__
 
-#include <list>
-#include <map>
 #include <string>
 #include <vector>
 #include <SDL2/SDL.h>
@@ -20,12 +18,12 @@ class DialogRenderer {
   void DrawLines(const std::vector<std::string>& lines, bool place_at_top);
 
  private:
-  Text* DrawText(const std::string& text);
+  Text* DrawText(int font_size, const std::string& text);
 
   const SDL_Rect bounds_;
   SDL_Renderer* renderer_;
   TextRenderer text_renderer_;
-  LRUCache<std::string,Text> text_cache_;
+  LRUCache<std::pair<int,std::string>,Text> text_cache_;
 };
 
 } // namespace render

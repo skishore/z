@@ -19,7 +19,7 @@ struct CircularListNode {
 
 }  // namespace
 
-template<typename K, typename V>
+template<typename K,typename V>
 class LRUCache {
  public:
   LRUCache(int capacity) : capacity_(capacity), head_(nullptr) {
@@ -48,7 +48,7 @@ class LRUCache {
   // This method will crash if the value is null or if the key is already
   // present in the crash. The cache takes ownership of the value pointer.
   void Set(K key, V* value) {
-    ASSERT(values_.find(key) == values_.end(), key << " is already set!");
+    ASSERT(values_.find(key) == values_.end(), "Key is already set!");
     ASSERT(value != nullptr, "value == nullptr!");
     CircularListNode<K>* node = new CircularListNode<K>(key);
     values_[key] = value;
