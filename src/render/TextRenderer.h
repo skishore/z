@@ -18,6 +18,8 @@ class Font;
 }  // namespace font
 
 struct Text {
+  ~Text() { SDL_DestroyTexture(texture); }
+
   Point size;
   Point baseline;
   SDL_Texture* texture;
@@ -28,11 +30,11 @@ class TextRenderer {
   TextRenderer(SDL_Renderer* renderer);
   ~TextRenderer();
 
-  // The caller takes ownership of the SDL_Texture in the returned Text.
+  // The caller takes ownership of the new Text.
   // This method does not take a color argument because the text color can be
   // set when rendering the text by calling SDL_SetTextureColorMod.
-  Text DrawText(const std::string& font_name, int font_size,
-                const std::string& text);
+  Text* DrawText(const std::string& font_name, int font_size,
+                 const std::string& text);
 
  private:
   // This class owns the loaded font.

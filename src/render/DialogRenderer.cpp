@@ -14,12 +14,13 @@ namespace render {
 namespace {
 
 static const int kTextSize = 16;
-static const int kMaxCacheSize = 16;
+static const int kCacheCapacity = 16;
 
 }  // namespace
 
 DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
-    : bounds_(bounds), renderer_(renderer), text_renderer_(renderer) {}
+    : bounds_(bounds), renderer_(renderer),
+      text_renderer_(renderer), text_cache_(kCacheCapacity) {}
 
 void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   if (lines.empty()) {
@@ -64,25 +65,10 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
 }
 
 Text* DialogRenderer::DrawText(const string& text) {
-  Text* result = nullptr;
-  if (text_cache_.find(text) != text_cache_.end()) {
-    result = text_cache_.at(text);
-    text_cache_.erase(text);
-    const auto& it = find(text_priority_.begin(), text_priority_.end(), text);
-    ASSERT(it != text_priority_.end(), text << " missing priority!");
-    text_priority_.erase(it);
-  }
+  Text* result = text_cache_.Get(text);
   if (result == nullptr) {
-    result = new Text(
-        text_renderer_.DrawText("default_font.ttf", kTextSize, text));
-  }
-  text_cache_[text] = result;
-  text_priority_.push_front(text);
-  if (text_priority_.size() > kMaxCacheSize) {
-    const string evicted = text_priority_.back();
-    SDL_DestroyTexture(text_cache_.at(evicted)->texture);
-    text_cache_.erase(evicted);
-    text_priority_.pop_back();
+    result = text_renderer_.DrawText("default_font.ttf", kTextSize, text);
+    text_cache_.Set(text, result);
   }
   return result;
 }

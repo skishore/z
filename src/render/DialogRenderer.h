@@ -7,6 +7,7 @@
 #include <vector>
 #include <SDL2/SDL.h>
 
+#include "base/lru_cache.h"
 #include "render/TextRenderer.h"
 
 namespace babel {
@@ -24,9 +25,7 @@ class DialogRenderer {
   const SDL_Rect bounds_;
   SDL_Renderer* renderer_;
   TextRenderer text_renderer_;
-
-  std::map<std::string,Text*> text_cache_;
-  std::list<std::string> text_priority_;
+  LRUCache<std::string,Text> text_cache_;
 };
 
 } // namespace render

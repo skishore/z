@@ -377,23 +377,24 @@ TextRenderer::~TextRenderer() {
   FT_Done_FreeType(library_);
 }
 
-Text TextRenderer::DrawText(const string& font_name, int font_size,
+Text* TextRenderer::DrawText(const string& font_name, int font_size,
                             const string& text) {
-  Text result;
+  Text* result = new Text;
   Font* font = LoadFont(font_name, font_size);
-  font->PrepareToRender(text, &result.size, &result.baseline);
+  font->PrepareToRender(text, &result->size, &result->baseline);
 
   // Create an appropriately-sized surface to render the text in.
   SDL_Surface* surface = SDL_CreateRGBSurface(
-      0, result.size.x, result.size.y, kBitDepth,
+      0, result->size.x, result->size.y, kBitDepth,
       kAMask, kRMask, kGMask, kBMask);
   ASSERT(surface != nullptr, SDL_GetError());
   SDL_FillRect(surface, nullptr, 0x000000);
 
-  font->Render(Point(0, 0), result.size, result.baseline, 0xffffffff, surface);
+  font->Render(Point(0, 0), result->size, result->baseline,
+               0xffffffff, surface);
 
-  result.texture = SDL_CreateTextureFromSurface(renderer_, surface);
-  ASSERT(result.texture != nullptr, SDL_GetError());
+  result->texture = SDL_CreateTextureFromSurface(renderer_, surface);
+  ASSERT(result->texture != nullptr, SDL_GetError());
   SDL_FreeSurface(surface);
   return result;
 }
