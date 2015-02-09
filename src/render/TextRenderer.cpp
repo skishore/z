@@ -378,7 +378,7 @@ TextRenderer::~TextRenderer() {
 }
 
 Text TextRenderer::DrawText(const string& font_name, int font_size,
-                            const string& text, uint32_t color) {
+                            const string& text) {
   Text result;
   Font* font = LoadFont(font_name, font_size);
   font->PrepareToRender(text, &result.size, &result.baseline);
@@ -390,7 +390,7 @@ Text TextRenderer::DrawText(const string& font_name, int font_size,
   ASSERT(surface != nullptr, SDL_GetError());
   SDL_FillRect(surface, nullptr, 0x000000);
 
-  font->Render(Point(0, 0), result.size, result.baseline, color, surface);
+  font->Render(Point(0, 0), result.size, result.baseline, 0xffffffff, surface);
 
   result.texture = SDL_CreateTextureFromSurface(renderer_, surface);
   ASSERT(result.texture != nullptr, SDL_GetError());
