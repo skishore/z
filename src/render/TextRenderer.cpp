@@ -112,7 +112,7 @@ struct Blend {
   }
 };
 
-template <typename T>
+template<typename T>
 void Renderer(int y, int count, const FT_Span* spans, void* ctx) {
   RendererContext* context = (RendererContext*)ctx;
   y = context->gy - y;
