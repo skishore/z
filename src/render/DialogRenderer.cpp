@@ -6,6 +6,7 @@
 #include "base/point.h"
 
 using std::find;
+using std::max;
 using std::pair;
 using std::string;
 using std::vector;
@@ -19,9 +20,89 @@ static const int kCacheCapacity = 16;
 
 }  // namespace
 
+namespace dialog {
+
+struct RenderParams {
+  SDL_Renderer* renderer;
+  DialogRenderer* text_renderer;
+};
+
+Dialog::~Dialog() {
+  for (Dialog* child : children_) {
+    delete child;
+  }
+}
+
+void Dialog::AddChild(Dialog* child) {
+  children_.push_back(child);
+}
+
+class ColumnDialog : public Dialog {
+ public:
+  int GetHeight() const override {
+    int height = 0;
+    for (Dialog* child : children_) {
+      height = max(child->GetHeight(), height);
+    }
+    return height;
+  }
+
+  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  }
+};
+
+class RowDialog : public Dialog {
+ public:
+  int GetHeight() const override {
+    int height = 0;
+    for (Dialog* child : children_) {
+      height += child->GetHeight();
+    }
+    return height;
+  }
+
+  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  }
+};
+
+class TextDialog : public Dialog {
+ public:
+  TextDialog(float size, const string& text, uint32_t color)
+      : font_size_(size*kTextSize), text_(text), color_(color) {};
+
+  int GetHeight() const override {
+    return 3*font_size_/2;
+  }
+
+  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  }
+
+ private:
+  const int font_size_;
+  const string text_;
+  const uint32_t color_;
+};
+
+Dialog* MakeColumnDialog() {
+  return new ColumnDialog;
+}
+
+Dialog* MakeRowDialog() {
+  return new RowDialog;
+}
+
+Dialog* MakeTextDialog(int font_size, const string& text, uint32_t color) {
+  return new TextDialog(font_size, text, color);
+}
+
+}  // namespace dialog
+
 DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
     : bounds_(bounds), renderer_(renderer),
       text_renderer_(renderer), text_cache_(kCacheCapacity) {}
+
+void DialogRenderer::Draw(const dialog::Dialog& dialog, bool place_at_top) {
+}
 
 void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   if (lines.empty()) {
