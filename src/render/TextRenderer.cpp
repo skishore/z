@@ -378,7 +378,7 @@ TextRenderer::~TextRenderer() {
 }
 
 Text* TextRenderer::DrawText(const string& font_name, int font_size,
-                            const string& text) {
+                             const string& text) {
   Text* result = new Text;
   Font* font = LoadFont(font_name, font_size);
   font->PrepareToRender(text, &result->size, &result->baseline);
