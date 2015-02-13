@@ -1,6 +1,7 @@
 #include "render/DialogRenderer.h"
 
 #include <algorithm>
+#include <memory>
 
 #include "base/debug.h"
 #include "base/point.h"
@@ -184,6 +185,7 @@ DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
       text_renderer_(renderer), text_cache_(kCacheCapacity) {}
 
 void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
+  std::unique_ptr<dialog::Element> owner(element);
   const int border = 2;
   const int margin = kTextSize/4;
   const Point padding(kTextSize, kTextSize/2);
@@ -212,7 +214,6 @@ void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
   rect.w -= 2*padding.x;
   rect.h -= 2*padding.y;
   element->Draw(dialog::RenderParams{rect, renderer_, this});
-  delete element;
 }
 
 void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
