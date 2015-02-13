@@ -20,7 +20,8 @@ void AddChild(Element* parent, Element* child);
 // The caller takes ownership of the new dialogs.
 Element* MakeColumnElement();
 Element* MakeRowElement();
-Element* MakeTextElement(int font_size, const std::string& text, uint32_t color);
+Element* MakeTextElement(
+    float font_size, const std::string& text, uint32_t color);
 
 }  // namespace dialog
 

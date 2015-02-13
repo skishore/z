@@ -22,11 +22,6 @@ static const int kCacheCapacity = 16;
 
 namespace dialog {
 
-struct RenderParams {
-  SDL_Renderer* renderer;
-  DialogRenderer* text_renderer;
-};
-
 class Element {
  public:
   virtual ~Element() {
@@ -35,7 +30,8 @@ class Element {
     }
   }
 
-  virtual void Draw(const SDL_Rect& rect, const RenderParams& params) const = 0;
+  virtual void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
+                    DialogRenderer* text_renderer) const = 0;
   virtual int GetHeight() const = 0;
 
  protected:
@@ -48,12 +44,19 @@ class ColumnElement : public Element {
   int GetHeight() const override {
     int height = 0;
     for (Element* child : children_) {
-      height = max(child->GetHeight(), height);
+      height += child->GetHeight();
     }
     return height;
   }
 
-  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
+            DialogRenderer* text_renderer) const override {
+    SDL_Rect inner(rect);
+    for (Element* child : children_) {
+      inner.h = child->GetHeight();
+      child->Draw(inner, renderer, text_renderer);
+      inner.y += inner.h;
+    }
   }
 };
 
@@ -62,31 +65,54 @@ class RowElement : public Element {
   int GetHeight() const override {
     int height = 0;
     for (Element* child : children_) {
-      height += child->GetHeight();
+      height = max(child->GetHeight(), height);
     }
     return height;
   }
 
-  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
+            DialogRenderer* text_renderer) const override{
+    SDL_Rect inner(rect);
+    for (int i = 0; i < children_.size(); i++) {
+      Element* child = children_[i];
+      inner.x = rect.x + i*rect.w/children_.size();
+      inner.w = rect.x + (i + 1)*rect.w/children_.size() - inner.x;
+      inner.h = child->GetHeight();
+      child->Draw(inner, renderer, text_renderer);
+    }
   }
 };
 
 class TextElement : public Element {
  public:
   TextElement(float size, const string& text, uint32_t color)
-      : font_size_(size*kTextSize), text_(text), color_(color) {};
+      : font_size_(size*kTextSize), text_(text) {
+    color_ = SDL_Color{
+        uint8_t(color >> 16), uint8_t(color >> 8), uint8_t(color), 0x00};
+  }
 
   int GetHeight() const override {
     return 3*font_size_/2;
   }
 
-  void Draw(const SDL_Rect& rect, const RenderParams& params) const override {
+  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
+            DialogRenderer* text_renderer) const override{
+    // NOTE: TextElements do NOT render any children that they may have.
+    Text* text = text_renderer->DrawText(font_size_, text_);
+    const SDL_Rect dest{
+        rect.x - text->baseline.x, rect.y - text->baseline.y + font_size_,
+        text->size.x, text->size.y};
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureColorMod(text->texture, color_.r, color_.g, color_.b);
+    SDL_RenderCopy(renderer, text->texture, nullptr, &dest);
+    SDL_SetTextureColorMod(text->texture, 0xff, 0xff, 0xff);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
   }
 
  private:
   const int font_size_;
   const string text_;
-  const uint32_t color_;
+  SDL_Color color_;
 };
 
 void AddChild(Element* parent, Element* child) {
@@ -101,7 +127,7 @@ Element* MakeRowElement() {
   return new RowElement;
 }
 
-Element* MakeTextElement(int font_size, const string& text, uint32_t color) {
+Element* MakeTextElement(float font_size, const string& text, uint32_t color) {
   return new TextElement(font_size, text, color);
 }
 
@@ -112,18 +138,10 @@ DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
       text_renderer_(renderer), text_cache_(kCacheCapacity) {}
 
 void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
-  delete element;
-}
-
-void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
-  if (lines.empty()) {
-    return;
-  }
   const int border = 2;
-  const int line_height = 3*kTextSize/2;
   const int margin = kTextSize/4;
   const Point padding(kTextSize, kTextSize/2);
-  const int height = line_height*lines.size() + 2*border + 2*padding.y;
+  const int height = element->GetHeight() + 2*border + 2*padding.y;
 
   SDL_Rect rect(bounds_);
 
@@ -144,17 +162,20 @@ void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
   }
 
   rect.x += padding.x;
-  rect.y += padding.y + kTextSize;
-  for (const string& line : lines) {
-    Text* text = DrawText(kTextSize, line);
-    const SDL_Rect dest{rect.x - text->baseline.x, rect.y - text->baseline.y,
-                        text->size.x, text->size.y};
-    SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
-    SDL_RenderCopy(renderer_, text->texture, nullptr, &dest);
-    SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_NONE);
+  rect.y += padding.y;
+  element->Draw(rect, renderer_, this);
+  delete element;
+}
 
-    rect.y += line_height;
+void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {
+  if (lines.empty()) {
+    return;
   }
+  dialog::Element* column = dialog::MakeColumnElement();
+  for (const string& line : lines) {
+    dialog::AddChild(column, dialog::MakeTextElement(1.0, line, 0x00ffffff));
+  }
+  Draw(column, place_at_top);
 }
 
 Text* DialogRenderer::DrawText(int font_size, const string& text) {
