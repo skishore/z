@@ -20,6 +20,7 @@ void AddChild(Element* parent, Element* child);
 // The caller takes ownership of the new dialogs.
 Element* MakeColumnElement();
 Element* MakeRowElement();
+Element* MakeSpanElement(bool centered);
 Element* MakeTextElement(
     float font_size, const std::string& text, uint32_t color);
 

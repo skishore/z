@@ -83,6 +83,14 @@ class RowElement : public Element {
   }
 };
 
+class SpanElement : public RowElement {
+ public:
+  SpanElement(bool centered) : centered_(centered) {}
+
+ private:
+  const bool centered_;
+};
+
 class TextElement : public Element {
  public:
   TextElement(float size, const string& text, uint32_t color)
@@ -125,6 +133,10 @@ Element* MakeColumnElement() {
 
 Element* MakeRowElement() {
   return new RowElement;
+}
+
+Element* MakeSpanElement(bool centered) {
+  return new SpanElement(centered);
 }
 
 Element* MakeTextElement(float font_size, const string& text, uint32_t color) {
