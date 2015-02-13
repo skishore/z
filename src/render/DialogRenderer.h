@@ -12,19 +12,10 @@ namespace babel {
 namespace render {
 namespace dialog {
 
-struct RenderParams;
+class Dialog;
 
-class Dialog {
- public:
-  virtual ~Dialog();
-  virtual void AddChild(Dialog* dialog);
-
-  virtual void Draw(const SDL_Rect& rect, const RenderParams& params) const = 0;
-  virtual int GetHeight() const = 0;
-
- protected:
-  std::vector<Dialog*> children_;
-};
+// The parent takes owernship of the child dialog. Neither may be null.
+void AddChild(Dialog* parent, Dialog* child);
 
 // The caller takes ownership of the new dialogs.
 Dialog* MakeColumnDialog();

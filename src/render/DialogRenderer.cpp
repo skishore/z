@@ -27,15 +27,21 @@ struct RenderParams {
   DialogRenderer* text_renderer;
 };
 
-Dialog::~Dialog() {
-  for (Dialog* child : children_) {
-    delete child;
+class Dialog {
+ public:
+  virtual ~Dialog() {
+    for (Dialog* child : children_) {
+      delete child;
+    }
   }
-}
 
-void Dialog::AddChild(Dialog* child) {
-  children_.push_back(child);
-}
+  virtual void Draw(const SDL_Rect& rect, const RenderParams& params) const = 0;
+  virtual int GetHeight() const = 0;
+
+ protected:
+  std::vector<Dialog*> children_;
+  friend void AddChild(Dialog* parent, Dialog* child);
+};
 
 class ColumnDialog : public Dialog {
  public:
@@ -82,6 +88,10 @@ class TextDialog : public Dialog {
   const string text_;
   const uint32_t color_;
 };
+
+void AddChild(Dialog* parent, Dialog* child) {
+  parent->children_.push_back(child);
+}
 
 Dialog* MakeColumnDialog() {
   return new ColumnDialog;
