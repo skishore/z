@@ -2,6 +2,7 @@
 #define __BABEL_INTERFACE_TRANSLITERATION_GAME_H__
 
 #include <string>
+#include <vector>
 
 #include "interface/Dialog.h"
 
@@ -18,9 +19,14 @@ class TransliterationGame : public Dialog {
   virtual void Draw(render::DialogRenderer* renderer) const override;
 
  private:
-  std::string hindi_;
-  std::string english_;
-  std::string input_;
+  void Advance();
+
+  std::vector<std::string> segments_;
+  std::vector<std::string> answers_;
+  std::vector<std::string> entries_;
+  std::vector<bool> guides_;
+  int index_ = 0;
+  int length_ = 0;
 };
 
 }  // namespace interface
