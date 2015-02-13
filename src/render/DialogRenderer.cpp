@@ -27,10 +27,10 @@ struct RenderParams {
   DialogRenderer* text_renderer;
 };
 
-class Dialog {
+class Element {
  public:
-  virtual ~Dialog() {
-    for (Dialog* child : children_) {
+  virtual ~Element() {
+    for (Element* child : children_) {
       delete child;
     }
   }
@@ -39,15 +39,15 @@ class Dialog {
   virtual int GetHeight() const = 0;
 
  protected:
-  std::vector<Dialog*> children_;
-  friend void AddChild(Dialog* parent, Dialog* child);
+  std::vector<Element*> children_;
+  friend void AddChild(Element* parent, Element* child);
 };
 
-class ColumnDialog : public Dialog {
+class ColumnElement : public Element {
  public:
   int GetHeight() const override {
     int height = 0;
-    for (Dialog* child : children_) {
+    for (Element* child : children_) {
       height = max(child->GetHeight(), height);
     }
     return height;
@@ -57,11 +57,11 @@ class ColumnDialog : public Dialog {
   }
 };
 
-class RowDialog : public Dialog {
+class RowElement : public Element {
  public:
   int GetHeight() const override {
     int height = 0;
-    for (Dialog* child : children_) {
+    for (Element* child : children_) {
       height += child->GetHeight();
     }
     return height;
@@ -71,9 +71,9 @@ class RowDialog : public Dialog {
   }
 };
 
-class TextDialog : public Dialog {
+class TextElement : public Element {
  public:
-  TextDialog(float size, const string& text, uint32_t color)
+  TextElement(float size, const string& text, uint32_t color)
       : font_size_(size*kTextSize), text_(text), color_(color) {};
 
   int GetHeight() const override {
@@ -89,20 +89,20 @@ class TextDialog : public Dialog {
   const uint32_t color_;
 };
 
-void AddChild(Dialog* parent, Dialog* child) {
+void AddChild(Element* parent, Element* child) {
   parent->children_.push_back(child);
 }
 
-Dialog* MakeColumnDialog() {
-  return new ColumnDialog;
+Element* MakeColumnElement() {
+  return new ColumnElement;
 }
 
-Dialog* MakeRowDialog() {
-  return new RowDialog;
+Element* MakeRowElement() {
+  return new RowElement;
 }
 
-Dialog* MakeTextDialog(int font_size, const string& text, uint32_t color) {
-  return new TextDialog(font_size, text, color);
+Element* MakeTextElement(int font_size, const string& text, uint32_t color) {
+  return new TextElement(font_size, text, color);
 }
 
 }  // namespace dialog
@@ -111,7 +111,8 @@ DialogRenderer::DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer)
     : bounds_(bounds), renderer_(renderer),
       text_renderer_(renderer), text_cache_(kCacheCapacity) {}
 
-void DialogRenderer::Draw(const dialog::Dialog& dialog, bool place_at_top) {
+void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
+  delete element;
 }
 
 void DialogRenderer::DrawLines(const vector<string>& lines, bool place_at_top) {

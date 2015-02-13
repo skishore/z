@@ -12,15 +12,15 @@ namespace babel {
 namespace render {
 namespace dialog {
 
-class Dialog;
+class Element;
 
 // The parent takes owernship of the child dialog. Neither may be null.
-void AddChild(Dialog* parent, Dialog* child);
+void AddChild(Element* parent, Element* child);
 
 // The caller takes ownership of the new dialogs.
-Dialog* MakeColumnDialog();
-Dialog* MakeRowDialog();
-Dialog* MakeTextDialog(int font_size, const std::string& text, uint32_t color);
+Element* MakeColumnElement();
+Element* MakeRowElement();
+Element* MakeTextElement(int font_size, const std::string& text, uint32_t color);
 
 }  // namespace dialog
 
@@ -28,7 +28,8 @@ class DialogRenderer {
  public:
   DialogRenderer(const SDL_Rect& bounds, SDL_Renderer* renderer);
 
-  void Draw(const dialog::Dialog& dialog, bool place_at_top);
+  // Takes ownership of and destructs the dialog element.
+  void Draw(dialog::Element* element, bool place_at_top);
   void DrawLines(const std::vector<std::string>& lines, bool place_at_top);
 
   // This Text must be used before another call to DrawText is made,
