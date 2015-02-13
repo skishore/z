@@ -214,6 +214,7 @@ class Font {
   hb_unicode_funcs_t* unicode_funcs_;
   vector<hb_buffer_t*> segments_;
   vector<hb_script_t> scripts_;
+  Uint32 load_flags_ = 0;
 };
 
 Font::Font(const string& font_name, int font_size, FT_Library library)
@@ -233,6 +234,11 @@ Font::Font(const string& font_name, int font_size, FT_Library library)
   renderer_.black_spans = nullptr;
   renderer_.bit_set = nullptr;
   renderer_.bit_test = nullptr;
+
+  #ifndef EMSCRIPTEN
+  // TODO(skishore): Figure out why auto-hinting crashes emscripten.
+  load_flags_ = FT_LOAD_FORCE_AUTOHINT;
+  #endif // EMSCRIPTEN
 }
 
 Font::~Font() {
@@ -274,7 +280,7 @@ void Font::PrepareToRender(const string& text, Point* size, Point* baseline) {
         hb_buffer_get_glyph_positions(segments_[j], &glyph_count);
 
     for (int i = 0; i < glyph_count; i++) {
-      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, 0),
+      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, load_flags_),
              "Failed to load glyph: " << glyph_info[i].codepoint);
       ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
              "Got unexpected glyph format: " << (char*)&face->glyph->format);
@@ -321,13 +327,6 @@ void Font::Render(
 
   SDL_LockSurface(surface);
 
-  #ifdef EMSCRIPTEN
-  // TODO(babel): Why does auto-hinting crash emscripten?
-  const Uint32 load_flags = 0;
-  #else  // EMSCRIPTEN
-  const Uint32 load_flags = FT_LOAD_FORCE_AUTOHINT;
-  #endif // EMSCRIPTEN
-
   for (int j = 0; j < segments_.size(); j++) {
     FT_Face face = (scripts_[j] == HB_SCRIPT_LATIN ? face_ : big_face_);
 
@@ -338,7 +337,7 @@ void Font::Render(
         hb_buffer_get_glyph_positions(segments_[j], &glyph_count);
 
     for (int i = 0; i < glyph_count; i++) {
-      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, load_flags),
+      ASSERT(!FT_Load_Glyph(face, glyph_info[i].codepoint, load_flags_),
              "Failed to load glyph: " << glyph_info[i].codepoint);
       ASSERT(face->glyph->format == FT_GLYPH_FORMAT_OUTLINE,
              "Got unexpected glyph format: " << (char*)&face->glyph->format);
