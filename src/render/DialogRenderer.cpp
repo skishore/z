@@ -22,6 +22,12 @@ static const int kCacheCapacity = 16;
 
 namespace dialog {
 
+struct RenderParams {
+  SDL_Rect rect;
+  SDL_Renderer* renderer;
+  DialogRenderer* text_renderer;
+};
+
 class Element {
  public:
   virtual ~Element() {
@@ -30,8 +36,7 @@ class Element {
     }
   }
 
-  virtual void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
-                    DialogRenderer* text_renderer) const = 0;
+  virtual void Draw(RenderParams params) const = 0;
   virtual int GetHeight() const = 0;
 
  protected:
@@ -49,13 +54,11 @@ class ColumnElement : public Element {
     return height;
   }
 
-  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
-            DialogRenderer* text_renderer) const override {
-    SDL_Rect inner(rect);
+  void Draw(RenderParams params) const override {
     for (Element* child : children_) {
-      inner.h = child->GetHeight();
-      child->Draw(inner, renderer, text_renderer);
-      inner.y += inner.h;
+      params.rect.h = child->GetHeight();
+      child->Draw(params);
+      params.rect.y += params.rect.h;
     }
   }
 };
@@ -70,15 +73,15 @@ class RowElement : public Element {
     return height;
   }
 
-  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
-            DialogRenderer* text_renderer) const override{
-    SDL_Rect inner(rect);
+  void Draw(RenderParams params) const override{
+    const int left = params.rect.x;
+    const int width = params.rect.w;
     for (int i = 0; i < children_.size(); i++) {
       Element* child = children_[i];
-      inner.x = rect.x + i*rect.w/children_.size();
-      inner.w = rect.x + (i + 1)*rect.w/children_.size() - inner.x;
-      inner.h = child->GetHeight();
-      child->Draw(inner, renderer, text_renderer);
+      params.rect.x = left + i*width/children_.size();
+      params.rect.w = left + (i + 1)*width/children_.size() - params.rect.x;
+      params.rect.h = child->GetHeight();
+      child->Draw(params);
     }
   }
 };
@@ -103,18 +106,17 @@ class TextElement : public Element {
     return 3*font_size_/2;
   }
 
-  void Draw(const SDL_Rect& rect, SDL_Renderer* renderer,
-            DialogRenderer* text_renderer) const override{
+  void Draw(RenderParams params) const override{
     // NOTE: TextElements do NOT render any children that they may have.
-    Text* text = text_renderer->DrawText(font_size_, text_);
-    const SDL_Rect dest{
-        rect.x - text->baseline.x, rect.y - text->baseline.y + font_size_,
-        text->size.x, text->size.y};
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    Text* text = params.text_renderer->DrawText(font_size_, text_);
+    const SDL_Rect dest{params.rect.x - text->baseline.x,
+                        params.rect.y - text->baseline.y + font_size_,
+                        text->size.x, text->size.y};
+    SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_BLEND);
     SDL_SetTextureColorMod(text->texture, color_.r, color_.g, color_.b);
-    SDL_RenderCopy(renderer, text->texture, nullptr, &dest);
+    SDL_RenderCopy(params.renderer, text->texture, nullptr, &dest);
     SDL_SetTextureColorMod(text->texture, 0xff, 0xff, 0xff);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_NONE);
   }
 
  private:
@@ -175,7 +177,7 @@ void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
 
   rect.x += padding.x;
   rect.y += padding.y;
-  element->Draw(rect, renderer_, this);
+  element->Draw(dialog::RenderParams{rect, renderer_, this});
   delete element;
 }
 
