@@ -141,9 +141,9 @@ class TextElement : public Element {
   void Draw(RenderParams params) const override{
     // NOTE: TextElements do NOT render any children that they may have.
     Text* text = params.text_renderer->DrawText(font_size_, text_);
-    const SDL_Rect dest{params.rect.x - text->baseline.x,
-                        params.rect.y - text->baseline.y + font_size_,
-                        text->size.x, text->size.y};
+    const SDL_Rect dest{
+        params.rect.x, params.rect.y - text->baseline.y + font_size_,
+        text->size.x, text->size.y};
     SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_BLEND);
     SDL_SetTextureColorMod(text->texture, color_.r, color_.g, color_.b);
     SDL_RenderCopy(params.renderer, text->texture, nullptr, &dest);
