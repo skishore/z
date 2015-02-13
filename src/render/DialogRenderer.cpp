@@ -36,8 +36,14 @@ class Element {
     }
   }
 
-  virtual void Draw(RenderParams params) const = 0;
   virtual int GetHeight() const = 0;
+
+  virtual int GetWidth(const RenderParams& params) const {
+    // The default implementation assumes a block-rendered element.
+    return params.rect.w;
+  }
+
+  virtual void Draw(RenderParams params) const = 0;
 
  protected:
   std::vector<Element*> children_;
@@ -55,7 +61,7 @@ class ColumnElement : public Element {
   }
 
   void Draw(RenderParams params) const override {
-    for (Element* child : children_) {
+    for (const Element* child : children_) {
       params.rect.h = child->GetHeight();
       child->Draw(params);
       params.rect.y += params.rect.h;
@@ -77,7 +83,7 @@ class RowElement : public Element {
     const int left = params.rect.x;
     const int width = params.rect.w;
     for (int i = 0; i < children_.size(); i++) {
-      Element* child = children_[i];
+      const Element* child = children_[i];
       params.rect.x = left + i*width/children_.size();
       params.rect.w = left + (i + 1)*width/children_.size() - params.rect.x;
       params.rect.h = child->GetHeight();
@@ -89,6 +95,27 @@ class RowElement : public Element {
 class SpanElement : public RowElement {
  public:
   SpanElement(bool centered) : centered_(centered) {}
+
+  void Draw(RenderParams params) const override{
+    vector<int> widths;
+    int total_width = 0;
+    for (Element* child : children_) {
+      int width = child->GetWidth(params);
+      widths.push_back(width);
+      total_width += width;
+    }
+    if (centered_) {
+      params.rect.x += (params.rect.w - total_width)/2;
+      params.rect.w = total_width;
+    }
+    for (int i = 0; i < children_.size(); i++) {
+      const Element* child = children_[i];
+      params.rect.w = widths[i];
+      params.rect.h = child->GetHeight();
+      child->Draw(params);
+      params.rect.x += params.rect.w;
+    }
+  }
 
  private:
   const bool centered_;
@@ -104,6 +131,11 @@ class TextElement : public Element {
 
   int GetHeight() const override {
     return 3*font_size_/2;
+  }
+
+  int GetWidth(const RenderParams& params) const {
+    Text* text = params.text_renderer->DrawText(font_size_, text_);
+    return text->size.x;
   }
 
   void Draw(RenderParams params) const override{
@@ -177,6 +209,8 @@ void DialogRenderer::Draw(dialog::Element* element, bool place_at_top) {
 
   rect.x += padding.x;
   rect.y += padding.y;
+  rect.w -= 2*padding.x;
+  rect.h -= 2*padding.y;
   element->Draw(dialog::RenderParams{rect, renderer_, this});
   delete element;
 }
