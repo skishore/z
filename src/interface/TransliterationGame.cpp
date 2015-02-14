@@ -7,6 +7,12 @@
 
 using std::string;
 using std::vector;
+using babel::render::dialog::AddChild;
+using babel::render::dialog::Element;
+using babel::render::dialog::MakeColumnElement;
+using babel::render::dialog::MakeRowElement;
+using babel::render::dialog::MakeSpanElement;
+using babel::render::dialog::MakeTextElement;
 
 namespace babel {
 namespace interface {
@@ -50,13 +56,29 @@ bool TransliterationGame::Active() const {
 }
 
 void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
-  vector<string> lines{"To attack, you must transliterate: \u25AF"};
-  renderer->DrawLines(lines, true /* place_at_top */);
+  Element* column = MakeColumnElement();
+  AddChild(column, MakeTextElement(1.0, "To attack, you must transliterate:"));
+  Element* top = MakeRowElement();
+  Element* bottom = MakeRowElement();
+  for (int i = 0; i < segments_.size(); i++) {
+    Element* top_span = MakeSpanElement(true);
+    AddChild(top_span, MakeTextElement(1.8, segments_[i]));
+    Element* bottom_span = MakeSpanElement(true);
+    AddChild(bottom_span, MakeTextElement(1.0, entries_[i]));
+    if (i == index_) {
+      AddChild(bottom_span, MakeTextElement(1.0, "\u25AF"));
+    }
+    AddChild(top, top_span);
+    AddChild(bottom, bottom_span);
+  }
+  AddChild(column, top);
+  AddChild(column, bottom);
+  renderer->Draw(column, true /* place_at_top */);
 }
 
 void TransliterationGame::Advance() {
   while (index_ < segments_.size() &&
-         entries_[index_].size() < answers_[index_].size()) {
+         entries_[index_].size() >= answers_[index_].size()) {
     index_ += 1;
   }
 }

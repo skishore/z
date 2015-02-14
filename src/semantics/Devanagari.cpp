@@ -131,25 +131,21 @@ string Devanagari::GetRandomConjunct() {
   const string& consonant = consonants[rand() % consonants.size()];
   const string& vowel = vowels[rand() % vowels.size()];
   const string& sign = vowel_to_sign.at(vowel);
+  const string hi = consonant + sign;
   const string en = gHindiToEnglish.at(consonant) + gHindiToEnglish.at(vowel);
-  gEnglishToHindi[en] = consonant + sign;
-  return consonant + sign;
+  gEnglishToHindi[en] = hi;
+  gHindiToEnglish[hi] = en;
+  return hi;
 }
 
 string Devanagari::EnglishToHindi(const string& english) {
   // TODO(skishore): Actually implement a transliterator here.
-  if (gEnglishToHindi.find(english) != gEnglishToHindi.end()) {
-    return gEnglishToHindi.at(english);
-  }
-  return "";
+  return gEnglishToHindi.at(english);
 }
 
 string Devanagari::HindiToEnglish(const string& hindi) {
   // TODO(skishore): Actually implement a transliterator here.
-  if (gHindiToEnglish.find(hindi) != gHindiToEnglish.end()) {
-    return gHindiToEnglish.at(hindi);
-  }
-  return "";
+  return gHindiToEnglish.at(hindi);
 }
 
 }  // namespace semantics
