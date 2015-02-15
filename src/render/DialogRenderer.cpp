@@ -80,7 +80,7 @@ class RowElement : public Element {
     return height;
   }
 
-  void Draw(RenderParams params) const override{
+  void Draw(RenderParams params) const override {
     const int left = params.rect.x;
     const int width = params.rect.w;
     for (int i = 0; i < children_.size(); i++) {
@@ -97,7 +97,7 @@ class SpanElement : public RowElement {
  public:
   SpanElement(bool centered) : centered_(centered) {}
 
-  void Draw(RenderParams params) const override{
+  void Draw(RenderParams params) const override {
     vector<int> widths;
     int total_width = 0;
     for (Element* child : children_) {
@@ -122,40 +122,58 @@ class SpanElement : public RowElement {
   const bool centered_;
 };
 
+inline SDL_Color ConvertColor(uint32_t c) {
+  return SDL_Color{uint8_t(c >> 16), uint8_t(c >> 8), uint8_t(c), 0x00};
+}
+
 class TextElement : public Element {
  public:
-  TextElement(float size, const string& text, uint32_t color)
-      : font_size_(size*kTextSize), text_(text) {
-    color_ = SDL_Color{
-        uint8_t(color >> 16), uint8_t(color >> 8), uint8_t(color), 0x00};
-  }
+  TextElement(double size, const string& text, uint32_t fore, uint32_t back)
+      : font_size_(size*kTextSize), text_(text),
+        draw_fore_(fore != 0), draw_back_(back != 0),
+        fore_(ConvertColor(fore)), back_(ConvertColor(back)) {}
 
   int GetHeight() const override {
     return 3*font_size_/2;
   }
 
   int GetWidth(const RenderParams& params) const {
+    if (text_.empty()) {
+      return 0;
+    }
     Text* text = params.text_renderer->DrawText(font_size_, text_);
     return text->size.x;
   }
 
-  void Draw(RenderParams params) const override{
+  void Draw(RenderParams params) const override {
     // NOTE: TextElements do NOT render any children that they may have.
+    if (text_.empty()) {
+      return;
+    }
     Text* text = params.text_renderer->DrawText(font_size_, text_);
     const SDL_Rect dest{
         params.rect.x, params.rect.y - text->baseline.y + font_size_,
         text->size.x, text->size.y};
-    SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureColorMod(text->texture, color_.r, color_.g, color_.b);
-    SDL_RenderCopy(params.renderer, text->texture, nullptr, &dest);
-    SDL_SetTextureColorMod(text->texture, 0xff, 0xff, 0xff);
-    SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_NONE);
+    if (draw_back_) {
+      SDL_SetRenderDrawColor(params.renderer, back_.r, back_.g, back_.b, 0xff);
+      SDL_RenderFillRect(params.renderer, &params.rect);
+    }
+    if (draw_fore_) {
+      SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_BLEND);
+      SDL_SetTextureColorMod(text->texture, fore_.r, fore_.g, fore_.b);
+      SDL_RenderCopy(params.renderer, text->texture, nullptr, &dest);
+      SDL_SetTextureColorMod(text->texture, 0xff, 0xff, 0xff);
+      SDL_SetRenderDrawBlendMode(params.renderer, SDL_BLENDMODE_NONE);
+    }
   }
 
  private:
   const int font_size_;
   const string text_;
-  SDL_Color color_;
+  const bool draw_fore_;
+  const bool draw_back_;
+  SDL_Color fore_;
+  SDL_Color back_;
 };
 
 void AddChild(Element* parent, Element* child) {
@@ -174,8 +192,9 @@ Element* MakeSpanElement(bool centered) {
   return new SpanElement(centered);
 }
 
-Element* MakeTextElement(float font_size, const string& text, uint32_t color) {
-  return new TextElement(font_size, text, color);
+Element* MakeTextElement(double font_size, const string& text,
+                         uint32_t fore, uint32_t back) {
+  return new TextElement(font_size, text, fore, back);
 }
 
 }  // namespace dialog

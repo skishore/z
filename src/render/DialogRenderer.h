@@ -17,12 +17,12 @@ class Element;
 // The parent takes owernship of the child dialog. Neither may be null.
 void AddChild(Element* parent, Element* child);
 
-// The caller takes ownership of the new dialogs.
+// The caller takes ownership of the new elements.
 Element* MakeColumnElement();
 Element* MakeRowElement();
 Element* MakeSpanElement(bool centered);
-Element* MakeTextElement(float font_size, const std::string& text,
-                         uint32_t color=0xffffffff);
+Element* MakeTextElement(double font_size, const std::string& text,
+                         uint32_t fore=0xffffffff, uint32_t back=0x0);
 
 }  // namespace dialog
 

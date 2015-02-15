@@ -18,7 +18,7 @@ namespace babel {
 namespace interface {
 
 TransliterationGame::TransliterationGame() {
-  const int num = (rand() % 4) + 3;
+  const int num = (rand() % 3) + 3;
   for (int i = 0; i < num; i++) {
     const string hindi = semantics::Devanagari::GetRandomConjunct();
     segments_.push_back(hindi);
@@ -58,6 +58,7 @@ bool TransliterationGame::Active() const {
 void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
   Element* column = MakeColumnElement();
   AddChild(column, MakeTextElement(1.0, "To attack, you must transliterate:"));
+  AddChild(column, MakeTextElement(0.4, ""));
   Element* top = MakeRowElement();
   Element* bottom = MakeRowElement();
   for (int i = 0; i < segments_.size(); i++) {
@@ -66,7 +67,7 @@ void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
     Element* bottom_span = MakeSpanElement(true);
     AddChild(bottom_span, MakeTextElement(1.0, entries_[i]));
     if (i == index_) {
-      AddChild(bottom_span, MakeTextElement(1.0, "\u25AF"));
+      AddChild(bottom_span, MakeTextElement(1.0, "A", 0x0, 0xff888888));
     }
     AddChild(top, top_span);
     AddChild(bottom, bottom_span);
