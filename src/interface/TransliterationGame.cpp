@@ -48,11 +48,12 @@ DialogResult TransliterationGame::Consume(char ch) {
     Advance();
   }
   result.redraw = true;
+  result.update = !Active();
   return result;
 }
 
 bool TransliterationGame::Active() const {
-  return true;
+  return index_ < segments_.size();
 }
 
 void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
