@@ -12,7 +12,6 @@ namespace semantics {
 namespace {
 
 map<string,string> gHindiToEnglish;
-map<string,string> gEnglishToHindi;
 
 const vector<string> kAlphabetZip{
   "a", "aa", "i", "ee", "u", "oo", "e", "ai", "o", "au",
@@ -26,7 +25,7 @@ const vector<string> kAlphabetZip{
 };
 
 void InitializeHax() {
-  if (gEnglishToHindi.size() > 0) {
+  if (gHindiToEnglish.size() > 0) {
     return;
   }
   ASSERT(Devanagari::alphabet.size() == kAlphabetZip.size(), "");
@@ -132,15 +131,16 @@ string Devanagari::GetRandomConjunct() {
   const string& vowel = vowels[rand() % vowels.size()];
   const string& sign = vowel_to_sign.at(vowel);
   const string hi = consonant + sign;
-  const string en = gHindiToEnglish.at(consonant) + gHindiToEnglish.at(vowel);
-  gEnglishToHindi[en] = hi;
-  gHindiToEnglish[hi] = en;
+  if (gHindiToEnglish.find(hi) == gHindiToEnglish.end()) {
+    const string en = gHindiToEnglish.at(consonant) + gHindiToEnglish.at(vowel);
+    gHindiToEnglish[hi] = en;
+  }
   return hi;
 }
 
 string Devanagari::EnglishToHindi(const string& english) {
   // TODO(skishore): Actually implement a transliterator here.
-  return gEnglishToHindi.at(english);
+  ASSERT(false, "EnglishToHindi is not implemented!");
 }
 
 string Devanagari::HindiToEnglish(const string& hindi) {
