@@ -13,11 +13,11 @@ const std::vector<Creature> kCreatures = {
     Stats{12, 60, 7}},
   Creature{
     Appearance{"grid bug", 1, 0x00ff6060},
-    Attack{1, 2},
+    Attack{1, 1},
     Stats{2, 40, 4}},
   Creature{
     Appearance{"troll", 2, 0x006060ff},
-    Attack{1, 4},
+    Attack{1, 2},
     Stats{4, 30, 4}}
 };
 

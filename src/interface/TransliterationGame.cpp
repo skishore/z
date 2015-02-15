@@ -18,7 +18,7 @@ namespace babel {
 namespace interface {
 
 TransliterationGame::TransliterationGame() {
-  const int num = (rand() % 3) + 3;
+  const int num = (rand() % 2) + 2;
   for (int i = 0; i < num; i++) {
     const string hindi = semantics::Devanagari::GetRandomConjunct();
     segments_.push_back(hindi);
