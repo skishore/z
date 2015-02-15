@@ -62,12 +62,25 @@ void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
   Element* top = MakeRowElement();
   Element* bottom = MakeRowElement();
   for (int i = 0; i < segments_.size(); i++) {
+    const uint32_t color = (i < index_ ? 0xff88ff44 : 0xffffffff);
+    const uint32_t guide = 0xffcccccc;
+    const uint32_t cursor = 0xff666666;
     Element* top_span = MakeSpanElement(true);
-    AddChild(top_span, MakeTextElement(1.8, segments_[i]));
+    AddChild(top_span, MakeTextElement(1.8, segments_[i], color));
     Element* bottom_span = MakeSpanElement(true);
-    AddChild(bottom_span, MakeTextElement(1.0, entries_[i]));
-    if (i == index_) {
-      AddChild(bottom_span, MakeTextElement(1.0, "A", 0x0, 0xff888888));
+    AddChild(bottom_span, MakeTextElement(1.0, entries_[i], color));
+    if (guides_[i]) {
+      string leftover = answers_[i].substr(entries_[i].size());
+      if (i == index_ && leftover.size() > 0) {
+        const string ch(1, leftover[0]);
+        leftover = leftover.substr(1);
+        AddChild(bottom_span, MakeTextElement(1.0, ch, guide, cursor));
+      }
+      if (leftover.size() > 0) {
+        AddChild(bottom_span, MakeTextElement(1.0, leftover, guide));
+      }
+    } else if (i == index_) {
+      AddChild(bottom_span, MakeTextElement(1.0, "A", 0x0, cursor));
     }
     AddChild(top, top_span);
     AddChild(bottom, bottom_span);
