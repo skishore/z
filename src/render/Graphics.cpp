@@ -62,6 +62,11 @@ void Graphics::Draw(const engine::View& view, const Transform& transform) {
   DrawInner(view, &transform);
 }
 
+void Graphics::DrawDialog() {
+  dialog_.Draw(dialog_renderer_.get());
+  SDL_RenderPresent(renderer_);
+}
+
 void Graphics::DrawInner(const engine::View& view, const Transform* transform) {
   SDL_SetRenderDrawColor(renderer_, 0x00, 0x00, 0x00, 0xff);
   SDL_RenderClear(renderer_);

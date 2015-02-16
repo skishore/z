@@ -48,7 +48,7 @@ DialogResult TransliterationGame::Consume(char ch) {
     entries_[index_] += ch;
     Advance();
   }
-  result.redraw = true;
+  result.redraw_dialog = true;
   result.update = !Active();
   return result;
 }

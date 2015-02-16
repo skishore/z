@@ -23,6 +23,7 @@ class Graphics {
 
   void Draw(const engine::View& view);
   void Draw(const engine::View& view, const Transform& transform);
+  void DrawDialog();
 
  private:
   void DrawInner(const engine::View& view, const Transform* transform);

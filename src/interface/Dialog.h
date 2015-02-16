@@ -23,6 +23,7 @@ namespace interface {
 struct DialogResult {
   bool reset = false;
   bool redraw = false;
+  bool redraw_dialog = false;
   bool update = false;
   engine::Action* action = nullptr;
 };

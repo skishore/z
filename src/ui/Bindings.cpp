@@ -49,6 +49,13 @@ bool Bindings::Update(double frame_rate) {
   }
   if (result.redraw) {
     Redraw();
+  } else if (result.redraw_dialog) {
+    // Partial draws don't work in the WebGL implementation of SDL2.
+    #ifdef EMSCRIPTEN
+    Redraw();
+    #else
+    graphics_.DrawDialog();
+    #endif
   }
   return true;
 }
