@@ -15,7 +15,7 @@ namespace babel {
 namespace engine {
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
-                  vector<EventHandler*>* handlers) {
+                  EventHandler* handler) {
   if (sprite_ != nullptr) {
     ASSERT(dialog_ != nullptr, "Bind was called twice!");
     ASSERT(sprite_ == sprite, "Re-bound with different sprite!");
@@ -23,10 +23,10 @@ void Action::Bind(Sprite* sprite, GameState* game_state,
   }
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(game_state != nullptr, "game_state == nullptr");
-  ASSERT(handlers != nullptr, "handlers == nullptr");
+  ASSERT(handler != nullptr, "handler == nullptr");
   sprite_ = sprite;
   game_state_ = game_state;
-  handlers_ = handlers;
+  handler_ = handler;
 }
 
 AttackAction::AttackAction(Sprite* target) : target_(target) {}
@@ -48,22 +48,16 @@ ActionResult AttackAction::Execute() {
     const string& enemy = target_->creature.appearance.name;
     if (counterattack > 0) {
       game_state_->log.AddLine("You hit the " + enemy + ".");
-      for (EventHandler* handler : *handlers_) {
-        handler->BeforeAttack(*sprite_, *target_);
-      }
+      handler_->BeforeAttack(*sprite_, *target_);
       const string followup =
           (counterattack >= sprite_->cur_health ? " You die..." : "");
       game_state_->log.AddLine("The " + enemy + " counters!" + followup);
-      for (EventHandler* handler : *handlers_) {
-        handler->BeforeAttack(*target_, *sprite_);
-      }
+      handler_->BeforeAttack(*target_, *sprite_);
       sprite_->cur_health = max(sprite_->cur_health - counterattack, 0);
     }
     if (sprite_->IsAlive()) {
       game_state_->log.AddLine("You kill the " + enemy + ".");
-      for (EventHandler* handler : *handlers_) {
-        handler->BeforeAttack(*sprite_, *target_);
-      }
+      handler_->BeforeAttack(*sprite_, *target_);
       game_state_->RemoveNPC(target_);
     }
     result.success = true;
@@ -78,9 +72,7 @@ ActionResult AttackAction::Execute() {
   const string followup = (damage >= target_->cur_health ? " You die..." : "");
   game_state_->log.AddLine(
       "The " + sprite_->creature.appearance.name + " hits!" + followup);
-  for (EventHandler* handler : *handlers_) {
-    handler->BeforeAttack(*sprite_, *target_);
-  }
+  handler_->BeforeAttack(*sprite_, *target_);
   target_->cur_health = max(target_->cur_health - damage, 0);
   result.success = true;
   return result;

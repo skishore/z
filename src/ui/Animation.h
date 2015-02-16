@@ -28,7 +28,6 @@ class Animation : public engine::EventHandler {
   // EventHandler callbacks, used to add to the animation queue.
   void BeforeAttack(const engine::Sprite& sprite,
                     const engine::Sprite& target) override;
-  void BeforeSpeech(const engine::Sprite& sprite) override;
 
   void Checkpoint();
   void Draw(render::Graphics* graphics) const;

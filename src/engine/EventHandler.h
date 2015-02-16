@@ -12,7 +12,15 @@ namespace engine {
 class EventHandler {
  public:
   virtual void BeforeAttack(const Sprite& sprite, const Sprite& target) {};
-  virtual void BeforeSpeech(const Sprite& sprite) {};
+};
+
+class DelegatingEventHandler : public EventHandler {
+ public:
+  void BeforeAttack(const Sprite& sprite, const Sprite& target) override {
+    for (auto* handler : handlers_) handler->BeforeAttack(sprite, target);
+  }
+
+  std::vector<EventHandler*> handlers_;
 };
 
 }  // namespace engine

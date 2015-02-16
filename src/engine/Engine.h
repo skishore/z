@@ -31,7 +31,7 @@ class Engine {
 
  private:
   GameState game_state_;
-  std::vector<EventHandler*> handlers_;
+  DelegatingEventHandler handler_;
   std::unique_ptr<Action> interrupt_;
 };
 

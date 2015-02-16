@@ -21,7 +21,7 @@ Engine::Engine() : game_state_("world.dat") {
 
 void Engine::AddEventHandler(EventHandler* handler) {
   ASSERT(handler != nullptr, "Added null EventHandler!");
-  handlers_.push_back(handler);
+  handler_.handlers_.push_back(handler);
 }
 
 interface::Dialog* Engine::GetDialog() {
@@ -63,7 +63,7 @@ bool Engine::Update(Action* input) {
     // Bind and execute the action and advance the sprite index.
     ActionResult result;
     while (action != nullptr) {
-      action->Bind(sprite, &game_state_, &handlers_);
+      action->Bind(sprite, &game_state_, &handler_);
       result = action->Execute();
       if (result.stalled) {
         ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");

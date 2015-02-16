@@ -33,8 +33,7 @@ class Action {
   virtual ~Action() {};
 
   // None of the input arguments may be null.
-  void Bind(Sprite* sprite, GameState* game_state,
-            std::vector<EventHandler*>* handlers);
+  void Bind(Sprite* sprite, GameState* game_state, EventHandler* handler);
   virtual ActionResult Execute() = 0;
 
   std::unique_ptr<interface::Dialog> dialog_;
@@ -42,7 +41,7 @@ class Action {
  protected:
   Sprite* sprite_ = nullptr;
   GameState* game_state_ = nullptr;
-  std::vector<EventHandler*>* handlers_ = nullptr;
+  EventHandler* handler_ = nullptr;
 };
 
 class AttackAction : public Action {

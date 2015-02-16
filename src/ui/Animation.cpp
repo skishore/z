@@ -65,17 +65,7 @@ class AttackComponent : public TransformComponent {
   }
 };
 
-class SpeechComponent : public TransformComponent {
- public:
-  SpeechComponent() {
-    frames_left_ = kSpeechFrames;
-  }
-
- private:
-  static const int kSpeechFrames = 4;
-};
-
-}
+}  // namespace
 
 Animation::Animation(int radius, const engine::GameState& game_state)
     : radius_(radius), game_state_(game_state) {
@@ -92,10 +82,6 @@ Animation::~Animation() {
 void Animation::BeforeAttack(const engine::Sprite& sprite,
                              const engine::Sprite& target) {
   PushStep(AnimationStep{new AttackComponent(target.square), Snapshot()});
-}
-
-void Animation::BeforeSpeech(const engine::Sprite& sprite) {
-  PushStep(AnimationStep{new SpeechComponent, Snapshot()});
 }
 
 void Animation::Checkpoint() {
