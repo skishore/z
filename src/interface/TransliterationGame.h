@@ -18,6 +18,8 @@ class TransliterationGame : public Dialog {
   virtual bool Active() const override;
   virtual void Draw(render::DialogRenderer* renderer) const override;
 
+  int errors_ = 0;
+
  private:
   void Advance();
 

@@ -43,6 +43,7 @@ DialogResult TransliterationGame::Consume(char ch) {
     }
     entries_[index_].clear();
     guides_[index_] = true;
+    errors_ += 1;
   } else {
     entries_[index_] += ch;
     Advance();

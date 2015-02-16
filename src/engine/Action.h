@@ -8,7 +8,13 @@
 #include "base/point.h"
 #include "interface/Dialog.h"
 
+
 namespace babel {
+
+namespace interface {
+class TransliterationGame;
+}  // namespace interface
+
 namespace engine {
 
 class Action;
@@ -46,6 +52,7 @@ class AttackAction : public Action {
 
  private:
   Sprite* target_;
+  const interface::TransliterationGame* game_;
 };
 
 class MoveAction : public Action {
