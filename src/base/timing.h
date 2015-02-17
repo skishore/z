@@ -13,6 +13,8 @@ tick GetCurrentTick();
 void StartTimer(const std::string& name);
 void EndTimer();
 
+void SetTimerVerbosity(bool verbose);
+
 }  // namespace babel
 
 #endif  // __BABEL_BASE_TIMING_H__

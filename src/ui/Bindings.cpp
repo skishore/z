@@ -1,4 +1,5 @@
 #include "base/debug.h"
+#include "base/timing.h"
 #include "ui/Bindings.h"
 
 namespace babel {
@@ -9,8 +10,9 @@ static const int kFrameRate = 60;
 static const int kScreenRadius = 10;
 }  // namespace
 
-Bindings::Bindings(bool verbose)
-    : verbose_(verbose), graphics_(kScreenRadius, interface_) {}
+Bindings::Bindings(bool verbose) : graphics_(kScreenRadius, interface_) {
+  SetTimerVerbosity(verbose);
+}
 
 int Bindings::Start() {
   Reset();
@@ -19,12 +21,6 @@ int Bindings::Start() {
 }
 
 bool Bindings::Update(double frame_rate) {
-  static double last_frame_rate = 0;
-  if (frame_rate != last_frame_rate && verbose_) {
-    last_frame_rate = frame_rate;
-    DEBUG("FPS: " << frame_rate);
-  }
-
   char ch;
   bool has_input = input_.GetChar(&ch);
   if (has_input && ch == 0x1b) {
@@ -42,20 +38,26 @@ bool Bindings::Update(double frame_rate) {
   if (result.reset) {
     Reset();
   } else if (result.action != nullptr || result.update) {
+    StartTimer("Engine::Update");
     if (engine_->Update(result.action)) {
       result.redraw = true;
       interface_.Clear();
     }
+    EndTimer();
   }
   if (result.redraw) {
+    StartTimer("Animation::Draw");
     Redraw();
+    EndTimer();
   } else if (result.redraw_dialog) {
+    StartTimer("Graphics::DrawDialog");
     // Partial draws don't work in the WebGL implementation of SDL2.
     #ifdef EMSCRIPTEN
     Redraw();
     #else
     graphics_.DrawDialog();
     #endif
+    EndTimer();
   }
   return true;
 }

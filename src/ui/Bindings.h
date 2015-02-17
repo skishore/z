@@ -24,7 +24,6 @@ class Bindings : GameLoop::Updatable {
   void Reset();
   void Redraw();
 
-  bool verbose_;
   render::Graphics graphics_;
   InputHandler input_;
   Interface interface_;
