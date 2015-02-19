@@ -1,10 +1,11 @@
+#include "engine/GameState.h"
+
 #include <algorithm>
 #include <map>
 
 #include "base/creature.h"
 #include "base/debug.h"
 #include "base/util.h"
-#include "engine/GameState.h"
 #include "engine/Sprite.h"
 
 using std::map;

@@ -1,3 +1,5 @@
+#include "render/TextRenderer.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -11,7 +13,6 @@
 
 #include "base/debug.h"
 #include "render/SDL_prims.h"
-#include "render/TextRenderer.h"
 
 using std::max;
 using std::min;

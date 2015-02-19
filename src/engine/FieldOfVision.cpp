@@ -1,10 +1,11 @@
+#include "engine/FieldOfVision.h"
+
 #include <iostream>
 
 #include "permissive-fov.cc"
 #include "permissive-fov-cpp.h"
 
 #include "base/debug.h"
-#include "engine/FieldOfVision.h"
 
 using std::vector;
 

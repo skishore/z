@@ -1,3 +1,5 @@
+#include "debug.h"
+
 #ifndef EMSCRIPTEN
 
 #include <execinfo.h>
@@ -55,8 +57,6 @@ inline void SignalHandler(int signal) {
 }  // namespace
 
 #endif  // EMSCRIPTEN
-
-#include "debug.h"
 
 namespace babel {
 

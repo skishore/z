@@ -1,7 +1,8 @@
+#include "engine/Action.h"
+
 #include <algorithm>
 #include <memory>
 
-#include "engine/Action.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"

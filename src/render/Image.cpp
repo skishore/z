@@ -1,6 +1,6 @@
-#include <algorithm>
-
 #include "render/Image.h"
+
+#include <algorithm>
 
 using std::max;
 using std::min;

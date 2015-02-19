@@ -1,9 +1,10 @@
+#include "ui/Interface.h"
+
 #include <map>
 
 #include "base/debug.h"
 #include "base/point.h"
 #include "engine/Action.h"
-#include "ui/Interface.h"
 
 using std::map;
 

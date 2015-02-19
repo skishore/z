@@ -1,6 +1,7 @@
+#include "ui/Bindings.h"
+
 #include "base/debug.h"
 #include "base/timing.h"
-#include "ui/Bindings.h"
 
 namespace babel {
 namespace ui {

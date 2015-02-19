@@ -1,7 +1,8 @@
+#include "interface/TransliterationGame.h"
+
 #include <vector>
 
 #include "base/debug.h"
-#include "interface/TransliterationGame.h"
 #include "render/DialogRenderer.h"
 #include "semantics/Devanagari.h"
 

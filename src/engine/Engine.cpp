@@ -1,8 +1,9 @@
+#include "engine/Engine.h"
+
 #include <algorithm>
 #include <memory>
 
 #include "engine/Action.h"
-#include "engine/Engine.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Sprite.h"
 

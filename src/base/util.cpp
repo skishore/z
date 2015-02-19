@@ -1,6 +1,6 @@
-#include <cmath>
-
 #include "util.h"
+
+#include <cmath>
 
 using std::string;
 using std::vector;

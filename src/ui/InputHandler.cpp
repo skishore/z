@@ -1,7 +1,7 @@
+#include "ui/InputHandler.h"
+
 #include <map>
 #include <SDL2/SDL.h>
-
-#include "ui/InputHandler.h"
 
 using std::map;
 

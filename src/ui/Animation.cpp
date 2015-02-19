@@ -1,10 +1,11 @@
+#include "ui/Animation.h"
+
 #include <map>
 #include <string>
 #include <vector>
 
 #include "base/debug.h"
 #include "render/Transform.h"
-#include "ui/Animation.h"
 
 using std::map;
 using std::move;

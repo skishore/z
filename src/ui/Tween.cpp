@@ -1,7 +1,7 @@
+#include "ui/Tween.h"
+
 #include <map>
 #include <vector>
-
-#include "ui/Tween.h"
 
 using std::map;
 using std::move;

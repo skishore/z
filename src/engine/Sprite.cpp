@@ -1,7 +1,8 @@
+#include "engine/Sprite.h"
+
 #include <vector>
 
 #include "engine/Action.h"
-#include "engine/Sprite.h"
 #include "semantics/Devanagari.h"
 
 using std::string;

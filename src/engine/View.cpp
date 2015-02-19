@@ -1,6 +1,6 @@
-#include <algorithm>
-
 #include "engine/View.h"
+
+#include <algorithm>
 
 using std::max;
 using std::vector;

@@ -1,10 +1,10 @@
+#include "base/timing.h"
+
 #include <iostream>
 #include <string>
 #include <sys/time.h>
 #include <thread>
 #include <vector>
-
-#include "base/timing.h"
 
 using std::cout;
 using std::endl;

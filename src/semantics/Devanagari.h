@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <base/util.h>
+#include "base/util.h"
 
 namespace babel {
 namespace semantics {

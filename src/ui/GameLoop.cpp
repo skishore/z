@@ -1,3 +1,5 @@
+#include "ui/GameLoop.h"
+
 #include <unistd.h>
 
 #ifdef EMSCRIPTEN
@@ -6,7 +8,6 @@
 
 #include "base/debug.h"
 #include "base/timing.h"
-#include "ui/GameLoop.h"
 
 namespace babel {
 namespace ui {

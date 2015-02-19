@@ -1,9 +1,10 @@
+#include "engine/Log.h"
+
 #include <algorithm>
 #include <map>
 
 #include "base/debug.h"
 #include "base/util.h"
-#include "engine/Log.h"
 
 using std::map;
 using std::max;

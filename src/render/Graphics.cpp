@@ -1,9 +1,10 @@
+#include "render/Graphics.h"
+
 #include <algorithm>
 #include <string>
 
 #include "base/debug.h"
 #include "base/util.h"
-#include "render/Graphics.h"
 #include "render/SDL_prims.h"
 
 using std::map;

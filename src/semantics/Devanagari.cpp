@@ -1,7 +1,8 @@
+#include "semantics/Devanagari.h"
+
 #include <stdlib.h>
 
 #include "base/debug.h"
-#include "semantics/devanagari.h"
 
 using std::map;
 using std::string;
