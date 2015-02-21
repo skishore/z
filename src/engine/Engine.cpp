@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <memory>
 
+#include "base/debug.h"
 #include "engine/Action.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Sprite.h"
+#include "semantics/Transliterator.h"
 
 using std::max;
 using std::string;
@@ -15,8 +17,13 @@ namespace babel {
 namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
-  game_state_.log.AddLine(
-      "Welcome to Babel! You are a neutral male human neophyte.");
+  //game_state_.log.AddLine(
+  //    "Welcome to Babel! You are a neutral male human neophyte.");
+  semantics::EnglishToHindiTransliterator transliterator(
+      "hindee bhaarat kee raaShTribhaashaa hai");
+  const auto result = transliterator.Run();
+  ASSERT(result.error.empty(), result.error);
+  game_state_.log.AddLine(result.output);
   game_state_.log.Flush(true);
 }
 
