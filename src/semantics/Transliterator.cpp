@@ -10,6 +10,50 @@ using std::vector;
 
 namespace babel {
 namespace semantics {
+namespace {
+
+// Non-injective mapping from Hindi characters to English letters.
+// The reverse map must be computed by dictionary lookup, and there may
+// still be ambiguities.
+const vector<string> kAlphabetZip{
+  "a", "A", "i", "I", "u", "U", "e", "ai", "o", "au",
+  "k", "kh", "g", "gh", "ng",
+  "ch", "chh", "j", "jh", "ny",
+  "T", "Th", "D", "Dh", "n",
+  "t", "th", "d", "dh", "n",
+  "p", "ph", "b", "bh", "m",
+  "y", "r", "l", "v",
+  "sh", "sh", "s", "h",
+  "ao", "n", "h"
+};
+
+const string kVirama = "\u094D";
+
+template<typename T> map<T,T> Zip(
+    const vector<T>& keys, const vector<T>& values) {
+  map<T,T> result;
+  ASSERT(keys.size() == values.size(), "Size mismatch!");
+  for (int i = 0; i < keys.size(); i++) {
+    ASSERT(result.find(keys[i]) == result.end(),
+           "Duplicate item found when computing zip: " << keys[i]);
+    result[keys[i]] = values[i];
+  }
+  return result;
+}
+
+const map<string,string> kHindiToEnglish =
+    Zip(Devanagari::alphabet, kAlphabetZip);
+
+inline bool IsDiacritic(const string& character) {
+  return (character == "\u0901" || character == "\u0902" ||
+          character == "\u0903");
+}
+
+inline bool Contains(const map<string,string> dict, const string& key) {
+  return dict.find(key) != dict.end();
+}
+
+}  // namespace
 
 Transliterator::Transliterator(const string& input) : input_(input) {}
 
@@ -65,51 +109,6 @@ bool Transliterator::AdvanceState() {
     }
   }
 }
-
-namespace {
-
-// Non-injective mapping from Hindi characters to English letters.
-// The reverse map must be computed by dictionary lookup, and there may
-// still be ambiguities.
-const vector<string> kAlphabetZip{
-  "a", "A", "i", "I", "u", "U", "e", "ai", "o", "au",
-  "k", "kh", "g", "gh", "ng",
-  "c", "ch", "j", "jh", "ny",
-  "T", "Th", "D", "Dh", "N",
-  "t", "th", "d", "dh", "n",
-  "p", "ph", "b", "bh", "m",
-  "y", "r", "l", "v",
-  "sh", "sh", "s", "h",
-  "ao", "n", "h"
-};
-
-const string kVirama = "\u094D";
-
-template<typename T> map<T,T> Zip(
-    const vector<T>& keys, const vector<T>& values) {
-  map<T,T> result;
-  ASSERT(keys.size() == values.size(), "Size mismatch!");
-  for (int i = 0; i < keys.size(); i++) {
-    ASSERT(result.find(keys[i]) == result.end(),
-           "Duplicate item found when computing zip: " << keys[i]);
-    result[keys[i]] = values[i];
-  }
-  return result;
-}
-
-const map<string,string> kHindiToEnglish =
-    Zip(Devanagari::alphabet, kAlphabetZip);
-
-inline bool IsDiacritic(const string& character) {
-  return (character == "\u0901" || character == "\u0902" ||
-          character == "\u0903");
-}
-
-inline bool Contains(const map<string,string> dict, const string& key) {
-  return dict.find(key) != dict.end();
-}
-
-}  // namespace
 
 bool HindiToEnglishTransliterator::IsValidCharacter(
     const string& character) const {

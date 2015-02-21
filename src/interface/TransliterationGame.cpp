@@ -26,7 +26,6 @@ const std::map<char,string> kDiacritics{
   {'I', "ī"},
   {'U', "ū"},
   {'D', "ḍ"},
-  {'N', "ṇ"},
   {'T', "ṭ"}
 };
 
