@@ -25,8 +25,22 @@ const std::map<char,string> kDiacritics{
   {'A', "ā"},
   {'I', "ī"},
   {'U', "ū"},
-  {'T', "ṭ"},
-  {'D', "ḍ"}
+  {'D', "ḍ"},
+  {'N', "ṇ"},
+  {'T', "ṭ"}
+};
+
+// Encodes a Latin string using the diacritics map above
+string Encode(const string& input) {
+  string result;
+  for (char ch : input) {
+    if (kDiacritics.find(ch) != kDiacritics.end()) {
+      result += kDiacritics.at(ch);
+    } else {
+      result += ch;
+    }
+  }
+  return result;
 };
 
 }  // namespace
@@ -50,13 +64,8 @@ DialogResult TransliterationGame::Consume(char ch) {
       index_ >= segments_.size()) {
     return result;
   }
-  string character(1, ch);
-  if (kDiacritics.find(ch) != kDiacritics.end()) {
-    character = kDiacritics.at(ch);
-  }
 
-  if (character != answers_[index_].substr(
-          entries_[index_].size(), character.size())) {
+  if (ch != answers_[index_][entries_[index_].size()]) {
     if (guides_[index_]) {
       return result;
     }
@@ -64,7 +73,7 @@ DialogResult TransliterationGame::Consume(char ch) {
     guides_[index_] = true;
     errors_ += 1;
   } else {
-    entries_[index_] += character;
+    entries_[index_] += ch;
     Advance();
   }
   result.redraw_dialog = true;
@@ -89,16 +98,16 @@ void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
     Element* top_span = MakeSpanElement(true);
     AddChild(top_span, MakeTextElement(1.8, segments_[i], color));
     Element* bottom_span = MakeSpanElement(true);
-    AddChild(bottom_span, MakeTextElement(1.0, entries_[i], color));
+    AddChild(bottom_span, MakeTextElement(1.0, Encode(entries_[i]), color));
     if (guides_[i]) {
       string leftover = answers_[i].substr(entries_[i].size());
       if (i == index_ && leftover.size() > 0) {
         const string ch(1, leftover[0]);
         leftover = leftover.substr(1);
-        AddChild(bottom_span, MakeTextElement(1.0, ch, guide, cursor));
+        AddChild(bottom_span, MakeTextElement(1.0, Encode(ch), guide, cursor));
       }
       if (leftover.size() > 0) {
-        AddChild(bottom_span, MakeTextElement(1.0, leftover, guide));
+        AddChild(bottom_span, MakeTextElement(1.0, Encode(leftover), guide));
       }
     } else if (i == index_) {
       AddChild(bottom_span, MakeTextElement(1.0, "A", 0x0, cursor));
