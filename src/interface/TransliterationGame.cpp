@@ -5,6 +5,7 @@
 #include "base/debug.h"
 #include "render/DialogRenderer.h"
 #include "semantics/Devanagari.h"
+#include "semantics/Transliterator.h"
 
 using std::string;
 using std::vector;
@@ -23,7 +24,7 @@ TransliterationGame::TransliterationGame() {
   for (int i = 0; i < num; i++) {
     const string hindi = semantics::Devanagari::GetRandomConjunct();
     segments_.push_back(hindi);
-    answers_.push_back(semantics::Devanagari::HindiToEnglish(hindi));
+    answers_.push_back(semantics::UnsafeHindiToEnglish(hindi));
     entries_.push_back("");
     guides_.push_back(false);
     length_ += hindi.size();

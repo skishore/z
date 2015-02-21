@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "base/debug.h"
+
 namespace babel {
 namespace semantics {
 
@@ -64,6 +66,13 @@ class HindiToEnglishTransliterator : public Transliterator {
  private:
   // The index of the last character of the last consonant in the Hindi output.
   bool last_was_consonant_ = false;
+};
+
+inline std::string UnsafeHindiToEnglish(const std::string& input) {
+  HindiToEnglishTransliterator transliterator(input);
+  const TransliterationResult result = transliterator.Run();
+  ASSERT(result.error.empty(), result.error);
+  return result.output;
 };
 
 }  // namespace semantics

@@ -17,13 +17,8 @@ namespace babel {
 namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
-  //game_state_.log.AddLine(
-  //    "Welcome to Babel! You are a neutral male human neophyte.");
-  semantics::HindiToEnglishTransliterator transliterator(
-      "हिंदी राष्ट्रभाषा");
-  const auto result = transliterator.Run();
-  ASSERT(result.error.empty(), result.error);
-  game_state_.log.AddLine(result.output);
+  game_state_.log.AddLine(
+      "Welcome to Babel! You are a neutral male human neophyte.");
   game_state_.log.Flush(true);
 }
 
