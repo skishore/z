@@ -107,7 +107,13 @@ const vector<string> Devanagari::all(
 const map<string,string> Devanagari::sign_to_vowel(Invert(vowel_to_sign));
 
 string Devanagari::GetRandomConjunct() {
-  const string& consonant = consonants[rand() % consonants.size()];
+  string consonant = consonants[rand() % consonants.size()];
+  while (consonant == "ङ" || consonant == "ञ") {
+    if (rand() % vowels.size() == 0) {
+      return consonant;
+    }
+    consonant = consonants[rand() % consonants.size()];
+  }
   const string& vowel = vowels[rand() % vowels.size()];
   const string& sign = vowel_to_sign.at(vowel);
   return consonant + sign;
