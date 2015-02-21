@@ -72,10 +72,10 @@ namespace {
 // The reverse map must be computed by dictionary lookup, and there may
 // still be ambiguities.
 const vector<string> kAlphabetZip{
-  "a", "a", "i", "i", "u", "u", "e", "ai", "o", "au",
+  "a", "ā", "i", "ī", "u", "ū", "e", "ai", "o", "au",
   "k", "kh", "g", "gh", "ng",
   "c", "ch", "j", "jh", "ny",
-  "t", "th", "d", "dh", "n",
+  "ṭ", "ṭh", "ḍ", "ḍh", "n",
   "t", "th", "d", "dh", "n",
   "p", "ph", "b", "bh", "m",
   "y", "r", "l", "v",

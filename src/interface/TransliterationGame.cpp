@@ -1,5 +1,6 @@
 #include "interface/TransliterationGame.h"
 
+#include <map>
 #include <vector>
 
 #include "base/debug.h"
@@ -18,6 +19,17 @@ using babel::render::dialog::MakeTextElement;
 
 namespace babel {
 namespace interface {
+namespace {
+
+const std::map<char,string> kDiacritics{
+  {'A', "ā"},
+  {'I', "ī"},
+  {'U', "ū"},
+  {'T', "ṭ"},
+  {'D', "ḍ"}
+};
+
+}  // namespace
 
 TransliterationGame::TransliterationGame() {
   const int num = (rand() % 2) + 2;
@@ -38,8 +50,13 @@ DialogResult TransliterationGame::Consume(char ch) {
       index_ >= segments_.size()) {
     return result;
   }
+  string character(1, ch);
+  if (kDiacritics.find(ch) != kDiacritics.end()) {
+    character = kDiacritics.at(ch);
+  }
 
-  if (ch != answers_[index_][entries_[index_].size()]) {
+  if (character != answers_[index_].substr(
+          entries_[index_].size(), character.size())) {
     if (guides_[index_]) {
       return result;
     }
@@ -47,7 +64,7 @@ DialogResult TransliterationGame::Consume(char ch) {
     guides_[index_] = true;
     errors_ += 1;
   } else {
-    entries_[index_] += ch;
+    entries_[index_] += character;
     Advance();
   }
   result.redraw_dialog = true;
