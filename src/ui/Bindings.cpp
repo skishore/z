@@ -29,13 +29,17 @@ bool Bindings::Update(double frame_rate) {
   }
 
   if (animation_->Update()) {
+    StartTimer("Animation::Draw");
     animation_->Draw(&graphics_);
+    EndTimer();
     return true;
   } else if (!has_input) {
     return true;
   }
 
+  StartTimer("Interface::Update");
   interface::DialogResult result = interface_.Consume(ch);
+  EndTimer();
   if (result.reset) {
     Reset();
   } else if (result.action != nullptr || result.update) {
