@@ -44,10 +44,7 @@ const vector<string> Devanagari::vowels{
   "ए",
   "ऐ",
   "ओ",
-  "औ",
-  "\u0901", // candrabindu
-  "\u0902", // anusvara
-  "\u0903"  // visarga
+  "औ"
 };
 
 const vector<vector<string>> Devanagari::consonant_rows{
@@ -58,6 +55,12 @@ const vector<vector<string>> Devanagari::consonant_rows{
   {"प", "फ", "ब", "भ", "म"},
   {"य", "र", "ल", "व"},
   {"श", "ष", "स", "ह"}
+};
+
+const vector<string> Devanagari::diacritics{
+  "\u0901", // candrabindu
+  "\u0902", // anusvara
+  "\u0903"  // visarga
 };
 
 const vector<string> Devanagari::digits{
@@ -91,15 +94,12 @@ const map<string,string> Devanagari::vowel_to_sign{
   {"औ", "\u094C"},
   {"ॠ", "\u0944"},
   {"ॡ", "\u0963"},
-  {"ँ", "ँ"},
-  {"ं", "ं"},
-  {"ः", "ः"}
 };
 
 const vector<string> Devanagari::consonants(Concatenate(consonant_rows));
 
 const vector<string> Devanagari::alphabet(
-    Concatenate(vector<vector<string>>{vowels, consonants}));
+    Concatenate(vector<vector<string>>{vowels, consonants, diacritics}));
 
 const vector<string> Devanagari::all(
     Concatenate(vector<vector<string>>{alphabet, digits}));

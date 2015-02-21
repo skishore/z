@@ -73,7 +73,6 @@ namespace {
 // still be ambiguities.
 const vector<string> kAlphabetZip{
   "a", "a", "i", "i", "u", "u", "e", "ai", "o", "au",
-  "ao", "n", "h",
   "k", "kh", "g", "gh", "ng",
   "c", "ch", "j", "jh", "ny",
   "t", "th", "d", "dh", "n",
@@ -81,26 +80,7 @@ const vector<string> kAlphabetZip{
   "p", "ph", "b", "bh", "m",
   "y", "r", "l", "v",
   "sh", "sh", "s", "h",
-};
-
-const map<string,string> kVowelToSign{
-  {"अ", ""},
-  {"आ", "\u093E"},
-  {"इ", "\u093F"},
-  {"ई", "\u0940"},
-  {"उ", "\u0941"},
-  {"ऊ", "\u0942"},
-  {"ऋ", "\u0943"},
-  {"ऌ", "\u0962"},
-  {"ऍ", "\u0946"},
-  {"ऍ", "\u0946"},
-  {"ए", "\u0947"},
-  {"ऐ", "\u0948"},
-  {"ऑ", "\u094A"},
-  {"ओ", "\u094B"},
-  {"औ", "\u094C"},
-  {"ॠ", "\u0944"},
-  {"ॡ", "\u0963"}
+  "ao", "n", "h"
 };
 
 const string kVirama = "\u094D";
@@ -117,20 +97,8 @@ template<typename T> map<T,T> Zip(
   return result;
 }
 
-template<typename T> map<T,T> Invert(const map<T,T>& original) {
-  map<T,T> result;
-  for (const auto& pair : original) {
-    ASSERT(result.find(pair.second) == result.end(),
-           "Duplicate item found when computing inverted map: " << pair.second);
-    result[pair.second] = pair.first;
-  }
-  return result;
-}
-
 const map<string,string> kHindiToEnglish =
     Zip(Devanagari::alphabet, kAlphabetZip);
-
-const map<string,string> kSignToVowel = Invert(kVowelToSign);
 
 inline bool IsDiacritic(const string& character) {
   return (character == "\u0901" || character == "\u0902" ||
@@ -146,7 +114,8 @@ inline bool Contains(const map<string,string> dict, const string& key) {
 bool HindiToEnglishTransliterator::IsValidCharacter(
     const string& character) const {
   return (Contains(kHindiToEnglish, character) ||
-          Contains(kSignToVowel, character) || character == kVirama);
+          Contains(Devanagari::sign_to_vowel, character) ||
+          character == kVirama);
 }
 
 bool HindiToEnglishTransliterator::IsValidState(const string& state) const {
@@ -158,7 +127,7 @@ void HindiToEnglishTransliterator::FinishWord() {
 }
 
 bool HindiToEnglishTransliterator::PopState() {
-  const bool is_sign = Contains(kSignToVowel, state_);
+  const bool is_sign = Contains(Devanagari::sign_to_vowel, state_);
   if (is_sign || state_ == kVirama) {
     if (!last_was_consonant_) {
       result_.error = ("Unexpected conjunct at input@" +
@@ -166,7 +135,8 @@ bool HindiToEnglishTransliterator::PopState() {
       return false;
     }
     if (is_sign) {
-      result_.output += kHindiToEnglish.at(kSignToVowel.at(state_));
+      result_.output += kHindiToEnglish.at(
+          Devanagari::sign_to_vowel.at(state_));
     }
     last_was_consonant_ = false;
     return true;
@@ -177,7 +147,7 @@ bool HindiToEnglishTransliterator::PopState() {
   }
   result_.output += kHindiToEnglish.at(state_);
   last_was_consonant_ =
-      !(Contains(kVowelToSign, state_) || IsDiacritic(state_));
+      !(Contains(Devanagari::vowel_to_sign, state_) || IsDiacritic(state_));
   return true;
 }
 

@@ -14,6 +14,7 @@ class Devanagari {
  public:
   static const std::vector<std::string> vowels;
   static const std::vector<std::string> consonants;
+  static const std::vector<std::string> diacritics;
   static const std::vector<std::string> digits;
   static const std::vector<std::string> alphabet;
   static const std::vector<std::string> all;
