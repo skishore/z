@@ -33,8 +33,14 @@ class Transliterator {
   // Called when we encounter a word break.
   virtual void FinishWord() {};
 
+  const std::string input_;
+  std::string character_;
   std::string state_;
   TransliterationResult result_;
+
+  // The start and end indices of the current character.
+  int start_ = 0;
+  int end_ = 0;
 
  private:
   // Advances the end index until it contains a given character.
@@ -42,18 +48,11 @@ class Transliterator {
 
   // Attempts to push the current character on to the state.
   bool AdvanceState();
-
-  const std::string input_;
-  std::string character_;
-
-  // The start and end indices of the current character.
-  int start_ = 0;
-  int end_ = 0;
 };
 
-class EnglishToHindiTransliterator : public Transliterator {
+class HindiToEnglishTransliterator : public Transliterator {
  public:
-  EnglishToHindiTransliterator(const std::string& input)
+  HindiToEnglishTransliterator(const std::string& input)
       : Transliterator(input) {}
 
  protected:

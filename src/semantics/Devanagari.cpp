@@ -67,7 +67,10 @@ const vector<string> Devanagari::vowels{
   "ए",
   "ऐ",
   "ओ",
-  "औ"
+  "औ",
+  "\u0901", // candrabindu
+  "\u0902", // anusvara
+  "\u0903"  // visarga
 };
 
 const vector<vector<string>> Devanagari::consonant_rows{

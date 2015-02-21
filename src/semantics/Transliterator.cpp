@@ -11,7 +11,7 @@ using std::vector;
 namespace babel {
 namespace semantics {
 
-Transliterator::Transliterator(const std::string& input) : input_(input) {}
+Transliterator::Transliterator(const string& input) : input_(input) {}
 
 const TransliterationResult& Transliterator::Run() {
   while (end_ < input_.size() && GetNextCharacter() && AdvanceState()) {
@@ -68,18 +68,22 @@ bool Transliterator::AdvanceState() {
 
 namespace {
 
+// Non-injective mapping from Hindi characters to English letters.
+// The reverse map must be computed by dictionary lookup, and there may
+// still be ambiguities.
 const vector<string> kAlphabetZip{
-  "a", "aa", "i", "ee", "u", "oo", "e", "ai", "o", "au",
-  "k", "kh", "g", "gh", "NG",
-  "ch", "Ch", "j", "jh", "NY",
-  "T", "Th", "D", "Dh", "N",
+  "a", "a", "i", "i", "u", "u", "e", "ai", "o", "au",
+  "ao", "n", "h",
+  "k", "kh", "g", "gh", "ng",
+  "c", "ch", "j", "jh", "ny",
+  "t", "th", "d", "dh", "n",
   "t", "th", "d", "dh", "n",
   "p", "ph", "b", "bh", "m",
   "y", "r", "l", "v",
-  "sh", "Sh", "s", "h"
+  "sh", "sh", "s", "h",
 };
 
-const map<string,string> kVowelSigns{
+const map<string,string> kVowelToSign{
   {"अ", ""},
   {"आ", "\u093E"},
   {"इ", "\u093F"},
@@ -123,41 +127,57 @@ template<typename T> map<T,T> Invert(const map<T,T>& original) {
   return result;
 }
 
-const map<string,string> kEnglishToHindi =
-    Zip(kAlphabetZip, Devanagari::alphabet);
+const map<string,string> kHindiToEnglish =
+    Zip(Devanagari::alphabet, kAlphabetZip);
+
+const map<string,string> kSignToVowel = Invert(kVowelToSign);
+
+inline bool IsDiacritic(const string& character) {
+  return (character == "\u0901" || character == "\u0902" ||
+          character == "\u0903");
+}
+
+inline bool Contains(const map<string,string> dict, const string& key) {
+  return dict.find(key) != dict.end();
+}
 
 }  // namespace
 
-bool EnglishToHindiTransliterator::IsValidCharacter(
-    const std::string& character) const {
-  if (character.size() != 1) {
-    return false;
-  }
-  char ch = character[0];
-  return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z');
+bool HindiToEnglishTransliterator::IsValidCharacter(
+    const string& character) const {
+  return (Contains(kHindiToEnglish, character) ||
+          Contains(kSignToVowel, character) || character == kVirama);
 }
 
-bool EnglishToHindiTransliterator::IsValidState(
-    const std::string& state) const {
-  return state == "S" || kEnglishToHindi.find(state) != kEnglishToHindi.end();
+bool HindiToEnglishTransliterator::IsValidState(const string& state) const {
+  return IsValidCharacter(state);
 }
 
-void EnglishToHindiTransliterator::FinishWord() {
+void HindiToEnglishTransliterator::FinishWord() {
   last_was_consonant_ = false;
 }
 
-bool EnglishToHindiTransliterator::PopState() {
-  string hindi = kEnglishToHindi.at(state_);
-  const bool is_consonant = kVowelSigns.find(hindi) == kVowelSigns.end();
-  if (last_was_consonant_) {
-    if (is_consonant) {
-      result_.output += kVirama;
-    } else {
-      hindi = kVowelSigns.at(hindi);
+bool HindiToEnglishTransliterator::PopState() {
+  const bool is_sign = Contains(kSignToVowel, state_);
+  if (is_sign || state_ == kVirama) {
+    if (!last_was_consonant_) {
+      result_.error = ("Unexpected conjunct at input@" +
+                       IntToString(start_) + ": " + character_);
+      return false;
     }
+    if (is_sign) {
+      result_.output += kHindiToEnglish.at(kSignToVowel.at(state_));
+    }
+    last_was_consonant_ = false;
+    return true;
   }
-  result_.output += hindi;
-  last_was_consonant_ = is_consonant;
+  if (last_was_consonant_) {
+    // Add in the implicit schwa.
+    result_.output += "a";
+  }
+  result_.output += kHindiToEnglish.at(state_);
+  last_was_consonant_ =
+      !(Contains(kVowelToSign, state_) || IsDiacritic(state_));
   return true;
 }
 
