@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "base/debug.h"
+#include "base/util.h"
 
 using std::map;
 using std::string;
@@ -10,29 +11,6 @@ using std::vector;
 
 namespace babel {
 namespace semantics {
-namespace {
-
-template<typename T> vector<T> Concatenate(const vector<vector<T>>& lists) {
-  vector<T> result;
-  for (const vector<T>& list : lists) {
-    for (const T& element : list) {
-      result.push_back(element);
-    }
-  }
-  return result;
-}
-
-template<typename T> map<T,T> Invert(const map<T,T>& original) {
-  map<T,T> result;
-  for (const auto& pair : original) {
-    ASSERT(result.find(pair.second) == result.end(),
-           "Duplicate item found when computing inverted map: " << pair.second);
-    result[pair.second] = pair.first;
-  }
-  return result;
-}
-
-}  // namespace
 
 const vector<string> Devanagari::vowels{
   "अ",
