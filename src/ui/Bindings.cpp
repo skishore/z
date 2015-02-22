@@ -22,7 +22,7 @@ int Bindings::Start() {
 }
 
 bool Bindings::Update(double frame_rate) {
-  char ch;
+  char ch = '\0';
   bool has_input = input_.GetChar(&ch);
   if (has_input && ch == 0x1b) {
     return false;
@@ -33,13 +33,9 @@ bool Bindings::Update(double frame_rate) {
     animation_->Draw(&graphics_);
     EndTimer();
     return true;
-  } else if (!has_input) {
-    return true;
   }
 
-  StartTimer("Interface::Update");
   interface::DialogResult result = interface_.Consume(ch);
-  EndTimer();
   if (result.reset) {
     Reset();
   } else if (result.action != nullptr || result.update) {

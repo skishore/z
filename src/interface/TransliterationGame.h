@@ -29,6 +29,8 @@ class TransliterationGame : public Dialog {
   std::vector<bool> guides_;
   int index_ = 0;
   int length_ = 0;
+  // The number of frames to pause when the game is complete.
+  int pause_ = 4;
 };
 
 }  // namespace interface

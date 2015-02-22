@@ -59,8 +59,13 @@ TransliterationGame::TransliterationGame() {
 
 DialogResult TransliterationGame::Consume(char ch) {
   DialogResult result;
-  if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == ' ') ||
-      index_ >= segments_.size()) {
+  if (index_ >= segments_.size()) {
+    pause_ -= 1;
+    result.update = pause_ <= 0;
+    return result;
+  }
+
+  if (!(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == ' ')) {
     return result;
   }
 
@@ -76,7 +81,6 @@ DialogResult TransliterationGame::Consume(char ch) {
     Advance();
   }
   result.redraw_dialog = true;
-  result.update = !Active();
   return result;
 }
 
