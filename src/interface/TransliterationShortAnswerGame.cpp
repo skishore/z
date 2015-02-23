@@ -19,30 +19,6 @@ using babel::render::dialog::MakeTextElement;
 
 namespace babel {
 namespace interface {
-namespace {
-
-const std::map<char,string> kDiacritics{
-  {'A', "ā"},
-  {'I', "ī"},
-  {'U', "ū"},
-  {'D', "ḍ"},
-  {'T', "ṭ"}
-};
-
-// Encodes a Latin string using the diacritics map above
-string Encode(const string& input) {
-  string result;
-  for (char ch : input) {
-    if (kDiacritics.find(ch) != kDiacritics.end()) {
-      result += kDiacritics.at(ch);
-    } else {
-      result += ch;
-    }
-  }
-  return result;
-};
-
-}  // namespace
 
 TransliterationShortAnswerGame::TransliterationShortAnswerGame() {
   const int num = (rand() % 2) + 2;

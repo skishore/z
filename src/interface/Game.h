@@ -4,6 +4,8 @@
 #ifndef __BABEL_INTERFACE_GAME_H__
 #define __BABEL_INTERFACE_GAME_H__
 
+#include <string>
+
 #include "interface/Dialog.h"
 
 namespace babel {
@@ -16,9 +18,15 @@ struct GameResult {
 class Game : public Dialog {
  public:
   virtual GameResult GetResult() const = 0;
+
+ protected:
+  static std::string Encode(const std::string& input);
+
+  // The number of frames to pause for when the game is complete.
+  int pause_ = 4;
 };
 
 }  // namespace interface
 }  // namespace babel
 
-#endif  // __BABEL_INTERFACE_DIALOG_H__
+#endif  // __BABEL_INTERFACE_GAME_H__
