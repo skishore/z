@@ -41,7 +41,7 @@ class Dialog {
   virtual void Draw(render::DialogRenderer* renderer) const = 0;
 };
 
-}  // namespace dialog
+}  // namespace interface
 }  // namespace babel
 
 #endif  // __BABEL_INTERFACE_DIALOG_H__

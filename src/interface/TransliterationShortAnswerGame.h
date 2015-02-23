@@ -1,24 +1,24 @@
-#ifndef __BABEL_INTERFACE_TRANSLITERATION_GAME_H__
-#define __BABEL_INTERFACE_TRANSLITERATION_GAME_H__
+#ifndef __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__
+#define __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__
 
 #include <string>
 #include <vector>
 
-#include "interface/Dialog.h"
+#include "interface/Game.h"
 
 namespace babel {
 namespace interface {
 
-class TransliterationGame : public Dialog {
+class TransliterationShortAnswerGame : public Game {
  public:
-  TransliterationGame();
+  TransliterationShortAnswerGame();
 
   virtual DialogResult Consume(char ch) override;
 
   virtual bool Active() const override;
   virtual void Draw(render::DialogRenderer* renderer) const override;
 
-  int errors_ = 0;
+  virtual GameResult GetResult() const override;
 
  private:
   void Advance();
@@ -29,6 +29,7 @@ class TransliterationGame : public Dialog {
   std::vector<bool> guides_;
   int index_ = 0;
   int length_ = 0;
+  int errors_ = 0;
   // The number of frames to pause when the game is complete.
   int pause_ = 4;
 };
@@ -36,4 +37,4 @@ class TransliterationGame : public Dialog {
 }  // namespace interface
 }  // namespace babel
 
-#endif  // __BABEL_INTERFACE_TRANSLITERATION_GAME_H__
+#endif  // __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__

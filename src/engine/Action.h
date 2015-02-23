@@ -7,13 +7,9 @@
 
 #include "base/point.h"
 #include "interface/Dialog.h"
-
+#include "interface/Game.h"
 
 namespace babel {
-
-namespace interface {
-class TransliterationGame;
-}  // namespace interface
 
 namespace engine {
 
@@ -51,7 +47,7 @@ class AttackAction : public Action {
 
  private:
   Sprite* target_;
-  const interface::TransliterationGame* game_;
+  const interface::Game* game_;
 };
 
 class MoveAction : public Action {

@@ -1,4 +1,4 @@
-#include "interface/TransliterationGame.h"
+#include "interface/TransliterationShortAnswerGame.h"
 
 #include <map>
 #include <vector>
@@ -44,7 +44,7 @@ string Encode(const string& input) {
 
 }  // namespace
 
-TransliterationGame::TransliterationGame() {
+TransliterationShortAnswerGame::TransliterationShortAnswerGame() {
   const int num = (rand() % 2) + 2;
   for (int i = 0; i < num; i++) {
     const string hindi = semantics::Devanagari::GetRandomConjunct();
@@ -57,7 +57,7 @@ TransliterationGame::TransliterationGame() {
   Advance();
 }
 
-DialogResult TransliterationGame::Consume(char ch) {
+DialogResult TransliterationShortAnswerGame::Consume(char ch) {
   DialogResult result;
   if (index_ >= segments_.size()) {
     pause_ -= 1;
@@ -84,11 +84,12 @@ DialogResult TransliterationGame::Consume(char ch) {
   return result;
 }
 
-bool TransliterationGame::Active() const {
+bool TransliterationShortAnswerGame::Active() const {
   return index_ < segments_.size();
 }
 
-void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
+void TransliterationShortAnswerGame::Draw(
+    render::DialogRenderer* renderer) const {
   Element* column = MakeColumnElement();
   AddChild(column, MakeTextElement(1.0, "To attack, you must transliterate:"));
   AddChild(column, MakeTextElement(0.4, ""));
@@ -123,7 +124,13 @@ void TransliterationGame::Draw(render::DialogRenderer* renderer) const {
   renderer->Draw(column, true /* place_at_top */);
 }
 
-void TransliterationGame::Advance() {
+GameResult TransliterationShortAnswerGame::GetResult() const {
+  GameResult result;
+  result.errors = errors_;
+  return result;
+}
+
+void TransliterationShortAnswerGame::Advance() {
   while (index_ < segments_.size() &&
          entries_[index_].size() >= answers_[index_].size()) {
     index_ += 1;

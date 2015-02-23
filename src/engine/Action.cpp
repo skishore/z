@@ -6,7 +6,7 @@
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
-#include "interface/TransliterationGame.h"
+#include "interface/TransliterationShortAnswerGame.h"
 
 using std::max;
 using std::string;
@@ -37,15 +37,16 @@ ActionResult AttackAction::Execute() {
 
   if (sprite_->IsPlayer()) {
     if (dialog_ == nullptr) {
-      auto* game = new interface::TransliterationGame();
+      interface::Game* game = new interface::TransliterationShortAnswerGame();
       game_ = game;
       dialog_.reset(game);
       result.stalled = true;
       return result;
     }
 
-    // The player attacks an NPC after playing a transliteration game.
-    const int counterattack = game_->errors_;
+    // The player attacks an NPC after playing a semantic game.
+    const interface::GameResult game_result = game_->GetResult();
+    const int counterattack = game_result.errors;
     const string& enemy = target_->creature.appearance.name;
     if (counterattack > 0) {
       game_state_->log.AddLine("You hit the " + enemy + ".");
