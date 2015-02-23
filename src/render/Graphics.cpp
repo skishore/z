@@ -5,7 +5,6 @@
 
 #include "base/debug.h"
 #include "base/util.h"
-#include "render/SDL_prims.h"
 
 using std::map;
 using std::max;

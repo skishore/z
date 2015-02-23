@@ -12,7 +12,6 @@
 #include FT_OUTLINE_H
 
 #include "base/debug.h"
-#include "render/SDL_prims.h"
 
 using std::max;
 using std::min;
