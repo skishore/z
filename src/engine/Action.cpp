@@ -6,6 +6,7 @@
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
+#include "interface/TransliterationMultipleChoiceGame.h"
 #include "interface/TransliterationShortAnswerGame.h"
 
 using std::max;
@@ -14,6 +15,16 @@ using std::vector;
 
 namespace babel {
 namespace engine {
+namespace {
+
+inline interface::Game* GetSemanticGame(const Sprite& enemy) {
+  if (enemy.creature.appearance.graphic == 1) {
+    return new interface::TransliterationMultipleChoiceGame();
+  }
+  return new interface::TransliterationShortAnswerGame();
+}
+
+}  // namespace
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
                   EventHandler* handler) {
@@ -37,7 +48,7 @@ ActionResult AttackAction::Execute() {
 
   if (sprite_->IsPlayer()) {
     if (dialog_ == nullptr) {
-      interface::Game* game = new interface::TransliterationShortAnswerGame();
+      interface::Game* game = GetSemanticGame(*target_);
       game_ = game;
       dialog_.reset(game);
       result.stalled = true;

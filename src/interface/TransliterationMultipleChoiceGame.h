@@ -1,5 +1,5 @@
-#ifndef __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__
-#define __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__
+#ifndef __BABEL_INTERFACE_TRANSLITERATION_MULTIPLE_CHOICE_GAME_H__
+#define __BABEL_INTERFACE_TRANSLITERATION_MULTIPLE_CHOICE_GAME_H__
 
 #include <string>
 #include <vector>
@@ -9,9 +9,9 @@
 namespace babel {
 namespace interface {
 
-class TransliterationShortAnswerGame : public Game {
+class TransliterationMultipleChoiceGame : public Game {
  public:
-  TransliterationShortAnswerGame();
+  TransliterationMultipleChoiceGame();
 
   virtual DialogResult Consume(char ch) override;
 
@@ -21,18 +21,14 @@ class TransliterationShortAnswerGame : public Game {
   virtual GameResult GetResult() const override;
 
  private:
-  void Advance();
-
-  std::vector<std::string> segments_;
+  std::string question_;
   std::vector<std::string> answers_;
-  std::vector<std::string> entries_;
-  std::vector<bool> guides_;
-  int index_ = 0;
-  int length_ = 0;
+  std::vector<bool> attempted_;
+  int correct_answer_;
   int errors_ = 0;
 };
 
 }  // namespace interface
 }  // namespace babel
 
-#endif  // __BABEL_INTERFACE_TRANSLITERATION_SHORT_ANSWER_GAME_H__
+#endif  // __BABEL_INTERFACE_TRANSLITERATION_MULTIPLE_CHOICE_GAME_H__

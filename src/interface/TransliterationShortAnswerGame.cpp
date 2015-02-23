@@ -35,7 +35,7 @@ TransliterationShortAnswerGame::TransliterationShortAnswerGame() {
 
 DialogResult TransliterationShortAnswerGame::Consume(char ch) {
   DialogResult result;
-  if (index_ >= segments_.size()) {
+  if (!Active()) {
     pause_ -= 1;
     result.update = pause_ <= 0;
     return result;
