@@ -18,7 +18,8 @@ struct TileView {
 };
 
 struct SpriteView {
-  // The square is offset within the current view.
+  // square is offset within the current view.
+  engine::sid id;
   int graphic;
   uint32_t color;
   Point square;
@@ -36,7 +37,7 @@ class View {
   int size;
   Point offset;
   std::vector<std::vector<TileView>> tiles;
-  std::map<sid,SpriteView> sprites;
+  std::vector<SpriteView> sprites;
   std::vector<std::string> log;
   StatusView status;
 };

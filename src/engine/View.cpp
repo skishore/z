@@ -32,8 +32,8 @@ View::View(int radius, const GameState& game_state)
     if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
-      sprites[sprite->Id()] = SpriteView{
-            appearance.graphic, appearance.color, square};
+      sprites.push_back(SpriteView{
+          sprite->Id(), appearance.graphic, appearance.color, square});
     }
   }
   if (game_state.log.IsFresh()) {

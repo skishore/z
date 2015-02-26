@@ -52,7 +52,7 @@ $(HTML):	$(EMCC_OBJ_FILES)
 	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	cp index.html build/main.html
-	cp memory_profiler.js build/memory_profiler.js
+	cp static/* build/.
 
 $(BUILD)/%.o: %.cpp
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<

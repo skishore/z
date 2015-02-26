@@ -16,15 +16,15 @@ namespace babel {
 
 std::unique_ptr<engine::Engine> gEngine;
 
-const engine::View* GetView() {
-  return new engine::View(3, gEngine->GetGameState());
+const engine::View* GetView(int radius) {
+  return new engine::View(radius, gEngine->GetGameState());
 }
 
 EMSCRIPTEN_BINDINGS(stl_wrappers) {
-  register_vector<std::string>("StringVector");
-  register_vector<engine::TileView>("TileVector");
-  register_vector<std::vector<engine::TileView>>("2DTileVector");
-  register_map<engine::sid,engine::SpriteView>("SpriteMap");
+  register_vector<std::string>("VectorString");
+  register_vector<engine::TileView>("VectorTile");
+  register_vector<std::vector<engine::TileView>>("VectorVectorTile");
+  register_vector<engine::SpriteView>("VectorSprite");
 };
 
 EMSCRIPTEN_BINDINGS(value_types) {
@@ -37,6 +37,7 @@ EMSCRIPTEN_BINDINGS(value_types) {
     .field("visible", &engine::TileView::visible);
 
   value_object<engine::SpriteView>("BabelSprite")
+    .field("id", &engine::SpriteView::id)
     .field("graphic", &engine::SpriteView::graphic)
     .field("color", &engine::SpriteView::color)
     .field("square", &engine::SpriteView::square);
