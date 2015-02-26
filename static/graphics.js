@@ -1,7 +1,9 @@
 var BabelGraphics = function() {
 "use strict";
 
-function BabelGraphics(target) {
+function BabelGraphics(target, engine) {
+  this.engine = engine;
+
   // Core graphics constants.
   this.tile_textures = [];
   this.sprite_textures = [];
@@ -66,7 +68,7 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 
 BabelGraphics.prototype.Animate = function() {
   this.stats.begin();
-  var view = Module.BabelGetView(this.radius);
+  var view = this.engine.GetView(this.radius);
   var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
     var column = tiles.get(x);

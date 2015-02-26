@@ -29,7 +29,8 @@ class Engine {
   // If the input is not null, this method will take ownership of it.
   bool Update(Action* input);
 
-  const GameState& GetGameState() const { return game_state_; }
+  // The caller takes ownership of the new view.
+  const View* GetView(int radius) const;
 
  private:
   GameState game_state_;

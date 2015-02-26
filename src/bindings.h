@@ -14,12 +14,6 @@ using namespace emscripten;
 
 namespace babel {
 
-std::unique_ptr<engine::Engine> gEngine;
-
-const engine::View* GetView(int radius) {
-  return new engine::View(radius, gEngine->GetGameState());
-}
-
 EMSCRIPTEN_BINDINGS(stl_wrappers) {
   register_vector<std::string>("VectorString");
   register_vector<engine::TileView>("VectorTile");
@@ -42,21 +36,23 @@ EMSCRIPTEN_BINDINGS(value_types) {
     .field("color", &engine::SpriteView::color)
     .field("square", &engine::SpriteView::square);
 
-  value_object<engine::StatusView>("StatusView")
+  value_object<engine::StatusView>("BabelStatus")
     .field("cur_health", &engine::StatusView::cur_health)
     .field("max_health", &engine::StatusView::max_health);
+};
 
-  class_<engine::View>("View")
+EMSCRIPTEN_BINDINGS(engine_view) {
+  class_<engine::Engine>("BabelEngine")
+    .constructor<>()
+    .function("GetView", &engine::Engine::GetView, allow_raw_pointers());
+
+  class_<engine::View>("BabelView")
     .property("size", &engine::View::size)
     .property("tiles", &engine::View::tiles)
     .property("sprites", &engine::View::sprites)
     .property("log", &engine::View::log)
     .property("status", &engine::View::status);
 };
-
-EMSCRIPTEN_BINDINGS(view) {
-  function("BabelGetView", &GetView, allow_raw_pointers());
-}
 
 }  // namespace babel
 

@@ -98,5 +98,9 @@ bool Engine::Update(Action* input) {
   return changed;
 }
 
+const View* Engine::GetView(int radius) const {
+  return new View(radius, game_state_);
+}
+
 }  // namespace engine
 }  // namespace babel

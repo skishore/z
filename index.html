@@ -109,10 +109,12 @@
         };
       };
 
+      var engine;
       var graphics;
       function InitializeGraphics() {
+        engine = new Module.BabelEngine();
         var target = document.getElementsByClassName('canvas-wrapper')[0];
-        graphics = new BabelGraphics(target);
+        graphics = new BabelGraphics(target, engine);
       };
     </script>
     <script async type="text/javascript" src="main.js"></script>

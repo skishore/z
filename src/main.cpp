@@ -12,7 +12,6 @@ int main(int argc, char** argv) {
   srand(seed);
   babel::RegisterCrashHandlers(argv[0]);
   #ifdef EMSCRIPTEN
-  babel::gEngine.reset(new babel::engine::Engine);
   emscripten_exit_with_live_runtime();
   #endif  // EMSCRIPTEN
 }
