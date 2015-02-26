@@ -36,6 +36,11 @@ function BabelGraphics(target) {
 
   // Insert the new renderer at the top of the DOM.
   target.appendChild(this.renderer.view);
+
+  this.stats = new PIXI.Stats();
+  document.body.appendChild(this.stats.domElement);
+  this.stats.domElement.style.position = "absolute";
+  this.stats.domElement.style.top = "0px";
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
@@ -60,6 +65,7 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 }
 
 BabelGraphics.prototype.Animate = function() {
+  this.stats.begin();
   var view = Module.BabelGetView(this.radius);
   var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
@@ -80,6 +86,7 @@ BabelGraphics.prototype.Animate = function() {
   view.delete();
   this.renderer.render(this.stage);
   requestAnimationFrame(this.Animate.bind(this));
+  this.stats.end();
 }
 
 return BabelGraphics;
