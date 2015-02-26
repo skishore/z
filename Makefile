@@ -5,7 +5,7 @@ OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.obj))) $(addprefix
 EXECUTABLE := $(BUILD)/main
 
 INCLUDES := freetype2 freetype2/config harfbuzz
-PRELOADS := data fonts/default_font.ttf images
+PRELOADS := data #fonts/default_font.ttf images
 VPATH := src:$(subst $(eval) ,:,$(wildcard src/*))
 
 EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.o)))
@@ -52,6 +52,7 @@ $(HTML):	$(EMCC_OBJ_FILES)
 	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	cp index.html build/main.html
+	cp memory_profiler.js build/memory_profiler.js
 
 $(BUILD)/%.o: %.cpp
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<
