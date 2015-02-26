@@ -61,10 +61,12 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 
 BabelGraphics.prototype.Animate = function() {
   var view = Module.BabelGetView(this.radius);
+  var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
+    var column = tiles.get(x);
     for (var y = 0; y < this.size; y++) {
       var tile = this.tiles[this.size*x + y];
-      var tile_view = view.tiles.get(x).get(y);
+      var tile_view = column.get(y);
       if (tile_view.graphic < 0) {
         tile.visible = false;
       } else {
@@ -72,9 +74,12 @@ BabelGraphics.prototype.Animate = function() {
         tile.visible = true;
       }
     }
+    column.delete();
   }
+  tiles.delete();
   view.delete();
   this.renderer.render(this.stage);
+  requestAnimationFrame(this.Animate.bind(this));
 }
 
 return BabelGraphics;
