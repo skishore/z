@@ -49,7 +49,7 @@ $(BUILD)/%.obj: %.c
 	clang $(C_FLAGS) -c -MD -o $@ $<
 
 $(HTML):	$(EMCC_OBJ_FILES)
-	emcc $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
+	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	cp index.html build/main.html
 

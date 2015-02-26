@@ -9,6 +9,7 @@
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
+#include "engine/View.h"
 #include "interface/Dialog.h"
 
 namespace babel {
@@ -17,6 +18,7 @@ namespace engine {
 class Engine {
  public:
   Engine();
+  ~Engine();
 
   void AddEventHandler(EventHandler* handler);
 
