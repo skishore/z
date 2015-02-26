@@ -1,7 +1,7 @@
 var BabelGraphics = function() {
 "use strict";
 
-function BabelGraphics() {
+function BabelGraphics(target) {
   // Core graphics constants.
   this.tile_textures = [];
   this.sprite_textures = [];
@@ -35,7 +35,7 @@ function BabelGraphics() {
   //this.renderer.view.style.display = "block";
 
   // Insert the new renderer at the top of the DOM.
-  document.body.appendChild(this.renderer.view);
+  target.appendChild(this.renderer.view);
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
