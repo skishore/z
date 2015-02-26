@@ -3,8 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <script src='graphics.js'></script>
+
     <script src='memory_profiler.js'></script>
+    <script src='pixi.dev.js'></script>
+
+    <script src='graphics.js'></script>
+
     <title>Emscripten-Generated Code</title>
     <style>
       body {
@@ -54,7 +58,7 @@
     <script type='text/javascript'>
       var Module = {
         preRun: [],
-        postRun: [],
+        postRun: [InitializeGraphics],
         print: (function() {
           var element = document.getElementById('stdout');
           if (element) element.value = ''; // clear browser cache
@@ -114,6 +118,11 @@
         Module.setStatus = function(text) {
           if (text) Module.printErr('[post-exception status] ' + text);
         };
+      };
+
+      var graphics;
+      function InitializeGraphics() {
+        graphics = new BabelGraphics();
       };
     </script>
     <script async type="text/javascript" src="main.js"></script>
