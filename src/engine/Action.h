@@ -47,7 +47,8 @@ class AttackAction : public Action {
 
  private:
   Sprite* target_;
-  const interface::Game* game_;
+  // TODO(skishore): We should play a semantic game on some attacks.
+  //const interface::Game* game_;
 };
 
 class MoveAction : public Action {

@@ -15,12 +15,12 @@ BASE_CC_FLAGS := ${BASE_C_FLAGS} -std=c++11 -stdlib=libc++ -I permissive-fov
 
 CC := clang++
 C_FLAGS := ${BASE_C_FLAGS}
-CC_FLAGS := ${BASE_CC_FLAGS} -Isrc $(addprefix -I/usr/local/include/,$(INCLUDES))
-LD_FLAGS := $(CC_FLAGS) -lSDL2 -lfreetype -lharfbuzz
+CC_FLAGS := ${BASE_CC_FLAGS} -Isrc #$(addprefix -I/usr/local/include/,$(INCLUDES))
+LD_FLAGS := $(CC_FLAGS) #-lSDL2 -lfreetype -lharfbuzz
 
-EMC_FLAGS := ${BASE_C_FLAGS} -s USE_SDL=2
-EMCC_FLAGS := $(BASE_CC_FLAGS) -s USE_SDL=2 -Isrc $(addprefix -Icompiled-bytecode/include/,$(INCLUDES))
-EMCC_LD_FLAGS := $(EMCC_FLAGS) compiled-bytecode/lib/freetype2/* compiled-bytecode/lib/harfbuzz/*
+EMC_FLAGS := ${BASE_C_FLAGS} #-s USE_SDL=2
+EMCC_FLAGS := $(BASE_CC_FLAGS) -Isrc #-s USE_SDL=2 $(addprefix -Icompiled-bytecode/include/,$(INCLUDES))
+EMCC_LD_FLAGS := $(EMCC_FLAGS) #compiled-bytecode/lib/freetype2/* compiled-bytecode/lib/harfbuzz/*
 
 all:
 	make exe
