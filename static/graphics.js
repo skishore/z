@@ -31,18 +31,18 @@ function BabelGraphics(target, engine) {
   this.height = (this.size - 2)*this.square;
   this.renderer = PIXI.autoDetectRenderer(this.width, this.height);
 
-  //this.renderer.view.style.position = "absolute"
-  //this.renderer.view.style.width = window.innerWidth + "px";
-  //this.renderer.view.style.height = window.innerHeight + "px";
-  //this.renderer.view.style.display = "block";
+  var scale = 1.25;
+  this.renderer.view.style.width = Math.floor(scale*this.width) + "px";
+  this.renderer.view.style.height = Math.floor(scale*this.height) + "px";
 
   // Insert the new renderer at the top of the DOM.
   target.appendChild(this.renderer.view);
 
   this.stats = new PIXI.Stats();
   document.body.appendChild(this.stats.domElement);
-  this.stats.domElement.style.position = "absolute";
+  this.stats.domElement.style.position = "fixed";
   this.stats.domElement.style.top = "0px";
+  this.stats.domElement.style.left = "0px";
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
