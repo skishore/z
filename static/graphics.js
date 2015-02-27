@@ -68,6 +68,12 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 
 BabelGraphics.prototype.Animate = function() {
   this.stats.begin();
+
+  var move = {x: Math.floor(3*Math.random() - 1),
+              y: Math.floor(3*Math.random() - 1)};
+  var action = Module.MakeMoveAction(move);
+  this.engine.Update(action);
+
   var view = this.engine.GetView(this.radius);
 
   var tiles = view.tiles;

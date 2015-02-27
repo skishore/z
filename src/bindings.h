@@ -7,12 +7,17 @@
 #include <emscripten/bind.h>
 
 #include "base/point.h"
+#include "engine/Action.h"
 #include "engine/Engine.h"
 #include "engine/View.h"
 
 using namespace emscripten;
 
 namespace babel {
+
+inline engine::Action* MakeMoveAction(const Point point) {
+  return new engine::MoveAction(point);
+}
 
 EMSCRIPTEN_BINDINGS(stl_wrappers) {
   register_vector<std::string>("VectorString");
@@ -41,10 +46,16 @@ EMSCRIPTEN_BINDINGS(value_types) {
     .field("max_health", &engine::StatusView::max_health);
 };
 
+EMSCRIPTEN_BINDINGS(action) {
+  class_<engine::Action>("BabelAction");
+  function("MakeMoveAction", &MakeMoveAction, allow_raw_pointers());
+};
+
 EMSCRIPTEN_BINDINGS(engine_view) {
   class_<engine::Engine>("BabelEngine")
     .constructor<>()
-    .function("GetView", &engine::Engine::GetView, allow_raw_pointers());
+    .function("GetView", &engine::Engine::GetView, allow_raw_pointers())
+    .function("Update", &engine::Engine::Update, allow_raw_pointers());
 
   class_<engine::View>("BabelView")
     .property("size", &engine::View::size)
