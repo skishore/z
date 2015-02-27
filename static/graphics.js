@@ -16,7 +16,7 @@ function BabelGraphics(target, engine) {
 
   // The actual tile and sprite PIXI.Sprite instances.
   this.tiles = [];
-  this.sprites = [];
+  this.sprite_map = {};
 
   var assets_to_load = ['tileset.json', 'sprites.json'];
   var loader = new PIXI.AssetLoader(assets_to_load);
@@ -69,6 +69,7 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 BabelGraphics.prototype.Animate = function() {
   this.stats.begin();
   var view = this.engine.GetView(this.radius);
+
   var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
     var column = tiles.get(x);
@@ -85,6 +86,39 @@ BabelGraphics.prototype.Animate = function() {
     column.delete();
   }
   tiles.delete();
+
+  var sprites = view.sprites;
+  var sprite_map = {}
+  for (var i = 0; i < sprites.size(); i++) {
+    var sprite = sprites.get(i);
+    sprite_map[sprite.id] = sprite;
+  }
+  sprites.delete();
+
+  for (var id in sprite_map) {
+    if (sprite_map.hasOwnProperty(id)) {
+      if (!this.sprite_map.hasOwnProperty(id)) {
+        var graphic = sprite_map[id].graphic;
+        var sprite = new PIXI.Sprite(this.sprite_textures[graphic]);
+        this.sprite_map[id] = sprite;
+        this.stage.addChild(sprite);
+      }
+    }
+  }
+  for (var id in this.sprite_map) {
+    if (this.sprite_map.hasOwnProperty(id)) {
+      var sprite = this.sprite_map[id];
+      if (sprite_map.hasOwnProperty(id)) {
+        var sprite_view = sprite_map[id];
+        sprite.x = this.square*(sprite_view.square.x - 1);
+        sprite.y = this.square*(sprite_view.square.y - 1);
+      } else {
+        this.stage.removeChild(sprite);
+        delete this.sprite_map[id];
+      }
+    }
+  }
+
   view.delete();
   this.renderer.render(this.stage);
   requestAnimationFrame(this.Animate.bind(this));
