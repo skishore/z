@@ -47,10 +47,10 @@ function BabelGraphics(target, engine) {
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
   for (var i = 0; i < this.num_tiles; i++) {
-    this.tile_textures.push(PIXI.Texture.fromFrame("tile" + i + ".bmp"));
+    this.tile_textures.push(PIXI.Texture.fromFrame("tile" + i + ".png"));
   }
   for (var i = 0; i < this.num_sprites; i++) {
-    this.sprite_textures.push(PIXI.Texture.fromFrame("sprite" + i + ".bmp"));
+    this.sprite_textures.push(PIXI.Texture.fromFrame("sprite" + i + ".png"));
   }
   for (var x = 0; x < this.size; x++) {
     for (var y = 0; y < this.size; y++) {

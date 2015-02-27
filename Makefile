@@ -27,7 +27,7 @@ all:
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
-	rm -f $(HTML) $(HTML).mem $(BUILD)/*.js $(BUILD)/*.json $(BUILD)/*.bmp $(BUILD)/*.data $(BUILD)/*.o
+	rm -f $(HTML) $(HTML).mem $(BUILD)/*.js $(BUILD)/*.json $(BUILD)/*.png $(BUILD)/*.data $(BUILD)/*.o
 	rm -f $(BUILD)/*.d $(BUILD)/*.ccd $(BUILD)/*.emccd
 	rmdir -p $(BUILD)
 
@@ -53,7 +53,7 @@ $(HTML):	$(EMCC_OBJ_FILES)
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	cp index.html build/main.html
 	cp static/* build/.
-	cp images/* build/.
+	cp images/*.png build/.
 
 $(BUILD)/%.o: %.cpp
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<

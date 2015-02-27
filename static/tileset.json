@@ -1,41 +1,41 @@
 {
   "frames": {
-    "tile0.bmp": {
+    "tile0.png": {
       "frame": {"x":0,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
       "sourceSize": {"w":16,"h":16}
     },
-    "tile1.bmp": {
+    "tile1.png": {
       "frame": {"x":16,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
       "sourceSize": {"w":16,"h":16}
     },
-    "tile2.bmp": {
+    "tile2.png": {
       "frame": {"x":32,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
       "sourceSize": {"w":16,"h":16}
     },
-    "tile3.bmp": {
+    "tile3.png": {
       "frame": {"x":48,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
       "sourceSize": {"w":16,"h":16}
     },
-    "tile4.bmp": {
+    "tile4.png": {
       "frame": {"x":64,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
       "sourceSize": {"w":16,"h":16}
     },
-    "tile5.bmp": {
+    "tile5.png": {
       "frame": {"x":80,"y":0,"w":16,"h":16},
       "rotated": false,
       "trimmed": false,
@@ -46,7 +46,7 @@
   "meta": {
     "app": "http://www.texturepacker.com",
     "version": "1.0",
-    "image": "tileset.bmp",
+    "image": "tileset.png",
     "format": "RGBA8888",
     "size": {"w":96,"h":16},
     "scale": "1"
