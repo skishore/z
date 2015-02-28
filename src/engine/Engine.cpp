@@ -105,7 +105,7 @@ interface::Dialog* Engine::GetDialog() const {
   return (interrupt_ == nullptr ? nullptr : interrupt_->dialog_.get());
 }
 
-const View* Engine::GetView(int radius) const {
+View* Engine::GetView(int radius) const {
   return new View(radius, game_state_);
 }
 

@@ -34,7 +34,7 @@ class Engine {
   interface::Dialog* GetDialog() const;
 
   // The caller takes ownership of the new view.
-  const View* GetView(int radius) const;
+  View* GetView(int radius) const;
 
  private:
   GameState game_state_;
