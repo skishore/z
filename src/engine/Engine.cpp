@@ -24,6 +24,9 @@ Engine::Engine() : game_state_("world.dat") {
 }
 
 Engine::~Engine() {
+  for (auto* input : inputs_) {
+    delete input;
+  }
   DEBUG("Destructing engine.");
 }
 
