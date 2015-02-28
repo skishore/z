@@ -5,6 +5,9 @@ function BabelGraphics(target, bindings) {
   this.target = target;
   this.bindings = bindings;
 
+  this.radius = 9;
+  this.bindings.animation = new BabelAnimation(this.radius, this.bindings);
+
   this.log = this.target.find('.log');
   this.status = $('<div>').addClass('line');
   this.target.find('.status').append(this.status);
@@ -15,13 +18,12 @@ function BabelGraphics(target, bindings) {
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
   this.num_sprites = 3;
-  this.radius = 9;
   this.size = 2*this.radius + 1;
   this.square = 16;
 
   // The actual tile and sprite PIXI.Sprite instances.
   this.tiles = [];
-  this.sprite_map = {};
+  this.sprites = {};
 
   var assets_to_load = ['tileset.json', 'sprites.json'];
   var loader = new PIXI.AssetLoader(assets_to_load);
@@ -82,14 +84,12 @@ BabelGraphics.prototype.Animate = function() {
 }
 
 BabelGraphics.prototype.Redraw = function() {
-  var view = this.bindings.engine.GetView(this.radius);
+  var view = this.bindings.animation.Snapshot();
 
-  var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
-    var column = tiles.get(x);
     for (var y = 0; y < this.size; y++) {
       var tile = this.tiles[this.size*x + y];
-      var tile_view = column.get(y);
+      var tile_view = view.tiles[x][y];
       if (tile_view.graphic < 0) {
         tile.visible = false;
       } else {
@@ -98,59 +98,45 @@ BabelGraphics.prototype.Redraw = function() {
         tile.visible = true;
       }
     }
-    column.delete();
   }
-  tiles.delete();
 
-  var sprites = view.sprites;
-  var sprite_map = {}
-  for (var i = 0; i < sprites.size(); i++) {
-    var sprite = sprites.get(i);
-    sprite_map[sprite.id] = sprite;
-  }
-  sprites.delete();
-
-  for (var id in sprite_map) {
-    if (sprite_map.hasOwnProperty(id)) {
-      if (!this.sprite_map.hasOwnProperty(id)) {
-        var graphic = sprite_map[id].graphic;
+  for (var id in view.sprites) {
+    if (view.sprites.hasOwnProperty(id)) {
+      if (!this.sprites.hasOwnProperty(id)) {
+        var graphic = view.sprites[id].graphic;
         var sprite = new PIXI.Sprite(this.sprite_textures[graphic]);
-        this.sprite_map[id] = sprite;
+        this.sprites[id] = sprite;
         this.stage.addChild(sprite);
       }
     }
   }
-  for (var id in this.sprite_map) {
-    if (this.sprite_map.hasOwnProperty(id)) {
-      var sprite = this.sprite_map[id];
-      if (sprite_map.hasOwnProperty(id)) {
-        var sprite_view = sprite_map[id];
+  for (var id in this.sprites) {
+    if (this.sprites.hasOwnProperty(id)) {
+      var sprite = this.sprites[id];
+      if (view.sprites.hasOwnProperty(id)) {
+        var sprite_view = view.sprites[id];
         sprite.x = this.square*(sprite_view.square.x - 1);
         sprite.y = this.square*(sprite_view.square.y - 1);
       } else {
         this.stage.removeChild(sprite);
-        delete this.sprite_map[id];
+        delete this.sprites[id];
       }
     }
   }
 
-  var log = view.log;
-  if (log.size() > 0) {
+  if (view.log.length > 0) {
     this.log.children().remove();
-    for (var i = 0; i < log.size(); i++) {
-      var line = log.get(i);
-      this.log.append($('<div>').addClass('line').text(line));
+    for (var i = 0; i < view.log.length; i++) {
+      this.log.append($('<div>').addClass('line').text(view.log[i]));
     }
     this.log.show();
   } else {
     this.log.hide();
   }
-  log.delete();
 
   this.status.text(
     'Health: ' + view.status.cur_health + '/' + view.status.max_health);
 
-  view.delete();
   this.renderer.render(this.stage);
 }
 

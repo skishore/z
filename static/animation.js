@@ -54,9 +54,40 @@ BabelAnimation.prototype.Update = function() {
 // The remaining BabelAnimation methods are all private.
 
 BabelAnimation.prototype.Snapshot = function() {
+  var result = {};
   var view = this.bindings.engine.GetView(this.radius);
+
+  result.tiles = [];
+  var tiles = view.tiles;
+  for (var x = 0; x < tiles.size(); x++) {
+    result.tiles.push([]);
+    var column = tiles.get(x);
+    for (var y = 0; y < tiles.size(); y++) {
+      result.tiles[x].push(column.get(y));
+    }
+    column.delete();
+  }
+  tiles.delete();
+
+  result.sprites = {};
+  var sprites = view.sprites;
+  for (var i = 0; i < sprites.size(); i++) {
+    var sprite = sprites.get(i);
+    result.sprites[sprite.id] = sprite;
+  }
+  sprites.delete();
+
+  result.log = []
+  var log = view.log;
+  for (var j = 0; j < log.size(); j++) {
+    result.log.push(log.get(j));
+  }
+  log.delete();
+
+  result.status = view.status;
+
   view.delete();
-  ASSERT(false, "Snapshot is not implemented!");
+  return result;
 }
 
 BabelAnimation.prototype.PushStep = function(step) {
@@ -153,7 +184,7 @@ Tween.prototype.Update = function() {
   return true;
 }
 
-Tween.prototype.Draw(graphics) {
+Tween.prototype.Draw = function(graphics) {
   ASSERT(this.frames_left >= 0, "Tween.Draw called without frames left!");
   if (this.frames_left > 0 && this.events.length > 0) {
     graphics.Draw(this.start, this.transform);
