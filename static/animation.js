@@ -130,9 +130,8 @@ CheckpointComponent.prototype.Draw = function(view, graphics) {
 }
 
 function AttackComponent(target) {
-  var key = '' + target.x + ',' + target.y;
   this.transform = new Transform();
-  this.transform.shaded_squares[key] = {color: 0x00ff0000, alpha: 0.5};
+  this.transform.shaded_sprites[target] = 0xff0000;
   this.frames_left = kAttackFrames;
 }
 
@@ -142,7 +141,7 @@ AttackComponent.prototype.Update = function() {
 }
 
 AttackComponent.prototype.Draw = function(view, graphics) {
-  graphics.Draw(view, transform);
+  graphics.Draw(view, this.transform);
 }
 
 // Implementation of tweening logic.
@@ -238,7 +237,7 @@ function Transform() {
   this.hidden_sprites = {};
 
   // Map from serialized points (2, 3) -> '2,3' to a tint for that square.
-  this.shaded_squares = {};
+  this.shaded_sprites = {};
 }
 
 return BabelAnimation;

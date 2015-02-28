@@ -40,16 +40,16 @@ ActionResult AttackAction::Execute() {
     const string& enemy = target_->creature.appearance.name;
     if (counterattack > 0) {
       game_state_->log.AddLine("You hit the " + enemy + ".");
-      handler_->BeforeAttack(*sprite_, *target_);
+      handler_->BeforeAttack(sprite_->Id(), target_->Id());
       const string followup =
           (counterattack >= sprite_->cur_health ? " You die..." : "");
       game_state_->log.AddLine("The " + enemy + " counters!" + followup);
-      handler_->BeforeAttack(*target_, *sprite_);
+      handler_->BeforeAttack(target_->Id(), sprite_->Id());
       sprite_->cur_health = max(sprite_->cur_health - counterattack, 0);
     }
     if (sprite_->IsAlive()) {
       game_state_->log.AddLine("You kill the " + enemy + ".");
-      handler_->BeforeAttack(*sprite_, *target_);
+      handler_->BeforeAttack(sprite_->Id(), target_->Id());
       game_state_->RemoveNPC(target_);
     }
     result.success = true;
@@ -64,7 +64,7 @@ ActionResult AttackAction::Execute() {
   const string followup = (damage >= target_->cur_health ? " You die..." : "");
   game_state_->log.AddLine(
       "The " + sprite_->creature.appearance.name + " hits!" + followup);
-  handler_->BeforeAttack(*sprite_, *target_);
+  handler_->BeforeAttack(sprite_->Id(), target_->Id());
   target_->cur_health = max(target_->cur_health - damage, 0);
   result.success = true;
   return result;

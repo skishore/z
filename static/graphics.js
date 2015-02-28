@@ -75,6 +75,8 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 BabelGraphics.prototype.Reset = function() {
   this.bindings.engine = new Module.BabelEngine();
   this.bindings.animation = new BabelAnimation(this.radius, this.bindings);
+  this.bindings.engine.AddEventHandler(
+      Module.BabelEventHandler.implement(this.bindings.animation));
   this.Draw(this.bindings.animation.last, null);
 }
 
@@ -95,8 +97,7 @@ BabelGraphics.prototype.Draw = function(view, transform) {
     this.container.x = 0;
     this.container.y = 0;
   } else {
-    this.container.x = -transform.camera_offset.x;
-    this.container.y = -transform.camera_offset.y;
+    this.DrawTransformedTiles(view, transform);
   }
   this.renderer.render(this.stage);
 }
@@ -130,6 +131,7 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
         }
         sprite.x = this.square*(sprite_view.square.x - 1) + offset.x;
         sprite.y = this.square*(sprite_view.square.y - 1) + offset.y;
+        sprite.tint = 0xffffff;
       } else {
         this.stage.removeChild(sprite);
         delete this.sprites[id];
@@ -150,6 +152,17 @@ BabelGraphics.prototype.DrawTiles = function(view) {
         tile.tint = (tile_view.visible ? 0xffffff : 0x888888);
         tile.visible = true;
       }
+    }
+  }
+}
+
+BabelGraphics.prototype.DrawTransformedTiles = function(view, transform) {
+  this.container.x = -transform.camera_offset.x;
+  this.container.y = -transform.camera_offset.y;
+  for (var key in transform.shaded_sprites) {
+    if (transform.shaded_sprites.hasOwnProperty(key) &&
+        this.sprites.hasOwnProperty(key)) {
+      this.sprites[key].tint = transform.shaded_sprites[key];
     }
   }
 }

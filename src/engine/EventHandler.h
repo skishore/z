@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "base/point.h"
 #include "engine/Sprite.h"
 
 namespace babel {
@@ -11,13 +10,13 @@ namespace engine {
 
 class EventHandler {
  public:
-  virtual void BeforeAttack(const Sprite& sprite, const Sprite& target) {};
+  virtual void BeforeAttack(sid source, sid target) {};
 };
 
 class DelegatingEventHandler : public EventHandler {
  public:
-  void BeforeAttack(const Sprite& sprite, const Sprite& target) override {
-    for (auto* handler : handlers_) handler->BeforeAttack(sprite, target);
+  void BeforeAttack(sid source, sid target) override {
+    for (auto* handler : handlers_) handler->BeforeAttack(source, target);
   }
 
   std::vector<EventHandler*> handlers_;
