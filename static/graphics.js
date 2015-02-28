@@ -5,6 +5,10 @@ function BabelGraphics(target, bindings) {
   this.target = target;
   this.bindings = bindings;
 
+  this.log = this.target.find('.log');
+  this.status = $('<div>').addClass('line');
+  this.target.find('.status').append(this.status);
+
   // Core graphics constants.
   this.tile_textures = [];
   this.sprite_textures = [];
@@ -131,19 +135,19 @@ BabelGraphics.prototype.Redraw = function() {
   }
 
   var log = view.log;
-  var element = this.target.find('.log');
   if (log.size() > 0) {
-    element.children().remove();
+    this.log.children().remove();
     for (var i = 0; i < log.size(); i++) {
-      element.append($('<div>').addClass('line').text(log.get(i)));
+      var line = log.get(i);
+      this.log.append($('<div>').addClass('line').text(line));
     }
-    element.show();
+    this.log.show();
   } else {
-    element.hide();
+    this.log.hide();
   }
   log.delete();
 
-  this.target.find('.status .line').text(
+  this.status.text(
     'Health: ' + view.status.cur_health + '/' + view.status.max_health);
 
   view.delete();
