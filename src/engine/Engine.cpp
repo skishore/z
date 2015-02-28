@@ -17,7 +17,6 @@ namespace babel {
 namespace engine {
 
 Engine::Engine() : game_state_("world.dat") {
-  DEBUG("Constructing engine.");
   game_state_.log.AddLine(
       "Welcome to Babel! You are a neutral male human neophyte.");
   game_state_.log.Flush(true);
@@ -27,7 +26,6 @@ Engine::~Engine() {
   for (auto* input : inputs_) {
     delete input;
   }
-  DEBUG("Destructing engine.");
 }
 
 void Engine::AddEventHandler(EventHandler* handler) {

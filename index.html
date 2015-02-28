@@ -110,14 +110,12 @@
         };
       };
 
-      var engine;
-      var graphics;
-      var input;
+      var bindings = {};
       function InitializeGraphics() {
-        engine = new Module.BabelEngine();
+        bindings.engine = new Module.BabelEngine();
         var target = document.getElementsByClassName('canvas-wrapper')[0];
-        graphics = new BabelGraphics(target, engine);
-        input = new BabelInput(target, engine);
+        bindings.graphics = new BabelGraphics(target, bindings);
+        bindings.input = new BabelInput(bindings);
       };
     </script>
     <script async type="text/javascript" src="main.js"></script>

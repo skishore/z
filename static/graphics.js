@@ -1,8 +1,8 @@
 var BabelGraphics = function() {
 "use strict";
 
-function BabelGraphics(target, engine) {
-  this.engine = engine;
+function BabelGraphics(target, bindings) {
+  this.bindings = bindings;
 
   // Core graphics constants.
   this.tile_textures = [];
@@ -69,7 +69,7 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
 
 BabelGraphics.prototype.Animate = function() {
   this.stats.begin();
-  if (this.engine.Update()) {
+  if (this.bindings.engine.Update()) {
     this.Redraw();
   }
   requestAnimationFrame(this.Animate.bind(this));
@@ -77,7 +77,7 @@ BabelGraphics.prototype.Animate = function() {
 }
 
 BabelGraphics.prototype.Redraw = function() {
-  var view = this.engine.GetView(this.radius);
+  var view = this.bindings.engine.GetView(this.radius);
 
   var tiles = view.tiles;
   for (var x = 0; x < this.size; x++) {
