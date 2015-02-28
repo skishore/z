@@ -19,12 +19,20 @@ function BabelInput(bindings) {
   window.onkeypress = this.OnKeyPress.bind(this);
 }
 
+BabelInput.prototype.PressRandomKey = function(e) {
+  var key = 'r';
+  while (key === 'r') {
+    key = String.fromCharCode(Math.floor(26*Math.random() + 'a'.charCodeAt(0)));
+  }
+  this.OnKeyPress({keyCode: key.charCodeAt(0), stopPropagation: function() {}});
+}
+
 BabelInput.prototype.OnKeyPress = function(e) {
   var key = String.fromCharCode(e.keyCode);
   if (this.move_map.hasOwnProperty(key)) {
     var move = this.move_map[key];
     this.bindings.engine.AddInput(Module.MakeMoveAction(move));
-  } else if (key == 'r') {
+  } else if (key === 'r') {
     this.bindings.engine.delete();
     this.bindings.engine = new Module.BabelEngine();
     this.bindings.graphics.Redraw();
