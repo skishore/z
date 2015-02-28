@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
+    <script src='jquery.min.js'></script>
     <script src='memory_profiler.js'></script>
     <script src='pixi.dev.js'></script>
     <script src='stats.min.js'></script>
@@ -113,8 +114,7 @@
       var bindings = {};
       function InitializeGraphics() {
         bindings.engine = new Module.BabelEngine();
-        var target = document.getElementsByClassName('canvas-wrapper')[0];
-        bindings.graphics = new BabelGraphics(target, bindings);
+        bindings.graphics = new BabelGraphics($('.canvas-wrapper'), bindings);
         bindings.input = new BabelInput(bindings);
       };
     </script>

@@ -36,10 +36,10 @@ function BabelGraphics(target, bindings) {
   this.renderer.view.style.height = Math.floor(scale*this.height) + "px";
 
   // Insert the new renderer at the top of the DOM.
-  target.appendChild(this.renderer.view);
+  target.append($(this.renderer.view));
 
   this.stats = new PIXI.Stats();
-  document.body.appendChild(this.stats.domElement);
+  $('body').append($(this.stats.domElement));
   this.stats.domElement.style.position = "fixed";
   this.stats.domElement.style.top = "0px";
   this.stats.domElement.style.left = "0px";
