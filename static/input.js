@@ -34,8 +34,7 @@ BabelInput.prototype.OnKeyPress = function(e) {
     this.bindings.engine.AddInput(Module.MakeMoveAction(move));
   } else if (key === 'r') {
     this.bindings.engine.delete();
-    this.bindings.engine = new Module.BabelEngine();
-    this.bindings.graphics.Redraw();
+    this.bindings.graphics.Reset();
   }
   e.stopPropagation();
 }

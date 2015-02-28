@@ -14,7 +14,7 @@ function ASSERT(condition, message) {
 function BabelAnimation(radius, bindings) {
   this.radius = radius;
   this.bindings = bindings;
-  this.last = null;
+  this.last = this.Snapshot();
   this.tween = null;
   this.steps = [];
 }
@@ -38,17 +38,23 @@ BabelAnimation.prototype.Draw = function() {
 }
 
 BabelAnimation.prototype.Update = function() {
-  while (this.steps.length > 0) {
-    if (this.tween !== null && this.tween.Update()) {
-      return true;
+  while (true) {
+    while (this.steps.length > 0) {
+      if (this.tween !== null && this.tween.Update()) {
+        return true;
+      }
+      this.tween = null;
+      if (this.steps[0].component.Update()) {
+        return true;
+      }
+      this.PopStep();
     }
-    this.tween = null;
-    if (this.steps[0].component.Update()) {
-      return true;
+    if (this.bindings.engine.Update()) {
+      this.Checkpoint();
+    } else {
+      return false;
     }
-    PopStep();
   }
-  return false;
 }
 
 // The remaining BabelAnimation methods are all private.
@@ -56,6 +62,8 @@ BabelAnimation.prototype.Update = function() {
 BabelAnimation.prototype.Snapshot = function() {
   var result = {};
   var view = this.bindings.engine.GetView(this.radius);
+
+  result.offset = view.offset;
 
   result.tiles = [];
   var tiles = view.tiles;
@@ -144,7 +152,7 @@ function Tween(start, end) {
   this.end = end;
 
   this.events = [];
-  this.frames_left = kTweenFrames;
+  this.frame = 0;
   this.transform = new Transform();
 
   if (this.end.offset.x !== this.start.offset.x ||
@@ -167,26 +175,27 @@ function Tween(start, end) {
               id, {x: next.x - prev.x, y: next.y - prev.y}));
         }
       } else {
-        this.hidden_sprites[id] = true;
+        this.transform.hidden_sprites[id] = true;
       }
     }
   }
 }
 
 Tween.prototype.Update = function() {
-  this.frames_left -= 1;
-  if (this.frames_left < 0 || this.events.length === 0) {
+  this.frame += 1;
+  if (this.frame > kTweenFrames ||
+      (this.events.length === 0 && this.frame > 1)) {
     return false;
   }
   for (var i = 0; i < this.events.length; i++) {
-    this.events[i].Update(kTweenFrames - this.frames_left, this.transform);
+    this.events[i].Update(this.frame, this.transform);
   }
   return true;
 }
 
 Tween.prototype.Draw = function(graphics) {
-  ASSERT(this.frames_left >= 0, "Tween.Draw called without frames left!");
-  if (this.frames_left > 0 && this.events.length > 0) {
+  ASSERT(this.frame <= kTweenFrames, "Tween.Draw called without frames left!");
+  if (this.frame < kTweenFrames && this.events.length > 0) {
     graphics.Draw(this.start, this.transform);
   } else {
     graphics.Draw(this.end, null);
@@ -223,7 +232,7 @@ function Transform() {
   this.camera_offset = {x: 0, y: 0};
 
   // Map from sprite ID -> pixel offsets for the sprite from the original view.
-  this.sprites_offset = {};
+  this.sprite_offsets = {};
 
   // Map from sprite ID -> true. If the ID is in the map, the sprite is hidden.
   this.hidden_sprites = {};

@@ -59,7 +59,7 @@ EMSCRIPTEN_BINDINGS(engine_view) {
     .function("Update", &engine::Engine::Update);
 
   class_<engine::View>("BabelView")
-    .property("size", &engine::View::size)
+    .property("offset", &engine::View::offset)
     .property("tiles", &engine::View::tiles)
     .property("sprites", &engine::View::sprites)
     .property("log", &engine::View::log)

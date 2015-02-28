@@ -146,7 +146,7 @@
 
       var bindings = {};
       function InitializeGraphics() {
-        bindings.engine = new Module.BabelEngine();
+        // The graphics instance will also create animation and engine objects.
         bindings.graphics = new BabelGraphics($('.canvas-wrapper'), bindings);
         bindings.input = new BabelInput(bindings);
       };

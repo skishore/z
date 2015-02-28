@@ -5,9 +5,6 @@ function BabelGraphics(target, bindings) {
   this.target = target;
   this.bindings = bindings;
 
-  this.radius = 9;
-  this.bindings.animation = new BabelAnimation(this.radius, this.bindings);
-
   this.log = this.target.find('.log');
   this.status = $('<div>').addClass('line');
   this.target.find('.status').append(this.status);
@@ -18,6 +15,7 @@ function BabelGraphics(target, bindings) {
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
   this.num_sprites = 3;
+  this.radius = 9;
   this.size = 2*this.radius + 1;
   this.square = 16;
 
@@ -70,22 +68,77 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
     }
   }
 
-  this.Redraw();
-  requestAnimationFrame(this.Animate.bind(this));
+  this.Reset();
+  requestAnimationFrame(this.Update.bind(this));
 }
 
-BabelGraphics.prototype.Animate = function() {
+BabelGraphics.prototype.Reset = function() {
+  this.bindings.engine = new Module.BabelEngine();
+  this.bindings.animation = new BabelAnimation(this.radius, this.bindings);
+  this.Draw(this.bindings.animation.last, null);
+}
+
+BabelGraphics.prototype.Update = function() {
   this.stats.begin();
-  if (this.bindings.engine.Update()) {
-    this.Redraw();
+  if (this.bindings.animation.Update()) {
+    this.bindings.animation.Draw();
   }
-  requestAnimationFrame(this.Animate.bind(this));
+  requestAnimationFrame(this.Update.bind(this));
   this.stats.end();
 }
 
-BabelGraphics.prototype.Redraw = function() {
-  var view = this.bindings.animation.Snapshot();
+BabelGraphics.prototype.Draw = function(view, transform) {
+  this.DrawSprites(view, transform);
+  if (transform === null) {
+    this.DrawTiles(view);
+    this.DrawUI(view);
+    this.container.x = 0;
+    this.container.y = 0;
+  } else {
+    this.container.x = -transform.camera_offset.x;
+    this.container.y = -transform.camera_offset.y;
+  }
+  this.renderer.render(this.stage);
+}
 
+BabelGraphics.prototype.DrawSprites = function(view, transform) {
+  for (var id in view.sprites) {
+    if (view.sprites.hasOwnProperty(id) &&
+        (transform === null || !transform.hidden_sprites[id])) {
+      if (!this.sprites.hasOwnProperty(id)) {
+        var graphic = view.sprites[id].graphic;
+        var sprite = new PIXI.Sprite(this.sprite_textures[graphic]);
+        this.sprites[id] = sprite;
+        this.stage.addChild(sprite);
+      }
+    }
+  }
+  for (var id in this.sprites) {
+    if (this.sprites.hasOwnProperty(id)) {
+      var sprite = this.sprites[id];
+      if (view.sprites.hasOwnProperty(id) &&
+          (transform === null || !transform.hidden_sprites[id])) {
+        var sprite_view = view.sprites[id];
+        var offset = {x: 0, y: 0};
+        if (transform !== null) {
+          offset.x = -transform.camera_offset.x;
+          offset.y = -transform.camera_offset.y;
+          if (transform.sprite_offsets.hasOwnProperty(id)) {
+            offset.x += transform.sprite_offsets[id].x;
+            offset.y += transform.sprite_offsets[id].y;
+          }
+        }
+        sprite.x = this.square*(sprite_view.square.x - 1) + offset.x;
+        sprite.y = this.square*(sprite_view.square.y - 1) + offset.y;
+      } else {
+        this.stage.removeChild(sprite);
+        delete this.sprites[id];
+      }
+    }
+  }
+}
+
+BabelGraphics.prototype.DrawTiles = function(view) {
   for (var x = 0; x < this.size; x++) {
     for (var y = 0; y < this.size; y++) {
       var tile = this.tiles[this.size*x + y];
@@ -99,31 +152,9 @@ BabelGraphics.prototype.Redraw = function() {
       }
     }
   }
+}
 
-  for (var id in view.sprites) {
-    if (view.sprites.hasOwnProperty(id)) {
-      if (!this.sprites.hasOwnProperty(id)) {
-        var graphic = view.sprites[id].graphic;
-        var sprite = new PIXI.Sprite(this.sprite_textures[graphic]);
-        this.sprites[id] = sprite;
-        this.stage.addChild(sprite);
-      }
-    }
-  }
-  for (var id in this.sprites) {
-    if (this.sprites.hasOwnProperty(id)) {
-      var sprite = this.sprites[id];
-      if (view.sprites.hasOwnProperty(id)) {
-        var sprite_view = view.sprites[id];
-        sprite.x = this.square*(sprite_view.square.x - 1);
-        sprite.y = this.square*(sprite_view.square.y - 1);
-      } else {
-        this.stage.removeChild(sprite);
-        delete this.sprites[id];
-      }
-    }
-  }
-
+BabelGraphics.prototype.DrawUI = function(view) {
   if (view.log.length > 0) {
     this.log.children().remove();
     for (var i = 0; i < view.log.length; i++) {
@@ -136,8 +167,6 @@ BabelGraphics.prototype.Redraw = function() {
 
   this.status.text(
     'Health: ' + view.status.cur_health + '/' + view.status.max_health);
-
-  this.renderer.render(this.stage);
 }
 
 return BabelGraphics;
