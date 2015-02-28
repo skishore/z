@@ -21,9 +21,36 @@
         background-color: #363636;
       }
 
-      .canvas-wrapper {
+      .canvas-outer {
         margin: 16px auto;
         text-align: center;
+      }
+
+      .canvas-outer .canvas-wrapper {
+        display: inline-block;
+        position: relative;
+        text-align: left;
+      }
+
+      .canvas-outer .canvas-wrapper .log,
+      .canvas-outer .canvas-wrapper .status {
+        position: absolute;
+        left: 0;
+        right: 0;
+        background-color: #002266;
+        border: 1px solid white;
+        border-radius: 2px;
+        margin: 8px;
+      }
+
+      .canvas-outer .canvas-wrapper .status {
+        bottom: 4px;
+      }
+
+      .canvas-outer .canvas-wrapper .line {
+        color: white;
+        font-size: 12px;
+        margin: 4px 8px;
       }
 
       .stdout-wrapper {
@@ -50,7 +77,12 @@
     </style>
   </head>
   <body>
-    <div class="canvas-wrapper"></div>
+    <div class="canvas-outer">
+      <div class="canvas-wrapper">
+        <div class="log"></div>
+        <div class="status"><div class="line"></div></div>
+      </div>
+    </div>
     <div class="stdout-wrapper">
       <textarea id="stdout"></textarea>
     </div>

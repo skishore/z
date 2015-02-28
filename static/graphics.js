@@ -2,6 +2,7 @@ var BabelGraphics = function() {
 "use strict";
 
 function BabelGraphics(target, bindings) {
+  this.target = target;
   this.bindings = bindings;
 
   // Core graphics constants.
@@ -31,12 +32,12 @@ function BabelGraphics(target, bindings) {
   this.height = (this.size - 2)*this.square;
   this.renderer = PIXI.autoDetectRenderer(this.width, this.height);
 
-  var scale = 1.25;
+  var scale = 1.5;
   this.renderer.view.style.width = Math.floor(scale*this.width) + "px";
   this.renderer.view.style.height = Math.floor(scale*this.height) + "px";
 
   // Insert the new renderer at the top of the DOM.
-  target.append($(this.renderer.view));
+  this.target.append($(this.renderer.view));
 
   this.stats = new PIXI.Stats();
   $('body').append($(this.stats.domElement));
@@ -128,6 +129,22 @@ BabelGraphics.prototype.Redraw = function() {
       }
     }
   }
+
+  var log = view.log;
+  var element = this.target.find('.log');
+  if (log.size() > 0) {
+    element.children().remove();
+    for (var i = 0; i < log.size(); i++) {
+      element.append($('<div>').addClass('line').text(log.get(i)));
+    }
+    element.show();
+  } else {
+    element.hide();
+  }
+  log.delete();
+
+  this.target.find('.status .line').text(
+    'Health: ' + view.status.cur_health + '/' + view.status.max_health);
 
   view.delete();
   this.renderer.render(this.stage);
