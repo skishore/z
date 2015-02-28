@@ -23,7 +23,7 @@ EMCC_FLAGS := $(BASE_CC_FLAGS) -Isrc #-s USE_SDL=2 $(addprefix -Icompiled-byteco
 EMCC_LD_FLAGS := $(EMCC_FLAGS) #compiled-bytecode/lib/freetype2/* compiled-bytecode/lib/harfbuzz/*
 
 all:
-	make exe
+	make html
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
@@ -34,6 +34,9 @@ clean:
 exe: $(BUILD) $(EXECUTABLE)
 
 html: $(BUILD) $(HTML)
+	cp index.html build/main.html
+	cp static/* build/.
+	cp images/*.png build/.
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -51,9 +54,6 @@ $(BUILD)/%.obj: %.c
 $(HTML):	$(EMCC_OBJ_FILES)
 	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
-	cp index.html build/main.html
-	cp static/* build/.
-	cp images/*.png build/.
 
 $(BUILD)/%.o: %.cpp
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<
