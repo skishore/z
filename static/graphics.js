@@ -89,6 +89,7 @@ BabelGraphics.prototype.Redraw = function() {
         tile.visible = false;
       } else {
         tile.setTexture(this.tile_textures[tile_view.graphic]);
+        tile.tint = (tile_view.visible ? 0xffffff : 0x888888);
         tile.visible = true;
       }
     }
