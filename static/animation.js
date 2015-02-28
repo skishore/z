@@ -19,8 +19,10 @@ function BabelAnimation(radius, bindings) {
   this.steps = [];
 }
 
-BabelAnimation.prototype.BeforeAttack = function(source, dest) {
-  this.PushStep({component: new AttackComponent(dest), view: this.Snapshot()});
+BabelAnimation.prototype.BeforeAttack = function(source, target) {
+  var view = this.Snapshot();
+  var component = new AttackComponent(view, source, target);
+  this.PushStep({component: component, view: view});
 }
 
 BabelAnimation.prototype.Checkpoint = function() {
@@ -129,13 +131,27 @@ CheckpointComponent.prototype.Draw = function(view, graphics) {
   ASSERT(false, "CheckpointComponent.Draw should never be called!");
 }
 
-function AttackComponent(target) {
+function AttackComponent(view, source, target) {
+  this.source = source;
+  var move = {x: 0, y: 0};
+  if (view.sprites.hasOwnProperty(source) &&
+      view.sprites.hasOwnProperty(target)) {
+    var start = view.sprites[source].square;
+    var end = view.sprites[target].square;
+    move.x = kGridSize*(end.x - start.x)/4;
+    move.y = kGridSize*(end.y - start.y)/4;
+  }
+
   this.transform = new Transform();
+  this.transform.sprite_offsets[source] = move;
   this.transform.shaded_sprites[target] = 0xff0000;
   this.frames_left = kAttackFrames;
 }
 
 AttackComponent.prototype.Update = function() {
+  if (this.frames_left < kAttackFrames) {
+    delete this.transform.sprite_offsets[this.source];
+  }
   this.frames_left -= 1;
   return this.frames_left >= 0;
 }
