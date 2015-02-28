@@ -32,11 +32,12 @@ void Engine::AddEventHandler(EventHandler* handler) {
   handler_.handlers_.push_back(handler);
 }
 
-interface::Dialog* Engine::GetDialog() {
-  return (interrupt_ == nullptr ? nullptr : interrupt_->dialog_.get());
+void Engine::AddInput(Action* input) {
+  ASSERT(input != nullptr, "Added null Action!");
+  inputs_.push_back(input);
 }
 
-bool Engine::Update(Action* input) {
+bool Engine::Update() {
   bool changed = false;
   unique_ptr<Action> action;
 
@@ -60,11 +61,11 @@ bool Engine::Update(Action* input) {
     if (interrupt_ != nullptr) {
       action.reset(interrupt_.release());
     } else if (sprite->IsPlayer()) {
-      if (input == nullptr) {
+      if (inputs_.size() == 0) {
         break;
       }
-      action.reset(input);
-      input = nullptr;
+      action.reset(inputs_.back());
+      inputs_.pop_back();
     } else {
       action.reset(sprite->GetAction(game_state_));
     }
@@ -91,11 +92,16 @@ bool Engine::Update(Action* input) {
     }
   }
 
-  if (input != nullptr) {
+  for (auto* input : inputs_) {
     delete input;
   }
+  inputs_.clear();
   game_state_.log.Flush(changed);
   return changed;
+}
+
+interface::Dialog* Engine::GetDialog() const {
+  return (interrupt_ == nullptr ? nullptr : interrupt_->dialog_.get());
 }
 
 const View* Engine::GetView(int radius) const {

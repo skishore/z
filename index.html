@@ -9,6 +9,7 @@
     <script src='stats.min.js'></script>
 
     <script src='graphics.js'></script>
+    <script src='input.js'></script>
 
     <title>Emscripten-Generated Code</title>
     <style>
@@ -111,10 +112,12 @@
 
       var engine;
       var graphics;
+      var input;
       function InitializeGraphics() {
         engine = new Module.BabelEngine();
         var target = document.getElementsByClassName('canvas-wrapper')[0];
         graphics = new BabelGraphics(target, engine);
+        input = new BabelInput(target, engine);
       };
     </script>
     <script async type="text/javascript" src="main.js"></script>

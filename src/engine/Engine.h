@@ -1,8 +1,8 @@
 #ifndef __BABEL_ENGINE_ENGINE_H__
 #define __BABEL_ENGINE_ENGINE_H__
 
+#include <deque>
 #include <memory>
-#include <vector>
 
 #include "base/point.h"
 #include "engine/Action.h"
@@ -20,14 +20,18 @@ class Engine {
   Engine();
   ~Engine();
 
+  // Does NOT take ownership of the input EventHandler.
   void AddEventHandler(EventHandler* handler);
 
-  // Returns a non-null dialog if this game is blocking on input.
-  interface::Dialog* GetDialog();
+  // Takes ownership of the input Action.
+  void AddInput(Action* input);
 
-  // Runs a single update step. The player's input action may be null.
-  // If the input is not null, this method will take ownership of it.
-  bool Update(Action* input);
+  // Runs a single update step. Returns true if the graphics need to be
+  // redrawn because something changed.
+  bool Update();
+
+  // Returns a non-null dialog if this game is blocking on input.
+  interface::Dialog* GetDialog() const;
 
   // The caller takes ownership of the new view.
   const View* GetView(int radius) const;
@@ -35,6 +39,7 @@ class Engine {
  private:
   GameState game_state_;
   DelegatingEventHandler handler_;
+  std::deque<Action*> inputs_;
   std::unique_ptr<Action> interrupt_;
 };
 

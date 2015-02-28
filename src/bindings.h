@@ -54,8 +54,9 @@ EMSCRIPTEN_BINDINGS(action) {
 EMSCRIPTEN_BINDINGS(engine_view) {
   class_<engine::Engine>("BabelEngine")
     .constructor<>()
+    .function("AddInput", &engine::Engine::AddInput, allow_raw_pointers())
     .function("GetView", &engine::Engine::GetView, allow_raw_pointers())
-    .function("Update", &engine::Engine::Update, allow_raw_pointers());
+    .function("Update", &engine::Engine::Update);
 
   class_<engine::View>("BabelView")
     .property("size", &engine::View::size)

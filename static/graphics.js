@@ -63,17 +63,20 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
     }
   }
 
+  this.Redraw();
   requestAnimationFrame(this.Animate.bind(this));
 }
 
 BabelGraphics.prototype.Animate = function() {
   this.stats.begin();
+  if (this.engine.Update()) {
+    this.Redraw();
+  }
+  requestAnimationFrame(this.Animate.bind(this));
+  this.stats.end();
+}
 
-  var move = {x: Math.floor(3*Math.random() - 1),
-              y: Math.floor(3*Math.random() - 1)};
-  var action = Module.MakeMoveAction(move);
-  this.engine.Update(action);
-
+BabelGraphics.prototype.Redraw = function() {
   var view = this.engine.GetView(this.radius);
 
   var tiles = view.tiles;
@@ -127,8 +130,6 @@ BabelGraphics.prototype.Animate = function() {
 
   view.delete();
   this.renderer.render(this.stage);
-  requestAnimationFrame(this.Animate.bind(this));
-  this.stats.end();
 }
 
 return BabelGraphics;
