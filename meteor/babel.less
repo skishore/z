@@ -1,8 +1,53 @@
+@ui-color: white;
+@ui-background-color: #002266;
+@ui-border: 1px solid @ui-color;
+@ui-font-size: 12px;
+@ui-line-margin: 4px 8px;
+@ui-border-radius: 2px;
+
+@text-arrow-size: 3*@ui-font-size/4;
+
 body {
   font-family: arial;
   margin: 0;
   padding: 0;
   background-color: #363636;
+}
+
+.triangle-border {
+  position: relative;
+  display: inline-block;
+
+  background-color: @ui-background-color;
+  border: @ui-border;
+  border-radius: @ui-border-radius;
+  color: @ui-color;
+  font-size: @ui-font-size;
+  padding: @ui-line-margin;
+
+  margin-left: 400px;
+
+  &:before, &:after {
+    border-style: solid;
+    content: "";
+    display: block;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 0;
+  }
+
+  &:before {
+    bottom: -@text-arrow-size;
+    border-width: @text-arrow-size @text-arrow-size 0;
+    border-color: @ui-color transparent;
+  }
+
+  &:after {
+    bottom: -(@text-arrow-size - 1px);
+    border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+    border-color: @ui-background-color transparent;
+  }
 }
 
 .canvas-outer {
@@ -18,15 +63,15 @@ body {
       position: absolute;
       left: 0;
       right: 0;
-      background-color: #002266;
-      border: 1px solid white;
-      border-radius: 2px;
+      background-color: @ui-background-color;
+      border: @ui-border;
+      border-radius: @ui-border-radius;
       margin: 8px;
 
       .line {
-        color: white;
-        font-size: 12px;
-        margin: 4px 8px;
+        color: @ui-color;
+        font-size: @ui-font-size;
+        margin: @ui-line-margin;
       }
     }
 
