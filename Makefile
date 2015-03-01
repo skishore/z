@@ -27,16 +27,15 @@ all:
 
 clean:
 	rm -f $(EXECUTABLE) $(BUILD)/*.obj
-	rm -f $(HTML) $(HTML).mem $(BUILD)/*.js $(BUILD)/*.json $(BUILD)/*.png $(BUILD)/*.data $(BUILD)/*.o
+	rm -f $(HTML) $(BUILD)/*.data $(BUILD)/*.js $(BUILD)/*.json $(BUILD)/*.o $(BUILD)/*.png
 	rm -f $(BUILD)/*.d $(BUILD)/*.ccd $(BUILD)/*.emccd
 	rmdir -p $(BUILD)
 
 exe: $(BUILD) $(EXECUTABLE)
 
 html: $(BUILD) $(HTML)
-	cp index.html build/main.html
-	cp static/* build/.
-	cp images/*.png build/.
+	# Uncomment this line if we need to regenerate the static image files.
+	#cp images/*.png meteor/public/.
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -54,6 +53,12 @@ $(BUILD)/%.obj: %.c
 $(HTML):	$(EMCC_OBJ_FILES)
 	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
 	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
+	# Override Meteor scope guards for the Module global object.
+	sed -i '.bak' 's/var Module/var Module = window.Module/g' $(BUILD)/main.js
+	rm $(BUILD)/main.js.bak
+	# Move the newly compiled files into Meteor-controlled directories.
+	cp $(BUILD)/main.js meteor/client/bin/main.js
+	cp $(BUILD)/main.data meteor/public/main.data
 
 $(BUILD)/%.o: %.cpp
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<

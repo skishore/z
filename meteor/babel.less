@@ -1,0 +1,60 @@
+body {
+  font-family: arial;
+  margin: 0;
+  padding: 0;
+  background-color: #363636;
+}
+
+.canvas-outer {
+  margin: 16px auto;
+  text-align: center;
+}
+
+.canvas-outer .canvas-wrapper {
+  display: inline-block;
+  position: relative;
+  text-align: left;
+}
+
+.canvas-outer .canvas-wrapper .log,
+.canvas-outer .canvas-wrapper .status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: #002266;
+  border: 1px solid white;
+  border-radius: 2px;
+  margin: 8px;
+}
+
+.canvas-outer .canvas-wrapper .status {
+  bottom: 4px;
+}
+
+.canvas-outer .canvas-wrapper .line {
+  color: white;
+  font-size: 12px;
+  margin: 4px 8px;
+}
+
+.stdout-wrapper {
+  /* display: none; */
+  margin: 0 auto;
+  width: 600px;
+  height: 150px;
+}
+
+#stdout {
+  height: 100%;
+  width: 100%;
+
+  display: block;
+  border: none;
+  margin: 0;
+  padding: 0;
+
+  background-color: black;
+  color: white;
+  font-family: 'Lucida Console', Monaco, monospace;
+  outline: none;
+}
