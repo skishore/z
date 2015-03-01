@@ -168,18 +168,9 @@ BabelGraphics.prototype.DrawTransformedTiles = function(view, transform) {
 }
 
 BabelGraphics.prototype.DrawUI = function(view) {
-  if (view.log.length > 0) {
-    this.log.children().remove();
-    for (var i = 0; i < view.log.length; i++) {
-      this.log.append($('<div>').addClass('line').text(view.log[i]));
-    }
-    this.log.show();
-  } else {
-    this.log.hide();
-  }
-
-  this.status.text(
-    'Health: ' + view.status.cur_health + '/' + view.status.max_health);
+  Session.set('log', view.log);
+  Session.set('status.cur_health', view.status.cur_health);
+  Session.set('status.max_health', view.status.max_health);
 }
 
 return BabelGraphics;

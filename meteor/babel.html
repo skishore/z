@@ -6,11 +6,25 @@
 <body>
   <div class="canvas-outer">
     <div class="canvas-wrapper">
-      <div class="log"></div>
-      <div class="status"></div>
+      {{> log }}
+      {{> status }}
     </div>
   </div>
   <div class="stdout-wrapper">
     <textarea id="stdout"></textarea>
   </div>
 </body>
+
+<template name="log">
+  <div class="log" style="display: {{display}}">
+    {{#each lines}}
+      <div class="line">{{this}}</div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="status">
+  <div class="status">
+    <div class="line">Health: {{cur_health}}/{{max_health}}</div>
+  </div>
+</template>
