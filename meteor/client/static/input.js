@@ -1,8 +1,9 @@
 window.BabelInput = function() {
 "use strict";
 
-function BabelInput(bindings) {
-  this.bindings = bindings;
+function BabelInput(engine, reset) {
+  this.engine = engine;
+  this.reset = reset;
 
   this.move_map = {
     'h': {x: -1, y: 0},
@@ -31,10 +32,9 @@ BabelInput.prototype.OnKeyPress = function(e) {
   var key = String.fromCharCode(e.keyCode);
   if (this.move_map.hasOwnProperty(key)) {
     var move = this.move_map[key];
-    this.bindings.engine.AddInput(Module.MakeMoveAction(move));
+    this.engine.AddInput(Module.MakeMoveAction(move));
   } else if (key === 'r') {
-    this.bindings.engine.delete();
-    this.bindings.graphics.Reset();
+    this.reset();
   }
   e.stopPropagation();
 }

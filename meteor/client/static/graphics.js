@@ -1,9 +1,10 @@
 window.BabelGraphics = function() {
 "use strict";
 
-function BabelGraphics(target, bindings) {
+function BabelGraphics(target, radius, onload) {
   this.target = target;
-  this.bindings = bindings;
+  this.radius = radius;
+  this.onload = onload;
 
   this.log = this.target.find('.log');
   this.status = $('<div>').addClass('line');
@@ -15,7 +16,6 @@ function BabelGraphics(target, bindings) {
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
   this.num_sprites = 3;
-  this.radius = 9;
   this.size = 2*this.radius + 1;
   this.square = 16;
 
@@ -67,23 +67,18 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
       this.container.addChild(tile);
     }
   }
-
-  this.Reset();
-  requestAnimationFrame(this.Update.bind(this));
+  this.onload();
 }
 
-BabelGraphics.prototype.Reset = function() {
-  this.bindings.engine = new Module.BabelEngine();
-  this.bindings.animation = new BabelAnimation(this.radius, this.bindings);
-  this.bindings.engine.AddEventHandler(
-      Module.BabelEventHandler.implement(this.bindings.animation));
-  this.Draw(this.bindings.animation.last, null);
+BabelGraphics.prototype.Reset = function(animation) {
+  this.animation = animation;
+  this.Draw(this.animation.last, null);
 }
 
 BabelGraphics.prototype.Update = function() {
   this.stats.begin();
-  if (this.bindings.animation.Update()) {
-    this.bindings.animation.Draw();
+  if (this.animation.Update()) {
+    this.animation.Draw();
   }
   requestAnimationFrame(this.Update.bind(this));
   this.stats.end();

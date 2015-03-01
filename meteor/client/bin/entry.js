@@ -1,7 +1,7 @@
 var Module = {
   //preRun: [memoryprofiler_add_hooks],
   preRun: [],
-  postRun: [InitializeGraphics],
+  postRun: [InitializeBindings],
   print: (function() {
     return function(text) {
       var element = document.getElementById('stdout');
@@ -40,15 +40,11 @@ Module.setStatus('Downloading...');
 // Use the default amount of memory, 16Mb.
 //Module.TOTAL_MEMORY = 32*1024*1024;
 
-var bindings = {};
-function InitializeGraphics() {
-  // The graphics instance will also create animation and engine objects.
-  bindings.graphics = new BabelGraphics($('.canvas-wrapper'), bindings);
-  bindings.input = new BabelInput(bindings);
+function InitializeBindings() {
+  window.bindings = new BabelBindings($('.canvas-wrapper'));
 };
 
 window.Module = Module;
-window.bindings = bindings;
 
 window.onerror = function(event) {
   // TODO: do not warn on ok events like simulating an infinite loop or exitStatus

@@ -11,9 +11,10 @@ function ASSERT(condition, message) {
   }
 }
 
-function BabelAnimation(radius, bindings) {
+function BabelAnimation(engine, graphics, radius) {
+  this.engine = engine;
+  this.graphics = graphics;
   this.radius = radius;
-  this.bindings = bindings;
   this.last = this.Snapshot();
   this.tween = null;
   this.steps = [];
@@ -31,9 +32,9 @@ BabelAnimation.prototype.Checkpoint = function() {
 
 BabelAnimation.prototype.Draw = function() {
   if (this.tween !== null) {
-    this.tween.Draw(this.bindings.graphics);
+    this.tween.Draw(this.graphics);
   } else if (this.steps.length > 0) {
-    this.steps[0].component.Draw(this.steps[0].view, this.bindings.graphics);
+    this.steps[0].component.Draw(this.steps[0].view, this.graphics);
   } else {
     ASSERT(false, "Draw called while no animation was running!");
   }
@@ -51,7 +52,7 @@ BabelAnimation.prototype.Update = function() {
       }
       this.PopStep();
     }
-    if (this.bindings.engine.Update()) {
+    if (this.engine.Update()) {
       this.Checkpoint();
     } else {
       return false;
@@ -63,7 +64,7 @@ BabelAnimation.prototype.Update = function() {
 
 BabelAnimation.prototype.Snapshot = function() {
   var result = {};
-  var view = this.bindings.engine.GetView(this.radius);
+  var view = this.engine.GetView(this.radius);
 
   result.offset = view.offset;
 
