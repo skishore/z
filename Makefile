@@ -34,7 +34,7 @@ clean:
 exe: $(BUILD) $(EXECUTABLE)
 
 html: $(BUILD) $(HTML)
-	# Uncomment this line if we need to regenerate the static image files.
+	# Uncomment this line to regenerate the static image files.
 	#cp images/*.png meteor/public/.
 
 $(BUILD):
