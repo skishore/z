@@ -3,15 +3,13 @@ var Module = {
   preRun: [],
   postRun: [InitializeGraphics],
   print: (function() {
-    var element = document.getElementById('stdout');
-    if (element) element.value = ''; // clear browser cache
     return function(text) {
-      text = Array.prototype.slice.call(arguments).join(' ');
-      console.log(text);
+      var element = document.getElementById('stdout');
       if (element) {
         element.value += text + "\n";
         element.scrollTop = element.scrollHeight; // focus on bottom
       }
+      console.log(text);
     };
   })(),
   printErr: function(text) {
