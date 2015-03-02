@@ -4,8 +4,6 @@
   <title>Babel</title>
 </head>
 <body>
-  <div class="triangle-border">test speech bubble</div>
-
   <div class="canvas-outer">
     <div class="canvas-wrapper">
       {{> log }}
@@ -18,7 +16,7 @@
 </body>
 
 <template name="log">
-  <div class="log" style="display: {{display}}">
+  <div class="log ui-element" style="display: {{display}}">
     {{#each lines}}
       <div class="line">{{this}}</div>
     {{/each}}
@@ -26,7 +24,7 @@
 </template>
 
 <template name="status">
-  <div class="status">
+  <div class="status ui-element">
     <div class="line">Health: {{cur_health}}/{{max_health}}</div>
   </div>
 </template>

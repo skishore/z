@@ -36,9 +36,9 @@ function BabelGraphics(target, radius, onload) {
   this.height = (this.size - 2)*this.square;
   this.renderer = PIXI.autoDetectRenderer(this.width, this.height);
 
-  var scale = 1.5;
-  this.renderer.view.style.width = Math.floor(scale*this.width) + "px";
-  this.renderer.view.style.height = Math.floor(scale*this.height) + "px";
+  this.scale = 1.5;
+  this.renderer.view.style.width = Math.floor(this.scale*this.width) + "px";
+  this.renderer.view.style.height = Math.floor(this.scale*this.height) + "px";
 
   // Insert the new renderer at the top of the DOM.
   this.target.append($(this.renderer.view));
@@ -166,6 +166,20 @@ BabelGraphics.prototype.DrawUI = function(view) {
   Session.set('log', view.log);
   Session.set('status.cur_health', view.status.cur_health);
   Session.set('status.max_health', view.status.max_health);
+}
+
+BabelGraphics.prototype.ShowText = function(x, y, text) {
+  var line = $('<div>').addClass('line').text(text);
+  var element = $('<div>').addClass('triangle-down ui-element').append(line);
+  element.css({
+    left: Math.floor(this.scale*(this.radius + x - 0.5)*this.square),
+    top: Math.floor(this.scale*(this.radius + y - 0.5)*this.square)});
+  this.target.append(element);
+  element.width(element.width());
+  //$('.triangle-down').remove(); bindings.graphics.ShowText(4, 2, '?');
+  //move('.triangle-down')
+  //  .set('top', (1.5*$('.triangle-down').height() + 43) + 'px')
+  //  .set('left', '50%').set('width', '390px').end()
 }
 
 return BabelGraphics;
