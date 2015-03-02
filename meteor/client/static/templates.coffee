@@ -1,3 +1,8 @@
+Session.set 'dialog.active', undefined
+Session.set 'log', undefined
+Session.set 'status.cur_health', undefined
+Session.set 'status.max_health', undefined
+
 Template.log.helpers {
   dialog: -> Session.get 'dialog.active'
   display: ->

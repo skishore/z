@@ -68,21 +68,21 @@ animate = ->
   do typing.reset
   do typing.force_redraw
   margin_top = "-#{do $('.typing').height}px"
-  move('.typing-inner').set('margin-top', margin_top).duration('0.25s').end ->
+  move('.typing-inner').set('margin-top', margin_top).duration('0.4s').end ->
     Session.set 'typing.last_line', undefined
     $('.typing-inner').attr 'style', ''
     do $('.segments:first-child').empty
     $('.segments:last-child').css 'top', '50%'
 
 
-Template.typing.last_line = ->
-  data = Session.get 'typing.last_line'
-  if data?
-    Meteor.setTimeout animate, 0
-  data
-
-Template.typing.current_line = ->
-  Session.get 'typing.current_line'
+Template.typing.helpers {
+  current_line: -> Session.get 'typing.current_line'
+  last_line: ->
+    data = Session.get 'typing.last_line'
+    if data?
+      Meteor.setTimeout animate, 0
+    data
+}
 
 
 class @BabelDialog
