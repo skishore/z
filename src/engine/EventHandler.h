@@ -10,13 +10,18 @@ namespace engine {
 
 class EventHandler {
  public:
-  virtual void BeforeAttack(sid source, sid target) {};
+  virtual void BeforeAttack(sid source, sid target) = 0;
+  virtual void LaunchDialog(const Point& source) = 0;
 };
 
 class DelegatingEventHandler : public EventHandler {
  public:
   void BeforeAttack(sid source, sid target) override {
     for (auto* handler : handlers_) handler->BeforeAttack(source, target);
+  }
+
+  void LaunchDialog(const Point& source) override {
+    for (auto* handler : handlers_) handler->LaunchDialog(source);
   }
 
   std::vector<EventHandler*> handlers_;

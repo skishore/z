@@ -20,6 +20,9 @@
     {{#each lines}}
       <div class="line">{{this}}</div>
     {{/each}}
+    {{#if dialog}}
+      {{> typing}}
+    {{/if}}
   </div>
 </template>
 

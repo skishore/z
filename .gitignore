@@ -2,3 +2,5 @@
 *.swp
 .DS_Store
 build
+meteor/client/bin/main.js
+meteor/public/main.data

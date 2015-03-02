@@ -1,0 +1,56 @@
+.ui-element {
+  > .typing {
+    font-family: Times New Roman, serif;
+    font-size: 32px;
+    height: 80px;
+    margin: 0 auto;
+    overflow: hidden;
+    text-align: center;
+    width: 100%;
+
+    > .typing-inner {
+      position: relative;
+      height: 100%;
+      width: 100%;
+
+      > .segments {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+
+        > .segment {
+          color: white;
+          float: left;
+
+          &.correct {
+            color: #8f4;
+          }
+
+          > .answer {
+            font-size: 50%;
+            margin: 4px 0 8px;
+
+            > .cursor, .text, .guide {
+              display: inline-block;
+            }
+
+            > .cursor {
+              background-color: #ccc;
+              color: #888;
+
+              &.fixed-width {
+                width: 0.5em;
+              }
+            }
+
+            > .guide {
+              color: #ccc;
+            }
+          }
+        }
+      }
+    }
+  }
+}

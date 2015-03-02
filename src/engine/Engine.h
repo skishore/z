@@ -10,7 +10,6 @@
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
 #include "engine/View.h"
-#include "interface/Dialog.h"
 
 namespace babel {
 namespace engine {
@@ -30,9 +29,6 @@ class Engine {
   // redrawn because something changed.
   bool Update();
 
-  // Returns a non-null dialog if this game is blocking on input.
-  interface::Dialog* GetDialog() const;
-
   // The caller takes ownership of the new view.
   View* GetView(int radius) const;
 
@@ -40,7 +36,6 @@ class Engine {
   GameState game_state_;
   DelegatingEventHandler handler_;
   std::deque<Action*> inputs_;
-  std::unique_ptr<Action> interrupt_;
 };
 
 }  // namespace engine

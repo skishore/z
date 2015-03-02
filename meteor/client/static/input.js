@@ -17,7 +17,23 @@ function BabelInput(engine, reset) {
     '.': {x: 0, y: 0},
   };
 
+  Session.set('dialog.active', false);
+  this.dialog = null;
+
   window.onkeypress = this.OnKeyPress.bind(this);
+}
+
+BabelInput.prototype.OnKeyPress = function(e) {
+  var key = String.fromCharCode(e.keyCode);
+  if (this.dialog !== null) {
+    this.dialog.OnTextInput(key);
+  } else if (this.move_map.hasOwnProperty(key)) {
+    var move = this.move_map[key];
+    this.engine.AddInput(Module.MakeMoveAction(move));
+  } else if (key === 'r') {
+    this.reset();
+  }
+  e.stopPropagation();
 }
 
 BabelInput.prototype.PressRandomKey = function(e) {
@@ -28,15 +44,9 @@ BabelInput.prototype.PressRandomKey = function(e) {
   this.OnKeyPress({keyCode: key.charCodeAt(0), stopPropagation: function() {}});
 }
 
-BabelInput.prototype.OnKeyPress = function(e) {
-  var key = String.fromCharCode(e.keyCode);
-  if (this.move_map.hasOwnProperty(key)) {
-    var move = this.move_map[key];
-    this.engine.AddInput(Module.MakeMoveAction(move));
-  } else if (key === 'r') {
-    this.reset();
-  }
-  e.stopPropagation();
+BabelInput.prototype.RegisterDialog = function(dialog) {
+  Session.set('dialog.active', true);
+  this.dialog = dialog;
 }
 
 return BabelInput;

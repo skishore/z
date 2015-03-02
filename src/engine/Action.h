@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "base/point.h"
-#include "interface/Dialog.h"
-#include "interface/Game.h"
 
 namespace babel {
 
@@ -32,8 +30,6 @@ class Action {
   void Bind(Sprite* sprite, GameState* game_state, EventHandler* handler);
   virtual ActionResult Execute() = 0;
 
-  std::unique_ptr<interface::Dialog> dialog_;
-
  protected:
   Sprite* sprite_ = nullptr;
   GameState* game_state_ = nullptr;
@@ -47,8 +43,6 @@ class AttackAction : public Action {
 
  private:
   Sprite* target_;
-  // TODO(skishore): We should play a semantic game on some attacks.
-  //const interface::Game* game_;
 };
 
 class MoveAction : public Action {

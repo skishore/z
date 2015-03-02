@@ -1,0 +1,33 @@
+<template name="typing">
+  <div class="typing">
+    <div class="typing-inner">
+      {{> segments last_line}}
+      {{> segments current_line}}
+    </div>
+  </div>
+</template>
+
+<template name="segments">
+  <div class="segments">
+    {{#each segments}}
+      <div class="segment {{class}}" style="width: {{width}}">
+        <div class="text">{{segment}}</div>
+        {{> entry entry}}
+      </div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="entry">
+  <div class="answer">
+    <div class="text">{{text}}</div><!--
+ -->{{#if show_cursor}}<!--
+   -->{{#if cursor.length}}<!--
+     --><div class="cursor">{{cursor}}</div><!--
+   -->{{else}}<!--
+     --><div class="fixed-width cursor">&nbsp;</div><!--
+   -->{{/if}}<!--
+ -->{{/if}}<!--
+ --><div class="guide">{{guide}}</div>
+  </div>
+</template>

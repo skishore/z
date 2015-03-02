@@ -45,8 +45,7 @@ bool Engine::Update() {
   game_state_.log.Open();
 
   while (true) {
-    if (!game_state_.player->IsAlive() ||
-        (interrupt_ != nullptr && interrupt_->dialog_->Active())) {
+    if (!game_state_.player->IsAlive()) {
       break;
     }
     // Find the next sprite with enough energy to move.
@@ -56,12 +55,9 @@ bool Engine::Update() {
       game_state_.AdvanceSprite();
       continue;
     }
-    // Retrieve that sprite's next action. If we have a stored action that
-    // triggered a UI-layer interrupt, use it; else, use the input action for
-    // the player or an AI action for an NPC.
-    if (interrupt_ != nullptr) {
-      action.reset(interrupt_.release());
-    } else if (sprite->IsPlayer()) {
+    // Retrieve that sprite's next action, pulling from the input actions for
+    // the player or getting an AI action for an NPC.
+    if (sprite->IsPlayer()) {
       if (inputs_.size() == 0) {
         break;
       }
@@ -77,8 +73,6 @@ bool Engine::Update() {
       result = action->Execute();
       if (result.stalled) {
         ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");
-        ASSERT(action->dialog_  != nullptr, "Stalled Action has no dialog!");
-        interrupt_.reset(action.release());
         changed = true;
         break;
       }
@@ -99,10 +93,6 @@ bool Engine::Update() {
   inputs_.clear();
   game_state_.log.Flush(changed);
   return changed;
-}
-
-interface::Dialog* Engine::GetDialog() const {
-  return (interrupt_ == nullptr ? nullptr : interrupt_->dialog_.get());
 }
 
 View* Engine::GetView(int radius) const {

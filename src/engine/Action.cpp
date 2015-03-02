@@ -16,11 +16,7 @@ namespace engine {
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
                   EventHandler* handler) {
-  if (sprite_ != nullptr) {
-    ASSERT(dialog_ != nullptr, "Bind was called twice!");
-    ASSERT(sprite_ == sprite, "Re-bound with different sprite!");
-    return;
-  }
+  ASSERT(sprite_ == nullptr, "Bind was called twice!");
   ASSERT(sprite != nullptr, "sprite == nullptr");
   ASSERT(game_state != nullptr, "game_state == nullptr");
   ASSERT(handler != nullptr, "handler == nullptr");
@@ -35,9 +31,15 @@ ActionResult AttackAction::Execute() {
   ActionResult result;
 
   if (sprite_->IsPlayer()) {
+    const string& enemy = target_->creature.appearance.name;
+    game_state_->log.AddLine(
+        "To attack the " + enemy + ", you must transliterate:");
+    handler_->LaunchDialog(target_->square - sprite_->square);
+    result.stalled = true;
+    return result;
+
     // TODO(skishore): The player should play a semantic game to attack the NPC.
     const int counterattack = rand() % 2;
-    const string& enemy = target_->creature.appearance.name;
     if (counterattack > 0) {
       game_state_->log.AddLine("You hit the " + enemy + ".");
       handler_->BeforeAttack(sprite_->Id(), target_->Id());

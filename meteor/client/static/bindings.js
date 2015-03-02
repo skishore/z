@@ -26,5 +26,9 @@ BabelBindings.prototype.BeforeAttack = function(source, target) {
   this.animation.BeforeAttack(source, target);
 }
 
+BabelBindings.prototype.LaunchDialog = function(source) {
+  this.input.RegisterDialog(new BabelDialog());
+}
+
 return BabelBindings;
 }();
