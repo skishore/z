@@ -33,6 +33,7 @@ BabelInput.prototype.OnKeyPress = function(e) {
   } else if (key === 'r') {
     this.reset();
   }
+  e.preventDefault();
   e.stopPropagation();
 }
 
