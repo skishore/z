@@ -39,19 +39,23 @@ Graphics::~Graphics() {
 }
 
 void Graphics::Redraw(const engine::View& view) {
+  // Draw the tiles.
   for (int y = 0; y < view.size.y; y++) {
+    move(y, 0);
     for (int x = 0; x < view.size.x; x++) {
       const engine::TileView& tile = view.tiles[x][y];
       const char ch = (tile.graphic < 0 ? ' ' : kTileToChar[tile.graphic]);
       SetColor(tile.visible ? kDefaultColor : kShadowColor);
-      mvaddch(y, x, ch);
+      addch(ch);
     }
   }
+  // Draw the sprites.
   SetColor(kDefaultColor);
   for (int i = 0; i < view.sprites.size(); i++) {
     const engine::SpriteView& sprite = view.sprites[i];
     mvaddch(sprite.square.y, sprite.square.x, kSpriteToChar[sprite.graphic]);
   }
+  // Draw the status UI to the right.
   move(0, view.size.x + 1);
   clrtoeol();
   addstr("skishore the neophyte");
@@ -59,6 +63,7 @@ void Graphics::Redraw(const engine::View& view) {
   clrtoeol();
   addstr(("Health: " + IntToString(view.status.cur_health) +
           "/" + IntToString(view.status.max_health)).c_str());
+  // Draw the log at the bottom.
   move(view.size.y + 1, 0);
   clrtobot();
   for (int i = 0; i < view.log.size(); i++) {
