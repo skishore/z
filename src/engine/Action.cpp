@@ -30,37 +30,27 @@ AttackAction::AttackAction(Sprite* target) : target_(target) {}
 ActionResult AttackAction::Execute() {
   ActionResult result;
 
-  if (sprite_->IsPlayer()) {
-    const string& enemy = target_->creature.appearance.name;
-    const int counterattack = rand() % 2;
-    if (counterattack > 0) {
-      game_state_->log.AddLine("You hit the " + enemy + ".");
-      handler_->BeforeAttack(sprite_->Id(), target_->Id());
-      const string followup =
-          (counterattack >= sprite_->cur_health ? " You die..." : "");
-      game_state_->log.AddLine("The " + enemy + " counters!" + followup);
-      handler_->BeforeAttack(target_->Id(), sprite_->Id());
-      sprite_->cur_health = max(sprite_->cur_health - counterattack, 0);
-    }
-    if (sprite_->IsAlive()) {
-      game_state_->log.AddLine("You kill the " + enemy + ".");
-      handler_->BeforeAttack(sprite_->Id(), target_->Id());
-      game_state_->RemoveNPC(target_);
-    }
-    result.success = true;
-    return result;
-  }
-
-  // An NPC attacks the player. The player will NOT be removed from game state.
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
   }
-  const string followup = (damage >= target_->cur_health ? " You die..." : "");
-  game_state_->log.AddLine(
-      "The " + sprite_->creature.appearance.name + " hits!" + followup);
+  const bool killed = damage >= target_->cur_health;
+
+  if (sprite_->IsPlayer()) {
+    const string verb = (killed ? "kill" : "hit");
+    game_state_->log.AddLine(
+        "You " + verb + " the " + target_->creature.appearance.name + ".");
+  } else {
+    const string followup = (killed ? " You die..." : "");
+    game_state_->log.AddLine(
+        "The " + sprite_->creature.appearance.name + " hits!" + followup);
+  }
+
   handler_->BeforeAttack(sprite_->Id(), target_->Id());
   target_->cur_health = max(target_->cur_health - damage, 0);
+  if (killed && !target_->IsPlayer()) {
+    game_state_->RemoveNPC(target_);
+  }
   result.success = true;
   return result;
 }
