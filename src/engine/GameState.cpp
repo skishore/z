@@ -33,7 +33,7 @@ GameState::GameState(const string& map_file) {
     while (true) {
       const Point square = map.GetFreeSquare();
       if (!IsSquareOccupied(square)) {
-        int type = (rand() % (kCreatures.size() - 1)) + 1;
+        int type = (rand() % (kCreatures.size() - 4)) + 4;
         AddNPC(new Sprite(square, type));
         break;
       }

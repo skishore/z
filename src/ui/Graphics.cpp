@@ -36,8 +36,11 @@ static const Glyph kTileGlyphs[][6] = {
 // The glyph displayed for each sprite.
 static const Glyph kSpriteGlyphs[] = {
   {'@', COLOR_WHITE},
-  {'x', COLOR_MAGENTA},
-  {'T', COLOR_CYAN}};
+  {'b', COLOR_GREEN},
+  {'c', COLOR_RED},
+  {'s', COLOR_CYAN},
+  {'r', COLOR_YELLOW},
+  {'p', COLOR_BLACK}};
 
 }  // namespace
 

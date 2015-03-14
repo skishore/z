@@ -12,13 +12,25 @@ const std::vector<Creature> kCreatures = {
     Attack{1, 6},
     Stats{12, 60, 11}},
   Creature{
-    Appearance{"grid bug", 1, 0x00ff6060},
-    Attack{1, 1},
+    Appearance{"bulbasaur", 1, 0x00ff6060},
+    Attack{1, 2},
+    Stats{6, 40, 7}},
+  Creature{
+    Appearance{"charmander", 2, 0x006060ff},
+    Attack{1, 3},
+    Stats{6, 40, 9}},
+  Creature{
+    Appearance{"squirtle", 3, 0x006060ff},
+    Attack{1, 2},
+    Stats{8, 60, 7}},
+  Creature{
+    Appearance{"rattata", 4, 0x006060ff},
+    Attack{1, 2},
     Stats{2, 40, 7}},
   Creature{
-    Appearance{"troll", 2, 0x006060ff},
+    Appearance{"pidgey", 5, 0x006060ff},
     Attack{1, 2},
-    Stats{4, 30, 7}}
+    Stats{4, 80, 7}}
 };
 
 #undef Stats
