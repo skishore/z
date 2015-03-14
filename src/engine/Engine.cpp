@@ -7,7 +7,6 @@
 #include "engine/Action.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Sprite.h"
-#include "semantics/Transliterator.h"
 
 using std::max;
 using std::string;
@@ -95,7 +94,7 @@ bool Engine::Update() {
   return changed;
 }
 
-View* Engine::GetView(int radius) const {
+View* Engine::GetView(const Point& radius) const {
   return new View(radius, game_state_);
 }
 

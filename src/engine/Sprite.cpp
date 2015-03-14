@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "engine/Action.h"
-#include "semantics/Devanagari.h"
 
 using std::string;
 using std::vector;

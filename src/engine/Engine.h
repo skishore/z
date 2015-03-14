@@ -30,7 +30,7 @@ class Engine {
   bool Update();
 
   // The caller takes ownership of the new view.
-  View* GetView(int radius) const;
+  View* GetView(const Point& radius) const;
 
  private:
   GameState game_state_;

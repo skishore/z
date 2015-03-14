@@ -8,12 +8,12 @@ using std::vector;
 namespace babel {
 namespace engine {
 
-View::View(int radius, const GameState& game_state)
-    : size(2*radius + 1), tiles(size, vector<TileView>(size)) {
-  offset = game_state.player->square - Point(radius, radius);
+View::View(const Point& radius, const GameState& game_state)
+    : size(2*radius + Point(1, 1)), offset(game_state.player->square - radius),
+      tiles(size.x, vector<TileView>(size.y)) {
   const int vision = game_state.player->creature.stats.vision_radius;
-  for (int x = 0; x < size; x++) {
-    for (int y = 0; y < size; y++) {
+  for (int x = 0; x < size.x; x++) {
+    for (int y = 0; y < size.y; y++) {
       Point square = Point(x, y) + offset;
       if (game_state.IsSquareSeen(square)) {
         tiles[x][y].graphic = (int)game_state.map.GetMapTile(square);
@@ -29,7 +29,8 @@ View::View(int radius, const GameState& game_state)
       continue;
     }
     Point square = sprite->square - offset;
-    if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
+    if (0 <= square.x && square.x < size.x &&
+        0 <= square.y && square.y < size.y &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
       sprites.push_back(SpriteView{

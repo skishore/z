@@ -32,13 +32,6 @@ ActionResult AttackAction::Execute() {
 
   if (sprite_->IsPlayer()) {
     const string& enemy = target_->creature.appearance.name;
-    game_state_->log.AddLine(
-        "To attack the " + enemy + ", you must transliterate:");
-    handler_->LaunchDialog(target_->square - sprite_->square);
-    result.stalled = true;
-    return result;
-
-    // TODO(skishore): The player should play a semantic game to attack the NPC.
     const int counterattack = rand() % 2;
     if (counterattack > 0) {
       game_state_->log.AddLine("You hit the " + enemy + ".");

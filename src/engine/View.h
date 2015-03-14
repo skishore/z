@@ -32,10 +32,10 @@ struct StatusView {
 
 class View {
  public:
-  View(int radius, const GameState& game_state);
+  View(const Point& radius, const GameState& game_state);
 
-  int size;
-  Point offset;
+  const Point size;
+  const Point offset;
   std::vector<std::vector<TileView>> tiles;
   std::vector<SpriteView> sprites;
   std::vector<std::string> log;
