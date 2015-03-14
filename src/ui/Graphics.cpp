@@ -11,13 +11,33 @@ namespace babel {
 namespace ui {
 namespace {
 
-// The character displayed for each tile and each sprite.
-static const char kTileToChar[] = {'.', '.', '.', '.', '#', ' '};
-static const char kSpriteToChar[] = {'@', 'x', 'T'};
+struct Glyph {
+  char ch;
+  int color;
+};
 
-// Various color indices.
-static const int kDefaultColor = 1;
-static const int kShadowColor = 2;
+// The glyph displayed for each tile.
+static const Glyph kTileGlyphs[][6] = {
+  // Glyphs for hidden tiles.
+  {{' ', COLOR_BLACK},
+   {' ', COLOR_BLACK},
+   {' ', COLOR_BLACK},
+   {' ', COLOR_BLACK},
+   {'#', COLOR_WHITE},
+   {' ', COLOR_BLACK}},
+  // Glyphs for visible tiles.
+  {{'.', COLOR_BLACK},
+   {'.', COLOR_BLACK},
+   {'.', COLOR_BLACK},
+   {'.', COLOR_BLACK},
+   {'#', COLOR_BLACK},
+   {' ', COLOR_BLACK}}};
+
+// The glyph displayed for each sprite.
+static const Glyph kSpriteGlyphs[] = {
+  {'@', COLOR_WHITE},
+  {'x', COLOR_MAGENTA},
+  {'T', COLOR_CYAN}};
 
 }  // namespace
 
@@ -30,8 +50,9 @@ Graphics::Graphics() {
 
   start_color();
   use_default_colors();
-  init_pair(kDefaultColor, COLOR_BLACK, -1);
-  init_pair(kShadowColor, COLOR_WHITE, -1);
+  for (int i = 0; i < 16; i++) {
+    init_pair(i + 1, i, -1);
+  }
 }
 
 Graphics::~Graphics() {
@@ -44,18 +65,24 @@ void Graphics::Redraw(const engine::View& view) {
     move(y, 0);
     for (int x = 0; x < view.size.x; x++) {
       const engine::TileView& tile = view.tiles[x][y];
-      const char ch = (tile.graphic < 0 ? ' ' : kTileToChar[tile.graphic]);
-      SetColor(tile.visible ? kDefaultColor : kShadowColor);
-      addch(ch);
+      if (tile.graphic >= 0) {
+        const Glyph& glyph = kTileGlyphs[tile.visible][tile.graphic];
+        SetColor(glyph.color);
+        addch(glyph.ch);
+      } else {
+        addch(' ');
+      }
     }
   }
   // Draw the sprites.
-  SetColor(kDefaultColor);
   for (int i = 0; i < view.sprites.size(); i++) {
     const engine::SpriteView& sprite = view.sprites[i];
-    mvaddch(sprite.square.y, sprite.square.x, kSpriteToChar[sprite.graphic]);
+    const Glyph& glyph = kSpriteGlyphs[sprite.graphic];
+    SetColor(glyph.color);
+    mvaddch(sprite.square.y, sprite.square.x, glyph.ch);
   }
   // Draw the status UI to the right.
+  SetColor(COLOR_BLACK);
   move(0, view.size.x + 1);
   clrtoeol();
   addstr("skishore the neophyte");
@@ -75,7 +102,7 @@ void Graphics::Redraw(const engine::View& view) {
 
 void Graphics::SetColor(int color) {
   if (last_color_ != color) {
-    attron(COLOR_PAIR(color));
+    attron(COLOR_PAIR(color + 1));
     last_color_ = color;
   }
 }
