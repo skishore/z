@@ -32,8 +32,9 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
   }
   // Move toward the player if they are visible. Otherwise, move randomly.
   const int radius = sprite.creature.stats.vision_radius;
-  if (game_state.player_vision->IsSquareVisible(sprite.square, radius)) {
-    return -kFineness*(game_state.player->square - square).length();
+  const Point& target = game_state.player->square;
+  if (sprite.vision->IsSquareVisible(target, radius)) {
+    return -kFineness*(target - square).length();
   }
   return 0;
 }

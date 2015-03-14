@@ -18,7 +18,7 @@ View::View(const Point& radius, const GameState& game_state)
       if (game_state.IsSquareSeen(square)) {
         tiles[x][y].graphic = (int)game_state.map.GetMapTile(square);
         tiles[x][y].visible =
-            game_state.player_vision->IsSquareVisible(square, vision);
+            game_state.player->vision->IsSquareVisible(square, vision);
       } else {
         tiles[x][y].graphic = -1;
       }
@@ -31,7 +31,7 @@ View::View(const Point& radius, const GameState& game_state)
     Point square = sprite->square - offset;
     if (0 <= square.x && square.x < size.x &&
         0 <= square.y && square.y < size.y &&
-        game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
+        game_state.player->vision->IsSquareVisible(sprite->square, vision)) {
       const auto& appearance = sprite->creature.appearance;
       sprites.push_back(SpriteView{
           sprite->Id(), appearance.graphic, appearance.color, square});

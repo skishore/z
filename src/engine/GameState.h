@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "base/point.h"
-#include "engine/FieldOfVision.h"
 #include "engine/Log.h"
 #include "engine/TileMap.h"
 
@@ -44,11 +43,11 @@ class GameState {
   TileMap map;
   Sprite* player;
   std::vector<Sprite*> sprites;
-  std::unique_ptr<FieldOfVision> player_vision;
   Log log;
 
  private:
-  void RecomputePlayerVision();
+  void RecomputeSpriteVision(Sprite* sprite);
+
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
   int sprite_index = 0;

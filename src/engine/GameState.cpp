@@ -27,7 +27,6 @@ GameState::GameState(const string& map_file) {
       map.GetSize().x, vector<bool>(map.GetSize().y, false));
   player = new Sprite(map.GetFreeSquare(), kPlayerType);
   AddNPC(player);
-  RecomputePlayerVision();
 
   for (int i = 0; i < kNumEnemies; i++) {
     while (true) {
@@ -53,6 +52,7 @@ void GameState::AddNPC(Sprite* sprite) {
          "Adding sprite at occupied square " << sprite->square);
   sprites.push_back(sprite);
   sprite_positions[sprite->square] = sprite;
+  RecomputeSpriteVision(sprite);
 }
 
 void GameState::RemoveNPC(Sprite* sprite) {
@@ -84,10 +84,7 @@ void GameState::MoveSprite(const Point& move, Sprite* sprite) {
   sprite_positions.erase(sprite->square);
   sprite_positions[new_square] = sprite;
   sprite->square = new_square;
-
-  if (sprite == player) {
-    RecomputePlayerVision();
-  }
+  RecomputeSpriteVision(sprite);
 }
 
 Sprite* GameState::GetCurrentSprite() const {
@@ -115,14 +112,16 @@ Sprite* GameState::SpriteAt(const Point& square) const {
   return sprite_positions.at(square);
 }
 
-void GameState::RecomputePlayerVision() {
-  const int radius = player->creature.stats.vision_radius;
-  player_vision.reset(new FieldOfVision(map, player->square, radius));
-  for (int x = -radius; x <= radius; x++) {
-    for (int y = -radius; y <= radius; y++) {
-      const Point square = player->square + Point(x, y);
-      if (player_vision->IsSquareVisible(square, radius)) {
-        seen[square.x][square.y] = true;
+void GameState::RecomputeSpriteVision(Sprite* sprite) {
+  const int radius = sprite->creature.stats.vision_radius;
+  sprite->vision.reset(new FieldOfVision(map, sprite->square, radius));
+  if (sprite == player) {
+    for (int x = -radius; x <= radius; x++) {
+      for (int y = -radius; y <= radius; y++) {
+        const Point square = sprite->square + Point(x, y);
+        if (sprite->vision->IsSquareVisible(square, radius)) {
+          seen[square.x][square.y] = true;
+        }
       }
     }
   }

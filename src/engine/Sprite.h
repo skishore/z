@@ -6,6 +6,7 @@
 
 #include "base/creature.h"
 #include "base/point.h"
+#include "engine/FieldOfVision.h"
 #include "engine/GameState.h"
 
 namespace babel {
@@ -35,6 +36,7 @@ class Sprite {
   const Creature& creature;
   int cur_health;
   int max_health;
+  std::unique_ptr<FieldOfVision> vision;
 
  private:
   sid id;
