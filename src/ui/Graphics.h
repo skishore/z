@@ -11,6 +11,12 @@ class Graphics {
   Graphics();
   ~Graphics();
   void Redraw(const engine::View& view);
+
+ private:
+  // Sets the color to the color pair at the given color index.
+  void SetColor(int color);
+
+  int last_color_ = 0;
 };
 
 }  // namespace ui 

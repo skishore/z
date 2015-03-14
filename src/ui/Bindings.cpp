@@ -10,7 +10,7 @@ namespace ui {
 namespace {
 
 // The screen dimensions, in grid cells.
-static const Point radius(39, 15);
+static const Point radius(31, 11);
 
 }  // namespace
 

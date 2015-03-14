@@ -10,15 +10,15 @@ const std::vector<Creature> kCreatures = {
   Creature{
     Appearance{"human", 0, 0x0060ff60},
     Attack{1, 6},
-    Stats{12, 60, 7}},
+    Stats{12, 60, 11}},
   Creature{
     Appearance{"grid bug", 1, 0x00ff6060},
     Attack{1, 1},
-    Stats{2, 40, 4}},
+    Stats{2, 40, 7}},
   Creature{
     Appearance{"troll", 2, 0x006060ff},
     Attack{1, 2},
-    Stats{4, 30, 4}}
+    Stats{4, 30, 7}}
 };
 
 #undef Stats
