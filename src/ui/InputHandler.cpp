@@ -33,6 +33,8 @@ InputResult InputHandler::GetInput() const {
   const char ch = getch();
   if (ch == 0x03 /* Ctrl-C */) {
     result.done = true;
+  } else if (ch == 'r') {
+    result.reset = true;
   } else if (kCharToMove.find(ch) != kCharToMove.end()) {
     result.action = new engine::MoveAction(kCharToMove.at(ch));
   }

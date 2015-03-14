@@ -8,6 +8,7 @@ namespace ui {
 
 struct InputResult {
   bool done = false;
+  bool reset = false;
   engine::Action* action = nullptr;
 };
 

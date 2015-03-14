@@ -1,6 +1,8 @@
 #ifndef __BABEL_UI_BINDINGS_H__
 #define __BABEL_UI_BINDINGS_H__
 
+#include <memory>
+
 #include "engine/Engine.h"
 #include "ui/Graphics.h"
 #include "ui/InputHandler.h"
@@ -12,8 +14,10 @@ class Bindings {
  public:
   Bindings();
 
+  void Reset();
+
  private:
-  engine::Engine engine_;
+  std::unique_ptr<engine::Engine> engine_;
   ui::Graphics graphics_;
   ui::InputHandler handler_;
 };
