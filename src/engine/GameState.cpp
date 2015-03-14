@@ -15,28 +15,27 @@ using std::vector;
 
 namespace babel {
 namespace engine {
+namespace {
+
+const int kNumEnemies = 16;
+
+}  // namespace
 
 GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
   seen = vector<vector<bool>>(
       map.GetSize().x, vector<bool>(map.GetSize().y, false));
-  player = new Sprite(map.GetStartingSquare(), kPlayerType);
+  player = new Sprite(map.GetFreeSquare(), kPlayerType);
   AddNPC(player);
   RecomputePlayerVision();
 
-  for (int i = 1; i < map.GetRooms().size(); i++) {
-    const TileMap::Room& room = map.GetRooms()[i];
-    const int num_enemies = (room.size.x + room.size.y)/2 - 3;
-    for (int j = 0; j < num_enemies; j++) {
-      while (true) {
-        Point square = room.position;
-        square.x += rand() % room.size.x;
-        square.y += rand() % room.size.y;
-        if (!IsSquareOccupied(square)) {
-          int type = (rand() % (kCreatures.size() - 1)) + 1;
-          AddNPC(new Sprite(square, type));
-          break;
-        }
+  for (int i = 0; i < kNumEnemies; i++) {
+    while (true) {
+      const Point square = map.GetFreeSquare();
+      if (!IsSquareOccupied(square)) {
+        int type = (rand() % (kCreatures.size() - 1)) + 1;
+        AddNPC(new Sprite(square, type));
+        break;
       }
     }
   }

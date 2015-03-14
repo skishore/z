@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <ncurses.h>
+
 namespace {
 
 static const char* kBinary;
@@ -39,6 +41,9 @@ void AttachLLDBToCurrentProcess() {
 }
 
 inline void SignalHandler(int signal) {
+  // Close ncurses, if it's active.
+  endwin();
+
   static const int kTracebackSize = 64;
   void* stack_trace[kTracebackSize];
   size_t size = backtrace(stack_trace, kTracebackSize);

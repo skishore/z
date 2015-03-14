@@ -76,5 +76,14 @@ bool TileMap::IsSquareBlocked(const Point& square) const {
   return GetMapTile(square) > 3;
 }
 
+Point TileMap::GetFreeSquare() const {
+  while (true) {
+    const Point square(rand() % map_dimensions_.x, rand() % map_dimensions_.y);
+    if (!IsSquareBlocked(square)) {
+      return square;
+    }
+  }
+}
+
 }  // namespace engine
 } // namespace babel
