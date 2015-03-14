@@ -1,5 +1,18 @@
 #include "creature.h"
 
+#ifdef EMSCRIPTEN
+#define COLOR_BLACK   0x00000000
+#define COLOR_RED     0x00ff0000
+#define COLOR_GREEN   0x0000ff00
+#define COLOR_BLUE    0x000000ff
+#define COLOR_YELLOW  0x00ffff00
+#define COLOR_MAGENTA 0x00ff00ff
+#define COLOR_CYAN    0x0000ffff
+#define COLOR_WHITE   0x00ffffff
+#else
+#include <ncurses.h>
+#endif
+
 namespace babel {
 
 #define Appearance
@@ -8,27 +21,27 @@ namespace babel {
 
 const std::vector<Creature> kCreatures = {
   Creature{
-    Appearance{"human", 0, 0x0060ff60},
-    Attack{1, 6},
+    Appearance{"human", '@', COLOR_WHITE},
+    Attack{1, 1},
     Stats{12, 60, 11}},
   Creature{
-    Appearance{"bulbasaur", 1, 0x00ff6060},
+    Appearance{"bulbasaur", 'b', COLOR_GREEN},
     Attack{1, 2},
     Stats{6, 40, 7}},
   Creature{
-    Appearance{"charmander", 2, 0x006060ff},
+    Appearance{"charmander", 'c', COLOR_RED},
     Attack{1, 3},
     Stats{6, 40, 9}},
   Creature{
-    Appearance{"squirtle", 3, 0x006060ff},
+    Appearance{"squirtle", 's', COLOR_CYAN},
     Attack{1, 2},
     Stats{8, 60, 7}},
   Creature{
-    Appearance{"rattata", 4, 0x006060ff},
+    Appearance{"rattata", 'r', COLOR_WHITE},
     Attack{1, 2},
     Stats{2, 40, 7}},
   Creature{
-    Appearance{"pidgey", 5, 0x006060ff},
+    Appearance{"pidgey", 'p', COLOR_YELLOW},
     Attack{1, 2},
     Stats{4, 80, 7}}
 };

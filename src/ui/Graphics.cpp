@@ -33,15 +33,6 @@ static const Glyph kTileGlyphs[][6] = {
    {'#', COLOR_BLACK},
    {' ', COLOR_BLACK}}};
 
-// The glyph displayed for each sprite.
-static const Glyph kSpriteGlyphs[] = {
-  {'@', COLOR_WHITE},
-  {'b', COLOR_GREEN},
-  {'c', COLOR_RED},
-  {'s', COLOR_CYAN},
-  {'r', COLOR_YELLOW},
-  {'p', COLOR_BLACK}};
-
 }  // namespace
 
 Graphics::Graphics() {
@@ -80,9 +71,8 @@ void Graphics::Redraw(const engine::View& view) {
   // Draw the sprites.
   for (int i = 0; i < view.sprites.size(); i++) {
     const engine::SpriteView& sprite = view.sprites[i];
-    const Glyph& glyph = kSpriteGlyphs[sprite.graphic];
-    SetColor(glyph.color);
-    mvaddch(sprite.square.y, sprite.square.x, glyph.ch);
+    SetColor(sprite.color);
+    mvaddch(sprite.square.y, sprite.square.x, sprite.graphic);
   }
   // Draw the status UI to the right.
   SetColor(COLOR_BLACK);
