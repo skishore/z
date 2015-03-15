@@ -17,6 +17,7 @@ namespace babel {
 namespace engine {
 namespace {
 
+const int kNumAllies = 3;
 const int kNumEnemies = 16;
 
 }  // namespace
@@ -25,15 +26,29 @@ GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
   seen = vector<vector<bool>>(
       map.GetSize().x, vector<bool>(map.GetSize().y, false));
-  player = new Sprite(map.GetFreeSquare(), kPlayerType);
+  player = new Sprite(map.GetFreeSquare(), kPlayerType, false /* hostile */);
   AddNPC(player);
+
+  const int aligned = kNumAllies + 1;
+  for (int i = 0; i < kNumAllies; i++) {
+    Point square;
+    for (int j = 0; j < 8; j++) {
+      square = player->square + Point(rand() % 5 - 2, rand() % 5 - 2);
+      if (!IsSquareOccupied(square)) {
+        break;
+      }
+    }
+    if (!IsSquareOccupied(square)) {
+      AddNPC(new Sprite(square, kPlayerType + i + 1, false /* hostile */));
+    }
+  }
 
   for (int i = 0; i < kNumEnemies; i++) {
     while (true) {
       const Point square = map.GetFreeSquare();
       if (!IsSquareOccupied(square)) {
-        int type = (rand() % (kCreatures.size() - 4)) + 4;
-        AddNPC(new Sprite(square, type));
+        int type = (rand() % (kCreatures.size() - aligned)) + aligned;
+        AddNPC(new Sprite(square, type, true /* hostile */));
         break;
       }
     }

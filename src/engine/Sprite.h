@@ -17,7 +17,7 @@ typedef uint32_t sid;
 
 class Sprite {
  public:
-  Sprite(const Point& square, int type);
+  Sprite(const Point& square, int type, bool hostile);
 
   // Methods needed by the game loop to run sprites at the correct speeds.
   bool HasEnergyNeededToMove() const;
@@ -36,6 +36,7 @@ class Sprite {
   const Creature& creature;
   int cur_health;
   int max_health;
+  bool hostile;
   std::unique_ptr<FieldOfVision> vision;
 
  private:

@@ -67,7 +67,9 @@ ActionResult MoveAction::Execute() {
   if (square == sprite_->square) {
     result.success = true;
   } else if (game_state_->IsSquareOccupied(square)) {
-    result.alternate = new AttackAction(game_state_->SpriteAt(square));
+    if (game_state_->SpriteAt(square)->hostile != sprite_->hostile) {
+      result.alternate = new AttackAction(game_state_->SpriteAt(square));
+    }
   } else {
     game_state_->MoveSprite(move_, sprite_);
     result.success = true;

@@ -61,11 +61,12 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
 
 }  // namespace
 
-Sprite::Sprite(const Point& s, int t)
+Sprite::Sprite(const Point& s, int t, bool h)
     : square(s), creature(kCreatures[t]), id(gIdCounter), type(t) {
   gIdCounter += 1;
   max_health = creature.stats.max_health;
   cur_health = max_health;
+  hostile = h;
   if (IsPlayer()) {
     energy = kEnergyNeededToMove;
   } else {
@@ -88,7 +89,7 @@ void Sprite::ConsumeEnergy() {
 
 Action* Sprite::GetAction(const GameState& game_state) const {
   ASSERT(!IsPlayer(), "GetAction called for player!");
-  if (AreAdjacent(*this, *game_state.player)) {
+  if (hostile && AreAdjacent(*this, *game_state.player)) {
     return new AttackAction(game_state.player);
   } else {
     return new MoveAction(GetBestMove(*this, game_state));
