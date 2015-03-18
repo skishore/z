@@ -27,7 +27,8 @@ BabelBindings.prototype.BeforeAttack = function(source, target) {
 }
 
 BabelBindings.prototype.LaunchDialog = function(source) {
-  this.input.RegisterDialog(new BabelDialog());
+  DialogManager.instantiate_random_dialog();
+  this.input.RegisterDialog(DialogManager);
 }
 
 return BabelBindings;

@@ -1,0 +1,99 @@
+.dialog {
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+  transition: height 0.4s;
+
+  font-size: 48px;
+  width: 480px;
+
+  > .scroller {
+    position: relative;
+    height: 100%;
+    width: 100%;
+
+    > .subdialog {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+
+      > .multiple-choice-translit {
+        > .questions {
+          font-size: 80%;
+          height: 1.6em;
+        }
+
+        > .answers {
+          font-size: 40%;
+          height: 4em;
+
+          .text {
+            transition: all 0.2s;
+            top: 3em;
+
+            &.done, &.correct, &.wrong {
+              top: 0;
+            }
+          }
+        }
+
+        > .questions, .answers {
+          position: relative;
+          width: 100%;
+
+          > .text {
+            display: inline-block;
+            position: absolute;
+            transform: translateX(-50%);
+
+            &.correct {
+              color: #0a0;
+            }
+
+            &.wrong {
+              color: #c00;
+            }
+          }
+        }
+      }
+
+      > .short-answer-translit {
+        > .segment {
+          float: left;
+
+          &.correct {
+            color: #0a0;
+          }
+
+          &.wrong {
+            color: #c00;
+          }
+
+          > .answer {
+            font-size: 50%;
+
+            > .cursor, .text, .guide {
+              display: inline-block;
+              font-size: 100%;
+            }
+
+            > .cursor {
+              background-color: #ccc;
+              color: #888;
+
+              &.fixed-width {
+                width: 0.5em;
+              }
+            }
+
+            > .guide {
+              color: #ccc;
+            }
+          }
+        }
+      }
+    }
+  }
+}

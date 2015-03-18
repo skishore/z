@@ -1,4 +1,6 @@
-class @BaseTransliterator
+@semantics = @semantics or {}
+
+class semantics.BaseTransliterator
   constructor: (input) ->
     @error = undefined
     @output = ''

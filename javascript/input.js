@@ -17,7 +17,6 @@ function BabelInput(engine, reset) {
     '.': {x: 0, y: 0},
   };
 
-  Session.set('dialog.active', false);
   this.dialog = null;
 
   window.onkeypress = this.OnKeyPress.bind(this);
@@ -26,7 +25,7 @@ function BabelInput(engine, reset) {
 BabelInput.prototype.OnKeyPress = function(e) {
   var key = String.fromCharCode(e.keyCode);
   if (this.dialog !== null) {
-    this.dialog.OnTextInput(key);
+    this.dialog.on_input(key);
   } else if (this.move_map.hasOwnProperty(key)) {
     var move = this.move_map[key];
     this.engine.AddInput(Module.MakeMoveAction(move));
@@ -46,7 +45,6 @@ BabelInput.prototype.PressRandomKey = function(e) {
 }
 
 BabelInput.prototype.RegisterDialog = function(dialog) {
-  Session.set('dialog.active', true);
   this.dialog = dialog;
 }
 

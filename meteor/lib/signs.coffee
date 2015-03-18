@@ -1,4 +1,6 @@
-@SIGNS = {
+@semantics = @semantics or {}
+
+semantics.SIGNS = {
   'अ': ''
   'आ': '\u093E'
   'इ': '\u093F'
@@ -21,7 +23,7 @@
   'ः': 'ः'
 }
 
-@REVERSE_SIGNS = {}
-for vowel, sign of SIGNS
-  assert sign not of REVERSE_SIGNS
-  REVERSE_SIGNS[sign] = vowel
+semantics.REVERSE_SIGNS = {}
+for vowel, sign of semantics.SIGNS
+  assert sign not of semantics.REVERSE_SIGNS
+  semantics.REVERSE_SIGNS[sign] = vowel
