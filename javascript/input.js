@@ -19,11 +19,16 @@ function BabelInput(engine, reset) {
 
   this.dialog = null;
 
-  window.onkeypress = this.OnKeyPress.bind(this);
+  $('body').keydown(this.OnKeyPress.bind(this));
 }
 
 BabelInput.prototype.OnKeyPress = function(e) {
+  e = e || window.event;
   var key = String.fromCharCode(e.keyCode);
+  if (!e.shiftKey) {
+    key = key.toLowerCase();
+  }
+
   if (this.dialog !== null) {
     this.dialog.on_input(key);
   } else if (this.move_map.hasOwnProperty(key)) {
@@ -32,8 +37,10 @@ BabelInput.prototype.OnKeyPress = function(e) {
   } else if (key === 'r') {
     this.reset();
   }
+
   e.preventDefault();
   e.stopPropagation();
+  return false;
 }
 
 BabelInput.prototype.PressRandomKey = function(e) {

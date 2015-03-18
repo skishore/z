@@ -4,8 +4,11 @@
   position: relative;
   transition: height 0.4s;
 
-  font-size: 48px;
-  width: 480px;
+  color: white;
+  font-family: Times New Roman, serif;
+  font-size: 32px;
+  text-align: center;
+  width: 100%;
 
   > .scroller {
     position: relative;
@@ -49,11 +52,11 @@
             transform: translateX(-50%);
 
             &.correct {
-              color: #0a0;
+              color: #8f4;
             }
 
             &.wrong {
-              color: #c00;
+              color: #f62;
             }
           }
         }
@@ -64,11 +67,11 @@
           float: left;
 
           &.correct {
-            color: #0a0;
+            color: #8f4;
           }
 
           &.wrong {
-            color: #c00;
+            color: #f62;
           }
 
           > .answer {
@@ -80,8 +83,8 @@
             }
 
             > .cursor {
-              background-color: #ccc;
-              color: #888;
+              background-color: #666;
+              color: #ccc;
 
               &.fixed-width {
                 width: 0.5em;
