@@ -5,6 +5,9 @@ function BabelInput(engine, reset) {
   this.engine = engine;
   this.reset = reset;
 
+  this.key_map = {
+    190: '.',
+  };
   this.move_map = {
     'h': {x: -1, y: 0},
     'j': {x: 0, y: 1},
@@ -24,7 +27,8 @@ function BabelInput(engine, reset) {
 
 BabelInput.prototype.OnKeyPress = function(e) {
   e = e || window.event;
-  var key = String.fromCharCode(e.keyCode);
+  var keycode = e.keyCode || e.which;
+  var key = this.key_map[keycode] || String.fromCharCode(keycode);
   if (!e.shiftKey) {
     key = key.toLowerCase();
   }
