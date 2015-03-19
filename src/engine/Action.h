@@ -30,6 +30,10 @@ class Action {
   void Bind(Sprite* sprite, GameState* game_state, EventHandler* handler);
   virtual ActionResult Execute() = 0;
 
+  // If this method returns true, then this action will be added to an input
+  // queue if the user enters it but the engine already has input.
+  virtual bool Queueable() { return false; }
+
  protected:
   Sprite* sprite_ = nullptr;
   GameState* game_state_ = nullptr;

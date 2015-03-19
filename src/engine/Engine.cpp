@@ -35,7 +35,9 @@ void Engine::AddEventHandler(EventHandler* handler) {
 
 void Engine::AddInput(Action* input) {
   ASSERT(input != nullptr, "Added null Action!");
-  inputs_.push_back(input);
+  if (inputs_.empty() || input->Queueable()) {
+    inputs_.push_back(input);
+  }
 }
 
 bool Engine::Update() {
