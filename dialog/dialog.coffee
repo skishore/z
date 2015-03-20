@@ -1,4 +1,4 @@
-class @Dialog
+class @DialogPage
   # These static variables should be overridden by subclasses.
   # @name will always be set to the class name by CoffeeScript.
   @height = '0px'

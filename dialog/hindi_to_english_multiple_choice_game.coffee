@@ -1,4 +1,4 @@
-class HindiToEnglishMultipleChoiceGame extends Dialog
+class HindiToEnglishMultipleChoiceGame extends DialogPage
   DialogManager.register @, 'multiple_choice_translit'
   @template = 'multiple_choice_translit'
   @height: '3.6em'

@@ -1,4 +1,4 @@
-class @HindiToEnglishShortAnswerGame extends Dialog
+class @HindiToEnglishShortAnswerGame extends DialogPage
   DialogManager.register @, 'short_answer_translit'
   @template = 'short_answer_translit'
   @height = '3.2em'
