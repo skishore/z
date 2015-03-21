@@ -38,7 +38,7 @@ var Module = {
 
 Module.setStatus('Downloading...');
 // Use the default amount of memory, 16Mb.
-//Module.TOTAL_MEMORY = 32*1024*1024;
+Module.TOTAL_MEMORY = 16*1024*1024;
 
 function InitializeBindings() {
   window.bindings = new BabelBindings($('.canvas-wrapper'));

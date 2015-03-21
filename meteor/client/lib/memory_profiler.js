@@ -83,7 +83,7 @@ function formatBytes(bytes) {
 
 // Installs startup hook and periodic UI update timer.
 function memoryprofiler_add_hooks() {
-  var prevMalloc = _malloc;
+  var prevMalloc = Module._malloc;
   function hookedMalloc(size) {
     // Gather global stats.
     memoryprofiler_total_mem_allocated += size;
@@ -140,7 +140,7 @@ function memoryprofiler_add_hooks() {
     return ptr;
   }
 
-  var prevFree = _free;
+  var prevFree = Module._free;
   function hookedFree(ptr) {
     if (ptr) {
       // Decrement global stats.
@@ -192,12 +192,12 @@ function memoryprofiler_add_hooks() {
 
   if (MEMORYPROFILER_HOOK_STACKALLOC) {
     // Inject stack allocator.
-    var prevStackAlloc = Runtime.stackAlloc;
+    var prevStackAlloc = Module.Runtime.stackAlloc;
     function hookedStackAlloc(size) {
       memoryprofiler_stacktop_watermark = Math.max(memoryprofiler_stacktop_watermark, STACKTOP + size);
       return prevStackAlloc(size);
     }
-    Runtime.stackAlloc = hookedStackAlloc;
+    Module.Runtime.stackAlloc = hookedStackAlloc;
   }
 
   memoryprofiler = document.getElementById('memoryprofiler');
@@ -217,15 +217,17 @@ function memoryprofiler_add_hooks() {
   setInterval(memoryprofiler_update_ui, MEMORYPROFILER_UI_UPDATE_INTERVAL);
 }
 
+window.memoryprofiler_add_hooks = memoryprofiler_add_hooks;
+
 // Given a pointer 'bytes', compute the linear 1D position on the graph as pixels, rounding down for start address of a block.
 function memoryprofiler_bytesToPixels_rounddown(bytes) {
-  return (bytes * memoryprofiler_canvas_size / TOTAL_MEMORY) | 0;
+  return (bytes * memoryprofiler_canvas_size / Module.TOTAL_MEMORY) | 0;
 }
 
 // Same as memoryprofiler_bytesToPixels_rounddown, but rounds up for the end address of a block. The different rounding will
 // guarantee that even 'thin' allocations should get at least one pixel dot in the graph.
 function memoryprofiler_bytesToPixels_roundup(bytes) {
-  return ((bytes * memoryprofiler_canvas_size + TOTAL_MEMORY - 1) / TOTAL_MEMORY) | 0;
+  return ((bytes * memoryprofiler_canvas_size + Module.TOTAL_MEMORY - 1) / Module.TOTAL_MEMORY) | 0;
 }
 
 // Graphs a range of allocated memory. The memory range will be drawn as a top-to-bottom, left-to-right stripes or columns of pixels.
@@ -300,8 +302,8 @@ function memoryprofiler_update_ui() {
     }
     return '0x'+str;
   }
-  var width = (nBits(TOTAL_MEMORY)+3)/4; // Pointer 'word width'
-  memoryprofiler.innerHTML = 'Total HEAP size: ' + formatBytes(TOTAL_MEMORY) + '.';
+  var width = (nBits(Module.TOTAL_MEMORY)+3)/4; // Pointer 'word width'
+  memoryprofiler.innerHTML = 'Total HEAP size: ' + formatBytes(Module.TOTAL_MEMORY) + '.';
   memoryprofiler.innerHTML += '<br />'+colorBar('#202020')+'STATIC memory area size: ' + formatBytes(STATICTOP-STATIC_BASE);
   memoryprofiler.innerHTML += '. STATIC_BASE: ' + toHex(STATIC_BASE, width);
   memoryprofiler.innerHTML += '. STATICTOP: ' + toHex(STATICTOP, width) + '.';
@@ -315,7 +317,7 @@ function memoryprofiler_update_ui() {
   memoryprofiler.innerHTML += '<br />'+colorBar('#70FF70')+'DYNAMIC memory area size: ' + formatBytes(DYNAMICTOP-DYNAMIC_BASE);
   memoryprofiler.innerHTML += '. DYNAMIC_BASE: ' + toHex(DYNAMIC_BASE, width);
   memoryprofiler.innerHTML += '. DYNAMICTOP: ' + toHex(DYNAMICTOP, width) + '.';
-  memoryprofiler.innerHTML += '<br />'+colorBar('#6699CC')+colorBar('#003366')+colorBar('#0000FF')+'DYNAMIC memory area used: ' + formatBytes(memoryprofiler_total_mem_allocated) + ' (' + (memoryprofiler_total_mem_allocated*100.0/(TOTAL_MEMORY-DYNAMIC_BASE)).toFixed(2) + '% of all free memory)';
+  memoryprofiler.innerHTML += '<br />'+colorBar('#6699CC')+colorBar('#003366')+colorBar('#0000FF')+'DYNAMIC memory area used: ' + formatBytes(memoryprofiler_total_mem_allocated) + ' (' + (memoryprofiler_total_mem_allocated*100.0/(Module.TOTAL_MEMORY-DYNAMIC_BASE)).toFixed(2) + '% of all free memory)';
   
   var preloadedMemoryUsed = 0;
   for(i in memoryprofiler_prerun_mallocs) {
@@ -324,7 +326,7 @@ function memoryprofiler_update_ui() {
   memoryprofiler.innerHTML += '<br />'+colorBar('#FF9900')+colorBar('#FFDD33')+'Preloaded memory used, most likely memory reserved by files in the virtual filesystem : ' + formatBytes(preloadedMemoryUsed);
 
   memoryprofiler.innerHTML += '<br />OpenAL audio data: ' + formatBytes(memoryprofiler_count_openal_audiodata_size()) + ' (outside HEAP)';
-  memoryprofiler.innerHTML += '<br />'+colorBar('#FFFFFF')+'Unallocated HEAP space: ' + formatBytes(TOTAL_MEMORY - DYNAMICTOP);
+  memoryprofiler.innerHTML += '<br />'+colorBar('#FFFFFF')+'Unallocated HEAP space: ' + formatBytes(Module.TOTAL_MEMORY - DYNAMICTOP);
   memoryprofiler.innerHTML += '<br /># of total malloc()s/free()s performed in app lifetime: ' + memoryprofiler_num_allocs + '/' + memoryprofiler_num_frees + ' (delta: ' + (memoryprofiler_num_allocs-memoryprofiler_num_frees) + ')';
   
   // Background clear
