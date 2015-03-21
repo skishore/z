@@ -34,13 +34,13 @@ BabelInput.prototype.OnKeyPress = function(e) {
     key = key.toLowerCase();
   }
 
-  if (this.dialog !== null) {
-    this.dialog.on_input(key);
-  } else if (this.move_map.hasOwnProperty(key)) {
-    var move = this.move_map[key];
-    this.engine.AddInput(Module.MakeMoveAction(move));
-  } else if (key === 'r') {
-    this.reset();
+  if (!DialogManager.on_input(key)) {
+    if (this.move_map.hasOwnProperty(key)) {
+      var move = this.move_map[key];
+      this.engine.AddInput(Module.MakeMoveAction(move));
+    } else if (key === 'r') {
+      this.reset();
+    }
   }
 
   e.preventDefault();

@@ -2,6 +2,8 @@
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#else
+#define EM_ASM
 #endif  // EMSCRIPTEN
 
 #include "dialog/DialogAction.h"

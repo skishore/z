@@ -19,14 +19,38 @@ class @DialogPage
     # Takes a single-character input and return true if the dialog changed.
     assert false, "#{@constructor.name}.on_input is not implemented!"
 
+  _on_input: (char) ->
+    (do @active) and (@accepts_input char) and (@on_input char)
+
 
 class @DialogManager
-  @_current: null
-  @_registry: {}
+  @on_input: (char) ->
+    if @_next?
+      return true
+    if @_current?
+      @_redraw 'current' if @_current._on_input char
+      return true
+    false
 
-  @animate: =>
+  @reset: ->
+    @_current = null
+    @_next = null
+    Session.set 'dialog.last', undefined
+    Session.set 'dialog.current', undefined
+
+  @set_page: (page) ->
+    if @_current?
+      @_next = page
+      @_redraw 'last'
+    else
+      @_current = page
+      @_redraw 'current'
+
+  @_animate: =>
     $('.dialog > .scroller > *:last-child').css 'top', '150%'
-    do @instantiate_random_dialog
+    @_current = @_next
+    @_next = null
+    @_redraw 'current'
     height = @_current.constructor.height
     move('.dialog > .scroller').set('margin-top', "-#{height}")
                                .duration('0.4s').end ->
@@ -35,40 +59,22 @@ class @DialogManager
       $('.dialog > .scroller > *:last-child').css 'top', '50%'
       Session.set 'dialog.last', undefined
 
-  @instantiate: (dialog_name) ->
-    @_current = new @_registry[dialog_name]
-    @redraw 'current'
-
-  @instantiate_random_dialog: ->
-    @instantiate _.sample _.keys @_registry
-
-  @on_input: (char) ->
-    if do @_current?.active and @_current.accepts_input char
-      if @_current.on_input char
-        @redraw (if do @_current.active then 'current' else 'last')
-
-
-  @redraw: (target) ->
+  @_redraw: (target) ->
     Session.set "dialog.#{target}",
       name: @_current.constructor.template
       height: @_current.constructor.height
       data: do @_current.get_data
-
-  @register: (dialog_subclass, name) ->
-    assert name.length > 0, 'Tried to register empty name'
-    assert name not of @_registry, "Duplicate dialog: #{name}"
-    @_registry[name] = dialog_subclass
 
 
 Template.dialog.helpers {
   last: ->
     data = Session.get 'dialog.last'
     if data?
-      Meteor.setTimeout DialogManager.animate, 0
+      Meteor.setTimeout DialogManager._animate, 0
     data
   current: ->
     Session.get 'dialog.current'
 }
 
-Session.set 'dialog.last', undefined
-Session.set 'dialog.current', undefined
+
+do DialogManager.reset

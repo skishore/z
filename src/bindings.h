@@ -79,16 +79,11 @@ struct EventHandlerWrapper : public wrapper<engine::EventHandler> {
   void BeforeAttack(engine::sid source, engine::sid target) override {
     return call<void>("BeforeAttack", source, target);
   }
-  void LaunchDialog(const Point& source) override {
-    return call<void>("LaunchDialog", source);
-  }
 };
 
 EMSCRIPTEN_BINDINGS(events) {
   class_<engine::EventHandler>("BabelEventHandler")
     .function("BeforeAttack", &engine::EventHandler::BeforeAttack,
-              pure_virtual())
-    .function("LaunchDialog", &engine::EventHandler::LaunchDialog,
               pure_virtual())
     .allow_subclass<EventHandlerWrapper>("EventHandlerWrapper");
 };
