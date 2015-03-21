@@ -31,7 +31,8 @@ ActionResult LaunchDialogAction::Execute() {
     return result;
   }
 
-  game_state_->dialog.reset(new TransliterationCombatDialog(target_));
+  game_state_->dialog.reset(
+      new TransliterationCombatDialog(sprite_, target_));
   result.stalled = true;
   return result;
 }
