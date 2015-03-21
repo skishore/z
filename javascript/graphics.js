@@ -175,11 +175,6 @@ BabelGraphics.prototype.ShowText = function(x, y, text) {
     left: Math.floor(this.scale*(this.radius + x - 0.5)*this.square),
     top: Math.floor(this.scale*(this.radius + y - 0.5)*this.square)});
   this.target.append(element);
-  element.width(element.width());
-  //$('.triangle-down').remove(); bindings.graphics.ShowText(4, 2, '?');
-  //move('.triangle-down')
-  //  .set('top', (1.5*$('.triangle-down').height() + 43) + 'px')
-  //  .set('left', '50%').set('width', '390px').end()
 }
 
 return BabelGraphics;

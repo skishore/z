@@ -6,65 +6,65 @@
 @ui-line-margin: 4px 8px;
 @ui-border-radius: 2px;
 
-body {
-  font-family: arial;
-  margin: 0;
-  padding: 0;
-  background-color: #888;
-}
-
 .ui-element {
   background-color: @ui-background-color;
   border: @ui-border;
   border-radius: @ui-border-radius;
 
-  .line {
+  > .line {
     color: @ui-color;
     font-size: @ui-font-size;
     margin: @ui-line-margin;
   }
 }
 
-.canvas-outer {
-  margin: 16px auto;
-  text-align: center;
+body {
+  font-family: arial;
+  margin: 0;
+  padding: 0;
+  background-color: #888;
 
-  .canvas-wrapper {
-    display: inline-block;
-    position: relative;
-    text-align: left;
+  > .canvas-outer {
+    margin: 16px auto;
+    text-align: center;
 
-    .top-wrapper, .status {
-      position: absolute;
-      left: 0;
-      right: 0;
-      margin: @ui-element-margin;
-    }
+    > .canvas-wrapper {
+      display: inline-block;
+      position: relative;
+      text-align: left;
 
-    .status {
-      bottom: 4px;
+      > .top-wrapper, .status {
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin: @ui-element-margin;
+      }
+
+      > .status {
+        bottom: 4px;
+      }
     }
   }
-}
 
-.stdout-wrapper {
-  /* display: none; */
-  margin: 0 auto;
-  width: 600px;
-  height: 150px;
+  > .stdout-wrapper {
+    /* display: none; */
+    margin: 0 auto;
+    width: 600px;
+    height: 150px;
 
-  #stdout {
-    height: 100%;
-    width: 100%;
+    > #stdout {
+      height: 100%;
+      width: 100%;
 
-    display: block;
-    border: none;
-    margin: 0;
-    padding: 0;
+      display: block;
+      border: none;
+      margin: 0;
+      padding: 0;
 
-    background-color: black;
-    color: white;
-    font-family: 'Lucida Console', Monaco, monospace;
-    outline: none;
+      background-color: black;
+      color: white;
+      font-family: 'Lucida Console', Monaco, monospace;
+      outline: none;
+    }
   }
 }
