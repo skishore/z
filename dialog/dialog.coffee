@@ -76,6 +76,7 @@ class @DialogManager
 
 
 Template.dialog.helpers {
+  display: -> if Session.get 'dialog.active' then 'block' else 'none'
   text: -> Session.get 'dialog.text'
   last: ->
     data = Session.get 'dialog.last'

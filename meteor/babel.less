@@ -1,7 +1,8 @@
 @ui-color: white;
-@ui-background-color: #002266;
+@ui-background-color: #444;
 @ui-border: 1px solid @ui-color;
 @ui-font-size: 12px;
+@ui-element-margin: 6px;
 @ui-line-margin: 4px 8px;
 @ui-border-radius: 2px;
 
@@ -11,7 +12,7 @@ body {
   font-family: arial;
   margin: 0;
   padding: 0;
-  background-color: #363636;
+  background-color: #444;
 }
 
 .ui-element {
@@ -63,11 +64,11 @@ body {
     position: relative;
     text-align: left;
 
-    .log, .status {
+    .top-wrapper, .status {
       position: absolute;
       left: 0;
       right: 0;
-      margin: 8px;
+      margin: @ui-element-margin;
     }
 
     .status {

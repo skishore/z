@@ -1,55 +1,74 @@
-.dialog {
-  margin: 0 auto;
-  overflow: hidden;
-  position: relative;
-  transition: height 0.4s;
+.dialog-wrapper.ui-element {
+  background-color: #002266;
+  margin-bottom: 6px;
 
-  color: white;
-  font-family: Times New Roman, serif;
-  font-size: 32px;
-  text-align: center;
-  width: 100%;
-
-  > .scroller {
+  .dialog {
+    margin: 0 auto;
+    overflow: hidden;
     position: relative;
-    height: 100%;
+    transition: height 0.4s;
+
+    color: white;
+    font-family: Times New Roman, serif;
+    font-size: 32px;
+    text-align: center;
     width: 100%;
 
-    > .subdialog {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
+    > .scroller {
+      position: relative;
+      height: 100%;
+      width: 100%;
 
-      > .multiple-choice-translit {
-        > .questions {
-          font-size: 80%;
-          height: 1.6em;
-        }
+      > .subdialog {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
 
-        > .answers {
-          font-size: 40%;
-          height: 4em;
+        > .multiple-choice-translit {
+          > .questions {
+            font-size: 80%;
+            height: 1.6em;
+          }
 
-          .text {
-            transition: all 0.2s;
-            top: 3em;
+          > .answers {
+            font-size: 40%;
+            height: 4em;
 
-            &.done, &.correct, &.wrong {
-              top: 0;
+            .text {
+              transition: all 0.2s;
+              top: 3em;
+
+              &.done, &.correct, &.wrong {
+                top: 0;
+              }
+            }
+          }
+
+          > .questions, .answers {
+            position: relative;
+            width: 100%;
+
+            > .text {
+              display: inline-block;
+              position: absolute;
+              transform: translateX(-50%);
+
+              &.correct {
+                color: #8f4;
+              }
+
+              &.wrong {
+                color: #f62;
+              }
             }
           }
         }
 
-        > .questions, .answers {
-          position: relative;
-          width: 100%;
-
-          > .text {
-            display: inline-block;
-            position: absolute;
-            transform: translateX(-50%);
+        > .short-answer-translit {
+          > .segment {
+            float: left;
 
             &.correct {
               color: #8f4;
@@ -58,41 +77,27 @@
             &.wrong {
               color: #f62;
             }
-          }
-        }
-      }
 
-      > .short-answer-translit {
-        > .segment {
-          float: left;
+            > .answer {
+              font-size: 50%;
 
-          &.correct {
-            color: #8f4;
-          }
-
-          &.wrong {
-            color: #f62;
-          }
-
-          > .answer {
-            font-size: 50%;
-
-            > .cursor, .text, .guide {
-              display: inline-block;
-              font-size: 100%;
-            }
-
-            > .cursor {
-              background-color: #666;
-              color: #ccc;
-
-              &.fixed-width {
-                width: 0.5em;
+              > .cursor, .text, .guide {
+                display: inline-block;
+                font-size: 100%;
               }
-            }
 
-            > .guide {
-              color: #ccc;
+              > .cursor {
+                background-color: #666;
+                color: #ccc;
+
+                &.fixed-width {
+                  width: 0.5em;
+                }
+              }
+
+              > .guide {
+                color: #ccc;
+              }
             }
           }
         }

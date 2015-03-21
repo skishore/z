@@ -3,10 +3,7 @@ Session.set 'status.cur_health', undefined
 Session.set 'status.max_health', undefined
 
 Template.log.helpers {
-  display: ->
-    if Session.get 'dialog.active'
-      return 'block'
-    if (Session.get 'log')?.length == 0 then 'none' else 'block'
+  display: -> if (Session.get 'log')?.length > 0 then 'block' else 'none'
   lines: -> Session.get 'log'
 }
 

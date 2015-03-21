@@ -102,7 +102,7 @@ void OnTaskCompletion(engine::Engine* engine) {
 void OnTaskError(engine::Engine* engine) {
   dialog::Dialog* dialog = engine->GetDialog();
   if (dialog == nullptr) {
-    DEBUG("Failed to get dialog for OnTaskCompletion handler.");
+    DEBUG("Failed to get dialog for OnTaskError handler.");
     return;
   }
   engine::Action* action = dialog->OnTaskError();

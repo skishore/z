@@ -6,7 +6,10 @@
 <body>
   <div class="canvas-outer">
     <div class="canvas-wrapper">
-      {{> log }}
+      <div class="top-wrapper">
+        {{> dialog }}
+        {{> log }}
+      </div>
       {{> status }}
     </div>
   </div>
@@ -16,8 +19,7 @@
 </body>
 
 <template name="log">
-  <div class="log ui-element" style="display: {{display}}">
-    {{> dialog}}
+  <div class="log ui-element" style="display: {{display}};">
     {{#each lines}}
       <div class="line">{{this}}</div>
     {{/each}}
