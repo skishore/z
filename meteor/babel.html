@@ -17,10 +17,10 @@
 
 <template name="log">
   <div class="log ui-element" style="display: {{display}}">
+    {{> dialog}}
     {{#each lines}}
       <div class="line">{{this}}</div>
     {{/each}}
-    {{> dialog}}
   </div>
 </template>
 

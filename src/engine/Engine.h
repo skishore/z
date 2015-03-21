@@ -29,6 +29,9 @@ class Engine {
   // redrawn because something changed.
   bool Update();
 
+  // Exposed to emscripten bindings but not all the way to Javascript.
+  dialog::Dialog* GetDialog() { return game_state_.dialog.get(); }
+
   // The caller takes ownership of the new view.
   View* GetView(int radius) const;
 

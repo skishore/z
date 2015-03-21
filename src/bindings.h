@@ -7,6 +7,7 @@
 #include <emscripten/bind.h>
 
 #include "base/point.h"
+#include "dialog/Dialog.h"
 #include "engine/Action.h"
 #include "engine/Engine.h"
 #include "engine/View.h"
@@ -70,6 +71,50 @@ EMSCRIPTEN_BINDINGS(engine_view) {
     .property("sprites", &engine::View::sprites)
     .property("log", &engine::View::log)
     .property("status", &engine::View::status);
+};
+
+// Dialog-specific callback go here.
+
+void OnPageCompletion(engine::Engine* engine) {
+  dialog::Dialog* dialog = engine->GetDialog();
+  if (dialog == nullptr) {
+    DEBUG("Failed to get dialog for OnPageCompletion handler.");
+    return;
+  }
+  engine::Action* action = dialog->OnPageCompletion();
+  if (action != nullptr) {
+    engine->AddInput(action);
+  }
+}
+
+void OnTaskCompletion(engine::Engine* engine) {
+  dialog::Dialog* dialog = engine->GetDialog();
+  if (dialog == nullptr) {
+    DEBUG("Failed to get dialog for OnTaskCompletion handler.");
+    return;
+  }
+  engine::Action* action = dialog->OnTaskCompletion();
+  if (action != nullptr) {
+    engine->AddInput(action);
+  }
+}
+
+void OnTaskError(engine::Engine* engine) {
+  dialog::Dialog* dialog = engine->GetDialog();
+  if (dialog == nullptr) {
+    DEBUG("Failed to get dialog for OnTaskCompletion handler.");
+    return;
+  }
+  engine::Action* action = dialog->OnTaskError();
+  if (action != nullptr) {
+    engine->AddInput(action);
+  }
+}
+
+EMSCRIPTEN_BINDINGS(dialog) {
+  function("Dialog_OnPageCompletion", &OnPageCompletion, allow_raw_pointers());
+  function("Dialog_OnTaskCompletion", &OnTaskCompletion, allow_raw_pointers());
+  function("Dialog_OnTaskError", &OnTaskError, allow_raw_pointers());
 };
 
 // Animated events go here. We need to add each handler function to the wrapper.

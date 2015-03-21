@@ -49,6 +49,7 @@ ActionResult ExecuteCombatAction::Execute() {
 
   if (killed && target_->IsPlayer()) {
     line_ += " You die...";
+    complete_ = true;
   }
   game_state_->log.AddLine(line_);
   handler_->BeforeAttack(source_->Id(), target_->Id());
@@ -61,6 +62,7 @@ ActionResult ExecuteCombatAction::Execute() {
   if (complete_) {
     game_state_->dialog.reset(nullptr);
   }
+  result.success = complete_;
   result.stalled = !complete_;
   return result;
 }

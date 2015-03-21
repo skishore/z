@@ -1,10 +1,14 @@
 <template name="dialog">
+  {{#if text}}
+    <div class="line">{{text}}</div>
+  {{/if}}
   <div class="dialog" style="height: {{current.height}};">
     <div class="scroller">
       {{> subdialog last}}
       {{> subdialog current}}
     </div>
   </div>
+  <div class="line"></div>
 </template>
 
 <template name="subdialog">

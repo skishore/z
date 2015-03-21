@@ -19,6 +19,9 @@ class @DialogPage
     # Takes a single-character input and return true if the dialog changed.
     assert false, "#{@constructor.name}.on_input is not implemented!"
 
+  signal: (callback) ->
+    Module["Dialog_#{callback}"] bindings.engine
+
   _on_input: (char) ->
     (do @active) and (@accepts_input char) and (@on_input char)
 
@@ -35,6 +38,8 @@ class @DialogManager
   @reset: ->
     @_current = null
     @_next = null
+    Session.set 'dialog.active', false
+    Session.set 'dialog.text', undefined
     Session.set 'dialog.last', undefined
     Session.set 'dialog.current', undefined
 
@@ -45,6 +50,10 @@ class @DialogManager
     else
       @_current = page
       @_redraw 'current'
+      Session.set 'dialog.active', true
+
+  @set_text: (text) ->
+    Session.set 'dialog.text', text
 
   @_animate: =>
     $('.dialog > .scroller > *:last-child').css 'top', '150%'
@@ -67,6 +76,7 @@ class @DialogManager
 
 
 Template.dialog.helpers {
+  text: -> Session.get 'dialog.text'
   last: ->
     data = Session.get 'dialog.last'
     if data?

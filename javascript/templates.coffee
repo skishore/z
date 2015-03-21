@@ -4,7 +4,7 @@ Session.set 'status.max_health', undefined
 
 Template.log.helpers {
   display: ->
-    if (Session.get 'dialog.last')? or (Session.get 'dialog.current')?
+    if Session.get 'dialog.active'
       return 'block'
     if (Session.get 'log')?.length == 0 then 'none' else 'block'
   lines: -> Session.get 'log'

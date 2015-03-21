@@ -34,8 +34,8 @@ class ExecuteCombatAction : public DialogAction {
   engine::ActionResult Execute() override;
 
  private:
-  const bool complete_;
-  const int damage_;
+  bool complete_;
+  int damage_;
   std::string line_;
   engine::Sprite* source_;
   engine::Sprite* target_;
