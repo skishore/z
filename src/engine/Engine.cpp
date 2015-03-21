@@ -7,7 +7,6 @@
 #include "engine/Action.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Sprite.h"
-#include "semantics/Transliterator.h"
 
 using std::max;
 using std::string;
