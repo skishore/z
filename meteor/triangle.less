@@ -2,11 +2,17 @@
 @color: white;
 @text-arrow-size: 6px;
 
-.triangle-down {
+.triangle-down.ui-element {
   background-color: @background-color;
   display: inline-block;
   position: absolute;
   transform: translate(-50%, -150%);
+  z-index: 1;
+
+  > .line {
+    font-size: 14px;
+    margin: 0px 4px;
+  }
 
   &:before, &:after {
     border-style: solid;
