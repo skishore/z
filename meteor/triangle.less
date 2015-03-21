@@ -1,0 +1,32 @@
+@background-color: #002266;
+@color: white;
+@text-arrow-size: 6px;
+
+.triangle-down {
+  background-color: @background-color;
+  display: inline-block;
+  position: absolute;
+  transform: translate(-50%, -150%);
+
+  &:before, &:after {
+    border-style: solid;
+    content: "";
+    display: block;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 0;
+  }
+
+  &:before {
+    bottom: -@text-arrow-size;
+    border-width: @text-arrow-size @text-arrow-size 0;
+    border-color: @color transparent;
+  }
+
+  &:after {
+    bottom: -(@text-arrow-size - 1px);
+    border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+    border-color: @background-color transparent;
+  }
+}
