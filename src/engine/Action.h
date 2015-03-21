@@ -1,9 +1,7 @@
 #ifndef __BABEL_ENGINE_ACTION_H__
 #define __BABEL_ENGINE_ACTION_H__
 
-#include <memory>
 #include <string>
-#include <vector>
 
 #include "base/point.h"
 

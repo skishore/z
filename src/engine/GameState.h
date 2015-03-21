@@ -20,6 +20,11 @@
 #include "engine/TileMap.h"
 
 namespace babel {
+
+namespace dialog {
+class Dialog;
+}  // namespace dialog
+
 namespace engine {
 
 class Sprite;
@@ -45,6 +50,7 @@ class GameState {
   Sprite* player;
   std::vector<Sprite*> sprites;
   std::unique_ptr<FieldOfVision> player_vision;
+  std::unique_ptr<dialog::Dialog> dialog;
   Log log;
 
  private:

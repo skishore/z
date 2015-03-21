@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "dialog/DialogAction.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
@@ -27,6 +28,13 @@ AttackAction::AttackAction(Sprite* target) : target_(target) {}
 
 ActionResult AttackAction::Execute() {
   ActionResult result;
+
+  // Exit early if the player is attacking an enemy with a combat dialog.
+  if (sprite_->IsPlayer() && dialog::DefendsWithDialog(*target_)) {
+    result.alternate = new dialog::LaunchDialogAction(target_);
+    return result;
+  }
+
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;

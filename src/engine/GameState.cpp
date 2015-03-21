@@ -6,6 +6,7 @@
 #include "base/creature.h"
 #include "base/debug.h"
 #include "base/util.h"
+#include "dialog/Dialog.h"
 #include "engine/Sprite.h"
 
 using std::map;
