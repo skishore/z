@@ -13,6 +13,9 @@ BabelBindings.prototype.OnAssetsLoaded = function() {
 }
 
 BabelBindings.prototype.Reset = function() {
+  if (this.engine) {
+    this.engine.delete();
+  }
   this.engine = new Module.BabelEngine();
   this.engine.AddEventHandler(Module.BabelEventHandler.implement(this));
   this.animation = new BabelAnimation(this.engine, this.graphics, this.radius);

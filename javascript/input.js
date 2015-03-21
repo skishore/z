@@ -22,7 +22,8 @@ function BabelInput(engine, reset) {
 
   this.dialog = null;
 
-  $('body').keydown(this.OnKeyPress.bind(this));
+  $('body').off('keydown');
+  $('body').on('keydown', this.OnKeyPress.bind(this));
 }
 
 BabelInput.prototype.OnKeyPress = function(e) {
