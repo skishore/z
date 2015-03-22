@@ -1,8 +1,16 @@
 window.BabelAnimation = function() {
 "use strict";
 
+// The number of frames taken for each animation type.
 var kAttackFrames = 4;
+var kSplitFrames = 8;
+var kVibrateFrames = 8;
+var kVibrateInterval = 2;
+
+// The number of frames taken to tween between animation checkpoints.
 var kTweenFrames = 4;
+
+// The side length of each grid square, in pixels.
 var kGridSize = 16;
 
 function ASSERT(condition, message) {
@@ -20,9 +28,27 @@ function BabelAnimation(engine, graphics, radius) {
   this.steps = [];
 }
 
-BabelAnimation.prototype.BeforeAttack = function(source, target) {
+BabelAnimation.prototype.OnAttack = function(source, target) {
   var view = this.Snapshot();
   var component = new AttackComponent(view, source, target);
+  this.PushStep({component: component, view: view});
+}
+
+BabelAnimation.prototype.OnSplit = function(source, ids) {
+  var deserialized = [];
+  for (var i = 0; i < ids.size(); i++) {
+    deserialized.push(ids.get(i));
+  }
+  // ids is a const reference, so it is owned by the EventHandler caller.
+  // Deleting it would cause a duplicate-free bug when this callback is over.
+  var view = this.Snapshot();
+  var component = new SplitComponent(view, source, deserialized);
+  this.PushStep({component: component, view: view});
+}
+
+BabelAnimation.prototype.OnVibrate = function(sprite) {
+  var view = this.Snapshot();
+  var component = new VibrateComponent(view, sprite);
   this.PushStep({component: component, view: view});
 }
 
@@ -158,6 +184,67 @@ AttackComponent.prototype.Update = function() {
 }
 
 AttackComponent.prototype.Draw = function(view, graphics) {
+  graphics.Draw(view, this.transform);
+}
+
+function SplitComponent(view, start, ids) {
+  this.start = start;
+  this.move = {};
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i];
+    if (view.sprites.hasOwnProperty(id)) {
+      var end = view.sprites[id].square;
+      this.move[id] = {x: start.x - (end.x + view.offset.x),
+                       y: start.y - (end.y + view.offset.y)};
+    }
+  }
+
+  this.transform = new Transform();
+  this.frames_left = kSplitFrames;
+}
+
+SplitComponent.prototype.Update = function() {
+  this.frames_left -= 1;
+  if (this.frames_left < 0) {
+    return false;
+  }
+  var frame = this.frames_left + 1;
+  for (var id in this.move) {
+    if (this.move.hasOwnProperty(id)) {
+      var move = this.move[id];
+      this.transform.sprite_offsets[id] =
+          {x: Math.floor(frame*kGridSize*move.x/kSplitFrames),
+           y: Math.floor(frame*kGridSize*move.y/kSplitFrames)};
+    }
+  }
+  return true;
+}
+
+SplitComponent.prototype.Draw = function(view, graphics) {
+  graphics.Draw(view, this.transform);
+}
+
+function VibrateComponent(view, sprite) {
+  this.sprite = sprite;
+  this.transform = new Transform();
+  this.frames_left = kVibrateFrames;
+}
+
+VibrateComponent.prototype.Update = function() {
+  this.frames_left -= 1;
+  if (this.frames_left < 0) {
+    return false;
+  }
+  if ((this.frames_left + 1) % kVibrateInterval == 0) {
+    var radius = Math.floor(kGridSize/4);
+    this.transform.sprite_offsets[this.sprite] =
+        {x: Math.randint(-radius, radius + 1),
+         y: Math.randint(-radius, radius + 1)};
+  }
+  return true;
+}
+
+VibrateComponent.prototype.Draw = function(view, graphics) {
   graphics.Draw(view, this.transform);
 }
 

@@ -23,6 +23,7 @@ EMSCRIPTEN_BINDINGS(stl_wrappers) {
   register_vector<engine::TileView>("VectorTile");
   register_vector<std::vector<engine::TileView>>("VectorVectorTile");
   register_vector<engine::SpriteView>("VectorSprite");
+  register_vector<engine::sid>("VectorId");
 };
 
 EMSCRIPTEN_BINDINGS(value_types) {
@@ -121,15 +122,23 @@ EMSCRIPTEN_BINDINGS(dialog) {
 
 struct EventHandlerWrapper : public wrapper<engine::EventHandler> {
   EMSCRIPTEN_WRAPPER(EventHandlerWrapper);
-  void BeforeAttack(engine::sid source, engine::sid target) override {
-    return call<void>("BeforeAttack", source, target);
+  void OnAttack(engine::sid source, engine::sid target) override {
+    return call<void>("OnAttack", source, target);
+  }
+  void OnSplit(const Point& source,
+               const std::vector<engine::sid>& ids) override {
+    return call<void>("OnSplit", source, ids);
+  }
+  void OnVibrate(const engine::sid sprite) override {
+    return call<void>("OnVibrate", sprite);
   }
 };
 
 EMSCRIPTEN_BINDINGS(events) {
   class_<engine::EventHandler>("BabelEventHandler")
-    .function("BeforeAttack", &engine::EventHandler::BeforeAttack,
-              pure_virtual())
+    .function("OnAttack", &engine::EventHandler::OnAttack, pure_virtual())
+    .function("OnSplit", &engine::EventHandler::OnSplit, pure_virtual())
+    .function("OnVibrate", &engine::EventHandler::OnVibrate, pure_virtual())
     .allow_subclass<EventHandlerWrapper>("EventHandlerWrapper");
 };
 

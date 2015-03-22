@@ -42,20 +42,27 @@ ActionResult LaunchDialogAction::Execute() {
   //    new TransliterationCombatDialog(sprite_, target_));
   //result.stalled = true;
 
-  vector<Point> squares =
-      GetReachableSquares(*game_state_, target_->square, 4);
+  const Point start = target_->square;
+  vector<Point> squares = GetReachableSquares(*game_state_, start, 4);
   std::random_shuffle(squares.begin(), squares.end());
 
   game_state_->log.AddLine(
       "You strike the " + target_->creature.appearance.name + ".");
-  handler_->BeforeAttack(sprite_->Id(), target_->Id());
+  handler_->OnAttack(sprite_->Id(), target_->Id());
+  handler_->OnVibrate(target_->Id());
 
   game_state_->log.AddLine("It splits!");
   game_state_->RemoveNPC(target_);
-  const int num_to_spawn = min(int(squares.size()), 16);
+
+  const int num_to_spawn = min(int(squares.size()), 4);
+  vector<engine::sid> ids;
   for (int i = 0; i < num_to_spawn; i++) {
-    game_state_->AddNPC(new Sprite(squares[i], 1));
+    Sprite* sprite = new Sprite(squares[i], 1);
+    game_state_->AddNPC(sprite);
+    ids.push_back(sprite->Id());
+    sprite->ConsumeEnergy();
   }
+  handler_->OnSplit(start, ids);
 
   result.success = true;
   return result;
@@ -76,7 +83,7 @@ ActionResult ExecuteCombatAction::Execute() {
     complete_ = true;
   }
   game_state_->log.AddLine(line_);
-  handler_->BeforeAttack(source_->Id(), target_->Id());
+  handler_->OnAttack(source_->Id(), target_->Id());
 
   target_->cur_health = max(target_->cur_health - damage_, 0);
   if (killed && !target_->IsPlayer()) {

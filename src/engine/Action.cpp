@@ -50,8 +50,8 @@ ActionResult AttackAction::Execute() {
     game_state_->log.AddLine(
         "The " + sprite_->creature.appearance.name + " hits!" + followup);
   }
+  handler_->OnAttack(sprite_->Id(), target_->Id());
 
-  handler_->BeforeAttack(sprite_->Id(), target_->Id());
   target_->cur_health = max(target_->cur_health - damage, 0);
   if (!target_->IsPlayer() && killed) {
     game_state_->RemoveNPC(target_);
