@@ -36,7 +36,7 @@ GameState::GameState(const string& map_file) {
         square.y += rand() % room.size.y;
         if (!IsSquareOccupied(square)) {
           //const int type = (rand() % (kCreatures.size() - 1)) + 1;
-          const int type = kCreatures.size() - 1;
+          const int type = 1;
           AddNPC(new Sprite(square, type));
           break;
         }

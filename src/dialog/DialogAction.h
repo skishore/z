@@ -10,7 +10,7 @@ namespace babel {
 namespace dialog {
 
 // Returns true if attacking the given target launches a dialog.
-bool DefendsWithDialog(const engine::Sprite& target);
+bool DefendsWithDialog(int damage, const engine::Sprite& target);
 
 class DialogAction : public engine::Action {
  public:

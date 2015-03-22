@@ -21,8 +21,8 @@ using std::vector;
 namespace babel {
 namespace dialog {
 
-bool DefendsWithDialog(const Sprite& sprite) {
-  return sprite.creature.appearance.name == "troll";
+bool DefendsWithDialog(int damage, const Sprite& sprite) {
+  return sprite.type == 1 && damage >= sprite.cur_health;
 }
 
 LaunchDialogAction::LaunchDialogAction(Sprite* target) : target_(target) {}
@@ -47,15 +47,15 @@ ActionResult LaunchDialogAction::Execute() {
   std::random_shuffle(squares.begin(), squares.end());
 
   game_state_->log.AddLine(
-      "You strike the " + target_->creature.appearance.name + ".");
+      "You hit the " + target_->creature.appearance.name + ".");
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
-  game_state_->log.AddLine("It splits!");
+  game_state_->log.AddLine("Its heads roll!");
   game_state_->RemoveNPC(target_);
 
   const int num_to_spawn = min(int(squares.size()), 4);
   for (int i = 0; i < num_to_spawn; i++) {
-    Sprite* sprite = new Sprite(squares[i], 1);
+    Sprite* sprite = new Sprite(squares[i], 2);
     game_state_->AddNPC(sprite);
     sprite->ConsumeEnergy();
   }

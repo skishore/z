@@ -29,18 +29,20 @@ AttackAction::AttackAction(Sprite* target) : target_(target) {}
 ActionResult AttackAction::Execute() {
   ActionResult result;
 
-  // Exit early if the player is attacking an enemy with a combat dialog.
-  if (sprite_->IsPlayer() && dialog::DefendsWithDialog(*target_)) {
-    result.alternate = new dialog::LaunchDialogAction(target_);
-    return result;
-  }
-
+  // Compute the attack base damage.
   int damage = 0;
   for (int i = 0; i < sprite_->creature.attack.dice; i++) {
     damage += (rand() % sprite_->creature.attack.sides) + 1;
   }
-  const bool killed = damage >= target_->cur_health;
 
+  // Exit early if the player is attacking an enemy with a combat dialog.
+  if (sprite_->IsPlayer() && dialog::DefendsWithDialog(damage, *target_)) {
+    result.alternate = new dialog::LaunchDialogAction(target_);
+    return result;
+  }
+
+  // Log and animate the attack.
+  const bool killed = damage >= target_->cur_health;
   if (sprite_->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
     game_state_->log.AddLine("You " + verb + " the " +
@@ -52,6 +54,7 @@ ActionResult AttackAction::Execute() {
   }
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
+  // Execute the attack and maybe kill the sprite.
   target_->cur_health = max(target_->cur_health - damage, 0);
   if (!target_->IsPlayer() && killed) {
     game_state_->RemoveNPC(target_);

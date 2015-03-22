@@ -10,7 +10,6 @@ struct Creature {
   struct Appearance {
     std::string name;
     int graphic;
-    uint32_t color;
   } appearance;
 
   struct Attack {

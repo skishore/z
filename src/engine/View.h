@@ -21,7 +21,6 @@ struct SpriteView {
   // square is offset within the current view.
   engine::sid id;
   int graphic;
-  uint32_t color;
   Point square;
 };
 
