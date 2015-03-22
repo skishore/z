@@ -4,6 +4,7 @@
 #include <emscripten.h>
 #else
 #define EM_ASM(...)
+#define EM_ASM_INT(...)
 #endif  // EMSCRIPTEN
 
 #include "dialog/DialogAction.h"

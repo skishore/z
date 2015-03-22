@@ -31,14 +31,15 @@ class Sprite {
   bool IsAlive() const;
   bool IsPlayer() const;
 
-  Point square;
+  const int type;
   const Creature& creature;
+
+  Point square;
   int cur_health;
   int max_health;
 
  private:
   sid id;
-  int type;
   int energy;
 };
 

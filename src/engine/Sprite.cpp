@@ -61,7 +61,7 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
 }  // namespace
 
 Sprite::Sprite(const Point& s, int t)
-    : square(s), creature(kCreatures[t]), id(gIdCounter), type(t) {
+    : type(t), creature(kCreatures[t]), square(s),  id(gIdCounter) {
   gIdCounter += 1;
   max_health = creature.stats.max_health;
   cur_health = max_health;
