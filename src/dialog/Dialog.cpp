@@ -20,8 +20,9 @@ Dialog::~Dialog() {
 }
 
 TransliterationCombatDialog::TransliterationCombatDialog(
-    Sprite* source, Sprite* target) : source_(source), target_(target),
-                                      enemy_(target->creature.appearance.name) {
+    Sprite* source, Sprite* target)
+    : source_(source), target_(target),
+      enemy_(target->creature->appearance.name) {
   EM_ASM_INT({
     DialogManager.set_text('The ' + Module.Pointer_stringify($0) +
                            ' is vulnerable to transliteration:');

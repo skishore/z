@@ -43,19 +43,22 @@ ActionResult LaunchDialogAction::Execute() {
   //result.stalled = true;
 
   const Point start = target_->square;
-  vector<Point> squares = GetReachableSquares(*game_state_, start, 4);
+  const int target_num_to_spawn = 8;
+  vector<Point> squares = GetReachableSquares(
+      *game_state_, start, 2*target_num_to_spawn, 4);
   std::random_shuffle(squares.begin(), squares.end());
 
   game_state_->log.AddLine(
-      "You hit the " + target_->creature.appearance.name + ".");
+      "You hit the " + target_->creature->appearance.name + ".");
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
-  game_state_->log.AddLine("Its heads roll!");
-  game_state_->RemoveNPC(target_);
 
-  const int num_to_spawn = min(int(squares.size()), 4);
+  game_state_->log.AddLine("Its heads roll!");
+  target_->Polymorph(2);
+  target_->ConsumeEnergy();
+  const int num_to_spawn = min(int(squares.size()), target_num_to_spawn);
   for (int i = 0; i < num_to_spawn; i++) {
-    Sprite* sprite = new Sprite(squares[i], 2);
+    Sprite* sprite = new Sprite(squares[i], 3);
     game_state_->AddNPC(sprite);
     sprite->ConsumeEnergy();
   }

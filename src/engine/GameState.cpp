@@ -120,7 +120,7 @@ Sprite* GameState::SpriteAt(const Point& square) const {
 }
 
 void GameState::RecomputePlayerVision() {
-  const int radius = player->creature.stats.vision_radius;
+  const int radius = player->creature->stats.vision_radius;
   player_vision.reset(new FieldOfVision(map, player->square, radius));
   for (int x = -radius; x <= radius; x++) {
     for (int y = -radius; y <= radius; y++) {

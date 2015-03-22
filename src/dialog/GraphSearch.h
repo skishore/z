@@ -9,10 +9,10 @@
 namespace babel {
 namespace dialog {
 
-// Returns the list of unblocked and unoccupied squares reachable in up to k
-// steps from the starting square.
+// Searches for n unblocked, unoccupied squares reachable from start.
+// The search terminates at a distance of at most k.
 std::vector<Point> GetReachableSquares(
-    const engine::GameState& game_state, const Point& start, int k);
+    const engine::GameState& game_state, const Point& start, int n, int k);
 
 }  // namespace dialog
 }  // namespace babel

@@ -20,8 +20,8 @@ static const Point kKingMoves[] = {
 }  // namespace
 
 vector<Point> GetReachableSquares(
-    const GameState& game_state, const Point& start, int k) {
-  vector<Point> result{start};
+    const GameState& game_state, const Point& start, int n, int k) {
+  vector<Point> result;
   unordered_set<Point> visited{start};
   unique_ptr<vector<Point>> queue(new vector<Point>{start});
   for (int i = 0; i < k; i++) {
@@ -40,6 +40,9 @@ vector<Point> GetReachableSquares(
       }
     }
     queue = std::move(next);
+    if (result.size() > n) {
+      break;
+    }
   }
   return result;
 }

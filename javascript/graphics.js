@@ -15,7 +15,7 @@ function BabelGraphics(target, radius, onload) {
   this.sprite_textures = [];
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
-  this.num_sprites = 3;
+  this.num_sprites = 4;
   this.size = 2*this.radius + 1;
   this.square = 16;
 
@@ -104,6 +104,7 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
       if (!this.sprites.hasOwnProperty(id)) {
         var graphic = view.sprites[id].graphic;
         var sprite = new PIXI.Sprite(this.sprite_textures[graphic]);
+        sprite._babel_graphic = graphic;
         this.sprites[id] = sprite;
         this.stage.addChild(sprite);
       }
@@ -127,6 +128,12 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
         sprite.x = this.square*(sprite_view.square.x - 1) + offset.x;
         sprite.y = this.square*(sprite_view.square.y - 1) + offset.y;
         sprite.tint = 0xffffff;
+
+        var graphic = sprite_view.graphic;
+        if (sprite._babel_graphic !== graphic) {
+          sprite.setTexture(this.sprite_textures[graphic]);
+          sprite._babel_graphic = graphic;
+        }
       } else {
         this.stage.removeChild(sprite);
         delete this.sprites[id];

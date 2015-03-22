@@ -27,12 +27,15 @@ class Sprite {
   // This method will crash if called on the player.
   Action* GetAction(const GameState& game_state) const;
 
+  // Turns the sprite into a creature of the given type and resets its stats.
+  void Polymorph(int type);
+
   sid Id() const { return id; };
   bool IsAlive() const;
   bool IsPlayer() const;
 
-  const int type;
-  const Creature& creature;
+  int type;
+  const Creature* creature;
 
   Point square;
   int cur_health;

@@ -31,7 +31,7 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
     return INT_MIN;
   }
   // Move toward the player if they are visible. Otherwise, move randomly.
-  const int radius = sprite.creature.stats.vision_radius;
+  const int radius = sprite.creature->stats.vision_radius;
   if (game_state.player_vision->IsSquareVisible(sprite.square, radius)) {
     return -kFineness*(game_state.player->square - square).length();
   }
@@ -60,11 +60,9 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
 
 }  // namespace
 
-Sprite::Sprite(const Point& s, int t)
-    : type(t), creature(kCreatures[t]), square(s),  id(gIdCounter) {
+Sprite::Sprite(const Point& s, int t) : square(s),  id(gIdCounter) {
   gIdCounter += 1;
-  max_health = creature.stats.max_health;
-  cur_health = max_health;
+  Polymorph(t);
   if (IsPlayer()) {
     energy = kEnergyNeededToMove;
   } else {
@@ -77,7 +75,7 @@ bool Sprite::HasEnergyNeededToMove() const {
 }
 
 bool Sprite::GainEnergy() {
-  energy += creature.stats.speed;
+  energy += creature->stats.speed;
   return energy >= kEnergyNeededToMove;
 }
 
@@ -92,6 +90,13 @@ Action* Sprite::GetAction(const GameState& game_state) const {
   } else {
     return new MoveAction(GetBestMove(*this, game_state));
   }
+}
+
+void Sprite::Polymorph(int t) {
+  type = t;
+  creature = &kCreatures[t];
+  max_health = creature->stats.max_health;
+  cur_health = max_health;
 }
 
 bool Sprite::IsAlive() const {

@@ -31,8 +31,8 @@ ActionResult AttackAction::Execute() {
 
   // Compute the attack base damage.
   int damage = 0;
-  for (int i = 0; i < sprite_->creature.attack.dice; i++) {
-    damage += (rand() % sprite_->creature.attack.sides) + 1;
+  for (int i = 0; i < sprite_->creature->attack.dice; i++) {
+    damage += (rand() % sprite_->creature->attack.sides) + 1;
   }
 
   // Exit early if the player is attacking an enemy with a combat dialog.
@@ -46,11 +46,11 @@ ActionResult AttackAction::Execute() {
   if (sprite_->IsPlayer()) {
     const string verb = (killed ? "kill" : "hit");
     game_state_->log.AddLine("You " + verb + " the " +
-                             target_->creature.appearance.name + ".");
+                             target_->creature->appearance.name + ".");
   } else {
     const string followup = (killed ? " You die..." : "");
     game_state_->log.AddLine(
-        "The " + sprite_->creature.appearance.name + " hits!" + followup);
+        "The " + sprite_->creature->appearance.name + " hits!" + followup);
   }
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
