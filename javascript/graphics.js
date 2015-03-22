@@ -15,7 +15,7 @@ function BabelGraphics(target, radius, onload) {
   this.sprite_textures = [];
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
-  this.num_sprites = 4;
+  this.num_sprites = 5;
   this.size = 2*this.radius + 1;
   this.square = 16;
 

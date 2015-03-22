@@ -22,7 +22,10 @@ namespace babel {
 namespace dialog {
 
 bool DefendsWithDialog(int damage, const Sprite& sprite) {
-  return sprite.type == 1 && damage >= sprite.cur_health;
+  if (sprite.type == 1) {
+    return damage >= sprite.cur_health;
+  }
+  return sprite.type == 4;
 }
 
 LaunchDialogAction::LaunchDialogAction(Sprite* target) : target_(target) {}
@@ -38,9 +41,12 @@ ActionResult LaunchDialogAction::Execute() {
     return result;
   }
 
-  //game_state_->dialog.reset(
-  //    new TransliterationCombatDialog(sprite_, target_));
-  //result.stalled = true;
+  if (target_->type == 4) {
+    game_state_->dialog.reset(
+        new TransliterationCombatDialog(sprite_, target_));
+    result.stalled = true;
+    return result;
+  }
 
   const Point start = target_->square;
   const int target_num_to_spawn = 8;

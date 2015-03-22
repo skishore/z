@@ -27,16 +27,19 @@ GameState::GameState(const string& map_file) {
 
   for (int i = 1; i < map.GetRooms().size(); i++) {
     const TileMap::Room& room = map.GetRooms()[i];
-    //const int num_enemies = (room.size.x + room.size.y)/2 - 3;
-    const int num_enemies = 1;
+
+    // Decide what how many and what type of enemies to spawn in this room.
+    // TODO(skishore): Make this decision based off creature attributes.
+    bool demon = rand() % 2 == 0;
+    const int num_enemies = (demon ? 1 : (room.size.x + room.size.y)/2 - 3);
+    const int type = (demon ? 1 : 4);
+
     for (int j = 0; j < num_enemies; j++) {
       while (true) {
         Point square = room.position;
         square.x += rand() % room.size.x;
         square.y += rand() % room.size.y;
         if (!IsSquareOccupied(square)) {
-          //const int type = (rand() % (kCreatures.size() - 1)) + 1;
-          const int type = 1;
           AddNPC(new Sprite(square, type));
           break;
         }

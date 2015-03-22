@@ -22,7 +22,11 @@ const std::vector<Creature> kCreatures = {
   Creature{
     Appearance{"demon's head", 3},
     Attack{1, 1},
-    Stats{1, 20, 7}}
+    Stats{1, 20, 7}},
+  Creature{
+    Appearance{"gecko", 4},
+    Attack{1, 1},
+    Stats{2, 40, 7}}
 };
 
 #undef Stats
