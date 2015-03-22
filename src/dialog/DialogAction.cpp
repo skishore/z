@@ -49,20 +49,16 @@ ActionResult LaunchDialogAction::Execute() {
   game_state_->log.AddLine(
       "You strike the " + target_->creature.appearance.name + ".");
   handler_->OnAttack(sprite_->Id(), target_->Id());
-  handler_->OnVibrate(target_->Id());
 
   game_state_->log.AddLine("It splits!");
   game_state_->RemoveNPC(target_);
 
   const int num_to_spawn = min(int(squares.size()), 4);
-  vector<engine::sid> ids;
   for (int i = 0; i < num_to_spawn; i++) {
     Sprite* sprite = new Sprite(squares[i], 1);
     game_state_->AddNPC(sprite);
-    ids.push_back(sprite->Id());
     sprite->ConsumeEnergy();
   }
-  handler_->OnSplit(start, ids);
 
   result.success = true;
   return result;
