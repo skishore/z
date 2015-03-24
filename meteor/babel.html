@@ -6,6 +6,7 @@
 <body>
   <div class="canvas-outer">
     <div class="canvas-wrapper">
+      {{> labels }}
       <div class="top-wrapper">
         {{> dialog }}
         {{> log }}
@@ -17,6 +18,15 @@
     <textarea id="stdout"></textarea>
   </div>
 </body>
+
+<template name="labels">
+  {{#each labels}}
+    <div class="triangle triangle-{{orientation}} ui-element"
+         style="left: {{left}}px; top: {{top}}px;">
+      <div class="line">{{text}}</div>
+    </div>
+  {{/each}}
+</template>
 
 <template name="log">
   <div class="log ui-element" style="display: {{display}};">

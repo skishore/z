@@ -48,6 +48,22 @@ function BabelGraphics(target, radius, onload) {
   this.stats.domElement.style.position = "fixed";
   this.stats.domElement.style.top = "0px";
   this.stats.domElement.style.left = "0px";
+
+  // This constant should match @text_arrow_size in triangle.less.
+  var kTextArrowSize = 6;
+  var kSquare = this.scale*this.square;
+  var hpadding = 0;
+  var vpadding = 1;
+  this.kLabelOffset = {
+    'bottom': [0.5*kSquare, -vpadding],
+    'bottom-left': [0.5*kSquare - kTextArrowSize, -vpadding],
+    'bottom-right': [0.5*kSquare + kTextArrowSize, -vpadding],
+    'top': [0.5*kSquare, kSquare + vpadding],
+    'top-left': [0.5*kSquare - kTextArrowSize, kSquare + vpadding],
+    'top-right': [0.5*kSquare + kTextArrowSize, kSquare + vpadding],
+    'left': [kSquare + hpadding, 0.5*kSquare],
+    'right': [-hpadding, 0.5*kSquare],
+  };
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
@@ -110,6 +126,7 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
       }
     }
   }
+  var labels = [];
   for (var id in this.sprites) {
     if (this.sprites.hasOwnProperty(id)) {
       var sprite = this.sprites[id];
@@ -134,12 +151,18 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
           sprite.setTexture(this.sprite_textures[graphic]);
           sprite._babel_graphic = graphic;
         }
+
+        sprite_view.label = "हिन्दी";
+        if (sprite_view.label.length > 0) {
+          labels.push(this.DrawLabel(sprite, sprite_view.label, 'bottom-left'));
+        }
       } else {
         this.stage.removeChild(sprite);
         delete this.sprites[id];
       }
     }
   }
+  Session.set('labels', labels);
 }
 
 BabelGraphics.prototype.DrawTiles = function(view) {
@@ -175,13 +198,16 @@ BabelGraphics.prototype.DrawUI = function(view) {
   Session.set('status.max_health', view.status.max_health);
 }
 
-BabelGraphics.prototype.ShowText = function(x, y, text) {
-  var line = $('<div>').addClass('line').text(text);
-  var element = $('<div>').addClass('triangle-down ui-element').append(line);
-  element.css({
-    left: Math.floor(this.scale*(this.radius + x - 0.5)*this.square),
-    top: Math.floor(this.scale*(this.radius + y - 0.5)*this.square)});
-  this.target.append(element);
+BabelGraphics.prototype.DrawLabel = function(sprite, text, orientation) {
+  assert(this.kLabelOffset.hasOwnProperty(orientation),
+         "Invalid orientation: " + orientation);
+  var offset = this.kLabelOffset[orientation];
+  return {
+    left: Math.floor(this.scale*(sprite.x) + offset[0]),
+    top: Math.floor(this.scale*(sprite.y) + offset[1]),
+    orientation: orientation,
+    text: text,
+  };
 }
 
 return BabelGraphics;

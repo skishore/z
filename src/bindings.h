@@ -37,7 +37,8 @@ EMSCRIPTEN_BINDINGS(value_types) {
   value_object<engine::SpriteView>("BabelSprite")
     .field("id", &engine::SpriteView::id)
     .field("graphic", &engine::SpriteView::graphic)
-    .field("square", &engine::SpriteView::square);
+    .field("square", &engine::SpriteView::square)
+    .field("label", &engine::SpriteView::label);
 
   value_object<engine::StatusView>("BabelStatus")
     .field("cur_health", &engine::StatusView::cur_health)

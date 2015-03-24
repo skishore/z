@@ -2,11 +2,10 @@
 @color: white;
 @text-arrow-size: 6px;
 
-.triangle-down.ui-element {
+.triangle.ui-element {
   background-color: @background-color;
   display: inline-block;
   position: absolute;
-  transform: translate(-50%, -150%);
   z-index: 1;
 
   > .line {
@@ -18,21 +17,172 @@
     border-style: solid;
     content: "";
     display: block;
-    left: 50%;
     position: absolute;
-    transform: translateX(-50%);
     width: 0;
   }
 
-  &:before {
-    bottom: -@text-arrow-size;
-    border-width: @text-arrow-size @text-arrow-size 0;
-    border-color: @color transparent;
+  &.triangle-bottom {
+    transform: translate(-50%, -100%);
+
+    &:before, &:after {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      bottom: -@text-arrow-size;
+      border-width: @text-arrow-size @text-arrow-size 0;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      bottom: -(@text-arrow-size - 1px);
+      border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+      border-color: @background-color transparent;
+    }
   }
 
-  &:after {
-    bottom: -(@text-arrow-size - 1px);
-    border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
-    border-color: @background-color transparent;
+  &.triangle-bottom-left {
+    transform: translateY(-100%);
+
+    &:before {
+      left: -1px + @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:after {
+      left: -1px + @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      bottom: -@text-arrow-size;
+      border-width: @text-arrow-size @text-arrow-size 0;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      bottom: -(@text-arrow-size - 1px);
+      border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+      border-color: @background-color transparent;
+    }
+  }
+
+  &.triangle-bottom-right {
+    transform: translate(-100%, -100%);
+
+    &:before {
+      right: -1px - @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:after {
+      right: 1px - @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      bottom: -@text-arrow-size;
+      border-width: @text-arrow-size @text-arrow-size 0;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      bottom: -(@text-arrow-size - 1px);
+      border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+      border-color: @background-color transparent;
+    }
+  }
+
+  &.triangle-top-left {
+    &:before {
+      left: -1px + @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:after {
+      left: -1px + @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      top: -@text-arrow-size;
+      border-width: 0 @text-arrow-size @text-arrow-size;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      top: -(@text-arrow-size - 1px);
+      border-width: 0 (@text-arrow-size - 1px) (@text-arrow-size - 1px);
+      border-color: @background-color transparent;
+    }
+  }
+
+  &.triangle-top-right {
+    transform: translateX(-100%);
+
+    &:before {
+      right: -1px - @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:after {
+      right: 1px - @text-arrow-size;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      top: -@text-arrow-size;
+      border-width: 0 @text-arrow-size @text-arrow-size;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      top: -(@text-arrow-size - 1px);
+      border-width: 0 (@text-arrow-size - 1px) (@text-arrow-size - 1px);
+      border-color: @background-color transparent;
+    }
+  }
+
+  &.triangle-left {
+    transform: translateY(-50%);
+
+    &:before, &:after {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    &:before {
+      left: -@text-arrow-size;
+      border-width: @text-arrow-size @text-arrow-size @text-arrow-size 0;
+      border-color: transparent @color;
+    }
+
+    &:after {
+      left: -(@text-arrow-size - 1px);
+      border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+      border-color: transparent @background-color;
+    }
+  }
+
+  &.triangle-right {
+    transform: translate(-100%, -50%);
+
+    &:before, &:after {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    &:before {
+      right: -@text-arrow-size;
+      border-width: @text-arrow-size 0 @text-arrow-size @text-arrow-size;
+      border-color: transparent @color;
+    }
+
+    &:after {
+      right: -(@text-arrow-size - 1px);
+      border-width: (@text-arrow-size - 1px) 0 (@text-arrow-size - 1px) (@text-arrow-size - 1px);
+      border-color: transparent @background-color;
+    }
   }
 }
