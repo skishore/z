@@ -36,7 +36,8 @@ ActionResult AttackAction::Execute() {
   }
 
   // Exit early if the player is attacking an enemy with a combat dialog.
-  if (sprite_->IsPlayer() && dialog::DefendsWithDialog(damage, *target_)) {
+  if (sprite_->IsPlayer() &&
+      dialog::DefendsWithDialog(*game_state_, *target_, damage)) {
     result.alternate = new dialog::LaunchDialogAction(target_);
     return result;
   }

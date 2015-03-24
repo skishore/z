@@ -12,6 +12,7 @@
 #include "engine/Sprite.h"
 
 using babel::engine::ActionResult;
+using babel::engine::GameState;
 using babel::engine::Sprite;
 using std::max;
 using std::min;
@@ -21,7 +22,11 @@ using std::vector;
 namespace babel {
 namespace dialog {
 
-bool DefendsWithDialog(int damage, const Sprite& sprite) {
+bool DefendsWithDialog(const GameState& game_state,
+                       const Sprite& sprite, int damage) {
+  if (game_state.dialog != nullptr && game_state.dialog->IsInvolved(sprite)) {
+    return true;
+  }
   if (sprite.type == 1) {
     return damage >= sprite.cur_health;
   }
@@ -34,10 +39,16 @@ ActionResult LaunchDialogAction::Execute() {
   ActionResult result;
 
   ASSERT(sprite_->IsPlayer(), "NPC attack launched a dialog!");
+  const string& enemy = target_->creature->appearance.name;
 
   if (game_state_->dialog != nullptr) {
-    // TODO(skishore): Handle this case for complex dialog games.
-    ASSERT(false, "Tried to launch a dialog when one was up!");
+    if (game_state_->dialog->IsInvolved(*target_)) {
+      game_state_->dialog->OnAttack(game_state_, handler_, sprite_, target_);
+    } else {
+      game_state_->log.AddLine(
+          "You swing wildly, but completely miss the " + enemy + "!");
+    }
+    result.success = true;
     return result;
   }
 
@@ -54,21 +65,23 @@ ActionResult LaunchDialogAction::Execute() {
       *game_state_, start, 2*target_num_to_spawn, 4);
   std::random_shuffle(squares.begin(), squares.end());
 
-  game_state_->log.AddLine(
-      "You hit the " + target_->creature->appearance.name + ".");
+  game_state_->log.AddLine("You hit the " + enemy + ".");
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
-
-  game_state_->log.AddLine("Its heads roll!");
+  game_state_->log.AddLine("You sever its heads!");
+  vector<Sprite*> sprites{target_};
   target_->Polymorph(2);
   target_->ConsumeEnergy();
+
   const int num_to_spawn = min(int(squares.size()), target_num_to_spawn);
   for (int i = 0; i < num_to_spawn; i++) {
     Sprite* sprite = new Sprite(squares[i], 3);
     game_state_->AddNPC(sprite);
+    sprites.push_back(sprite);
     sprite->ConsumeEnergy();
   }
 
+  game_state_->dialog.reset(new ReverseTransliterationDialog(sprites));
   result.success = true;
   return result;
 }

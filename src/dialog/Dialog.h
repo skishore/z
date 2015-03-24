@@ -1,9 +1,12 @@
 #ifndef __BABEL_DIALOG_DIALOG_H__
 #define __BABEL_DIALOG_DIALOG_H__
 
+#include <set>
 #include <string>
+#include <vector>
 
 #include "engine/Action.h"
+#include "engine/GameState.h"
 #include "engine/Sprite.h"
 
 namespace babel {
@@ -12,6 +15,18 @@ namespace dialog {
 class Dialog {
  public:
   virtual ~Dialog();
+
+  // Returns true if the given sprite is involved in this dialog.
+  virtual bool IsInvolved(const engine::Sprite& sprite) const { return false; }
+
+  // Returns a string used to label the given involved monster in the UI.
+  virtual std::string GetLabel(
+      const engine::Sprite& sprite) const { return ""; }
+
+  // Executes an attack when the target is involved in the dialog.
+  virtual void OnAttack(
+      engine::GameState* game_state, engine::EventHandler* handler,
+      engine::Sprite* sprite, engine::Sprite* target) {}
 
   // Handlers for dialog events that update state and that may return an action
   // to pass to the game engine.
@@ -32,6 +47,22 @@ class TransliterationCombatDialog : public Dialog {
   engine::Sprite* source_;
   engine::Sprite* target_;
   const std::string enemy_;
+};
+
+class ReverseTransliterationDialog : public Dialog {
+ public:
+  ReverseTransliterationDialog(const std::vector<engine::Sprite*>& sprites);
+
+  bool IsInvolved(const engine::Sprite& sprite) const override;
+
+  std::string GetLabel(const engine::Sprite& sprite) const override;
+
+  void OnAttack(
+      engine::GameState* game_state, engine::EventHandler* handler,
+      engine::Sprite* sprite, engine::Sprite* target) override;
+
+ private:
+  std::set<engine::sid> ids_;
 };
 
 }  // namespace dialog

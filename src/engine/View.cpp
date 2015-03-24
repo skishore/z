@@ -2,7 +2,10 @@
 
 #include <algorithm>
 
+#include "dialog/Dialog.h"
+
 using std::max;
+using std::string;
 using std::vector;
 
 namespace babel {
@@ -31,8 +34,14 @@ View::View(int radius, const GameState& game_state)
     Point square = sprite->square - offset;
     if (0 <= square.x && square.x < size && 0 <= square.y && square.y < size &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
+      string label;
+      if (game_state.dialog != nullptr &&
+        game_state.dialog->IsInvolved(*sprite)) {
+        label = game_state.dialog->GetLabel(*sprite);
+      }
       const auto& appearance = sprite->creature->appearance;
-      sprites.push_back(SpriteView{sprite->Id(), appearance.graphic, square});
+      sprites.push_back(SpriteView{
+            sprite->Id(), appearance.graphic, square, label});
     }
   }
   if (game_state.log.IsFresh()) {

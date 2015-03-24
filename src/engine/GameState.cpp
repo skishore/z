@@ -30,7 +30,8 @@ GameState::GameState(const string& map_file) {
 
     // Decide what how many and what type of enemies to spawn in this room.
     // TODO(skishore): Make this decision based off creature attributes.
-    bool demon = rand() % 2 == 0;
+    //bool demon = rand() % 2 == 0;
+    bool demon = true;
     const int num_enemies = (demon ? 1 : (room.size.x + room.size.y)/2 - 3);
     const int type = (demon ? 1 : 4);
 

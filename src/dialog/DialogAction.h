@@ -4,13 +4,15 @@
 #include <string>
 
 #include "engine/Action.h"
+#include "engine/GameState.h"
 #include "engine/Sprite.h"
 
 namespace babel {
 namespace dialog {
 
 // Returns true if attacking the given target launches a dialog.
-bool DefendsWithDialog(int damage, const engine::Sprite& target);
+bool DefendsWithDialog(const engine::GameState& game_state,
+                       const engine::Sprite& target, int damage);
 
 class DialogAction : public engine::Action {
  public:

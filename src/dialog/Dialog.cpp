@@ -10,7 +10,12 @@
 #include "dialog/DialogAction.h"
 
 using babel::engine::Action;
+using babel::engine::EventHandler;
+using babel::engine::GameState;
 using babel::engine::Sprite;
+using std::set;
+using std::string;
+using std::vector;
 
 namespace babel {
 namespace dialog {
@@ -46,6 +51,26 @@ Action* TransliterationCombatDialog::OnTaskError() {
   return new ExecuteCombatAction(
       false /* complete */, 1 /* damage */,
       "The " + enemy_ + " hits!", target_, source_);
+}
+
+ReverseTransliterationDialog::ReverseTransliterationDialog(
+    const vector<Sprite*>& sprites) {
+  for (auto* sprite : sprites) {
+    ids_.insert(sprite->Id());
+  }
+}
+
+bool ReverseTransliterationDialog::IsInvolved(const Sprite& sprite) const {
+  return ids_.find(sprite.Id()) != ids_.end();
+}
+
+string ReverseTransliterationDialog::GetLabel(const Sprite& sprite) const {
+  return "test";
+}
+
+void ReverseTransliterationDialog::OnAttack(
+    GameState* game_state, EventHandler* handler,
+    Sprite* sprite, Sprite* target) {
 }
 
 }  // namespace dialog
