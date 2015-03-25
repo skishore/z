@@ -49,7 +49,7 @@ function BabelGraphics(target, radius, onload) {
   this.stats.domElement.style.top = "0px";
   this.stats.domElement.style.left = "0px";
 
-  this.layout = new BabelLayout(this.scale, this.square);
+  this.layout = new BabelLayout(this.scale, this.square, this.radius);
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
