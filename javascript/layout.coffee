@@ -78,7 +78,7 @@ class @BabelLayout
     rect = {
       x: @scale*sprite.x
       y: @scale*sprite.y
-      w: 0.25*@square*label.length
+      w: @square*label.length
       h: @square
     }
     if direction < 3

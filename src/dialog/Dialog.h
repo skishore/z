@@ -1,11 +1,13 @@
 #ifndef __BABEL_DIALOG_DIALOG_H__
 #define __BABEL_DIALOG_DIALOG_H__
 
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "engine/Action.h"
+#include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
 
@@ -24,9 +26,10 @@ class Dialog {
       const engine::Sprite& sprite) const { return ""; }
 
   // Executes an attack when the target is involved in the dialog.
-  virtual void OnAttack(
+  // Returns true if the dialog is now over.
+  virtual bool OnAttack(
       engine::GameState* game_state, engine::EventHandler* handler,
-      engine::Sprite* sprite, engine::Sprite* target) {}
+      engine::Sprite* sprite, engine::Sprite* target) { return false; }
 
   // Handlers for dialog events that update state and that may return an action
   // to pass to the game engine.
@@ -57,12 +60,16 @@ class ReverseTransliterationDialog : public Dialog {
 
   std::string GetLabel(const engine::Sprite& sprite) const override;
 
-  void OnAttack(
+  bool OnAttack(
       engine::GameState* game_state, engine::EventHandler* handler,
       engine::Sprite* sprite, engine::Sprite* target) override;
 
  private:
   std::set<engine::sid> ids_;
+  std::map<engine::sid,std::string> text_;
+  std::vector<engine::sid> order_;
+  engine::Sprite* center_;
+  int index_ = 0;
 };
 
 }  // namespace dialog

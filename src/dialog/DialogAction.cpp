@@ -43,7 +43,10 @@ ActionResult LaunchDialogAction::Execute() {
 
   if (game_state_->dialog != nullptr) {
     if (game_state_->dialog->IsInvolved(*target_)) {
-      game_state_->dialog->OnAttack(game_state_, handler_, sprite_, target_);
+      if (game_state_->dialog->OnAttack(
+              game_state_, handler_, sprite_, target_)) {
+        game_state_->dialog.reset(nullptr);
+      }
     } else {
       game_state_->log.AddLine(
           "You swing wildly, but completely miss the " + enemy + "!");
@@ -60,9 +63,9 @@ ActionResult LaunchDialogAction::Execute() {
   }
 
   const Point start = target_->square;
-  const int target_num_to_spawn = 8;
+  const int target_num_to_spawn = 6;
   vector<Point> squares = GetReachableSquares(
-      *game_state_, start, 2*target_num_to_spawn, 4);
+      *game_state_, start, 4*target_num_to_spawn, 4);
   std::random_shuffle(squares.begin(), squares.end());
 
   game_state_->log.AddLine("You hit the " + enemy + ".");
