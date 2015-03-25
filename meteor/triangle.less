@@ -9,7 +9,7 @@
   z-index: 1;
 
   > .line {
-    font-size: 14px;
+    font-size: 12px;
     margin: 0px 4px;
   }
 
@@ -38,6 +38,27 @@
     &:after {
       bottom: -(@text-arrow-size - 1px);
       border-width: (@text-arrow-size - 1px) (@text-arrow-size - 1px) 0;
+      border-color: @background-color transparent;
+    }
+  }
+
+  &.triangle-top {
+    transform: translateX(-50%);
+
+    &:before, &:after {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    &:before {
+      top: -@text-arrow-size;
+      border-width: 0 @text-arrow-size @text-arrow-size;
+      border-color: @color transparent;
+    }
+
+    &:after {
+      top: -(@text-arrow-size - 1px);
+      border-width: 0 (@text-arrow-size - 1px) (@text-arrow-size - 1px);
       border-color: @background-color transparent;
     }
   }

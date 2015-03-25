@@ -49,21 +49,7 @@ function BabelGraphics(target, radius, onload) {
   this.stats.domElement.style.top = "0px";
   this.stats.domElement.style.left = "0px";
 
-  // This constant should match @text_arrow_size in triangle.less.
-  var kTextArrowSize = 6;
-  var kSquare = this.scale*this.square;
-  var hpadding = 0;
-  var vpadding = 1;
-  this.kLabelOffset = {
-    'bottom': [0.5*kSquare, -vpadding],
-    'bottom-left': [0.5*kSquare - kTextArrowSize, -vpadding],
-    'bottom-right': [0.5*kSquare + kTextArrowSize, -vpadding],
-    'top': [0.5*kSquare, kSquare + vpadding],
-    'top-left': [0.5*kSquare - kTextArrowSize, kSquare + vpadding],
-    'top-right': [0.5*kSquare + kTextArrowSize, kSquare + vpadding],
-    'left': [kSquare + hpadding, 0.5*kSquare],
-    'right': [-hpadding, 0.5*kSquare],
-  };
+  this.layout = new BabelLayout(this.scale, this.square);
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
@@ -126,7 +112,6 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
       }
     }
   }
-  var labels = [];
   for (var id in this.sprites) {
     if (this.sprites.hasOwnProperty(id)) {
       var sprite = this.sprites[id];
@@ -151,18 +136,13 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
           sprite.setTexture(this.sprite_textures[graphic]);
           sprite._babel_graphic = graphic;
         }
-
-        sprite_view.label = "हिन्दी";
-        if (sprite_view.label.length > 0) {
-          labels.push(this.DrawLabel(sprite, sprite_view.label, 'bottom-left'));
-        }
       } else {
         this.stage.removeChild(sprite);
         delete this.sprites[id];
       }
     }
   }
-  Session.set('labels', labels);
+  Session.set('labels', this.layout.place(view, this.sprites));
 }
 
 BabelGraphics.prototype.DrawTiles = function(view) {
