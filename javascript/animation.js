@@ -20,6 +20,9 @@ function BabelAnimation(engine, graphics, radius) {
   this.engine = engine;
   this.graphics = graphics;
   this.radius = radius;
+
+  this.size = {x: 2*this.radius.x + 1, y: 2*this.radius.y + 1};
+
   this.last = this.Snapshot();
   this.tween = null;
   this.steps = [];
@@ -75,10 +78,10 @@ BabelAnimation.prototype.Snapshot = function() {
 
   result.tiles = [];
   var tiles = view.tiles;
-  for (var x = 0; x < tiles.size(); x++) {
+  for (var x = 0; x < this.size.x; x++) {
     result.tiles.push([]);
     var column = tiles.get(x);
-    for (var y = 0; y < tiles.size(); y++) {
+    for (var y = 0; y < this.size.y; y++) {
       result.tiles[x].push(column.get(y));
     }
     column.delete();

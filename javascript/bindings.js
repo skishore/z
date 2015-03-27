@@ -2,7 +2,7 @@ window.BabelBindings = function() {
 "use strict"
 
 function BabelBindings(target) {
-  this.radius = 9;
+  this.radius = {x: 12, y: 9};
   var onload = this.OnAssetsLoaded.bind(this);
   this.graphics = new BabelGraphics(target, this.radius, onload);
 }

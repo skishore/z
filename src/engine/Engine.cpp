@@ -96,7 +96,7 @@ bool Engine::Update() {
   return changed;
 }
 
-View* Engine::GetView(int radius) const {
+View* Engine::GetView(const Point& radius) const {
   return new View(radius, game_state_);
 }
 

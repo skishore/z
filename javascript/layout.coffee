@@ -1,7 +1,7 @@
 class @BabelLayout
   constructor: (@scale, square, radius) ->
     @square = @scale*square
-    @center = {x: @square*(radius - 1), y: @square*(radius - 1)}
+    @center = {x: @square*(radius.x - 1), y: @square*(radius.y - 1)}
     # This constant should match @text_arrow_size in triangle.less.
     text_arrow_size = 6
     hpadding = 0

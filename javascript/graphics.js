@@ -6,6 +6,8 @@ function BabelGraphics(target, radius, onload) {
   this.radius = radius;
   this.onload = onload;
 
+  this.size = {x: 2*this.radius.x + 1, y: 2*this.radius.y + 1};
+
   this.log = this.target.find('.log');
   this.status = $('<div>').addClass('line');
   this.target.find('.status').append(this.status);
@@ -16,7 +18,6 @@ function BabelGraphics(target, radius, onload) {
   // These should be read from the JSON files instead of hardcoded.
   this.num_tiles = 6;
   this.num_sprites = 5;
-  this.size = 2*this.radius + 1;
   this.square = 16;
 
   // The actual tile and sprite PIXI.Sprite instances.
@@ -32,8 +33,8 @@ function BabelGraphics(target, radius, onload) {
   this.container = new PIXI.DisplayObjectContainer();
   this.stage.addChild(this.container);
 
-  this.width = (this.size - 2)*this.square;
-  this.height = (this.size - 2)*this.square;
+  this.width = (this.size.x - 2)*this.square;
+  this.height = (this.size.y - 2)*this.square;
   this.renderer = PIXI.autoDetectRenderer(this.width, this.height);
 
   this.scale = 1.5;
@@ -59,8 +60,8 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
   for (var i = 0; i < this.num_sprites; i++) {
     this.sprite_textures.push(PIXI.Texture.fromFrame("sprite" + i + ".png"));
   }
-  for (var x = 0; x < this.size; x++) {
-    for (var y = 0; y < this.size; y++) {
+  for (var x = 0; x < this.size.x; x++) {
+    for (var y = 0; y < this.size.y; y++) {
       var tile = new PIXI.Sprite(this.tile_textures[0]);
       tile.x = this.square*(x - 1);
       tile.y = this.square*(y - 1);
@@ -147,9 +148,9 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
 }
 
 BabelGraphics.prototype.DrawTiles = function(view) {
-  for (var x = 0; x < this.size; x++) {
-    for (var y = 0; y < this.size; y++) {
-      var tile = this.tiles[this.size*x + y];
+  for (var x = 0; x < this.size.x; x++) {
+    for (var y = 0; y < this.size.y; y++) {
+      var tile = this.tiles[this.size.y*x + y];
       var tile_view = view.tiles[x][y];
       if (tile_view.graphic < 0) {
         tile.visible = false;
