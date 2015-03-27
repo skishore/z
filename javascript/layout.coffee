@@ -18,18 +18,21 @@ class @BabelLayout
       [0.5*@square, @square + vpadding],
       [0.5*@square - text_arrow_size, @square + vpadding],
     ]
+    # Mapping from sprite ids to the last direction of their label.
+    @cached_directions = {}
 
-  place: (view, sprites) ->
+  place: (view, sprites, recompute_directions) ->
     sprite_rects = []
     text_rects = []
 
-    for id, sprite of sprites
-      sprite_rects.push {
-        x: @scale*sprite.x
-        y: @scale*sprite.y
-        w: @square
-        h: @square
-      }
+    if recompute_directions
+      for id, sprite of sprites
+        sprite_rects.push {
+          x: @scale*sprite.x
+          y: @scale*sprite.y
+          w: @square
+          h: @square
+        }
 
     ids = []
     for id of view.sprites
@@ -38,14 +41,21 @@ class @BabelLayout
 
     labels = []
     for sprite_view in (view.sprites[id] for id in ids)
+      id = sprite_view.id
       if sprite_view.label.length == 0
         continue
-      if sprite_view.id not of sprites
+      if id not of sprites
         continue
-      sprite = sprites[sprite_view.id]
+      if (not recompute_directions) and id not of @cached_directions
+        continue
+      sprite = sprites[id]
       label = sprite_view.label
-      direction = (@_best_direction sprite, label, sprite_rects, text_rects)
-      text_rects.push (@_position sprite, direction, label)[0]
+      if recompute_directions
+        direction = (@_best_direction sprite, label, sprite_rects, text_rects)
+        @cached_directions[sprite_view.id] = direction
+        text_rects.push (@_position sprite, direction, label)[0]
+      else
+        direction = @cached_directions[id]
       labels.push @_label sprite, direction, label
     labels
 

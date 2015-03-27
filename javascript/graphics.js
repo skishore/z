@@ -142,7 +142,8 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
       }
     }
   }
-  Session.set('labels', this.layout.place(view, this.sprites));
+  Session.set('labels', this.layout.place(
+      view, this.sprites, transform === null));
 }
 
 BabelGraphics.prototype.DrawTiles = function(view) {
