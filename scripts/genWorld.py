@@ -6,14 +6,23 @@ import struct
 import sys
 
 
+# windiness of 1.0 leads to basically no winding corridors.
+# windiness of 8.0 maxes out winding.
+windiness = 2.0
+
+
 class Tileset(object):
   def __init__(self):
     self.default_tile = 5
-    self.num_tiles = 6
-    self.chars = ['.', '.', '.', '.', 'X', ' ']
+    self.num_tiles = 7
+    self.chars = ['.', '.', '.', '.', 'X', ' ', '+']
+    self.block = [False, False, False, False, True, True, False]
 
   def blocked(self, tile):
-    return tile > 3
+    return self.block[tile]
+
+  def get_door_tile(self):
+    return self.get_free_tile();
 
   def get_free_tile(self):
     return random.randint(0, 3)
@@ -26,6 +35,7 @@ class Map(object):
     self.tileset = tileset
     tile = tileset.default_tile
     self.tiles = [[tile for h in xrange(height)] for w in xrange(width)]
+    self.diggable = [[True for h in xrange(height)] for w in xrange(width)]
     self.rooms = []
     self.blocks = set()
 
@@ -34,16 +44,16 @@ class Map(object):
       for h in xrange(room.height):
         self.tiles[room.x + w][room.y + h] = self.tileset.get_free_tile()
     self.rooms.append(room)
-    self.add_block((room.x - 1, room.y - 1))
-    self.add_block((room.x - 1, room.y + room.height))
-    self.add_block((room.x + room.width, room.y - 1))
-    self.add_block((room.x + room.width, room.y + room.height))
+    self.make_undiggable((room.x - 1, room.y - 1))
+    self.make_undiggable((room.x - 1, room.y + room.height))
+    self.make_undiggable((room.x + room.width, room.y - 1))
+    self.make_undiggable((room.x + room.width, room.y + room.height))
 
-  def add_block(self, block):
+  def make_undiggable(self, block):
     if not (0 <= block[0] < self.width and 0 <= block[1] < self.height):
       return
-    self.blocks.add(block)
     self.tiles[block[0]][block[1]] = 4
+    self.diggable[block[0]][block[1]] = False
 
   def dig_corridor(self, index1, index2):
     source = self.rooms[index1].random_square()
@@ -63,19 +73,56 @@ class Map(object):
         if not (1 <= child[0] < self.width - 1 and
                 1 <= child[1] < self.height - 1):
           continue
-        if child in visited or child in self.blocks:
+        if child in visited or not self.diggable[child[0]][child[1]]:
           continue
         tile = self.tiles[child[0]][child[1]]
-        step_length = (2.0 if self.tileset.blocked(tile) else 1.0)
+        step_length = (2.0 if self.tileset.blocked(tile) else windiness)
         distance = best_distance + (1 + 0*random.random())*step_length
         if distance < frontier.get(child, float('Infinity')):
           frontier[child] = distance
           parents[child] = best_node
+    # Construct the path from source to target.
+    path = []
     node = target
     while node != None:
+      path.append(node)
+      node = parents[node]
+    path = reversed(path)
+    # Find the point at which the path first touches each room.
+    truncated_path = []
+    for i, element in enumerate(path):
+      if self.manhattan_distance_to_room(self.rooms[index1], element) == 1:
+        del truncated_path[:]
+      truncated_path.append(element)
+      if self.manhattan_distance_to_room(self.rooms[index2], element) == 1:
+        break
+    # Carve out the actual path.
+    assert truncated_path
+    for node in truncated_path:
       if self.tileset.blocked(self.tiles[node[0]][node[1]]):
         self.tiles[node[0]][node[1]] = self.tileset.get_free_tile()
-      node = parents[node]
+    # Add doors around each entry point.
+    self.add_door(self.rooms[index1], truncated_path[0])
+    self.add_door(self.rooms[index2], truncated_path[-1])
+
+  def manhattan_distance_to_room(self, room, square):
+    x_distance = max(
+      (room.x - square[0]),
+      (square[0] - room.x - room.width + 1), 0)
+    y_distance = max(
+      (room.y - square[1]),
+      (square[1] - room.y - room.height + 1), 0)
+    return x_distance + y_distance
+
+  def add_door(self, room, square):
+    assert self.manhattan_distance_to_room(room, square) == 1
+    if square[0] == room.x - 1 or square[0] == room.x + room.width:
+      self.make_undiggable((square[0], square[1] - 1))
+      self.make_undiggable((square[0], square[1] + 1))
+    else:
+      self.make_undiggable((square[0] - 1, square[1]))
+      self.make_undiggable((square[0] + 1, square[1]))
+    self.tiles[square[0]][square[1]] = self.tileset.get_door_tile()
 
   def add_walls(self):
     for w in xrange(self.width):
