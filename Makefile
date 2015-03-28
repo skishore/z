@@ -5,7 +5,7 @@ OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.obj))) $(addprefix
 EXECUTABLE := $(BUILD)/main
 
 INCLUDES := freetype2 freetype2/config harfbuzz
-PRELOADS := data #fonts/default_font.ttf images
+PRELOADS := data #images
 VPATH := src:$(subst $(eval) ,:,$(wildcard src/*))
 
 EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.o)))
