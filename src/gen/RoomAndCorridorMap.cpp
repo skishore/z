@@ -4,6 +4,7 @@
 #include "base/util.h"
 #include "engine/Tileset.h"
 #include "engine/TileMap.h"
+#include "gen/graph.h"
 #include "gen/util.h"
 
 typedef babel::engine::TileMap::Room Room;
@@ -28,8 +29,8 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   size_ = size;
   tileset_.reset(DefaultTileset());
 
-  CellArray cells = ConstructArray2D<Cell>(size_, Cell::DEFAULT);
-  Array2D<bool> diggable = ConstructArray2D<bool>(size_, false);
+  CellArray cells = ConstructArray2d<Cell>(size_, Cell::DEFAULT);
+  Array2d<bool> diggable = ConstructArray2d<bool>(size_, false);
 
   const int min_size = 6;
   const int max_size = 8;
@@ -45,8 +46,19 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
       tries_left -= 1;
     }
   }
-  MAYBE_DEBUG("Placed " << IntToString(rooms_.size()) << " rooms after "
+  const int n = rooms_.size();
+  MAYBE_DEBUG("Placed " << IntToString(n) << " rooms after "
               << IntToString(tries) << " attempts.");
+
+  Array2d<double> distances = ConstructArray2d<double>(Point(n, n), 0);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      distances[i][j] = RoomToRoomDistance(rooms_[i], rooms_[j]);
+    }
+  }
+  vector<Point> edges = MinimumSpanningTree(distances);
+  MAYBE_DEBUG("Computed a minimal spanning tree with "
+              << IntToString(edges.size()) << " edges.");
 
   MAYBE_DEBUG("Final map:" << ComputeDebugString(cells));
   tiles_.reset(ComputeTiles(*tileset_, cells));

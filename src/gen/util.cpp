@@ -34,18 +34,10 @@ inline Tile GetTileForCell(const Tileset& tileset, Cell cell) {
   return tileset.default_tile;
 }
 
-double RoomToRoomDistance(const Room& r1, const Room& r2) {
-  Point distance(max(max(r1.position.x - r2.position.x - r2.size.x,
-                         r2.position.x - r1.position.x - r1.size.x), 0),
-                 max(max(r1.position.y - r2.position.y - r2.size.y,
-                         r2.position.y - r1.position.y - r1.size.y), 0));
-  return distance.length();
-}
-
 }  // namespace
 
 bool PlaceRoom(const Room& room, int separation, CellArray* cells,
-               Array2D<bool>* diggable, vector<Room>* rooms) {
+               Array2d<bool>* diggable, vector<Room>* rooms) {
   for (const auto& other : *rooms) {
     if (RoomToRoomDistance(room, other) < separation) {
       return false;
@@ -62,6 +54,14 @@ bool PlaceRoom(const Room& room, int separation, CellArray* cells,
   (*diggable)[room.position.x+room.size.x][room.position.y+room.size.y] = false;
   rooms->push_back(room);
   return true;
+}
+
+double RoomToRoomDistance(const Room& r1, const Room& r2) {
+  Point distance(max(max(r1.position.x - r2.position.x - r2.size.x,
+                         r2.position.x - r1.position.x - r1.size.x), 0),
+                 max(max(r1.position.y - r2.position.y - r2.size.y,
+                         r2.position.y - r1.position.y - r1.size.y), 0));
+  return distance.length();
 }
 
 string ComputeDebugString(const CellArray& cells) {
