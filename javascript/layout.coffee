@@ -51,7 +51,7 @@ class @BabelLayout
       sprite = sprites[id]
       label = sprite_view.label
       if recompute_directions
-        direction = (@_best_direction sprite, label, sprite_rects, text_rects)
+        direction = @_best_direction sprite, id, label, sprite_rects, text_rects
         @cached_directions[sprite_view.id] = direction
         text_rects.push (@_position sprite, direction, label)[0]
       else
@@ -81,7 +81,7 @@ class @BabelLayout
   _sgn: (x) ->
     if x < -1 then -1 else if x > 1 then 1 else 0
 
-  _best_direction: (sprite, label, sprite_rects, text_rects) ->
+  _best_direction: (sprite, id, label, sprite_rects, text_rects) ->
     discriminant = [@_sgn(@scale*sprite.x - @center.x),
                     @_sgn(@scale*sprite.y - @center.y)]
     best_score = -1 << 16
@@ -89,6 +89,8 @@ class @BabelLayout
     for i in [0...8]
       [rect, offset] = @_position sprite, i, label
       score = @_score discriminant, offset, rect, sprite_rects, text_rects
+      if i == @cached_directions[id]
+        score += 1
       if score > best_score
         best_score = score
         best_index = i
