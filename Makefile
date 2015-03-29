@@ -1,14 +1,13 @@
 BUILD := build
-C_FILES := $(wildcard src/*/*.c)
 CPP_FILES := $(wildcard src/*/*.cpp) main.cpp
-OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.obj))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.obj)))
+OBJ_FILES := $(patsubst src/%.cpp, $(BUILD)/%.obj, $(CPP_FILES))
 EXECUTABLE := $(BUILD)/main
 
 INCLUDES := freetype2 freetype2/config harfbuzz
 PRELOADS := data #images
 VPATH := src:$(subst $(eval) ,:,$(wildcard src/*))
 
-EMCC_OBJ_FILES := $(addprefix $(BUILD)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(BUILD)/,$(notdir $(C_FILES:.c=.o)))
+EMCC_OBJ_FILES := $(OBJ_FILES:.obj=.o)
 HTML := $(BUILD)/main.html
 BASE_C_FLAGS := -Wall -g #-O2 -DNDEBUG
 BASE_CC_FLAGS := ${BASE_C_FLAGS} -std=c++11 -stdlib=libc++ -I permissive-fov
@@ -26,10 +25,7 @@ all:
 	make html
 
 clean:
-	rm -f $(EXECUTABLE) $(BUILD)/*.obj
-	rm -f $(HTML) $(BUILD)/*.data $(BUILD)/*.js $(BUILD)/*.json $(BUILD)/*.o $(BUILD)/*.png
-	rm -f $(BUILD)/*.d $(BUILD)/*.ccd $(BUILD)/*.emccd
-	rmdir -p $(BUILD)
+	rm -rf $(BUILD)
 
 exe: $(BUILD) $(EXECUTABLE)
 
@@ -44,15 +40,12 @@ $(EXECUTABLE):	$(OBJ_FILES)
 	$(CC) $(LD_FLAGS) -o $@ $^
 
 $(BUILD)/%.obj: %.cpp
+	@mkdir -p $(dir $@)
 	$(CC) $(CC_FLAGS) -c -MD -o $@ $<
-	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.ccd; done
-
-$(BUILD)/%.obj: %.c
-	clang $(C_FLAGS) -c -MD -o $@ $<
+	@mv $(patsubst %.obj,%.d,$@) $(addprefix $(BUILD)/, $(subst /,_,$(patsubst $(BUILD)/%.obj,%.ccd,$@)))
 
 $(HTML):	$(EMCC_OBJ_FILES)
 	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
-	for file in build/*.d; do mv $${file} build/`basename $${file} .d`.emccd; done
 	# Override Meteor scope guards for the Module global object.
 	sed -i '.bak' 's/var Module/var Module = window.Module/g' $(BUILD)/main.js
 	rm $(BUILD)/main.js.bak
@@ -61,10 +54,9 @@ $(HTML):	$(EMCC_OBJ_FILES)
 	cp $(BUILD)/main.data meteor/public/main.data
 
 $(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	emcc $(EMCC_FLAGS) -c -MD -o $@ $<
-
-$(BUILD)/%.o: %.c
-	emcc $(EMC_FLAGS) -c -MD -o $@ $<
+	@mv $(patsubst %.o,%.d,$@) $(addprefix $(BUILD)/, $(subst /,_,$(patsubst $(BUILD)/%.o,%.emccd,$@)))
 
 -include build/*.ccd
 -include build/*.emccd
