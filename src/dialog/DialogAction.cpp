@@ -27,10 +27,10 @@ bool DefendsWithDialog(const GameState& game_state,
   if (game_state.dialog != nullptr && game_state.dialog->IsInvolved(sprite)) {
     return true;
   }
-  if (sprite.type == 1) {
+  if (sprite.type == mWorker) {
     return damage >= sprite.cur_health;
   }
-  return sprite.type == 4;
+  return sprite.type == mGecko;
 }
 
 LaunchDialogAction::LaunchDialogAction(Sprite* target) : target_(target) {}
@@ -55,7 +55,7 @@ ActionResult LaunchDialogAction::Execute() {
     return result;
   }
 
-  if (target_->type == 4) {
+  if (target_->type == mGecko) {
     game_state_->dialog.reset(
         new TransliterationCombatDialog(sprite_, target_));
     result.stalled = true;
@@ -71,14 +71,14 @@ ActionResult LaunchDialogAction::Execute() {
   game_state_->log.AddLine("You hit the " + enemy + ".");
   handler_->OnAttack(sprite_->Id(), target_->Id());
 
-  game_state_->log.AddLine("You sever its heads!");
-  vector<Sprite*> sprites{target_};
-  target_->Polymorph(2);
-  target_->ConsumeEnergy();
+  game_state_->log.AddLine("You are swarmed by a group of " +
+                           kCreatures[mDrone].appearance.name + "s!");
+  game_state_->RemoveNPC(target_);
 
+  vector<Sprite*> sprites{};
   const int num_to_spawn = min(int(squares.size()), target_num_to_spawn);
   for (int i = 0; i < num_to_spawn; i++) {
-    Sprite* sprite = new Sprite(squares[i], 3);
+    Sprite* sprite = new Sprite(squares[i], mDrone);
     game_state_->AddNPC(sprite);
     sprites.push_back(sprite);
     sprite->ConsumeEnergy();

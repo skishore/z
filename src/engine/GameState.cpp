@@ -21,7 +21,7 @@ GameState::GameState(const string& map_file) {
   map.LoadMap(map_file);
   seen = vector<vector<bool>>(
       map.GetSize().x, vector<bool>(map.GetSize().y, false));
-  player = new Sprite(map.GetStartingSquare(), kPlayerType);
+  player = new Sprite(map.GetStartingSquare(), mPlayer);
   AddNPC(player);
   RecomputePlayerVision();
 
@@ -29,10 +29,9 @@ GameState::GameState(const string& map_file) {
     const TileMap::Room& room = map.GetRooms()[i];
 
     // Decide what how many and what type of enemies to spawn in this room.
-    // TODO(skishore): Make this decision based off creature attributes.
-    bool demon = rand() % 2 == 0;
-    const int num_enemies = (demon ? 1 : (room.size.x + room.size.y)/2 - 3);
-    const int type = (demon ? 1 : 4);
+    bool worker = rand() % 2 == 0;
+    const int num_enemies = (worker ? 1 : (room.size.x + room.size.y)/2 - 3);
+    const int type = (worker ? mWorker : mGecko);
 
     for (int j = 0; j < num_enemies; j++) {
       while (true) {

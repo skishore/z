@@ -104,7 +104,7 @@ bool Sprite::IsAlive() const {
 }
 
 bool Sprite::IsPlayer() const {
-  return type == kPlayerType;
+  return type == mPlayer;
 }
 
 }  // namespace engine

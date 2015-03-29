@@ -57,13 +57,8 @@ ReverseTransliterationDialog::ReverseTransliterationDialog(
     const vector<Sprite*>& sprites) {
   for (int i = 0; i < sprites.size(); i++) {
     ids_.insert(sprites[i]->Id());
-    text_[sprites[i]->Id()] =
-        (i > 0 ? string(1, (char)((int)'A' + i - 1)) : "");
-    if (i == 0) {
-      center_ = sprites[i];
-    } else {
-      order_.push_back(sprites[i]->Id());
-    }
+    text_[sprites[i]->Id()] = string(1, (char)((int)'A' + i));
+    order_.push_back(sprites[i]->Id());
   }
 }
 
@@ -87,11 +82,7 @@ bool ReverseTransliterationDialog::OnAttack(
   handler->OnAttack(sprite->Id(), target->Id());
   game_state->RemoveNPC(target);
   index_ += 1;
-  if (index_ == order_.size()) {
-    game_state->RemoveNPC(center_);
-    return true;
-  }
-  return false;
+  return index_ == order_.size();
 }
 
 }  // namespace dialog

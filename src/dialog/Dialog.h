@@ -68,7 +68,6 @@ class ReverseTransliterationDialog : public Dialog {
   std::set<engine::sid> ids_;
   std::map<engine::sid,std::string> text_;
   std::vector<engine::sid> order_;
-  engine::Sprite* center_;
   int index_ = 0;
 };
 
