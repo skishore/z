@@ -15,8 +15,6 @@ typedef unsigned char Tile;
 class TileMap {
  public:
   struct Room {
-    bool Contains(const Point& square) const;
-
     Point position;
     Point size;
   };

@@ -18,11 +18,6 @@ void CheckSkipToken(const string& expected, const string& actual) {
 }
 }  // namespace
 
-bool TileMap::Room::Contains(const Point& square) const {
-  return (position.x <= square.x && square.x < position.x + size.x &&
-          position.y <= square.y && square.y < position.y + size.y);
-}
-
 void TileMap::LoadMap(const string& filename) {
   std::ifstream file("data/" + filename, std::ios::in | std::ios::binary);
   ASSERT(file.is_open(), "Failed to open " << filename);
