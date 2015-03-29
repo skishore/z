@@ -1,7 +1,6 @@
 #ifndef __BABEL_ENGINE_TILE_MAP_H__
 #define __BABEL_ENGINE_TILE_MAP_H__
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -34,7 +33,7 @@ class TileMap {
   // Subclasses of TileMap correspond to different level generation algorithms.
   // These members are protected so that levelgen can edit them.
   Point size_;
-  std::unique_ptr<Tile[]> map_tiles_;
+  std::unique_ptr<Tile[]> tiles_;
   std::unique_ptr<Tileset> tileset_;
   Point starting_square_;
   std::vector<Room> rooms_;

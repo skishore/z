@@ -9,7 +9,7 @@ namespace engine {
 Tile TileMap::GetMapTile(const Point& square) const {
   if (0 <= square.x && square.x < size_.x &&
       0 <= square.y && square.y < size_.y) {
-    return map_tiles_[square.x*size_.y + square.y];
+    return tiles_[square.x*size_.y + square.y];
   }
   return tileset_->default_tile;
 }

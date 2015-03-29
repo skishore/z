@@ -13,15 +13,15 @@ struct Tileset {
   const Tile blocked_tile;
   const Tile default_tile;
 
-  inline bool IsTileBlocked(Tile tile) {
+  inline bool IsTileBlocked(Tile tile) const {
     return tile >= blocked_tile;
   };
 
-  inline Tile GetBlockedTile() {
+  inline Tile GetBlockedTile() const {
     return blocked_tile;
   };
 
-  inline Tile GetFreeTile() {
+  inline Tile GetFreeTile() const {
     return rand() % blocked_tile;
   };
 };

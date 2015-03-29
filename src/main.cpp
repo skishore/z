@@ -1,5 +1,7 @@
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#else
+#include "gen/RoomAndCorridorMap.h"
 #endif  // EMSCRIPTEN
 
 #include "base/debug.h"
@@ -13,5 +15,8 @@ int main(int argc, char** argv) {
   babel::RegisterCrashHandlers(argv[0]);
   #ifdef EMSCRIPTEN
   emscripten_exit_with_live_runtime();
+  #else
+  const babel::Point kMapSize(64, 64);
+  babel::gen::RoomAndCorridorMap map(kMapSize, true /* debug */);
   #endif  // EMSCRIPTEN
 }
