@@ -46,9 +46,9 @@ class GameState {
   bool IsSquareSeen(const Point& square) const;
   Sprite* SpriteAt(const Point& square) const;
 
-  TileMap map;
   Sprite* player;
   std::vector<Sprite*> sprites;
+  std::unique_ptr<TileMap> map;
   std::unique_ptr<FieldOfVision> player_vision;
   std::unique_ptr<dialog::Dialog> dialog;
   Log log;

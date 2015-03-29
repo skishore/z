@@ -6,11 +6,10 @@
 #include <vector>
 
 #include "base/point.h"
+#include "engine/tileset.h"
 
 namespace babel {
 namespace engine {
-
-typedef unsigned char Tile;
 
 class TileMap {
  public:
@@ -19,20 +18,24 @@ class TileMap {
     Point size;
   };
 
-  void LoadMap(const std::string& filename);
   Tile GetMapTile(const Point& square) const;
   bool IsSquareBlocked(const Point& square) const;
 
   const std::vector<Room>& GetRooms() const { return rooms_; }
-  const Point& GetSize() const { return map_dimensions_; };
+  const Point& GetSize() const { return size_; };
   const Point& GetStartingSquare() const { return starting_square_; }
 
- private:
+ protected:
+  TileMap() {};
+
   // Information about the whole map: its dimensions, its packed 1d tile array,
   // and its default tile (returned when a point outside the map is accessed).
-  Point map_dimensions_;
+  //
+  // Subclasses of TileMap correspond to different level generation algorithms.
+  // These members are protected so that levelgen can edit them.
+  Point size_;
   std::unique_ptr<Tile[]> map_tiles_;
-  Tile map_default_tile_;
+  std::unique_ptr<Tileset> tileset_;
   Point starting_square_;
   std::vector<Room> rooms_;
 };

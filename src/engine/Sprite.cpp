@@ -26,7 +26,7 @@ int ScoreMove(const Sprite& sprite, const GameState& game_state,
               const Point& move) {
   Point square = sprite.square + move;
   if ((move.x != 0 || move.y != 0) &&
-      (game_state.map.IsSquareBlocked(square) ||
+      (game_state.map->IsSquareBlocked(square) ||
        game_state.IsSquareOccupied(square))) {
     return INT_MIN;
   }

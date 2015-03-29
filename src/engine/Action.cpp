@@ -69,7 +69,7 @@ MoveAction::MoveAction(const Point& move) : move_(move) {}
 ActionResult MoveAction::Execute() {
   ActionResult result;
   Point square = sprite_->square + move_;
-  if (game_state_->map.IsSquareBlocked(square)) {
+  if (game_state_->map->IsSquareBlocked(square)) {
     return result;
   }
 

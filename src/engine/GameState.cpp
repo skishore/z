@@ -8,6 +8,7 @@
 #include "base/util.h"
 #include "dialog/Dialog.h"
 #include "engine/Sprite.h"
+#include "gen/RoomAndCorridorMap.h"
 
 using std::map;
 using std::max;
@@ -16,17 +17,22 @@ using std::vector;
 
 namespace babel {
 namespace engine {
+namespace {
+
+const Point kMapSize(64, 64);
+
+}  // namespace
 
 GameState::GameState(const string& map_file) {
-  map.LoadMap(map_file);
+  map.reset(new gen::RoomAndCorridorMap(kMapSize));
   seen = vector<vector<bool>>(
-      map.GetSize().x, vector<bool>(map.GetSize().y, false));
-  player = new Sprite(map.GetStartingSquare(), mPlayer);
+      map->GetSize().x, vector<bool>(map->GetSize().y, false));
+  player = new Sprite(map->GetStartingSquare(), mPlayer);
   AddNPC(player);
   RecomputePlayerVision();
 
-  for (int i = 1; i < map.GetRooms().size(); i++) {
-    const TileMap::Room& room = map.GetRooms()[i];
+  for (int i = 1; i < map->GetRooms().size(); i++) {
+    const TileMap::Room& room = map->GetRooms()[i];
 
     // Decide what how many and what type of enemies to spawn in this room.
     bool worker = rand() % 2 == 0;
@@ -110,8 +116,8 @@ bool GameState::IsSquareOccupied(const Point& square) const {
 }
 
 bool GameState::IsSquareSeen(const Point& square) const {
-  if (0 <= square.x && square.x < map.GetSize().x &&
-      0 <= square.y && square.y < map.GetSize().y) {
+  if (0 <= square.x && square.x < map->GetSize().x &&
+      0 <= square.y && square.y < map->GetSize().y) {
     return seen[square.x][square.y];
   }
   return false;
@@ -123,7 +129,7 @@ Sprite* GameState::SpriteAt(const Point& square) const {
 
 void GameState::RecomputePlayerVision() {
   const int radius = player->creature->stats.vision_radius;
-  player_vision.reset(new FieldOfVision(map, player->square, radius));
+  player_vision.reset(new FieldOfVision(*map, player->square, radius));
   for (int x = -radius; x <= radius; x++) {
     for (int y = -radius; y <= radius; y++) {
       const Point square = player->square + Point(x, y);

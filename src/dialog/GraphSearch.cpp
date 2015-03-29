@@ -31,7 +31,7 @@ vector<Point> GetReachableSquares(
         const Point neighbor = square + move;
         if (visited.find(neighbor) == visited.end()) {
           visited.insert(neighbor);
-          if (!game_state.map.IsSquareBlocked(neighbor) &&
+          if (!game_state.map->IsSquareBlocked(neighbor) &&
               !game_state.IsSquareOccupied(neighbor)) {
             result.push_back(neighbor);
             next->push_back(neighbor);
