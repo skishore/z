@@ -35,9 +35,12 @@ inline int RandInt(int x, int y) {
 void AddWalls(const Point& size, CellArray* cells);
 
 // Digs a corridor between the two rooms, modifying cells and diggable.
+//
+// Windiness is between 1.0 and 8.0, with increasing windiness causing the
+// corridor digger to take longer paths between rooms.
 void DigCorridor(const engine::TileMap::Room& r1,
-                 const engine::TileMap::Room& r2,
-                 const Point& size, CellArray* cells, Array2d<bool>* diggable);
+                 const engine::TileMap::Room& r2, const Point& size,
+                 double windiness, CellArray* cells, Array2d<bool>* diggable);
 
 // Return a uniform random square in the given room.
 Point GetRandomSquareInRoom(const engine::TileMap::Room& room);

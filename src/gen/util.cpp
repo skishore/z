@@ -25,10 +25,6 @@ const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
                             {1, 1}, {-1, 1}, {-1, 1}, {-1, -1}};
 
-// Windiness is between 1.0 and 8.0, with increasing windiness causing the
-// corridor digger to take longer paths between rooms.
-const double kWindiness = 8.0;
-
 inline string GetDebugCharForCell(Cell cell) {
   if (cell == Cell::FREE) {
     return ".";
@@ -93,7 +89,7 @@ void AddWalls(const Point& size, CellArray* cells) {
 }
 
 void DigCorridor(const Room& r1, const Room& r2, const Point& size,
-                 CellArray* cells, Array2d<bool>* diggable) {
+                 double windiness, CellArray* cells, Array2d<bool>* diggable) {
   const Point source = GetRandomSquareInRoom(r1);
   const Point target = GetRandomSquareInRoom(r2);
   ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y] &&
@@ -125,7 +121,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
         continue;
       }
       bool free = (*cells)[child.x][child.y] == Cell::FREE;
-      double distance = best_distance + (free ? kWindiness : 2.0);
+      double distance = best_distance + (free ? windiness : 2.0);
       if (distances.find(child) == distances.end() ||
           distance < distances.at(child)) {
         distances[child] = distance;

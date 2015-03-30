@@ -94,9 +94,11 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   }
   MAYBE_DEBUG("Added " << IntToString(loop_edges) << " high-ratio loop edges.");
 
+  const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y, "Graph includes reflexive edge!");
-    DigCorridor(rooms_[edge.x], rooms_[edge.y], size_, &cells, &diggable);
+    DigCorridor(rooms_[edge.x], rooms_[edge.y], size_,
+                windiness, &cells, &diggable);
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
