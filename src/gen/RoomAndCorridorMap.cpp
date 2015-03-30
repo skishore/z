@@ -100,6 +100,10 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
+  AddWalls(size_, &cells);
+  const Room& starting_room = rooms_[RandInt(0, rooms_.size() - 1)];
+  starting_square_ = GetRandomSquareInRoom(starting_room);
+
   MAYBE_DEBUG("Final map:" << ComputeDebugString(cells));
   tiles_.reset(ComputeTiles(*tileset_, cells));
 }

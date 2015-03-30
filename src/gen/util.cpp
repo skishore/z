@@ -21,7 +21,9 @@ namespace babel {
 namespace gen {
 namespace {
 
-const Point kSteps[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                            {1, 1}, {-1, 1}, {-1, 1}, {-1, -1}};
 
 // Windiness is between 1.0 and 8.0, with increasing windiness causing the
 // corridor digger to take longer paths between rooms.
@@ -43,11 +45,6 @@ inline Tile GetTileForCell(const Tileset& tileset, Cell cell) {
     return tileset.GetBlockedTile();
   }
   return tileset.default_tile;
-}
-
-inline Point GetRandomSquare(const Room& room) {
-  return room.position + Point(RandInt(0, room.size.x - 1),
-                               RandInt(0, room.size.y - 1));
 }
 
 inline bool InBounds(const Point& square, const Point& size) {
@@ -77,10 +74,28 @@ void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
 
 }  // namespace
 
+void AddWalls(const Point& size, CellArray* cells) {
+  for (int x = 0; x < size.x; x++) {
+    for (int y = 0; y < size.y; y++) {
+      if ((*cells)[x][y] != Cell::FREE) {
+        continue;
+      }
+      for (const Point& step : kKingMoves) {
+        const Point square(x + step.x, y + step.y);
+        if (0 <= square.x && square.x < size.x &&
+            0 <= square.y && square.y < size.y &&
+            (*cells)[square.x][square.y] == Cell::DEFAULT) {
+          (*cells)[square.x][square.y] = Cell::BLOCKED;
+        }
+      }
+    }
+  }
+}
+
 void DigCorridor(const Room& r1, const Room& r2, const Point& size,
                  CellArray* cells, Array2d<bool>* diggable) {
-  const Point source = GetRandomSquare(r1);
-  const Point target = GetRandomSquare(r2);
+  const Point source = GetRandomSquareInRoom(r1);
+  const Point target = GetRandomSquareInRoom(r2);
   ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y] &&
          InBounds(source, size) && (*diggable)[source.x][source.y],
          "Endpoint " << source << " or " << target << " invalid.");
@@ -103,7 +118,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
     }
     distances.erase(best_node);
     visited.insert(best_node);
-    for (const Point& step : kSteps) {
+    for (const Point& step : kRookMoves) {
       const Point child = best_node + step;
       if (!(InBounds(child, size) && (*diggable)[child.x][child.y] &&
             visited.find(child) == visited.end())) {
@@ -146,6 +161,11 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   }
   AddDoor(truncated_path[0], r2, diggable);
   AddDoor(truncated_path[truncated_path.size() - 1], r1, diggable);
+}
+
+Point GetRandomSquareInRoom(const Room& room) {
+  return room.position + Point(RandInt(0, room.size.x - 1),
+                               RandInt(0, room.size.y - 1));
 }
 
 bool PlaceRoom(const Room& room, int separation, CellArray* cells,

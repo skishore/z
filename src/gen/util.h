@@ -31,10 +31,16 @@ inline int RandInt(int x, int y) {
   return (rand() % (y - x + 1)) + x;
 }
 
+// Turns any DEFAULT square adjacent to a FREE square into a wall.
+void AddWalls(const Point& size, CellArray* cells);
+
 // Digs a corridor between the two rooms, modifying cells and diggable.
 void DigCorridor(const engine::TileMap::Room& r1,
                  const engine::TileMap::Room& r2,
                  const Point& size, CellArray* cells, Array2d<bool>* diggable);
+
+// Return a uniform random square in the given room.
+Point GetRandomSquareInRoom(const engine::TileMap::Room& room);
 
 // Returns true and adds room to rooms if the room was successfully placed.
 bool PlaceRoom(const engine::TileMap::Room& room, int separation,
