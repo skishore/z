@@ -4,7 +4,6 @@ OBJ_FILES := $(patsubst src/%.cpp, $(BUILD)/%.obj, $(CPP_FILES))
 EXECUTABLE := $(BUILD)/main
 
 INCLUDES := freetype2 freetype2/config harfbuzz
-PRELOADS := data #images
 VPATH := src:$(subst $(eval) ,:,$(wildcard src/*))
 
 EMCC_OBJ_FILES := $(OBJ_FILES:.obj=.o)
@@ -45,13 +44,12 @@ $(BUILD)/%.obj: %.cpp
 	@mv $(patsubst %.obj,%.d,$@) $(addprefix $(BUILD)/, $(subst /,_,$(patsubst $(BUILD)/%.obj,%.ccd,$@)))
 
 $(HTML):	$(EMCC_OBJ_FILES)
-	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^ $(addprefix --preload-file ,$(PRELOADS))
+	em++ --bind $(EMCC_LD_FLAGS) -o $@ $^
 	# Override Meteor scope guards for the Module global object.
 	sed -i '.bak' 's/var Module/var Module = window.Module/g' $(BUILD)/main.js
 	rm $(BUILD)/main.js.bak
 	# Move the newly compiled files into Meteor-controlled directories.
 	cp $(BUILD)/main.js meteor/client/bin/main.js
-	cp $(BUILD)/main.data meteor/public/main.data
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
