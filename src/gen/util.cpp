@@ -55,11 +55,24 @@ inline bool InBounds(const Point& square, const Point& size) {
           0 < square.y && square.y < size.y - 1);
 }
 
-inline bool AtEdgeOfRoom(const Point& square, const Room& room) {
+bool AtEdgeOfRoom(const Point& square, const Room& room) {
   return (max(max(square.x - room.position.x - room.size.x + 1,
                   room.position.x - square.x), 0) +
           max(max(square.y - room.position.y - room.size.y + 1,
                   room.position.y - square.y), 0)) == 1;
+}
+
+void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
+  ASSERT(AtEdgeOfRoom(square, room), "Adding door not at the edge!");
+  if (square.x == room.position.x - 1 ||
+      square.x == room.position.x + room.size.x) {
+    (*diggable)[square.x][square.y + 1] = false;
+    (*diggable)[square.x][square.y - 1] = false;
+  } else {
+    (*diggable)[square.x + 1][square.y] = false;
+    (*diggable)[square.x - 1][square.y] = false;
+  }
+  // TODO(skishore): Maybe add a dungeon feature here.
 }
 
 }  // namespace
@@ -127,9 +140,12 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   }
 
   // Dig the corridor.
+  ASSERT(truncated_path.size() > 0, "Truncated entire path!");
   for (const Point& node : truncated_path) {
     (*cells)[node.x][node.y] = Cell::FREE;
   }
+  AddDoor(truncated_path[0], r2, diggable);
+  AddDoor(truncated_path[truncated_path.size() - 1], r1, diggable);
 }
 
 bool PlaceRoom(const Room& room, int separation, CellArray* cells,
