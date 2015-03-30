@@ -30,7 +30,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   tileset_.reset(DefaultTileset());
 
   CellArray cells = ConstructArray2d<Cell>(size_, Cell::DEFAULT);
-  Array2d<bool> diggable = ConstructArray2d<bool>(size_, false);
+  Array2d<bool> diggable = ConstructArray2d<bool>(size_, true);
 
   const int min_size = 6;
   const int max_size = 8;
@@ -59,6 +59,10 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   vector<Point> edges = MinimumSpanningTree(distances);
   MAYBE_DEBUG("Computed a minimal spanning tree with "
               << IntToString(edges.size()) << " edges.");
+  for (const Point& edge : edges) {
+    ASSERT(edge.x != edge.y, "Tree includes reflexive edge!");
+    DigCorridor(rooms_[edge.x], rooms_[edge.y], size_, &cells, &diggable);
+  }
 
   MAYBE_DEBUG("Final map:" << ComputeDebugString(cells));
   tiles_.reset(ComputeTiles(*tileset_, cells));

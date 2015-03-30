@@ -1,6 +1,9 @@
 #include "gen/util.h"
 
 #include <algorithm>
+#include <cfloat>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "base/debug.h"
 
@@ -10,11 +13,19 @@ using babel::engine::Tile;
 using babel::engine::Tileset;
 using std::max;
 using std::string;
+using std::unordered_map;
+using std::unordered_set;
 using std::vector;
 
 namespace babel {
 namespace gen {
 namespace {
+
+const Point kSteps[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+// Windiness is between 1.0 and 8.0, with increasing windiness causing the
+// corridor digger to take longer paths between rooms.
+const double kWindiness = 8.0;
 
 inline string GetDebugCharForCell(Cell cell) {
   if (cell == Cell::FREE) {
@@ -34,7 +45,92 @@ inline Tile GetTileForCell(const Tileset& tileset, Cell cell) {
   return tileset.default_tile;
 }
 
+inline Point GetRandomSquare(const Room& room) {
+  return room.position + Point(RandInt(0, room.size.x - 1),
+                               RandInt(0, room.size.y - 1));
+}
+
+inline bool InBounds(const Point& square, const Point& size) {
+  return (0 < square.x && square.x < size.x - 1 &&
+          0 < square.y && square.y < size.y - 1);
+}
+
+inline bool AtEdgeOfRoom(const Point& square, const Room& room) {
+  return (max(max(square.x - room.position.x - room.size.x + 1,
+                  room.position.x - square.x), 0) +
+          max(max(square.y - room.position.y - room.size.y + 1,
+                  room.position.y - square.y), 0)) == 1;
+}
+
 }  // namespace
+
+void DigCorridor(const Room& r1, const Room& r2, const Point& size,
+                 CellArray* cells, Array2d<bool>* diggable) {
+  const Point source = GetRandomSquare(r1);
+  const Point target = GetRandomSquare(r2);
+  ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y] &&
+         InBounds(source, size) && (*diggable)[source.x][source.y],
+         "Endpoint " << source << " or " << target << " invalid.");
+
+  unordered_map<Point, double> distances{{source, 0}};
+  unordered_map<Point, Point> parents;
+  unordered_set<Point> visited;
+
+  // Run Djikstra's algorithm between the source and target.
+  while (visited.find(target) == visited.end()) {
+    Point best_node;
+    double best_distance = DBL_MAX;
+    ASSERT(distances.size() > 0, "Failed to route from "
+           << source << " to " << target);
+    for (const auto& pair : distances) {
+      if (pair.second <= best_distance) {
+        best_node = pair.first;
+        best_distance = pair.second;
+      }
+    }
+    distances.erase(best_node);
+    visited.insert(best_node);
+    for (const Point& step : kSteps) {
+      const Point child = best_node + step;
+      if (!(InBounds(child, size) && (*diggable)[child.x][child.y] &&
+            visited.find(child) == visited.end())) {
+        continue;
+      }
+      bool free = (*cells)[child.x][child.y] == Cell::FREE;
+      double distance = best_distance + (free ? kWindiness : 2.0);
+      if (distances.find(child) == distances.end() ||
+          distance < distances.at(child)) {
+        distances[child] = distance;
+        parents[child] = best_node;
+      }
+    }
+  }
+
+  // Construct the actual path from source to target.
+  vector<Point> path;
+  Point node = target;
+  while (node != source) {
+    path.push_back(node);
+    node = parents.at(node);
+  }
+
+  // Truncate the path to only include sections outside the two rooms.
+  vector<Point> truncated_path;
+  for (const Point& node : path) {
+    if (AtEdgeOfRoom(node, r2)) {
+      truncated_path.clear();
+    }
+    truncated_path.push_back(node);
+    if (AtEdgeOfRoom(node, r1)) {
+      break;
+    }
+  }
+
+  // Dig the corridor.
+  for (const Point& node : truncated_path) {
+    (*cells)[node.x][node.y] = Cell::FREE;
+  }
+}
 
 bool PlaceRoom(const Room& room, int separation, CellArray* cells,
                Array2d<bool>* diggable, vector<Room>* rooms) {
