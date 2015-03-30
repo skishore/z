@@ -8,8 +8,12 @@
 namespace babel {
 namespace gen {
 
-std::vector<Point> MinimumSpanningTree(
-    const std::vector<std::vector<double>>& graph);
+typedef std::vector<std::vector<double>> Graph;
+
+std::vector<Point> MinimumSpanningTree(const Graph& graph);
+
+Graph ComputeTreeDistances(
+    const Graph& graph, const std::vector<Point>& tree);
 
 }  // namespace gen
 }  // namespace babel
