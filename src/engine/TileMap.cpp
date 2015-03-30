@@ -6,6 +6,11 @@ using std::vector;
 namespace babel {
 namespace engine {
 
+bool TileMap::Room::Contains(const Point& square) const {
+  return (position.x <= square.x && square.x < position.x + size.x &&
+          position.y <= square.y && square.y < position.y + size.y);
+}
+
 Tile TileMap::GetMapTile(const Point& square) const {
   if (0 <= square.x && square.x < size_.x &&
       0 <= square.y && square.y < size_.y) {

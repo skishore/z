@@ -31,8 +31,11 @@ GameState::GameState(const string& map_file) {
   AddNPC(player);
   RecomputePlayerVision();
 
-  for (int i = 1; i < map->GetRooms().size(); i++) {
+  for (int i = 0; i < map->GetRooms().size(); i++) {
     const TileMap::Room& room = map->GetRooms()[i];
+    if (room.Contains(player->square)) {
+      continue;
+    }
 
     // Decide what how many and what type of enemies to spawn in this room.
     bool worker = rand() % 2 == 0;
