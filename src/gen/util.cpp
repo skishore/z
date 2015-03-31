@@ -23,7 +23,7 @@ namespace {
 
 const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
-                            {1, 1}, {-1, 1}, {-1, 1}, {-1, -1}};
+                            {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
 inline string GetDebugCharForCell(Cell cell) {
   if (cell == Cell::FREE) {
