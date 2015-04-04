@@ -30,6 +30,10 @@ class DefaultTileset : public Tileset {
       return rand() % 4;
     } else if (tile == Tile::WALL) {
       return 4;
+    } else if (tile == Tile::DOOR) {
+      return 7;
+    } else if (tile == Tile::FENCE) {
+      return 6;
     }
     return 5;
   }

@@ -26,12 +26,16 @@ const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
                             {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
 inline string GetDebugCharForTile(Tile tile) {
-  if (tile == Tile::FREE) {
+  if (tile == Tile::DEFAULT) {
+    return " ";
+  } else if (tile == Tile::FREE) {
     return ".";
   } else if (tile == Tile::WALL) {
     return "#";
+  } else if (tile == Tile::DOOR) {
+    return "+";
   }
-  return " ";
+  return "?";
 }
 
 inline bool InBounds(const Point& square, const Point& size) {
@@ -46,7 +50,8 @@ bool AtEdgeOfRoom(const Point& square, const Room& room) {
                   room.position.y - square.y), 0)) == 1;
 }
 
-void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
+void AddDoor(const Point& square, const Room& room,
+             TileArray* tiles, Array2d<bool>* diggable) {
   ASSERT(AtEdgeOfRoom(square, room));
   if (square.x == room.position.x - 1 ||
       square.x == room.position.x + room.size.x) {
@@ -56,7 +61,9 @@ void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
     (*diggable)[square.x + 1][square.y] = false;
     (*diggable)[square.x - 1][square.y] = false;
   }
-  // TODO(skishore): Maybe add a dungeon feature here.
+  if (rand() % 2 == 0) {
+    (*tiles)[square.x][square.y] = Tile::DOOR;
+  }
 }
 
 }  // namespace
@@ -109,8 +116,9 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
             visited.find(child) == visited.end())) {
         continue;
       }
-      bool free = (*tiles)[child.x][child.y] == Tile::FREE;
-      double distance = best_distance + (free ? windiness : 2.0);
+      const Tile tile = (*tiles)[child.x][child.y];
+      const bool free = (tile == Tile::FREE || tile == Tile::DOOR);
+      const double distance = best_distance + (free ? windiness : 2.0);
       if (distances.find(child) == distances.end() ||
           distance < distances.at(child)) {
         distances[child] = distance;
@@ -144,8 +152,8 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   for (const Point& node : truncated_path) {
     (*tiles)[node.x][node.y] = Tile::FREE;
   }
-  AddDoor(truncated_path[0], r2, diggable);
-  AddDoor(truncated_path[truncated_path.size() - 1], r1, diggable);
+  AddDoor(truncated_path[0], r2, tiles, diggable);
+  AddDoor(truncated_path[truncated_path.size() - 1], r1, tiles, diggable);
 }
 
 Point GetRandomSquareInRoom(const Room& room) {

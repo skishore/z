@@ -11,7 +11,9 @@ typedef unsigned char Graphic;
 enum Tile {
   DEFAULT = 0,
   FREE = 1,
-  WALL = 2
+  WALL = 2,
+  DOOR = 3,
+  FENCE = 4
 };
 
 class Tileset {
