@@ -11,6 +11,8 @@
 
 typedef babel::engine::TileMap::Room Room;
 
+using babel::engine::Graphic;
+using babel::engine::Tile;
 using babel::engine::Tileset;
 using std::min;
 using std::vector;
@@ -21,18 +23,25 @@ namespace {
 
 #define MAYBE_DEBUG(...) if (verbose) { DEBUG(__VA_ARGS__); }
 
-// The caller takes ownership of the new tileset.
-Tileset* DefaultTileset() {
-  return new Tileset{4 /* blocked_tile */, 5 /* default_tile */};
-}
+class DefaultTileset : public Tileset {
+ public:
+  Graphic GetGraphicForTile(Tile tile) const override {
+    if (tile == Tile::FREE) {
+      return rand() % 4;
+    } else if (tile == Tile::WALL) {
+      return 4;
+    }
+    return 5;
+  }
+};
 
 }  // namespace
 
 RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   size_ = size;
-  tileset_.reset(DefaultTileset());
+  tileset_.reset(new DefaultTileset());
 
-  CellArray cells = ConstructArray2d<Cell>(size_, Cell::DEFAULT);
+  TileArray tiles = ConstructArray2d<Tile>(size_, Tile::DEFAULT);
   Array2d<bool> diggable = ConstructArray2d<bool>(size_, true);
 
   const int min_size = 6;
@@ -45,7 +54,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
     const Point size{RandInt(min_size, max_size), RandInt(min_size, max_size)};
     const Room room{{RandInt(1, size_.x - size.x - 1),
                      RandInt(1, size_.y - size.y - 1)}, size};
-    if (!PlaceRoom(room, separation, &cells, &diggable, &rooms_)) {
+    if (!PlaceRoom(room, separation, &tiles, &diggable, &rooms_)) {
       tries_left -= 1;
     }
   }
@@ -98,16 +107,16 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y, "Graph includes reflexive edge!");
     DigCorridor(rooms_[edge.x], rooms_[edge.y], size_,
-                windiness, &cells, &diggable);
+                windiness, &tiles, &diggable);
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
-  AddWalls(size_, &cells);
+  AddWalls(size_, &tiles);
   const Room& starting_room = rooms_[RandInt(0, rooms_.size() - 1)];
   starting_square_ = GetRandomSquareInRoom(starting_room);
 
-  MAYBE_DEBUG("Final map:" << ComputeDebugString(cells));
-  tiles_.reset(ComputeTiles(*tileset_, cells));
+  MAYBE_DEBUG("Final map:" << ComputeDebugString(tiles));
+  PackTiles(tiles);
 }
 
 }  // namespace gen

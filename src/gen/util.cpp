@@ -9,8 +9,8 @@
 
 typedef babel::engine::TileMap::Room Room;
 
+using babel::engine::Graphic;
 using babel::engine::Tile;
-using babel::engine::Tileset;
 using std::max;
 using std::string;
 using std::unordered_map;
@@ -25,22 +25,13 @@ const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
                             {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
-inline string GetDebugCharForCell(Cell cell) {
-  if (cell == Cell::FREE) {
+inline string GetDebugCharForTile(Tile tile) {
+  if (tile == Tile::FREE) {
     return ".";
-  } else if (cell == Cell::BLOCKED) {
+  } else if (tile == Tile::WALL) {
     return "#";
   }
   return " ";
-}
-
-inline Tile GetTileForCell(const Tileset& tileset, Cell cell) {
-  if (cell == Cell::FREE) {
-    return tileset.GetFreeTile();
-  } else if (cell == Cell::BLOCKED) {
-    return tileset.GetBlockedTile();
-  }
-  return tileset.default_tile;
 }
 
 inline bool InBounds(const Point& square, const Point& size) {
@@ -70,18 +61,18 @@ void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
 
 }  // namespace
 
-void AddWalls(const Point& size, CellArray* cells) {
+void AddWalls(const Point& size, TileArray* tiles) {
   for (int x = 0; x < size.x; x++) {
     for (int y = 0; y < size.y; y++) {
-      if ((*cells)[x][y] != Cell::FREE) {
+      if ((*tiles)[x][y] != Tile::FREE) {
         continue;
       }
       for (const Point& step : kKingMoves) {
         const Point square(x + step.x, y + step.y);
         if (0 <= square.x && square.x < size.x &&
             0 <= square.y && square.y < size.y &&
-            (*cells)[square.x][square.y] == Cell::DEFAULT) {
-          (*cells)[square.x][square.y] = Cell::BLOCKED;
+            (*tiles)[square.x][square.y] == Tile::DEFAULT) {
+          (*tiles)[square.x][square.y] = Tile::WALL;
         }
       }
     }
@@ -89,7 +80,7 @@ void AddWalls(const Point& size, CellArray* cells) {
 }
 
 void DigCorridor(const Room& r1, const Room& r2, const Point& size,
-                 double windiness, CellArray* cells, Array2d<bool>* diggable) {
+                 double windiness, TileArray* tiles, Array2d<bool>* diggable) {
   const Point source = GetRandomSquareInRoom(r1);
   const Point target = GetRandomSquareInRoom(r2);
   ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y] &&
@@ -120,7 +111,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
             visited.find(child) == visited.end())) {
         continue;
       }
-      bool free = (*cells)[child.x][child.y] == Cell::FREE;
+      bool free = (*tiles)[child.x][child.y] == Tile::FREE;
       double distance = best_distance + (free ? windiness : 2.0);
       if (distances.find(child) == distances.end() ||
           distance < distances.at(child)) {
@@ -153,7 +144,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   // Dig the corridor.
   ASSERT(truncated_path.size() > 0, "Truncated entire path!");
   for (const Point& node : truncated_path) {
-    (*cells)[node.x][node.y] = Cell::FREE;
+    (*tiles)[node.x][node.y] = Tile::FREE;
   }
   AddDoor(truncated_path[0], r2, diggable);
   AddDoor(truncated_path[truncated_path.size() - 1], r1, diggable);
@@ -164,7 +155,7 @@ Point GetRandomSquareInRoom(const Room& room) {
                                RandInt(0, room.size.y - 1));
 }
 
-bool PlaceRoom(const Room& room, int separation, CellArray* cells,
+bool PlaceRoom(const Room& room, int separation, TileArray* tiles,
                Array2d<bool>* diggable, vector<Room>* rooms) {
   for (const auto& other : *rooms) {
     if (RoomToRoomDistance(room, other) < separation) {
@@ -173,7 +164,7 @@ bool PlaceRoom(const Room& room, int separation, CellArray* cells,
   }
   for (int x = 0; x < room.size.x; x++) {
     for (int y = 0; y < room.size.y; y++) {
-      (*cells)[x + room.position.x][y + room.position.y] = Cell::FREE;
+      (*tiles)[x + room.position.x][y + room.position.y] = Tile::FREE;
     }
   }
   (*diggable)[room.position.x - 1][room.position.y - 1] = false;
@@ -192,29 +183,16 @@ double RoomToRoomDistance(const Room& r1, const Room& r2) {
   return distance.length();
 }
 
-string ComputeDebugString(const CellArray& cells) {
+string ComputeDebugString(const TileArray& tiles) {
   string result;
-  for (int x = 0; x < cells.size(); x++) {
+  for (int x = 0; x < tiles.size(); x++) {
     string row = "\n";
-    for (int y = 0; y < cells.size(); y++) {
-      row += GetDebugCharForCell(cells[x][y]);
+    for (int y = 0; y < tiles.size(); y++) {
+      row += GetDebugCharForTile(tiles[x][y]);
     }
     result += row;
   }
   return result;
-}
-
-Tile* ComputeTiles(const Tileset& tileset, const CellArray& cells) {
-  ASSERT(cells.size() > 0, "Got empty cell array.");
-  const int height = cells[0].size();
-  Tile* tiles = new Tile[cells.size()*cells[0].size()];
-  for (int x = 0; x < cells.size(); x++) {
-    ASSERT(cells[x].size() == height, "Got non-rectangular cell array.");
-    for (int y = 0; y < height; y++) {
-      tiles[x*height + y] = GetTileForCell(tileset, cells[x][y]);
-    }
-  }
-  return tiles;
 }
 
 }  // namespace gen

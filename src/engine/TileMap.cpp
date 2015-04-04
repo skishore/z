@@ -11,16 +11,41 @@ bool TileMap::Room::Contains(const Point& square) const {
           position.y <= square.y && square.y < position.y + size.y);
 }
 
-Tile TileMap::GetMapTile(const Point& square) const {
+Graphic TileMap::GetGraphic(const Point& square) const {
+  if (0 <= square.x && square.x < size_.x &&
+      0 <= square.y && square.y < size_.y) {
+    return graphics_[square.x*size_.y + square.y];
+  }
+  return tileset_->GetGraphicForTile(Tile::DEFAULT);
+}
+
+Tile TileMap::GetTile(const Point& square) const {
   if (0 <= square.x && square.x < size_.x &&
       0 <= square.y && square.y < size_.y) {
     return tiles_[square.x*size_.y + square.y];
   }
-  return tileset_->default_tile;
+  return Tile::DEFAULT;
 }
 
 bool TileMap::IsSquareBlocked(const Point& square) const {
-  return tileset_->IsTileBlocked(GetMapTile(square));
+  return GetTile(square) != Tile::FREE;
+}
+
+void TileMap::PackTiles(const vector<vector<Tile>>& tiles) {
+  const int size = size_.x*size_.y;
+  ASSERT(size > 0, "Tried to pack empty tiles!");
+  graphics_.reset(new Graphic[size]);
+  tiles_.reset(new Tile[size]);
+  ASSERT(tiles.size() == size_.x, "Incorrect size for tile array!");
+  for (int x = 0; x < size_.x; x++) {
+    ASSERT(tiles[x].size() == size_.y, "Incorrect size for tile column!");
+    for (int y = 0; y < size_.y; y++) {
+      const Tile tile = tiles[x][y];
+      const int index = x*size_.y + y;
+      graphics_[index] = tileset_->GetGraphicForTile(tile);
+      tiles_[index] = tile;
+    }
+  }
 }
 
 }  // namespace engine

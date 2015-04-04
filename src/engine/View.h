@@ -7,13 +7,14 @@
 
 #include "engine/GameState.h"
 #include "engine/Sprite.h"
+#include "engine/Tileset.h"
 
 namespace babel {
 namespace engine {
 
 struct TileView {
   // graphic will be -1 if the tile is unknown to the player.
-  int graphic;
+  Graphic graphic;
   bool visible;
 };
 

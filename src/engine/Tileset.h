@@ -6,24 +6,19 @@
 namespace babel {
 namespace engine {
 
-typedef unsigned char Tile;
+typedef unsigned char Graphic;
 
-struct Tileset {
-  // For now, we assume that all free tiles come before all blocked tiles.
-  const Tile blocked_tile;
-  const Tile default_tile;
+enum Tile {
+  DEFAULT = 0,
+  FREE = 1,
+  WALL = 2
+};
 
-  inline bool IsTileBlocked(Tile tile) const {
-    return tile >= blocked_tile;
-  };
-
-  inline Tile GetBlockedTile() const {
-    return blocked_tile;
-  };
-
-  inline Tile GetFreeTile() const {
-    return rand() % blocked_tile;
-  };
+class Tileset {
+ public:
+  // This function is NOT necessarily deterministic, so when a map is generated,
+  // a graphic should be saved for each tile in the map.
+  virtual Graphic GetGraphicForTile(Tile tile) const = 0;
 };
 
 } // namespace engine

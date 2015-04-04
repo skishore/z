@@ -19,7 +19,7 @@ View::View(const Point& radius, const GameState& game_state)
     for (int y = 0; y < size.y; y++) {
       Point square = Point(x, y) + offset;
       if (game_state.IsSquareSeen(square)) {
-        tiles[x][y].graphic = (int)game_state.map->GetMapTile(square);
+        tiles[x][y].graphic = game_state.map->GetGraphic(square);
         tiles[x][y].visible =
             game_state.player_vision->IsSquareVisible(square, vision);
       } else {
