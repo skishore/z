@@ -38,7 +38,7 @@ LaunchDialogAction::LaunchDialogAction(Sprite* target) : target_(target) {}
 ActionResult LaunchDialogAction::Execute() {
   ActionResult result;
 
-  ASSERT(sprite_->IsPlayer(), "NPC attack launched a dialog!");
+  ASSERT(sprite_->IsPlayer());
   const string& enemy = target_->creature->appearance.name;
 
   if (game_state_->dialog != nullptr) {

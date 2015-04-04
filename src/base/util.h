@@ -27,8 +27,7 @@ std::vector<T> Concatenate(const std::vector<std::vector<T>>& nested_list) {
 template<typename T> std::map<T,T> Invert(const std::map<T,T>& original) {
   std::map<T,T> result;
   for (const auto& pair : original) {
-    ASSERT(result.find(pair.second) == result.end(),
-           "Duplicate item found when computing inverted map: " << pair.second);
+    ASSERT(result.find(pair.second) == result.end());
     result[pair.second] = pair.first;
   }
   return result;

@@ -8,14 +8,14 @@ namespace babel {
 
 #ifdef NDEBUG
 
-#define ASSERT(x, y) (void)(x)
+#define ASSERT(x) (void)(x)
 #define DEBUG(x)
 
 #else  // NDEBUG
 
-#define ASSERT(x, y) do { \
+#define ASSERT(x) do { \
   if (!(x)) { \
-    DEBUG("ASSERTION FAILED: " << y); \
+    DEBUG("ASSERTION FAILED: " << #x); \
     exit(-1); \
   } \
 } while(false)

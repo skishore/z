@@ -66,7 +66,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       graph[i][j] = RoomToRoomDistance(rooms_[i], rooms_[j]);
-      ASSERT(i == j || graph[i][j] > 0, "Rooms are touching!");
+      ASSERT(i == j || graph[i][j] > 0);
     }
   }
   vector<Point> edges = MinimumSpanningTree(graph);
@@ -105,7 +105,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
 
   const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
-    ASSERT(edge.x != edge.y, "Graph includes reflexive edge!");
+    ASSERT(edge.x != edge.y);
     DigCorridor(rooms_[edge.x], rooms_[edge.y], size_,
                 windiness, &tiles, &diggable);
   }

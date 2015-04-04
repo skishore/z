@@ -33,12 +33,12 @@ bool TileMap::IsSquareBlocked(const Point& square) const {
 
 void TileMap::PackTiles(const vector<vector<Tile>>& tiles) {
   const int size = size_.x*size_.y;
-  ASSERT(size > 0, "Tried to pack empty tiles!");
+  ASSERT(size > 0);
   graphics_.reset(new Graphic[size]);
   tiles_.reset(new Tile[size]);
-  ASSERT(tiles.size() == size_.x, "Incorrect size for tile array!");
+  ASSERT(tiles.size() == size_.x);
   for (int x = 0; x < size_.x; x++) {
-    ASSERT(tiles[x].size() == size_.y, "Incorrect size for tile column!");
+    ASSERT(tiles[x].size() == size_.y);
     for (int y = 0; y < size_.y; y++) {
       const Tile tile = tiles[x][y];
       const int index = x*size_.y + y;

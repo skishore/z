@@ -47,7 +47,7 @@ bool AtEdgeOfRoom(const Point& square, const Room& room) {
 }
 
 void AddDoor(const Point& square, const Room& room, Array2d<bool>* diggable) {
-  ASSERT(AtEdgeOfRoom(square, room), "Adding door not at the edge!");
+  ASSERT(AtEdgeOfRoom(square, room));
   if (square.x == room.position.x - 1 ||
       square.x == room.position.x + room.size.x) {
     (*diggable)[square.x][square.y + 1] = false;
@@ -83,9 +83,8 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
                  double windiness, TileArray* tiles, Array2d<bool>* diggable) {
   const Point source = GetRandomSquareInRoom(r1);
   const Point target = GetRandomSquareInRoom(r2);
-  ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y] &&
-         InBounds(source, size) && (*diggable)[source.x][source.y],
-         "Endpoint " << source << " or " << target << " invalid.");
+  ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y]);
+  ASSERT(InBounds(target, size) && (*diggable)[target.x][target.y]);
 
   unordered_map<Point, double> distances{{source, 0}};
   unordered_map<Point, Point> parents;
@@ -95,8 +94,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   while (visited.find(target) == visited.end()) {
     Point best_node;
     double best_distance = DBL_MAX;
-    ASSERT(distances.size() > 0, "Failed to route from "
-           << source << " to " << target);
+    ASSERT(distances.size() > 0);
     for (const auto& pair : distances) {
       if (pair.second <= best_distance) {
         best_node = pair.first;
@@ -142,7 +140,7 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   }
 
   // Dig the corridor.
-  ASSERT(truncated_path.size() > 0, "Truncated entire path!");
+  ASSERT(truncated_path.size() > 0);
   for (const Point& node : truncated_path) {
     (*tiles)[node.x][node.y] = Tile::FREE;
   }

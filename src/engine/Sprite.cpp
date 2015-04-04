@@ -54,7 +54,7 @@ const Point GetBestMove(const Sprite& sprite, const GameState& game_state) {
       }
     }
   }
-  ASSERT(best_moves.size() > 0, "Could not find a move!");
+  ASSERT(best_moves.size() > 0);
   return best_moves[rand() % best_moves.size()];
 }
 
@@ -84,7 +84,7 @@ void Sprite::ConsumeEnergy() {
 }
 
 Action* Sprite::GetAction(const GameState& game_state) const {
-  ASSERT(!IsPlayer(), "GetAction called for player!");
+  ASSERT(!IsPlayer());
   if (AreAdjacent(*this, *game_state.player)) {
     return new AttackAction(game_state.player);
   } else {

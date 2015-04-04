@@ -15,10 +15,11 @@ namespace engine {
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
                   EventHandler* handler) {
-  ASSERT(sprite_ == nullptr, "Bind was called twice!");
-  ASSERT(sprite != nullptr, "sprite == nullptr");
-  ASSERT(game_state != nullptr, "game_state == nullptr");
-  ASSERT(handler != nullptr, "handler == nullptr");
+  ASSERT(sprite != nullptr);
+  ASSERT(game_state != nullptr);
+  ASSERT(handler != nullptr);
+  // Check that Bind was not called twice for the same Action.
+  ASSERT(sprite_ == nullptr);
   sprite_ = sprite;
   game_state_ = game_state;
   handler_ = handler;

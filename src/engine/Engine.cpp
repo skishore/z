@@ -28,12 +28,12 @@ Engine::~Engine() {
 }
 
 void Engine::AddEventHandler(EventHandler* handler) {
-  ASSERT(handler != nullptr, "Added null EventHandler!");
+  ASSERT(handler != nullptr);
   handler_.handlers_.push_back(handler);
 }
 
 void Engine::AddInput(Action* input) {
-  ASSERT(input != nullptr, "Added null Action!");
+  ASSERT(input != nullptr);
   if (inputs_.empty() || input->Queueable()) {
     inputs_.push_back(input);
   }
@@ -51,7 +51,7 @@ bool Engine::Update() {
     }
     // Find the next sprite with enough energy to move.
     Sprite* sprite = game_state_.GetCurrentSprite();
-    ASSERT(sprite != nullptr, "Current sprite is NULL!");
+    ASSERT(sprite != nullptr);
     if (!sprite->HasEnergyNeededToMove() && !sprite->GainEnergy()) {
       game_state_.AdvanceSprite();
       continue;
@@ -73,7 +73,8 @@ bool Engine::Update() {
       action->Bind(sprite, &game_state_, &handler_);
       result = action->Execute();
       if (result.stalled) {
-        ASSERT(result.alternate == nullptr, "Stalled Action has alternate!");
+        // Stalled actions should not return alternates. They will not be executed.
+        ASSERT(result.alternate == nullptr);
         changed = true;
         break;
       }

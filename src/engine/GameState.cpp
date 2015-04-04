@@ -63,16 +63,15 @@ GameState::~GameState() {
 }
 
 void GameState::AddNPC(Sprite* sprite) {
-  ASSERT(sprite != nullptr, "sprite == nullptr");
-  ASSERT(!IsSquareOccupied(sprite->square),
-         "Adding sprite at occupied square " << sprite->square);
+  ASSERT(sprite != nullptr);
+  ASSERT(!IsSquareOccupied(sprite->square));
   sprites.push_back(sprite);
   sprite_positions[sprite->square] = sprite;
 }
 
 void GameState::RemoveNPC(Sprite* sprite) {
-  ASSERT(sprite != nullptr, "sprite == nullptr");
-  ASSERT(!sprite->IsPlayer(), "Removing player!");
+  ASSERT(sprite != nullptr);
+  ASSERT(!sprite->IsPlayer());
   const auto& it = remove(sprites.begin(), sprites.end(), sprite);
   const int index = it - sprites.begin();
   sprites.erase(it, sprites.end());
@@ -90,12 +89,10 @@ void GameState::MoveSprite(const Point& move, Sprite* sprite) {
   if (move.x == 0 && move.y == 0) {
     return;
   }
-  ASSERT(sprite != nullptr, "sprite == nullptr");
-  ASSERT(sprite_positions[sprite->square] == sprite,
-         "Integrity error: unexpected sprite at " << sprite->square);
+  ASSERT(sprite != nullptr);
+  ASSERT(sprite_positions[sprite->square] == sprite);
   Point new_square = sprite->square + move;
-  ASSERT(!IsSquareOccupied(new_square),
-         "Moving sprite to occupied square " << new_square);
+  ASSERT(!IsSquareOccupied(new_square));
   sprite_positions.erase(sprite->square);
   sprite_positions[new_square] = sprite;
   sprite->square = new_square;
@@ -110,7 +107,7 @@ Sprite* GameState::GetCurrentSprite() const {
 }
 
 void GameState::AdvanceSprite() {
-  ASSERT(sprites.size() > 0, "There are no sprites!");
+  ASSERT(sprites.size() > 0);
   sprite_index = (sprite_index + 1) % sprites.size();
 }
 
