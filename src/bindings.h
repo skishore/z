@@ -124,11 +124,15 @@ struct EventHandlerWrapper : public wrapper<engine::EventHandler> {
   void OnAttack(engine::sid source, engine::sid target) override {
     return call<void>("OnAttack", source, target);
   }
+  void OnSnapshot() override {
+    return call<void>("OnSnapshot");
+  }
 };
 
 EMSCRIPTEN_BINDINGS(events) {
   class_<engine::EventHandler>("BabelEventHandler")
     .function("OnAttack", &engine::EventHandler::OnAttack, pure_virtual())
+    .function("OnSnapshot", &engine::EventHandler::OnSnapshot, pure_virtual())
     .allow_subclass<EventHandlerWrapper>("EventHandlerWrapper");
 };
 

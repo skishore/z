@@ -27,6 +27,8 @@ class TileMap {
   const Point& GetSize() const { return size_; };
   const Point& GetStartingSquare() const { return starting_square_; }
 
+  void SetTile(const Point& square, Tile tile);
+
  protected:
   TileMap() {};
 

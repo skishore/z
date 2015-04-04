@@ -46,6 +46,8 @@ class GameState {
   bool IsSquareSeen(const Point& square) const;
   Sprite* SpriteAt(const Point& square) const;
 
+  void RecomputePlayerVision();
+
   Sprite* player;
   std::vector<Sprite*> sprites;
   std::unique_ptr<TileMap> map;
@@ -54,7 +56,6 @@ class GameState {
   Log log;
 
  private:
-  void RecomputePlayerVision();
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
   int sprite_index = 0;

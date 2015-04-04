@@ -34,6 +34,10 @@ BabelAnimation.prototype.OnAttack = function(source, target) {
   this.PushStep({component: component, view: view});
 }
 
+BabelAnimation.prototype.OnSnapshot = function() {
+  this.PushStep({component: new SnapshotComponent(), view: this.Snapshot()});
+}
+
 BabelAnimation.prototype.Checkpoint = function() {
   this.PushStep({component: new CheckpointComponent(), view: this.Snapshot()});
 }
@@ -167,6 +171,16 @@ AttackComponent.prototype.Update = function() {
 
 AttackComponent.prototype.Draw = function(view, graphics) {
   graphics.Draw(view, this.transform);
+}
+
+function SnapshotComponent() {};
+
+SnapshotComponent.prototype.Update = function() {
+  return false;
+}
+
+SnapshotComponent.prototype.Draw = function(view, graphics) {
+  assert(false, "SnapshotComponent.Draw should never be called!");
 }
 
 // Implementation of tweening logic.

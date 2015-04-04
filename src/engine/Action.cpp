@@ -70,7 +70,11 @@ MoveAction::MoveAction(const Point& move) : move_(move) {}
 ActionResult MoveAction::Execute() {
   ActionResult result;
   Point square = sprite_->square + move_;
+
   if (game_state_->map->IsSquareBlocked(square)) {
+    if (sprite_->IsPlayer()) {
+      result.alternate = new OpenDoorAction(square);
+    }
     return result;
   }
 
@@ -80,6 +84,29 @@ ActionResult MoveAction::Execute() {
     result.alternate = new AttackAction(game_state_->SpriteAt(square));
   } else {
     game_state_->MoveSprite(move_, sprite_);
+    result.success = true;
+  }
+  return result;
+}
+
+OpenDoorAction::OpenDoorAction(const Point& square) : square_(square) {}
+
+ActionResult OpenDoorAction::Execute() {
+  ActionResult result;
+  const Tile tile = game_state_->map->GetTile(square_);
+
+  if (tile == Tile::DOOR) {
+    game_state_->map->SetTile(square_, Tile::FREE);
+    game_state_->RecomputePlayerVision();
+    // Check if we should log and animate the event.
+    const int radius = game_state_->player->creature->stats.vision_radius;
+    if (game_state_->player_vision->IsSquareVisible(square_, radius)) {
+      const string verb_phrase =
+          (sprite_->IsPlayer() ? "You open" :
+           "The " + sprite_->creature->appearance.name + " opens");
+      game_state_->log.AddLine(verb_phrase + " the door.");
+      handler_->OnSnapshot();
+    }
     result.success = true;
   }
   return result;

@@ -31,6 +31,17 @@ bool TileMap::IsSquareBlocked(const Point& square) const {
   return GetTile(square) != Tile::FREE;
 }
 
+void TileMap::SetTile(const Point& square, Tile tile) {
+  if (0 <= square.x && square.x < size_.x &&
+      0 <= square.y && square.y < size_.y) {
+    const int index = square.x*size_.y + square.y;
+    if (tiles_[index] != tile) {
+      graphics_[index] = tileset_->GetGraphicForTile(tile);
+      tiles_[index] = tile;
+    }
+  }
+}
+
 void TileMap::PackTiles(const vector<vector<Tile>>& tiles) {
   const int size = size_.x*size_.y;
   ASSERT(size > 0);

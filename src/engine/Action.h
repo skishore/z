@@ -56,6 +56,15 @@ class MoveAction : public Action {
   Point move_;
 };
 
+class OpenDoorAction : public Action {
+ public:
+  OpenDoorAction(const Point& square);
+  ActionResult Execute() override;
+
+ private:
+  Point square_;
+};
+
 }  // namespace engine
 }  // namespace babel
 
