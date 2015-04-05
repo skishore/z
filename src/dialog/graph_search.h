@@ -9,6 +9,11 @@
 namespace babel {
 namespace dialog {
 
+// Searches for a set of squares that, if blocked, would isolate the given
+// squares from the rest of the map.
+std::vector<Point> GetBlockingSquares(
+    const engine::GameState& game_state, const std::vector<Point>& squares);
+
 // Searches for n unblocked, unoccupied squares reachable from start.
 // The search terminates at a distance of at most k.
 std::vector<Point> GetReachableSquares(

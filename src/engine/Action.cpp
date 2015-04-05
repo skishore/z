@@ -12,6 +12,21 @@ using std::string;
 
 namespace babel {
 namespace engine {
+namespace {
+
+void SetSquareAndLog(const Point& square, Tile tile, const string& text,
+                     GameState* game_state, EventHandler* handler) {
+  game_state->map->SetTile(square, tile);
+  game_state->RecomputePlayerVision();
+  // Check if we should log and animate the event.
+  const int radius = game_state->player->creature->stats.vision_radius;
+  if (game_state->player_vision->IsSquareVisible(square, radius)) {
+    game_state->log.AddLine(text);
+    handler->OnSnapshot();
+  }
+}
+
+}  // namespace
 
 void Action::Bind(Sprite* sprite, GameState* game_state,
                   EventHandler* handler) {
@@ -98,20 +113,28 @@ ActionResult OpenDoorAction::Execute() {
   ActionResult result;
   const Tile tile = game_state_->map->GetTile(square_);
 
-  if (tile == Tile::DOOR) {
-    game_state_->map->SetTile(square_, Tile::FREE);
-    game_state_->RecomputePlayerVision();
-    // Check if we should log and animate the event.
-    const int radius = game_state_->player->creature->stats.vision_radius;
-    if (game_state_->player_vision->IsSquareVisible(square_, radius)) {
-      const string verb_phrase =
-          (sprite_->IsPlayer() ? "You open" :
-           "The " + sprite_->creature->appearance.name + " opens");
-      game_state_->log.AddLine(verb_phrase + " the door.");
-      handler_->OnSnapshot();
+  if (!(tile == Tile::DOOR || tile == Tile::FENCE)) {
+    return result;
+  }
+  const string tense = (sprite_->IsPlayer() ? "" : "s");
+  const string verb_phrase =
+      (tile == Tile::DOOR ? "open" + tense + " the door" :
+       "force" + tense + " open the fence");
+
+  if (game_state_->dialog != nullptr) {
+    if (sprite_->IsPlayer()) {
+      game_state_->log.AddLine("You're engaged in combat! "
+                               "You don't have time to " + verb_phrase + "!");
     }
     result.success = true;
+    return result;
   }
+
+  const string noun = (sprite_->IsPlayer() ? "You" :
+                       "The " + sprite_->creature->appearance.name);
+  SetSquareAndLog(square_, Tile::FREE, noun + " " + verb_phrase + ".",
+                  game_state_, handler_);
+  result.success = true;
   return result;
 }
 
