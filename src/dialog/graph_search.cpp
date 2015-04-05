@@ -1,4 +1,4 @@
-#include "dialog/GraphSearch.h"
+#include "dialog/graph_search.h"
 
 #include <memory>
 #include <unordered_set>

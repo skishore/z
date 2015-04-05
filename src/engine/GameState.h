@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "base/point.h"
-#include "engine/EventHandler.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Log.h"
 #include "engine/TileMap.h"
@@ -29,6 +28,7 @@ class Dialog;
 
 namespace engine {
 
+class EventHandler;
 class Sprite;
 
 class GameState {

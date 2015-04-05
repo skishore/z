@@ -7,7 +7,7 @@
 #include <emscripten/bind.h>
 
 #include "base/point.h"
-#include "dialog/Dialog.h"
+#include "dialog/dialogs.h"
 #include "engine/Action.h"
 #include "engine/Engine.h"
 #include "engine/View.h"

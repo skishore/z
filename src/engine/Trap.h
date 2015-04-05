@@ -19,10 +19,10 @@ class Trap {
   // The trap is destroyed after Trigger is called.
   virtual void Trigger(GameState* game_state, EventHandler* handler) = 0;
 
-  const std::vector<Point> GetSquares() const { return squares_; }
+  const std::vector<Point>& GetSquares() const { return squares_; }
 
  protected:
-  const std::vector<Point> squares_;
+  std::vector<Point> squares_;
 };
 
 }  // namespace engine

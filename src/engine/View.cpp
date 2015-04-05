@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "dialog/Dialog.h"
+#include "dialog/dialogs.h"
 
 using std::max;
 using std::string;

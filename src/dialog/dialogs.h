@@ -1,5 +1,5 @@
-#ifndef __BABEL_DIALOG_DIALOG_H__
-#define __BABEL_DIALOG_DIALOG_H__
+#ifndef __BABEL_DIALOG_DIALOGS_H__
+#define __BABEL_DIALOG_DIALOGS_H__
 
 #include <map>
 #include <set>
@@ -74,4 +74,4 @@ class ReverseTransliterationDialog : public Dialog {
 }  // namespace dialog
 }  // namespace babel
 
-#endif  // __BABEL_DIALOG_DIALOG_H__
+#endif  // __BABEL_DIALOG_DIALOGS_H__

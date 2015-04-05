@@ -6,7 +6,7 @@
 #include "base/creature.h"
 #include "base/debug.h"
 #include "base/util.h"
-#include "dialog/Dialog.h"
+#include "dialog/dialogs.h"
 #include "engine/Sprite.h"
 #include "gen/RoomAndCorridorMap.h"
 

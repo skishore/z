@@ -1,4 +1,4 @@
-#include "dialog/Dialog.h"
+#include "dialog/dialogs.h"
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -7,7 +7,7 @@
 #define EM_ASM_INT(...)
 #endif  // EMSCRIPTEN
 
-#include "dialog/DialogAction.h"
+#include "dialog/actions.h"
 
 using babel::engine::Action;
 using babel::engine::EventHandler;

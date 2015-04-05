@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "dialog/DialogAction.h"
+#include "dialog/actions.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"

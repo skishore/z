@@ -1,12 +1,12 @@
-#include "dialog/DialogAction.h"
+#include "dialog/actions.h"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
 #include "base/point.h"
-#include "dialog/Dialog.h"
-#include "dialog/GraphSearch.h"
+#include "dialog/dialogs.h"
+#include "dialog/graph_search.h"
 #include "engine/EventHandler.h"
 #include "engine/GameState.h"
 #include "engine/Sprite.h"

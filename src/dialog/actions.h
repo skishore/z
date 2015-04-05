@@ -1,5 +1,5 @@
-#ifndef __BABEL_DIALOG_DIALOG_ACTION_H__
-#define __BABEL_DIALOG_DIALOG_ACTION_H__
+#ifndef __BABEL_DIALOG_ACTIONS_H__
+#define __BABEL_DIALOG_ACTIONS_H__
 
 #include <string>
 
@@ -46,4 +46,4 @@ class ExecuteCombatAction : public DialogAction {
 }  // namespace dialog
 }  // namespace babel
 
-#endif  // __BABEL_DIALOG_DIALOG_ACTION_H__
+#endif  // __BABEL_DIALOG_ACTIONS_H__
