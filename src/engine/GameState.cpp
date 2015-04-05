@@ -7,6 +7,7 @@
 #include "base/debug.h"
 #include "base/util.h"
 #include "dialog/dialogs.h"
+#include "dialog/traps.h"
 #include "engine/Sprite.h"
 #include "gen/RoomAndCorridorMap.h"
 
@@ -38,17 +39,20 @@ GameState::GameState(const string& map_file) {
     }
 
     // Decide what how many and what type of enemies to spawn in this room.
-    bool worker = rand() % 2 == 0;
-    const int num_enemies = (worker ? 1 : (room.size.x + room.size.y)/2 - 3);
-    const int type = (worker ? mWorker : mGecko);
+    bool trapped = rand() % 2 == 0;
+    if (trapped) {
+      AddTrap(new dialog::DialogGroupTrap(room));
+      continue;
+    }
 
+    const int num_enemies = (rand() % 3) + 2;
     for (int j = 0; j < num_enemies; j++) {
-      while (true) {
+      for (int tries = 0; tries < 10; tries++) {
         Point square = room.position;
         square.x += rand() % room.size.x;
         square.y += rand() % room.size.y;
         if (!IsSquareOccupied(square)) {
-          AddNPC(new Sprite(square, type));
+          AddNPC(new Sprite(square, mGecko));
           break;
         }
       }

@@ -27,7 +27,6 @@ struct Creature {
 extern const int mPlayer;
 extern const int mGecko;
 extern const int mDrone;
-extern const int mWorker;
 
 extern const std::vector<Creature> kCreatures;
 

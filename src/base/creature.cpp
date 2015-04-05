@@ -9,7 +9,6 @@ namespace babel {
 const int mPlayer = 0;
 const int mGecko = 1;
 const int mDrone = 2;
-const int mWorker = 3;
 
 const std::vector<Creature> kCreatures = {
   Creature{
@@ -23,11 +22,7 @@ const std::vector<Creature> kCreatures = {
   Creature{
     Appearance{"drone", 2},
     Attack{1, 1},
-    Stats{1, 20, 9}},
-  Creature{
-    Appearance{"worker", 3},
-    Attack{1, 2},
-    Stats{2, 40, 9}}
+    Stats{1, 20, 9}}
 };
 
 #undef Stats
