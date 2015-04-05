@@ -1,8 +1,6 @@
 #include "dialog/actions.h"
 
 #include <algorithm>
-#include <string>
-#include <vector>
 
 #include "base/point.h"
 #include "dialog/dialogs.h"
@@ -15,20 +13,15 @@ using babel::engine::ActionResult;
 using babel::engine::GameState;
 using babel::engine::Sprite;
 using std::max;
-using std::min;
 using std::string;
-using std::vector;
 
 namespace babel {
 namespace dialog {
 
 bool DefendsWithDialog(const GameState& game_state,
                        const Sprite& sprite, int damage) {
-  if (game_state.dialog != nullptr && game_state.dialog->IsInvolved(sprite)) {
-    return true;
-  }
-  if (sprite.type == mWorker) {
-    return damage >= sprite.cur_health;
+  if (game_state.dialog != nullptr) {
+    return game_state.dialog->IsInvolved(sprite);
   }
   return sprite.type == mGecko;
 }
@@ -36,56 +29,23 @@ bool DefendsWithDialog(const GameState& game_state,
 LaunchDialogAction::LaunchDialogAction(Sprite* target) : target_(target) {}
 
 ActionResult LaunchDialogAction::Execute() {
+  ASSERT(sprite_->IsPlayer());
   ActionResult result;
 
-  ASSERT(sprite_->IsPlayer());
-  const string& enemy = target_->creature->appearance.name;
-
   if (game_state_->dialog != nullptr) {
-    if (game_state_->dialog->IsInvolved(*target_)) {
-      if (game_state_->dialog->OnAttack(
-              game_state_, handler_, sprite_, target_)) {
-        game_state_->dialog.reset(nullptr);
-      }
-    } else {
-      game_state_->log.AddLine(
-          "You swing wildly, but completely miss the " + enemy + "!");
+    ASSERT(game_state_->dialog->IsInvolved(*target_));
+    if (game_state_->dialog->OnAttack(
+            game_state_, handler_, sprite_, target_)) {
+      game_state_->dialog.reset(nullptr);
     }
     result.success = true;
     return result;
   }
 
-  if (target_->type == mGecko) {
-    game_state_->dialog.reset(
-        new TransliterationCombatDialog(sprite_, target_));
-    result.stalled = true;
-    return result;
-  }
-
-  const Point start = target_->square;
-  const int target_num_to_spawn = 6;
-  vector<Point> squares = GetReachableSquares(
-      *game_state_, start, 4*target_num_to_spawn, 4);
-  std::random_shuffle(squares.begin(), squares.end());
-
-  game_state_->log.AddLine("You hit the " + enemy + ".");
-  handler_->OnAttack(sprite_->Id(), target_->Id());
-
-  game_state_->log.AddLine("You are swarmed by a group of " +
-                           kCreatures[mDrone].appearance.name + "s!");
-  game_state_->RemoveNPC(target_);
-
-  vector<Sprite*> sprites{};
-  const int num_to_spawn = min(int(squares.size()), target_num_to_spawn);
-  for (int i = 0; i < num_to_spawn; i++) {
-    Sprite* sprite = new Sprite(squares[i], mDrone);
-    game_state_->AddNPC(sprite);
-    sprites.push_back(sprite);
-    sprite->ConsumeEnergy();
-  }
-
-  game_state_->dialog.reset(new ReverseTransliterationDialog(sprites));
-  result.success = true;
+  ASSERT(target_->type == mGecko);
+  game_state_->dialog.reset(
+      new TransliterationCombatDialog(sprite_, target_));
+  result.stalled = true;
   return result;
 }
 
