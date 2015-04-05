@@ -6,12 +6,13 @@
 
 #include "base/creature.h"
 #include "base/point.h"
-#include "engine/GameState.h"
 
 namespace babel {
 namespace engine {
 
 class Action;
+class GameState;
+
 typedef uint32_t sid;
 
 class Sprite {

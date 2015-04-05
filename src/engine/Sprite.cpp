@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "engine/Action.h"
+#include "engine/GameState.h"
 
 using std::string;
 using std::vector;

@@ -84,6 +84,9 @@ ActionResult MoveAction::Execute() {
     result.alternate = new AttackAction(game_state_->SpriteAt(square));
   } else {
     game_state_->MoveSprite(move_, sprite_);
+    if (sprite_->IsPlayer()) {
+      game_state_->MaybeTriggerTrap(square, handler_);
+    }
     result.success = true;
   }
   return result;

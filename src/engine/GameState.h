@@ -15,9 +15,11 @@
 #include <vector>
 
 #include "base/point.h"
+#include "engine/EventHandler.h"
 #include "engine/FieldOfVision.h"
 #include "engine/Log.h"
 #include "engine/TileMap.h"
+#include "engine/Trap.h"
 
 namespace babel {
 
@@ -39,13 +41,21 @@ class GameState {
   void RemoveNPC(Sprite* sprite);
   void MoveSprite(const Point& move, Sprite* sprite);
 
+  // AddTrap takes ownership of the new trap.
+  void AddTrap(Trap* trap);
+  void RemoveTrap(Trap* trap);
+  void MaybeTriggerTrap(const Point& square, EventHandler* handler);
+
   Sprite* GetCurrentSprite() const;
   void AdvanceSprite();
 
   bool IsSquareOccupied(const Point& square) const;
-  bool IsSquareSeen(const Point& square) const;
   Sprite* SpriteAt(const Point& square) const;
 
+  bool IsSquareTrapped(const Point& square) const;
+  Trap* TrapAt(const Point& square) const;
+
+  bool IsSquareSeen(const Point& square) const;
   void RecomputePlayerVision();
 
   Sprite* player;
@@ -58,6 +68,8 @@ class GameState {
  private:
   std::vector<std::vector<bool>> seen;
   std::unordered_map<Point,Sprite*> sprite_positions;
+  std::unordered_map<Point,Trap*> trap_positions;
+  std::vector<Trap*> traps;
   int sprite_index = 0;
 };
 

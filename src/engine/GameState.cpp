@@ -102,6 +102,36 @@ void GameState::MoveSprite(const Point& move, Sprite* sprite) {
   }
 }
 
+void GameState::AddTrap(Trap* trap) {
+  ASSERT(trap != nullptr);
+  for (const Point& square : trap->GetSquares()) {
+    ASSERT(!IsSquareTrapped(square));
+  }
+  traps.push_back(trap);
+  for (const Point& square : trap->GetSquares()) {
+    trap_positions[square] = trap;
+  }
+}
+
+void GameState::RemoveTrap(Trap* trap) {
+  ASSERT(trap != nullptr);
+  const auto& it = remove(traps.begin(), traps.end(), trap);
+  traps.erase(it, traps.end());
+  for (const Point& square : trap->GetSquares()) {
+    trap_positions.erase(square);
+  }
+  delete trap;
+}
+
+void GameState::MaybeTriggerTrap(const Point& square, EventHandler* handler) {
+  if (!IsSquareTrapped(square)) {
+    return;
+  }
+  Trap* trap = TrapAt(square);
+  trap->Trigger(this, handler);
+  RemoveTrap(trap);
+}
+
 Sprite* GameState::GetCurrentSprite() const {
   return sprites[sprite_index];
 }
@@ -115,16 +145,24 @@ bool GameState::IsSquareOccupied(const Point& square) const {
   return sprite_positions.find(square) != sprite_positions.end();
 }
 
+Sprite* GameState::SpriteAt(const Point& square) const {
+  return sprite_positions.at(square);
+}
+
+bool GameState::IsSquareTrapped(const Point& square) const {
+  return trap_positions.find(square) != trap_positions.end();
+}
+
+Trap* GameState::TrapAt(const Point& square) const {
+  return trap_positions.at(square);
+}
+
 bool GameState::IsSquareSeen(const Point& square) const {
   if (0 <= square.x && square.x < map->GetSize().x &&
       0 <= square.y && square.y < map->GetSize().y) {
     return seen[square.x][square.y];
   }
   return false;
-}
-
-Sprite* GameState::SpriteAt(const Point& square) const {
-  return sprite_positions.at(square);
 }
 
 void GameState::RecomputePlayerVision() {
