@@ -1,8 +1,14 @@
 import sys
 
+# TODO(skishore): Convert from CMU phonetic representation to our
+# Devanagari transliteration scheme. Besides applying the substitutions
+# in our symbol map, we also have to execute a few more rules:
+#   - Trailing Zs should be transliterated as "s".
+#   - Some consonants, like K or T, when followed by HH, should be aspirated.
+
 if __name__ == '__main__':
   num_common_words = int(0 if len(sys.argv) == 1 else sys.argv[1])
-  common_words = set()
+  words = set()
   result = []
 
   with open('data/frequency/en.txt') as frequency:
@@ -10,11 +16,18 @@ if __name__ == '__main__':
       word = line.split(' ')[0]
       if not word.isalpha():
         continue
-      common_words.add(word)
-      if len(common_words) == num_common_words:
+      words.add(word)
+      if len(words) == num_common_words:
         break
 
-  with open('data/cmudict/cmudict-0.7b') as cmudict:
+  with open('data/scripts/extra_transliterations') as extra_transliterations:
+    for line in extra_transliterations:
+      word = line.strip()
+      if not word.isalpha():
+        continue
+      words.add(word)
+
+  with open('data/cmudict/cmudict-0.7b.modified') as cmudict:
     for line in cmudict:
       if line.startswith(';'):
         continue
@@ -22,7 +35,7 @@ if __name__ == '__main__':
       word = word.lower()
       if not word.isalpha():
         continue
-      if not word in common_words:
+      if not word in words:
         continue
       result.append(line)
 
