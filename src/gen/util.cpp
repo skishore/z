@@ -66,6 +66,17 @@ void AddDoor(const Point& square, const Room& room,
   }
 }
 
+Tile GetTile(const TileArray& tiles, const Point& square) {
+  if (square.x < tiles.size() && square.y < tiles[square.x].size()) {
+    return tiles[square.x][square.y];
+  }
+  return Tile::DEFAULT;
+}
+
+bool IsTileBlocked(Tile tile) {
+  return !(tile == Tile::FREE || tile == Tile::DOOR);
+}
+
 }  // namespace
 
 void AddWalls(const Point& size, TileArray* tiles) {
@@ -116,9 +127,8 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
             visited.find(child) == visited.end())) {
         continue;
       }
-      const Tile tile = (*tiles)[child.x][child.y];
-      const bool free = (tile == Tile::FREE || tile == Tile::DOOR);
-      const double distance = best_distance + (free ? windiness : 2.0);
+      const bool blocked = IsTileBlocked((*tiles)[child.x][child.y]);
+      const double distance = best_distance + (blocked ? 2.0 : windiness);
       if (distances.find(child) == distances.end() ||
           distance < distances.at(child)) {
         distances[child] = distance;
@@ -154,6 +164,29 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
   }
   AddDoor(truncated_path[0], r2, tiles, diggable);
   AddDoor(truncated_path[truncated_path.size() - 1], r1, tiles, diggable);
+}
+
+void Erode(const Point& size, TileArray* tiles) {
+  TileArray new_tiles = ConstructArray2d<Tile>(size, Tile::DEFAULT);
+  for (int x = 0; x < size.x; x++) {
+    for (int y = 0; y < size.y; y++) {
+      const Tile tile = (*tiles)[x][y];
+      const bool blocked = IsTileBlocked(tile);
+      int neighbors_blocked = 0;
+      for (const Point& step : kKingMoves) {
+        if (IsTileBlocked(GetTile(*tiles, Point(x, y) + step))) {
+          neighbors_blocked += 1;
+        }
+      }
+      const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
+      if (blocked) {
+        new_tiles[x][y] = (rand() % 8 < matches ? Tile::DEFAULT : Tile::FREE);
+      } else {
+        new_tiles[x][y] = (rand() % 8 < 2*matches ? Tile::FREE: Tile::DEFAULT);
+      }
+    }
+  }
+  *tiles = new_tiles;
 }
 
 Point GetRandomSquareInRoom(const Room& room) {

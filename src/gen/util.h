@@ -36,6 +36,10 @@ void DigCorridor(const engine::TileMap::Room& r1,
                  const engine::TileMap::Room& r2, const Point& size,
                  double windiness, TileArray* tiles, Array2d<bool>* diggable);
 
+// Runs an erosion step on the tile array. Each tile has a chance of being
+// converted to the types of the tiles around it.
+void Erode(const Point& size, TileArray* tiles);
+
 // Return a uniform random square in the given room.
 Point GetRandomSquareInRoom(const engine::TileMap::Room& room);
 
