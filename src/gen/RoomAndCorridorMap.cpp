@@ -107,7 +107,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   }
   MAYBE_DEBUG("Added " << IntToString(loop_edges) << " high-ratio loop edges.");
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 6; i++) {
     Erode(size_, &tiles);
   }
 

@@ -22,8 +22,10 @@ namespace gen {
 namespace {
 
 const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-const Point kKingMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},
-                            {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
+// IMPORTANT: The king moves are arranged in increasing order of angle.
+const Point kKingMoves[] = {{1, 0}, {1, 1}, {0, 1}, {-1, 1},
+                            {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
 
 inline string GetDebugCharForTile(Tile tile) {
   if (tile == Tile::DEFAULT) {
@@ -64,13 +66,6 @@ void AddDoor(const Point& square, const Room& room,
   if (rand() % 2 == 0) {
     (*tiles)[square.x][square.y] = Tile::DOOR;
   }
-}
-
-Tile GetTile(const TileArray& tiles, const Point& square) {
-  if (square.x < tiles.size() && square.y < tiles[square.x].size()) {
-    return tiles[square.x][square.y];
-  }
-  return Tile::DEFAULT;
 }
 
 bool IsTileBlocked(Tile tile) {
@@ -167,22 +162,58 @@ void DigCorridor(const Room& r1, const Room& r2, const Point& size,
 }
 
 void Erode(const Point& size, TileArray* tiles) {
-  TileArray new_tiles = ConstructArray2d<Tile>(size, Tile::DEFAULT);
-  for (int x = 0; x < size.x; x++) {
-    for (int y = 0; y < size.y; y++) {
+  TileArray new_tiles = *tiles;
+  for (int x = 1; x < size.x - 1; x++) {
+    for (int y = 1; y < size.y - 1; y++) {
       const Tile tile = (*tiles)[x][y];
       const bool blocked = IsTileBlocked(tile);
       int neighbors_blocked = 0;
       for (const Point& step : kKingMoves) {
-        if (IsTileBlocked(GetTile(*tiles, Point(x, y) + step))) {
+        if (IsTileBlocked((*tiles)[x + step.x][y + step.y])) {
           neighbors_blocked += 1;
         }
       }
+
+      int min_unblocked_index = -1;
+      int max_unblocked_index = -1;
+      int gaps = 0;
+      for (int i = 0; i < 8; i++) {
+        const Point& step = kKingMoves[i];
+        if (IsTileBlocked(new_tiles[x + step.x][y + step.y])) {
+          continue;
+        }
+        if (min_unblocked_index < 0) {
+          min_unblocked_index = i;
+          max_unblocked_index = i;
+          continue;
+        }
+        if (i > max_unblocked_index + (max_unblocked_index % 2 == 0 ? 2 : 1)) {
+          gaps += 1;
+        }
+        max_unblocked_index = i;
+      }
+      if (min_unblocked_index >= 0 &&
+          !(min_unblocked_index == 0 && max_unblocked_index >= 6)) {
+        gaps += 1;
+      }
+
+      if (gaps > 1) {
+        // This tile connects two distinct areas of free tiles in the eroded map.
+        // We should not change its state, as doing so would either link or unlink
+        // the two areas.
+        new_tiles[x][y] = tile;
+        continue;
+      }
+
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
+      const int k = 2;
+      const int l = 3;
       if (blocked) {
-        new_tiles[x][y] = (rand() % 8 < matches ? Tile::DEFAULT : Tile::FREE);
+        new_tiles[x][y] = ((rand() % (8*k)) < (8 - matches) ?
+                           Tile::FREE : Tile::DEFAULT);
       } else {
-        new_tiles[x][y] = (rand() % 8 < 2*matches ? Tile::FREE: Tile::DEFAULT);
+        new_tiles[x][y] = ((rand() % (8*l)) < (8 - matches) ?
+                           Tile::DEFAULT : Tile::FREE);
       }
     }
   }
