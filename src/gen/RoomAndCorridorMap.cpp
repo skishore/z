@@ -108,7 +108,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   MAYBE_DEBUG("Added " << IntToString(loop_edges) << " high-ratio loop edges.");
 
   for (int i = 0; i < 6; i++) {
-    Erode(size_, &tiles);
+    Erode(2, size_, &tiles);
   }
 
   const double windiness = 1 << (rand() % 4);

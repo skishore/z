@@ -161,7 +161,7 @@ void DigCorridor(const Room& r1, const Room& r2, double windiness,
   AddDoor(truncated_path[truncated_path.size() - 1], r1, tiles, diggable);
 }
 
-void Erode(const Point& size, TileArray* tiles) {
+void Erode(int islandness, const Point& size, TileArray* tiles) {
   TileArray new_tiles = *tiles;
   for (int x = 1; x < size.x - 1; x++) {
     for (int y = 1; y < size.y - 1; y++) {
@@ -218,7 +218,8 @@ void Erode(const Point& size, TileArray* tiles) {
         new_tiles[x][y] = ((rand() % (8*k)) < 8 - matches ?
                            Tile::FREE : Tile::DEFAULT);
       } else {
-        new_tiles[x][y] = ((rand() % (8*l)) < max(8 - matches, matches - 4) ?
+        const int cutoff = max(8 - matches, matches - 8 + islandness);
+        new_tiles[x][y] = ((rand() % (8*l)) < cutoff ?
                            Tile::DEFAULT : Tile::FREE);
       }
     }

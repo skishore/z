@@ -39,7 +39,10 @@ void DigCorridor(const engine::TileMap::Room& r1,
 
 // Runs an erosion step on the tile array. Each tile has a chance of being
 // converted to the types of the tiles around it.
-void Erode(const Point& size, TileArray* tiles);
+//
+// Islandness is between 0 and 16, with increasing islandness causing it to
+// be more likely to have random walls in the interior of a room.
+void Erode(int islandness, const Point& size, TileArray* tiles);
 
 // Return a uniform random square in the given room.
 Point GetRandomSquareInRoom(const engine::TileMap::Room& room);
