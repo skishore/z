@@ -72,6 +72,41 @@ bool IsTileBlocked(Tile tile) {
   return !(tile == Tile::FREE || tile == Tile::DOOR);
 }
 
+// Returns true if, during erosion, this square cannot be modified because doing
+// so would change the orthogonal connectivity of the free squares around it.
+bool SquareFixedByConnectivityConstraint(
+    const TileArray& tiles, const Point& square) {
+  int neighbors_blocked = 0;
+  int min_unblocked_index = -1;
+  int max_unblocked_index = -1;
+  int gaps = 0;
+  bool has_free_orthogonal_neighbor = false;
+  for (int i = 0; i < 8; i++) {
+    const Point& step = kKingMoves[i];
+    if (IsTileBlocked(tiles[square.x + step.x][square.y + step.y])) {
+      neighbors_blocked += 1;
+      continue;
+    }
+    if (i % 2 == 0) {
+      has_free_orthogonal_neighbor = true;
+    }
+    if (min_unblocked_index < 0) {
+      min_unblocked_index = i;
+      max_unblocked_index = i;
+      continue;
+    }
+    if (i > max_unblocked_index + 1) {
+      gaps += 1;
+    }
+    max_unblocked_index = i;
+  }
+  if (min_unblocked_index >= 0 &&
+      !(min_unblocked_index == 0 && max_unblocked_index == 7)) {
+    gaps += 1;
+  }
+  return neighbors_blocked == 8 || gaps > 1 || !has_free_orthogonal_neighbor;
+}
+
 }  // namespace
 
 void AddWalls(const Point& size, TileArray* tiles) {
@@ -165,6 +200,9 @@ void Erode(int islandness, const Point& size, TileArray* tiles) {
   TileArray new_tiles = *tiles;
   for (int x = 1; x < size.x - 1; x++) {
     for (int y = 1; y < size.y - 1; y++) {
+      if (SquareFixedByConnectivityConstraint(new_tiles, Point(x, y))) {
+        continue;
+      }
       const Tile tile = (*tiles)[x][y];
       const bool blocked = IsTileBlocked(tile);
       int neighbors_blocked = 0;
@@ -173,44 +211,6 @@ void Erode(int islandness, const Point& size, TileArray* tiles) {
           neighbors_blocked += 1;
         }
       }
-
-      int new_neighbors_blocked = 0;
-      bool has_free_orthogonal_new_neighbor = false;
-      int min_unblocked_index = -1;
-      int max_unblocked_index = -1;
-      int gaps = 0;
-      for (int i = 0; i < 8; i++) {
-        const Point& step = kKingMoves[i];
-        if (IsTileBlocked(new_tiles[x + step.x][y + step.y])) {
-          new_neighbors_blocked += 1;
-          continue;
-        }
-        if (i % 2 == 0) {
-          has_free_orthogonal_new_neighbor = true;
-        }
-        if (min_unblocked_index < 0) {
-          min_unblocked_index = i;
-          max_unblocked_index = i;
-          continue;
-        }
-        if (i > max_unblocked_index + 1) {
-          gaps += 1;
-        }
-        max_unblocked_index = i;
-      }
-      if (min_unblocked_index >= 0 &&
-          !(min_unblocked_index == 0 && max_unblocked_index == 7)) {
-        gaps += 1;
-      }
-
-      if (new_neighbors_blocked == 8 || gaps > 1 ||
-          !has_free_orthogonal_new_neighbor) {
-        // This tile connects two distinct areas of free tiles in the new map.
-        // We should not change its state, as doing so would either link or
-        // unlink those two areas.
-        continue;
-      }
-
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
       const int k = 4;
       const int l = 6;
