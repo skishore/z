@@ -92,8 +92,8 @@ void AddWalls(const Point& size, TileArray* tiles) {
   }
 }
 
-void DigCorridor(const Room& r1, const Room& r2, const Point& size,
-                 double windiness, TileArray* tiles, Array2d<bool>* diggable) {
+void DigCorridor(const Room& r1, const Room& r2, double windiness,
+                 const Point& size, TileArray* tiles, Array2d<bool>* diggable) {
   const Point source = GetRandomSquareInRoom(r1);
   const Point target = GetRandomSquareInRoom(r2);
   ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y]);
@@ -174,45 +174,51 @@ void Erode(const Point& size, TileArray* tiles) {
         }
       }
 
+      int new_neighbors_blocked = 0;
+      bool has_free_orthogonal_new_neighbor = false;
       int min_unblocked_index = -1;
       int max_unblocked_index = -1;
       int gaps = 0;
       for (int i = 0; i < 8; i++) {
         const Point& step = kKingMoves[i];
         if (IsTileBlocked(new_tiles[x + step.x][y + step.y])) {
+          new_neighbors_blocked += 1;
           continue;
+        }
+        if (i % 2 == 0) {
+          has_free_orthogonal_new_neighbor = true;
         }
         if (min_unblocked_index < 0) {
           min_unblocked_index = i;
           max_unblocked_index = i;
           continue;
         }
-        if (i > max_unblocked_index + (max_unblocked_index % 2 == 0 ? 2 : 1)) {
+        if (i > max_unblocked_index + 1) {
           gaps += 1;
         }
         max_unblocked_index = i;
       }
       if (min_unblocked_index >= 0 &&
-          !(min_unblocked_index == 0 && max_unblocked_index >= 6)) {
+          !(min_unblocked_index == 0 && max_unblocked_index == 7)) {
         gaps += 1;
       }
 
-      if (gaps > 1) {
-        // This tile connects two distinct areas of free tiles in the eroded map.
-        // We should not change its state, as doing so would either link or unlink
-        // the two areas.
-        new_tiles[x][y] = tile;
+      if (new_neighbors_blocked == 8 || gaps > 1 ||
+          !has_free_orthogonal_new_neighbor) {
+        // This tile connects two distinct areas of free tiles in the new map.
+        // We should not change its state, as doing so would either link or
+        // unlink those two areas.
         continue;
       }
 
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
-      const int k = 2;
-      const int l = 3;
+      const int k = 4;
+      const int l = 6;
       if (blocked) {
-        new_tiles[x][y] = ((rand() % (8*k)) < (8 - matches) ?
+        new_tiles[x][y] = ((rand() % (8*k)) < 8 - matches ?
                            Tile::FREE : Tile::DEFAULT);
       } else {
-        new_tiles[x][y] = ((rand() % (8*l)) < (8 - matches) ?
+        new_tiles[x][y] = ((rand() % (8*l)) < max(8 - matches, matches - 4) ?
                            Tile::DEFAULT : Tile::FREE);
       }
     }
@@ -253,11 +259,11 @@ double RoomToRoomDistance(const Room& r1, const Room& r2) {
   return distance.length();
 }
 
-string ComputeDebugString(const TileArray& tiles) {
+string ComputeDebugString(const Point& size, const TileArray& tiles) {
   string result;
-  for (int x = 0; x < tiles.size(); x++) {
+  for (int y = 0; y < size.y; y++) {
     string row = "\n";
-    for (int y = 0; y < tiles.size(); y++) {
+    for (int x = 0; x < size.x; x++) {
       row += GetDebugCharForTile(tiles[x][y]);
     }
     result += row;

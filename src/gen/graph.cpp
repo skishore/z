@@ -53,6 +53,9 @@ vector<Point> MinimumSpanningTree(const Graph& graph) {
 Graph ComputeTreeDistances(const Graph& graph, const vector<Point>& tree) {
   const int n = graph.size();
   Graph result(n, vector<double>(n));
+  if (n == 1) {
+    return result;
+  }
 
   map<int, vector<int>> adjacency;
   for (const Point& edge : tree) {

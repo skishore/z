@@ -33,8 +33,9 @@ void AddWalls(const Point& size, TileArray* tiles);
 // Windiness is between 1.0 and 8.0, with increasing windiness causing the
 // corridor digger to take longer paths between rooms.
 void DigCorridor(const engine::TileMap::Room& r1,
-                 const engine::TileMap::Room& r2, const Point& size,
-                 double windiness, TileArray* tiles, Array2d<bool>* diggable);
+                 const engine::TileMap::Room& r2,
+                 double windiness, const Point& size,
+                 TileArray* tiles, Array2d<bool>* diggable);
 
 // Runs an erosion step on the tile array. Each tile has a chance of being
 // converted to the types of the tiles around it.
@@ -53,7 +54,7 @@ double RoomToRoomDistance(const engine::TileMap::Room& r1,
                           const engine::TileMap::Room& r2);
 
 // Converts a 2d array of tiles into a human-readable string.
-std::string ComputeDebugString(const TileArray& blocked);
+std::string ComputeDebugString(const Point& size, const TileArray& blocked);
 
 }  // namespace gen
 }  // namespace babel

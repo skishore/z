@@ -114,8 +114,8 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y);
-    DigCorridor(rooms_[edge.x], rooms_[edge.y], size_,
-                windiness, &tiles, &diggable);
+    DigCorridor(rooms_[edge.x], rooms_[edge.y], windiness,
+                size_, &tiles, &diggable);
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
@@ -123,7 +123,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   const Room& starting_room = rooms_[RandInt(0, rooms_.size() - 1)];
   starting_square_ = GetRandomSquareInRoom(starting_room);
 
-  MAYBE_DEBUG("Final map:" << ComputeDebugString(tiles));
+  MAYBE_DEBUG("Final map:" << ComputeDebugString(size, tiles));
   PackTiles(tiles);
 }
 
