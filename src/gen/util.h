@@ -20,6 +20,12 @@ Array2d<T> ConstructArray2d(const Point& size, T value) {
   return Array2d<T>(size.x, std::vector<T>(size.y, value));
 }
 
+// rid stands for "room index".
+//
+// rid 0 is reserved for squares not in any room. If rids[i][j] is
+// greater than 0, square (i, j) is in room rids[i][j] - 1.
+typedef unsigned char rid;
+
 struct Level {
   Level(const Point& size);
 
@@ -45,13 +51,11 @@ struct Level {
                  std::vector<engine::TileMap::Room>* rooms);
 
   // Returns a human-readable serialization of the level.
-  std::string ToDebugString() const;
+  std::string ToDebugString(bool show_rooms=true) const;
 
-  // rooms[i][j] will be 0 if square (i, j) is not in a room.
-  // Otherwise, that square is in room rooms[i][j] - 1.
   const Point size;
   TileArray tiles;
-  Array2d<unsigned char> rooms;
+  Array2d<rid> rids;
   Array2d<bool> diggable;
 };
 

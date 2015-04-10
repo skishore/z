@@ -72,46 +72,39 @@ bool IsTileBlocked(Tile tile) {
   return !(tile == Tile::FREE || tile == Tile::DOOR);
 }
 
-// Returns true if, during erosion, this square cannot be modified because doing
-// so would change the orthogonal connectivity of the free squares around it.
-bool SquareFixedByConnectivityConstraint(
-    const TileArray& tiles, const Point& square) {
-  int neighbors_blocked = 0;
-  int min_unblocked_index = -1;
-  int max_unblocked_index = -1;
-  int gaps = 0;
+// Returns true if it is possible to erode the given square in the map.
+// A square may be immune to erosion if:
+//  - It has no free orthogonal neighbors. We want all rooms to be connected
+//    by rook moves, even though the player can move diagonally.
+//  - It is adjacent to squares in two different rooms. Eroding it would
+//    connect those two rooms, which we don't want.
+//
+// If this method returns true, it will set room_index to be the index of
+// the adjacent free square's room.
+bool CanErodeSquare(
+    const Array2d<rid>& rids, const Point& square, rid* room_index) {
+  *room_index = 0;
   bool has_free_orthogonal_neighbor = false;
   for (int i = 0; i < 8; i++) {
     const Point& step = kKingMoves[i];
-    if (IsTileBlocked(tiles[square.x + step.x][square.y + step.y])) {
-      neighbors_blocked += 1;
+    const rid adjacent = rids[square.x + step.x][square.y + step.y];
+    if (adjacent == 0) {
       continue;
     }
-    if (i % 2 == 0) {
-      has_free_orthogonal_neighbor = true;
+    if (*room_index > 0 && *room_index != adjacent) {
+      return false;
     }
-    if (min_unblocked_index < 0) {
-      min_unblocked_index = i;
-      max_unblocked_index = i;
-      continue;
-    }
-    if (i > max_unblocked_index + 1) {
-      gaps += 1;
-    }
-    max_unblocked_index = i;
+    *room_index = adjacent;
+    has_free_orthogonal_neighbor |= i % 2 == 0;
   }
-  if (min_unblocked_index >= 0 &&
-      !(min_unblocked_index == 0 && max_unblocked_index == 7)) {
-    gaps += 1;
-  }
-  return neighbors_blocked == 8 || gaps > 1 || !has_free_orthogonal_neighbor;
+  return has_free_orthogonal_neighbor;
 }
 
 }  // namespace
 
 Level::Level(const Point& s)
     : size(s), tiles(ConstructArray2d<Tile>(s, Tile::DEFAULT)),
-      rooms(ConstructArray2d<unsigned char>(s, 0)),
+      rids(ConstructArray2d<rid>(s, 0)),
       diggable(ConstructArray2d<bool>(s, true)) {}
 
 void Level::AddWalls() {
@@ -201,34 +194,33 @@ void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
 }
 
 void Level::Erode(int islandness) {
-  TileArray new_tiles = tiles;
+  Array2d<rid> new_rids = rids;
   for (int x = 1; x < size.x - 1; x++) {
     for (int y = 1; y < size.y - 1; y++) {
-      if (SquareFixedByConnectivityConstraint(new_tiles, Point(x, y))) {
+      rid room_index;
+      if (!CanErodeSquare(new_rids, Point(x, y), &room_index)) {
         continue;
       }
-      const Tile tile = tiles[x][y];
-      const bool blocked = IsTileBlocked(tile);
       int neighbors_blocked = 0;
       for (const Point& step : kKingMoves) {
-        if (IsTileBlocked(tiles[x + step.x][y + step.y])) {
+        if (rids[x + step.x][y + step.y] == 0) {
           neighbors_blocked += 1;
         }
       }
+      const bool blocked = rids[x][y] == 0;
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
       const int k = 4;
       const int l = 6;
       if (blocked) {
-        new_tiles[x][y] = ((rand() % (8*k)) < 8 - matches ?
-                           Tile::FREE : Tile::DEFAULT);
+        new_rids[x][y] = ((rand() % (8*k)) < 8 - matches ? room_index : 0);
       } else {
         const int cutoff = max(8 - matches, matches - 8 + islandness);
-        new_tiles[x][y] = ((rand() % (8*l)) < cutoff ?
-                           Tile::DEFAULT : Tile::FREE);
+        new_rids[x][y] = ((rand() % (8*l)) < cutoff ? 0 : room_index);
       }
+      tiles[x][y] = (new_rids[x][y] == 0 ? Tile::DEFAULT : Tile::FREE);
     }
   }
-  tiles = new_tiles;
+  rids = new_rids;
 }
 
 bool Level::PlaceRoom(const Room& room, int separation, vector<Room>* rooms) {
@@ -237,21 +229,26 @@ bool Level::PlaceRoom(const Room& room, int separation, vector<Room>* rooms) {
       return false;
     }
   }
+  const rid room_index = rooms->size() + 1;
   for (int x = 0; x < room.size.x; x++) {
     for (int y = 0; y < room.size.y; y++) {
       tiles[x + room.position.x][y + room.position.y] = Tile::FREE;
+      rids[x + room.position.x][y + room.position.y] = room_index;
     }
   }
   rooms->push_back(room);
   return true;
 }
 
-string Level::ToDebugString() const {
+string Level::ToDebugString(bool show_rooms) const {
   string result;
   for (int y = 0; y < size.y; y++) {
     string row = "\n";
     for (int x = 0; x < size.x; x++) {
       row += GetDebugCharForTile(tiles[x][y]);
+      if (show_rooms && rids[x][y] > 0) {
+        row[row.size() - 1] = char(int('0') + (rids[x][y] - 1) % 10);
+      }
     }
     result += row;
   }
