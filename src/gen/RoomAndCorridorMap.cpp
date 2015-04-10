@@ -45,8 +45,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   size_ = size;
   tileset_.reset(new DefaultTileset());
 
-  TileArray tiles = ConstructArray2d<Tile>(size_, Tile::DEFAULT);
-  Array2d<bool> diggable = ConstructArray2d<bool>(size_, true);
+  Level level(size_);
 
   const int min_size = 6;
   const int max_size = 8;
@@ -58,7 +57,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
     const Point size{RandInt(min_size, max_size), RandInt(min_size, max_size)};
     const Room room{{RandInt(1, size_.x - size.x - 1),
                      RandInt(1, size_.y - size.y - 1)}, size};
-    if (!PlaceRoom(room, separation, &tiles, &diggable, &rooms_)) {
+    if (!level.PlaceRoom(room, separation, &rooms_)) {
       tries_left -= 1;
     }
   }
@@ -108,23 +107,22 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   MAYBE_DEBUG("Added " << IntToString(loop_edges) << " high-ratio loop edges.");
 
   for (int i = 0; i < 6; i++) {
-    Erode(2, size_, &tiles);
+    level.Erode(2 /* islandness */);
   }
 
   const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y);
-    DigCorridor(rooms_[edge.x], rooms_[edge.y], windiness,
-                size_, &tiles, &diggable);
+    level.DigCorridor(rooms_[edge.x], rooms_[edge.y], windiness);
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
-  AddWalls(size_, &tiles);
+  level.AddWalls();
   const Room& starting_room = rooms_[RandInt(0, rooms_.size() - 1)];
   starting_square_ = GetRandomSquareInRoom(starting_room);
 
-  MAYBE_DEBUG("Final map:" << ComputeDebugString(size, tiles));
-  PackTiles(tiles);
+  MAYBE_DEBUG("Final map:" << level.ToDebugString());
+  PackTiles(level.tiles);
 }
 
 }  // namespace gen

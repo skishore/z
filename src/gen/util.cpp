@@ -109,30 +109,34 @@ bool SquareFixedByConnectivityConstraint(
 
 }  // namespace
 
-void AddWalls(const Point& size, TileArray* tiles) {
+Level::Level(const Point& s)
+    : size(s), tiles(ConstructArray2d<Tile>(s, Tile::DEFAULT)),
+      rooms(ConstructArray2d<unsigned char>(s, 0)),
+      diggable(ConstructArray2d<bool>(s, true)) {}
+
+void Level::AddWalls() {
   for (int x = 0; x < size.x; x++) {
     for (int y = 0; y < size.y; y++) {
-      if ((*tiles)[x][y] != Tile::FREE) {
+      if (tiles[x][y] != Tile::FREE) {
         continue;
       }
       for (const Point& step : kKingMoves) {
         const Point square(x + step.x, y + step.y);
         if (0 <= square.x && square.x < size.x &&
             0 <= square.y && square.y < size.y &&
-            (*tiles)[square.x][square.y] == Tile::DEFAULT) {
-          (*tiles)[square.x][square.y] = Tile::WALL;
+            tiles[square.x][square.y] == Tile::DEFAULT) {
+          tiles[square.x][square.y] = Tile::WALL;
         }
       }
     }
   }
 }
 
-void DigCorridor(const Room& r1, const Room& r2, double windiness,
-                 const Point& size, TileArray* tiles, Array2d<bool>* diggable) {
+void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
   const Point source = GetRandomSquareInRoom(r1);
   const Point target = GetRandomSquareInRoom(r2);
-  ASSERT(InBounds(source, size) && (*diggable)[source.x][source.y]);
-  ASSERT(InBounds(target, size) && (*diggable)[target.x][target.y]);
+  ASSERT(InBounds(source, size) && diggable[source.x][source.y]);
+  ASSERT(InBounds(target, size) && diggable[target.x][target.y]);
 
   unordered_map<Point, double> distances{{source, 0}};
   unordered_map<Point, Point> parents;
@@ -153,11 +157,11 @@ void DigCorridor(const Room& r1, const Room& r2, double windiness,
     visited.insert(best_node);
     for (const Point& step : kRookMoves) {
       const Point child = best_node + step;
-      if (!(InBounds(child, size) && (*diggable)[child.x][child.y] &&
+      if (!(InBounds(child, size) && diggable[child.x][child.y] &&
             visited.find(child) == visited.end())) {
         continue;
       }
-      const bool blocked = IsTileBlocked((*tiles)[child.x][child.y]);
+      const bool blocked = IsTileBlocked(tiles[child.x][child.y]);
       const double distance = best_distance + (blocked ? 2.0 : windiness);
       if (distances.find(child) == distances.end() ||
           distance < distances.at(child)) {
@@ -190,24 +194,24 @@ void DigCorridor(const Room& r1, const Room& r2, double windiness,
   // Dig the corridor.
   ASSERT(truncated_path.size() > 0);
   for (const Point& node : truncated_path) {
-    (*tiles)[node.x][node.y] = Tile::FREE;
+    tiles[node.x][node.y] = Tile::FREE;
   }
-  AddDoor(truncated_path[0], r2, tiles, diggable);
-  AddDoor(truncated_path[truncated_path.size() - 1], r1, tiles, diggable);
+  AddDoor(truncated_path[0], r2, &tiles, &diggable);
+  AddDoor(truncated_path[truncated_path.size() - 1], r1, &tiles, &diggable);
 }
 
-void Erode(int islandness, const Point& size, TileArray* tiles) {
-  TileArray new_tiles = *tiles;
+void Level::Erode(int islandness) {
+  TileArray new_tiles = tiles;
   for (int x = 1; x < size.x - 1; x++) {
     for (int y = 1; y < size.y - 1; y++) {
       if (SquareFixedByConnectivityConstraint(new_tiles, Point(x, y))) {
         continue;
       }
-      const Tile tile = (*tiles)[x][y];
+      const Tile tile = tiles[x][y];
       const bool blocked = IsTileBlocked(tile);
       int neighbors_blocked = 0;
       for (const Point& step : kKingMoves) {
-        if (IsTileBlocked((*tiles)[x + step.x][y + step.y])) {
+        if (IsTileBlocked(tiles[x + step.x][y + step.y])) {
           neighbors_blocked += 1;
         }
       }
@@ -224,16 +228,10 @@ void Erode(int islandness, const Point& size, TileArray* tiles) {
       }
     }
   }
-  *tiles = new_tiles;
+  tiles = new_tiles;
 }
 
-Point GetRandomSquareInRoom(const Room& room) {
-  return room.position + Point(RandInt(0, room.size.x - 1),
-                               RandInt(0, room.size.y - 1));
-}
-
-bool PlaceRoom(const Room& room, int separation, TileArray* tiles,
-               Array2d<bool>* diggable, vector<Room>* rooms) {
+bool Level::PlaceRoom(const Room& room, int separation, vector<Room>* rooms) {
   for (const auto& other : *rooms) {
     if (RoomToRoomDistance(room, other) < separation) {
       return false;
@@ -241,26 +239,14 @@ bool PlaceRoom(const Room& room, int separation, TileArray* tiles,
   }
   for (int x = 0; x < room.size.x; x++) {
     for (int y = 0; y < room.size.y; y++) {
-      (*tiles)[x + room.position.x][y + room.position.y] = Tile::FREE;
+      tiles[x + room.position.x][y + room.position.y] = Tile::FREE;
     }
   }
-  (*diggable)[room.position.x - 1][room.position.y - 1] = false;
-  (*diggable)[room.position.x - 1][room.position.y + room.size.y] = false;
-  (*diggable)[room.position.x + room.size.x][room.position.y - 1] = false;
-  (*diggable)[room.position.x+room.size.x][room.position.y+room.size.y] = false;
   rooms->push_back(room);
   return true;
 }
 
-double RoomToRoomDistance(const Room& r1, const Room& r2) {
-  Point distance(max(max(r1.position.x - r2.position.x - r2.size.x,
-                         r2.position.x - r1.position.x - r1.size.x), 0),
-                 max(max(r1.position.y - r2.position.y - r2.size.y,
-                         r2.position.y - r1.position.y - r1.size.y), 0));
-  return distance.length();
-}
-
-string ComputeDebugString(const Point& size, const TileArray& tiles) {
+string Level::ToDebugString() const {
   string result;
   for (int y = 0; y < size.y; y++) {
     string row = "\n";
@@ -270,6 +256,19 @@ string ComputeDebugString(const Point& size, const TileArray& tiles) {
     result += row;
   }
   return result;
+}
+
+Point GetRandomSquareInRoom(const Room& room) {
+  return room.position + Point(RandInt(0, room.size.x - 1),
+                               RandInt(0, room.size.y - 1));
+}
+
+double RoomToRoomDistance(const Room& r1, const Room& r2) {
+  Point distance(max(max(r1.position.x - r2.position.x - r2.size.x,
+                         r2.position.x - r1.position.x - r1.size.x), 0),
+                 max(max(r1.position.y - r2.position.y - r2.size.y,
+                         r2.position.y - r1.position.y - r1.size.y), 0));
+  return distance.length();
 }
 
 }  // namespace gen
