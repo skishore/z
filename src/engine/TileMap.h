@@ -13,10 +13,8 @@ namespace engine {
 class TileMap {
  public:
   struct Room {
-    bool Contains(const Point& square) const;
-
-    Point position;
-    Point size;
+    Point GetRandomSquare() const;
+    std::vector<Point> squares;
   };
 
   Graphic GetGraphic(const Point& square) const;

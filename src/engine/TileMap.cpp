@@ -6,9 +6,8 @@ using std::vector;
 namespace babel {
 namespace engine {
 
-bool TileMap::Room::Contains(const Point& square) const {
-  return (position.x <= square.x && square.x < position.x + size.x &&
-          position.y <= square.y && square.y < position.y + size.y);
+Point TileMap::Room::GetRandomSquare() const {
+  return squares[rand() % squares.size()];
 }
 
 Graphic TileMap::GetGraphic(const Point& square) const {

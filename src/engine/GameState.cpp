@@ -32,25 +32,19 @@ GameState::GameState(const string& map_file) {
   AddNPC(player);
   RecomputePlayerVision();
 
-  for (int i = 0; i < map->GetRooms().size(); i++) {
+  // TODO(skishore): Don't assume that the player starts in room 0.
+  for (int i = 1; i < map->GetRooms().size(); i++) {
     const TileMap::Room& room = map->GetRooms()[i];
-    if (room.Contains(player->square)) {
-      continue;
-    }
-
-    // Decide what how many and what type of enemies to spawn in this room.
+    // Decide whether to spawn a trap or a group of enemies in this room.
     bool trapped = rand() % 2 == 0;
     if (trapped) {
-      AddTrap(new dialog::DialogGroupTrap(room));
+      AddTrap(new dialog::DialogGroupTrap(room.squares));
       continue;
     }
-
     const int num_enemies = (rand() % 3) + 2;
     for (int j = 0; j < num_enemies; j++) {
       for (int tries = 0; tries < 10; tries++) {
-        Point square = room.position;
-        square.x += rand() % room.size.x;
-        square.y += rand() % room.size.y;
+        const Point square = room.GetRandomSquare();
         if (!IsSquareOccupied(square)) {
           AddNPC(new Sprite(square, mGecko));
           break;

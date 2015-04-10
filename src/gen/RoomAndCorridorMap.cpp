@@ -46,6 +46,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   tileset_.reset(new DefaultTileset());
 
   Level level(size_);
+  vector<Rect> rects;
 
   const int min_size = 6;
   const int max_size = 8;
@@ -55,20 +56,21 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
 
   while (tries_left > 0) {
     const Point size{RandInt(min_size, max_size), RandInt(min_size, max_size)};
-    const Room room{{RandInt(1, size_.x - size.x - 1),
-                     RandInt(1, size_.y - size.y - 1)}, size};
-    if (!level.PlaceRoom(room, separation, &rooms_)) {
+    const Rect rect{size, {RandInt(1, size_.x - size.x - 1),
+                           RandInt(1, size_.y - size.y - 1)}};
+    if (!level.PlaceRectangularRoom(rect, separation, &rects)) {
       tries_left -= 1;
     }
   }
-  const int n = rooms_.size();
-  MAYBE_DEBUG("Placed " << IntToString(n) << " rooms after "
+  const int n = rects.size();
+  ASSERT(n > 0);
+  MAYBE_DEBUG("Placed " << IntToString(n) << " rectangular rooms after "
               << IntToString(tries) << " attempts.");
 
   Array2d<double> graph = ConstructArray2d<double>(Point(n, n), 0);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      graph[i][j] = RoomToRoomDistance(rooms_[i], rooms_[j]);
+      graph[i][j] = RectToRectDistance(rects[i], rects[j]);
       ASSERT(i == j || graph[i][j] > 0);
     }
   }
@@ -109,18 +111,17 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   for (int i = 0; i < 6; i++) {
     level.Erode(2 /* islandness */);
   }
+  level.ExtractFinalRooms(n, &rooms_);
 
   const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y);
-    level.DigCorridor(rooms_[edge.x], rooms_[edge.y], windiness);
+    ASSERT(level.DigCorridor(rooms_, edge.x, edge.y, windiness));
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
   level.AddWalls();
-  const Room& starting_room = rooms_[RandInt(0, rooms_.size() - 1)];
-  starting_square_ = GetRandomSquareInRoom(starting_room);
-
+  starting_square_ = rooms_[0].GetRandomSquare();
   MAYBE_DEBUG("Final map:" << level.ToDebugString());
   PackTiles(level.tiles);
 }

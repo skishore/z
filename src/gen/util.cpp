@@ -21,11 +21,13 @@ namespace babel {
 namespace gen {
 namespace {
 
-const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+const Point kBishopMoves[] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
 
 // IMPORTANT: The king moves are arranged in increasing order of angle.
 const Point kKingMoves[] = {{1, 0}, {1, 1}, {0, 1}, {-1, 1},
                             {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
+
+const Point kRookMoves[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
 inline string GetDebugCharForTile(Tile tile) {
   if (tile == Tile::DEFAULT) {
@@ -45,31 +47,21 @@ inline bool InBounds(const Point& square, const Point& size) {
           0 < square.y && square.y < size.y - 1);
 }
 
-bool AtEdgeOfRoom(const Point& square, const Room& room) {
-  return (max(max(square.x - room.position.x - room.size.x + 1,
-                  room.position.x - square.x), 0) +
-          max(max(square.y - room.position.y - room.size.y + 1,
-                  room.position.y - square.y), 0)) == 1;
+inline bool IsTileBlocked(Tile tile) {
+  return tile == Tile::DEFAULT;
 }
 
 void AddDoor(const Point& square, const Room& room,
              TileArray* tiles, Array2d<bool>* diggable) {
-  ASSERT(AtEdgeOfRoom(square, room));
-  if (square.x == room.position.x - 1 ||
-      square.x == room.position.x + room.size.x) {
-    (*diggable)[square.x][square.y + 1] = false;
-    (*diggable)[square.x][square.y - 1] = false;
-  } else {
-    (*diggable)[square.x + 1][square.y] = false;
-    (*diggable)[square.x - 1][square.y] = false;
+  for (const Point& step : kRookMoves) {
+    const Point neighbor = square + step;
+    if (IsTileBlocked((*tiles)[neighbor.x][neighbor.y])) {
+      (*diggable)[neighbor.x][neighbor.y] = false;
+    }
   }
   if (rand() % 2 == 0) {
     (*tiles)[square.x][square.y] = Tile::DOOR;
   }
-}
-
-bool IsTileBlocked(Tile tile) {
-  return !(tile == Tile::FREE || tile == Tile::DOOR);
 }
 
 // Returns true if it is possible to erode the given square in the map.
@@ -138,9 +130,12 @@ void Level::AddWalls() {
   }
 }
 
-void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
-  const Point source = GetRandomSquareInRoom(r1);
-  const Point target = GetRandomSquareInRoom(r2);
+bool Level::DigCorridor(const vector<Room>& rooms, int index1,
+                        int index2, double windiness) {
+  const Room& r1 = rooms[index1];
+  const Room& r2 = rooms[index2];
+  const Point source = r1.GetRandomSquare();
+  const Point target = r2.GetRandomSquare();
   ASSERT(InBounds(source, size) && diggable[source.x][source.y]);
   ASSERT(InBounds(target, size) && diggable[target.x][target.y]);
 
@@ -149,10 +144,9 @@ void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
   unordered_set<Point> visited;
 
   // Run Djikstra's algorithm between the source and target.
-  while (visited.find(target) == visited.end()) {
+  while (distances.size() > 0 && visited.find(target) == visited.end()) {
     Point best_node;
     double best_distance = DBL_MAX;
-    ASSERT(distances.size() > 0);
     for (const auto& pair : distances) {
       if (pair.second <= best_distance) {
         best_node = pair.first;
@@ -177,6 +171,11 @@ void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
     }
   }
 
+  // We may have terminated without finding a path.
+  if (visited.find(target) == visited.end()) {
+    return false;
+  }
+
   // Construct the actual path from source to target.
   vector<Point> path;
   Point node = target;
@@ -188,22 +187,24 @@ void Level::DigCorridor(const Room& r1, const Room& r2, double windiness) {
   // Truncate the path to only include sections outside the two rooms.
   vector<Point> truncated_path;
   for (const Point& node : path) {
-    if (AtEdgeOfRoom(node, r2)) {
+    if (rids[node.x][node.y] == index2 + 1) {
       truncated_path.clear();
     }
     truncated_path.push_back(node);
-    if (AtEdgeOfRoom(node, r1)) {
+    if (rids[node.x][node.y] == index1 + 1) {
       break;
     }
   }
 
   // Dig the corridor.
-  ASSERT(truncated_path.size() > 0);
-  for (const Point& node : truncated_path) {
+  ASSERT(truncated_path.size() > 2);
+  for (int i = 1; i < truncated_path.size() - 1; i++) {
+    const Point& node = truncated_path[i];
     tiles[node.x][node.y] = Tile::FREE;
   }
-  AddDoor(truncated_path[0], r2, &tiles, &diggable);
-  AddDoor(truncated_path[truncated_path.size() - 1], r1, &tiles, &diggable);
+  AddDoor(truncated_path[1], r2, &tiles, &diggable);
+  AddDoor(truncated_path[truncated_path.size() - 2], r1, &tiles, &diggable);
+  return true;
 }
 
 void Level::Erode(int islandness) {
@@ -237,20 +238,45 @@ void Level::Erode(int islandness) {
   rids = new_rids;
 }
 
-bool Level::PlaceRoom(const Room& room, int separation, vector<Room>* rooms) {
-  for (const auto& other : *rooms) {
-    if (RoomToRoomDistance(room, other) < separation) {
+void Level::ExtractFinalRooms(int n, vector<Room>* rooms) {
+  rooms->clear();
+  rooms->resize(n);
+  for (int i = 0; i < n; i++) {
+    rooms->push_back(Room());
+  }
+  for (int x = 0; x < size.x; x++) {
+    for (int y = 0; y < size.y; y++) {
+      const rid room_index = rids[x][y];
+      if (room_index == 0) {
+        continue;
+      }
+      ASSERT(room_index - 1 < n);
+      (*rooms)[room_index - 1].squares.push_back(Point(x, y));
+      for (const Point& step : kBishopMoves) {
+        const Point neighbor = Point(x, y) + step;
+        if (IsTileBlocked(tiles[neighbor.x][neighbor.y])) {
+          diggable[neighbor.x][neighbor.y] = false;
+        }
+      }
+    }
+  }
+}
+
+bool Level::PlaceRectangularRoom(
+    const Rect& rect, int separation, vector<Rect>* rects) {
+  for (const auto& other : *rects) {
+    if (RectToRectDistance(rect, other) < separation) {
       return false;
     }
   }
-  const rid room_index = rooms->size() + 1;
-  for (int x = 0; x < room.size.x; x++) {
-    for (int y = 0; y < room.size.y; y++) {
-      tiles[x + room.position.x][y + room.position.y] = Tile::FREE;
-      rids[x + room.position.x][y + room.position.y] = room_index;
+  const rid room_index = rects->size() + 1;
+  for (int x = 0; x < rect.size.x; x++) {
+    for (int y = 0; y < rect.size.y; y++) {
+      tiles[x + rect.position.x][y + rect.position.y] = Tile::FREE;
+      rids[x + rect.position.x][y + rect.position.y] = room_index;
     }
   }
-  rooms->push_back(room);
+  rects->push_back(rect);
   return true;
 }
 
@@ -269,12 +295,7 @@ string Level::ToDebugString(bool show_rooms) const {
   return result;
 }
 
-Point GetRandomSquareInRoom(const Room& room) {
-  return room.position + Point(RandInt(0, room.size.x - 1),
-                               RandInt(0, room.size.y - 1));
-}
-
-double RoomToRoomDistance(const Room& r1, const Room& r2) {
+double RectToRectDistance(const Rect& r1, const Rect& r2) {
   Point distance(max(max(r1.position.x - r2.position.x - r2.size.x,
                          r2.position.x - r1.position.x - r1.size.x), 0),
                  max(max(r1.position.y - r2.position.y - r2.size.y,

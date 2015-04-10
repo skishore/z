@@ -22,11 +22,9 @@ static const int kMaxEnemiesInGroup = 6;
 
 }  // namespace
 
-DialogGroupTrap::DialogGroupTrap(const TileMap::Room& room) {
-  for (int x = 0; x < room.size.x; x++) {
-    for (int y = 0; y < room.size.y; y++) {
-      squares_.push_back(Point(x, y) + room.position);
-    }
+DialogGroupTrap::DialogGroupTrap(const vector<Point>& squares) {
+  for (const Point& square : squares) {
+    squares_.push_back(square);
   }
 }
 

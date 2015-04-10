@@ -20,6 +20,11 @@ Array2d<T> ConstructArray2d(const Point& size, T value) {
   return Array2d<T>(size.x, std::vector<T>(size.y, value));
 }
 
+struct Rect {
+  Point size;
+  Point position;
+};
+
 // rid stands for "room index".
 //
 // rid 0 is reserved for squares not in any room. If rids[i][j] is
@@ -33,11 +38,12 @@ struct Level {
   void AddWalls();
 
   // Digs a corridor between the two rooms, modifying tiles and diggable.
+  // Returns true if the corridor was successfully dug.
   //
   // Windiness is between 1.0 and 8.0, with increasing windiness causing the
   // corridor digger to take longer paths between rooms.
-  void DigCorridor(const engine::TileMap::Room& r1,
-                   const engine::TileMap::Room& r2, double windiness);
+  bool DigCorridor(const std::vector<engine::TileMap::Room>& rooms,
+                   int index1, int index2, double windiness);
 
   // Runs an erosion step on the level. Each tile has a chance of being
   // converted to the types of the tiles around it.
@@ -46,9 +52,12 @@ struct Level {
   // be more likely to have random walls in the interior of a room.
   void Erode(int islandness);
 
-  // Returns true and adds room to rooms if the room was successfully placed.
-  bool PlaceRoom(const engine::TileMap::Room& room, int separation,
-                 std::vector<engine::TileMap::Room>* rooms);
+  // Fills the rooms array with the final (non-rectangular) rooms.
+  void ExtractFinalRooms(int n, std::vector<engine::TileMap::Room>* rooms);
+
+  // Returns true and adds rect to rects if the room was successfully placed.
+  bool PlaceRectangularRoom(const Rect& rect, int separation,
+                            std::vector<Rect>* rects);
 
   // Returns a human-readable serialization of the level.
   std::string ToDebugString(bool show_rooms=false) const;
@@ -64,12 +73,8 @@ inline int RandInt(int x, int y) {
   return (rand() % (y - x + 1)) + x;
 }
 
-// Return a uniform random square in the given room.
-Point GetRandomSquareInRoom(const engine::TileMap::Room& room);
-
 // Returns the L2 distance between the two rooms.
-double RoomToRoomDistance(const engine::TileMap::Room& r1,
-                          const engine::TileMap::Room& r2);
+double RectToRectDistance(const Rect& r1, const Rect& r2);
 
 }  // namespace gen
 }  // namespace babel
