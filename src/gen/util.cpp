@@ -85,19 +85,32 @@ bool CanErodeSquare(
     const Array2d<rid>& rids, const Point& square, rid* room_index) {
   *room_index = 0;
   bool has_free_orthogonal_neighbor = false;
+  int min_unblocked_index = -1;
+  int max_unblocked_index = -1;
+  int gaps = 0;
   for (int i = 0; i < 8; i++) {
     const Point& step = kKingMoves[i];
     const rid adjacent = rids[square.x + step.x][square.y + step.y];
     if (adjacent == 0) {
       continue;
     }
-    if (*room_index > 0 && *room_index != adjacent) {
-      return false;
-    }
     *room_index = adjacent;
     has_free_orthogonal_neighbor |= i % 2 == 0;
+    if (min_unblocked_index < 0) {
+      min_unblocked_index = i;
+      max_unblocked_index = i;
+      continue;
+    }
+    if (i > max_unblocked_index + 1) {
+      gaps += 1;
+    }
+    max_unblocked_index = i;
   }
-  return has_free_orthogonal_neighbor;
+  if (min_unblocked_index >= 0 &&
+      !(min_unblocked_index == 0 && max_unblocked_index == 7)) {
+    gaps += 1;
+  }
+  return gaps <= 1 && has_free_orthogonal_neighbor;
 }
 
 }  // namespace
