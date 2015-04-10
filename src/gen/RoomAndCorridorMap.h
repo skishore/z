@@ -9,6 +9,9 @@ namespace gen {
 class RoomAndCorridorMap : public engine::TileMap {
  public:
   RoomAndCorridorMap(const Point& size, bool verbose=false);
+
+ private:
+  bool TryBuildMap(const Point& size, bool verbose);
 };
 
 }  // namespace gen

@@ -42,6 +42,10 @@ class DefaultTileset : public Tileset {
 }  // namespace
 
 RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
+  while (!TryBuildMap(size, verbose)) {}
+}
+
+bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
   size_ = size;
   tileset_.reset(new DefaultTileset());
 
@@ -116,7 +120,10 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   const double windiness = 1 << (rand() % 4);
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y);
-    ASSERT(level.DigCorridor(rooms_, edge.x, edge.y, windiness));
+    if (!level.DigCorridor(rooms_, edge.x, edge.y, windiness)) {
+      MAYBE_DEBUG("Failed to dig corridor. Retrying...");
+      return false;
+    }
   }
   MAYBE_DEBUG("Dug " << IntToString(edges.size()) << " corridors.");
 
@@ -124,6 +131,7 @@ RoomAndCorridorMap::RoomAndCorridorMap(const Point& size, bool verbose) {
   starting_square_ = rooms_[0].GetRandomSquare();
   MAYBE_DEBUG("Final map:" << level.ToDebugString());
   PackTiles(level.tiles);
+  return true;
 }
 
 }  // namespace gen

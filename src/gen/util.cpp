@@ -177,14 +177,16 @@ bool Level::DigCorridor(const vector<Room>& rooms, int index1,
   }
 
   // Construct the actual path from source to target.
-  vector<Point> path;
+  // Guarantee that the first element of the path is target and the last source.
   Point node = target;
+  vector<Point> path{node};
   while (node != source) {
-    path.push_back(node);
     node = parents.at(node);
+    path.push_back(node);
   }
 
   // Truncate the path to only include sections outside the two rooms.
+  // Guarantee that the first element of the path is in r2 and the last in r1.
   vector<Point> truncated_path;
   for (const Point& node : path) {
     if (rids[node.x][node.y] == index2 + 1) {
@@ -247,6 +249,7 @@ void Level::ExtractFinalRooms(int n, vector<Room>* rooms) {
   for (int x = 0; x < size.x; x++) {
     for (int y = 0; y < size.y; y++) {
       const rid room_index = rids[x][y];
+      ASSERT((room_index == 0) == IsTileBlocked(tiles[x][y]));
       if (room_index == 0) {
         continue;
       }
