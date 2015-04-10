@@ -112,8 +112,9 @@ bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
   }
   MAYBE_DEBUG("Added " << IntToString(loop_edges) << " high-ratio loop edges.");
 
-  for (int i = 0; i < 6; i++) {
-    level.Erode(2 /* islandness */);
+  const double islandness = rand() % 4;
+  for (int i = 0; i < 3; i++) {
+    level.Erode(islandness);
   }
   level.ExtractFinalRooms(n, &rooms_);
 

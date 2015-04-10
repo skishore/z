@@ -225,8 +225,8 @@ void Level::Erode(int islandness) {
       }
       const bool blocked = rids[x][y] == 0;
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
-      const int inverse_blocked_to_free = 4;
-      const int inverse_free_to_blocked = 6;
+      const int inverse_blocked_to_free = 2;
+      const int inverse_free_to_blocked = 4;
       const int cutoff = max(8 - matches, matches - 8 + islandness);
       const bool changed =
           (blocked ? (rand() % (8*inverse_blocked_to_free)) < 8 - matches :
