@@ -51,7 +51,7 @@ struct Level {
                  std::vector<engine::TileMap::Room>* rooms);
 
   // Returns a human-readable serialization of the level.
-  std::string ToDebugString(bool show_rooms=true) const;
+  std::string ToDebugString(bool show_rooms=false) const;
 
   const Point size;
   TileArray tiles;

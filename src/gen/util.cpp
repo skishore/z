@@ -209,15 +209,16 @@ void Level::Erode(int islandness) {
       }
       const bool blocked = rids[x][y] == 0;
       const int matches = (blocked ? neighbors_blocked : 8 - neighbors_blocked);
-      const int k = 4;
-      const int l = 6;
-      if (blocked) {
-        new_rids[x][y] = ((rand() % (8*k)) < 8 - matches ? room_index : 0);
-      } else {
-        const int cutoff = max(8 - matches, matches - 8 + islandness);
-        new_rids[x][y] = ((rand() % (8*l)) < cutoff ? 0 : room_index);
+      const int inverse_blocked_to_free = 4;
+      const int inverse_free_to_blocked = 6;
+      const int cutoff = max(8 - matches, matches - 8 + islandness);
+      const bool changed =
+          (blocked ? (rand() % (8*inverse_blocked_to_free)) < 8 - matches :
+                     (rand() % (8*inverse_free_to_blocked)) < cutoff);
+      if (changed) {
+        new_rids[x][y] = (blocked ? room_index : 0);
+        tiles[x][y] = (blocked ? Tile::FREE : Tile::DEFAULT);
       }
-      tiles[x][y] = (new_rids[x][y] == 0 ? Tile::DEFAULT : Tile::FREE);
     }
   }
   rids = new_rids;
