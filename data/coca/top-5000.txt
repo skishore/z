@@ -26,7 +26,6 @@ his,a,1801708
 from,i,1635914
 that,d,1712406
 not,x,1638830
-n't,x,1619007
 by,i,1490548
 she,p,1484869
 or,c,1379320
@@ -1137,7 +1136,7 @@ effective,j,35851
 neighborhood,n,34691
 original,j,34368
 act,n,34104
-troop (PL),n,36001
+troop,n,36001
 income,n,34925
 directly,r,34090
 hurt,v,34445
@@ -1457,7 +1456,7 @@ wine,n,26682
 below,r,26765
 cool,j,26279
 voter,n,27768
-means (PL),n,28991
+means,n,28991
 demand,v,25207
 learning,n,28869
 bus,n,25850
@@ -2211,7 +2210,7 @@ consist,v,16648
 alcohol,n,15877
 enable,v,16293
 bend,v,16285
-saving (PL),n,15917
+saving,n,15917
 gain,n,15822
 desert,n,15653
 shall,v,15997
@@ -2277,7 +2276,7 @@ quote,v,15415
 online,j,15848
 pass,n,15599
 negotiation,n,15680
-good (PL),n,15259
+good,n,15259
 urge,v,14894
 occasion,n,14792
 dust,n,15475
@@ -2710,7 +2709,7 @@ bear,n,12194
 unlikely,j,11869
 tissue,n,12342
 constitutional,j,12567
-pants (PL),n,12457
+pants,n,12457
 stranger,n,12261
 infection,n,12402
 cabinet,n,11846
@@ -3242,7 +3241,7 @@ borrow,v,9150
 furthermore,r,10349
 comedy,n,9596
 mortgage,n,10022
-sanction (PL),n,10163
+sanction,n,10163
 civilian,j,9684
 twelve,m,9638
 weekly,j,9297
@@ -4100,7 +4099,6 @@ Dutch,j,6690
 quantity,n,6833
 trailer,n,6713
 mate,n,6693
-o'clock,r,6972
 Greek,j,6642
 genius,n,6509
 monument,n,6680

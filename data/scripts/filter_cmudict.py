@@ -48,10 +48,10 @@ if __name__ == '__main__':
   result = []
   converter = Converter()
 
-  with open('data/frequency/en.txt') as frequency:
+  with open('data/coca/top-5000.txt') as frequency:
     for line in frequency:
-      word = line.strip().split()[0]
-      if not word.isalpha():
+      word = line.strip().split(',')[0]
+      if not word.isalpha() or word != word.lower():
         continue
       words.add(word)
       if len(words) == num_common_words:
