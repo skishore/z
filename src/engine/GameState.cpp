@@ -36,7 +36,7 @@ GameState::GameState(const string& map_file) {
   for (int i = 1; i < map->GetRooms().size(); i++) {
     const TileMap::Room& room = map->GetRooms()[i];
     // Decide whether to spawn a trap or a group of enemies in this room.
-    bool trapped = rand() % 2 == 0;
+    const bool trapped = rand() % 2 == 0;
     if (trapped) {
       AddTrap(new dialog::DialogGroupTrap(room.squares));
       continue;

@@ -19,18 +19,9 @@
 
 <template name="multiple_choice_translit">
   <div class="multiple-choice-translit">
-    <div class="questions">
-      {{#each questions}}
-        <div class="text {{class}}" style="left: {{left}}">{{text}}</div>
-      {{/each}}
-    </div>
-    <div class="answers">
-      {{#each answers}}
-        <div class="text {{class}}" style="left: {{left}}">
-          {{label}}: {{text}}
-        </div>
-      {{/each}}
-    </div>
+    <div class="question">{{question}}</div>
+    <div class="interstitial">➙</div>
+    <div class="answer">{{answer}}</div>
   </div>
 </template>
 

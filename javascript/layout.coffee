@@ -42,21 +42,21 @@ class @BabelLayout
     labels = []
     for sprite_view in (view.sprites[id] for id in ids)
       id = sprite_view.id
-      if sprite_view.label.length == 0
+      if not sprite_view.label?
         continue
       if id not of sprites
         continue
       if (not recompute_directions) and id not of @cached_directions
         continue
       sprite = sprites[id]
-      label = sprite_view.label
+      label = sprite_view.label.text
       if recompute_directions
         direction = @_best_direction sprite, id, label, sprite_rects, text_rects
         @cached_directions[sprite_view.id] = direction
         text_rects.push (@_position sprite, direction, label)[0]
       else
         direction = @cached_directions[id]
-      labels.push @_label sprite, direction, label
+      labels.push @_label sprite, direction, sprite_view.label
     labels
 
   # Returns the area of the intersection of the two rectangles.
@@ -127,7 +127,8 @@ class @BabelLayout
   _label: (sprite, direction, label) ->
     assert 0 <= direction < 8
     offset = @kOffsets[direction]
-    left: @scale*sprite.x + offset[0]
-    top: @scale*sprite.y + offset[1]
-    orientation: @kClasses[direction]
-    text: label
+    result =
+      left: @scale*sprite.x + offset[0]
+      top: @scale*sprite.y + offset[1]
+      orientation: @kClasses[direction]
+    _.extend result, label

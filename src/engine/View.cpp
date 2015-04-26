@@ -35,14 +35,8 @@ View::View(const Point& radius, const GameState& game_state)
     if (0 <= square.x && square.x < size.x &&
         0 <= square.y && square.y < size.y &&
         game_state.player_vision->IsSquareVisible(sprite->square, vision)) {
-      string label;
-      if (game_state.dialog != nullptr &&
-        game_state.dialog->IsInvolved(*sprite)) {
-        label = game_state.dialog->GetLabel(*sprite);
-      }
       const auto& appearance = sprite->creature->appearance;
-      sprites.push_back(SpriteView{
-            sprite->Id(), appearance.graphic, square, label});
+      sprites.push_back(SpriteView{sprite->Id(), appearance.graphic, square});
     }
   }
   if (game_state.log.IsFresh()) {

@@ -13,6 +13,7 @@ using babel::engine::Action;
 using babel::engine::EventHandler;
 using babel::engine::GameState;
 using babel::engine::Sprite;
+using std::min;
 using std::set;
 using std::string;
 using std::vector;
@@ -54,20 +55,30 @@ Action* TransliterationCombatDialog::OnTaskError() {
 }
 
 ReverseTransliterationDialog::ReverseTransliterationDialog(
-    const vector<Sprite*>& sprites) {
-  for (int i = 0; i < sprites.size(); i++) {
-    ids_.insert(sprites[i]->Id());
-    text_[sprites[i]->Id()] = string(1, (char)((int)'A' + i));
-    order_.push_back(sprites[i]->Id());
-  }
+    int max_num_enemies) {
+  num_enemies_ = EM_ASM_INT({
+    var dialog = new EnglishToHindiMultipleChoiceGame($0);
+    var num_enemies = dialog.get_num_enemies();
+    if (num_enemies > 0) {
+      DialogManager.set_text('Fight off the drones by transliterating:');
+      DialogManager.set_page(dialog);
+    }
+    return num_enemies;
+  }, max_num_enemies);
+}
+
+void ReverseTransliterationDialog::AddEnemy(engine::Sprite* sprite) {
+  EM_ASM_INT({ DialogManager._current.add_enemy($0); }, sprite->Id());
+  ids_.insert(sprite->Id());
+  order_.push_back(sprite->Id());
+}
+
+int ReverseTransliterationDialog::GetNumEnemies() const {
+  return num_enemies_;
 }
 
 bool ReverseTransliterationDialog::IsInvolved(const Sprite& sprite) const {
   return ids_.find(sprite.Id()) != ids_.end();
-}
-
-string ReverseTransliterationDialog::GetLabel(const Sprite& sprite) const {
-  return text_.at(sprite.Id());
 }
 
 bool ReverseTransliterationDialog::OnAttack(

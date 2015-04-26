@@ -97,6 +97,9 @@ BabelAnimation.prototype.Snapshot = function() {
   for (var i = 0; i < sprites.size(); i++) {
     var sprite = sprites.get(i);
     result.sprites[sprite.id] = sprite;
+    if (DialogManager._current) {
+      sprite.label = DialogManager._current.get_label(sprite.id);
+    }
   }
   sprites.delete();
 

@@ -1,6 +1,7 @@
 class @HindiToEnglishShortAnswerGame extends DialogPage
   @template = 'short_answer_translit'
   @height = '2.8em'
+  @trap_input: true
 
   constructor: (show_guides) ->
     n = Math.randint 2, 5

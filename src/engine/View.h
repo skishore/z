@@ -23,7 +23,6 @@ struct SpriteView {
   engine::sid id;
   int graphic;
   Point square;
-  std::string label;
 };
 
 struct StatusView {

@@ -18,12 +18,14 @@ class Dialog {
  public:
   virtual ~Dialog();
 
+  // Used to add an enemy to the dialog during its initialization. Does not own.
+  virtual void AddEnemy(engine::Sprite* sprite) { ASSERT(false); }
+
+  // Returns the number of enemies needed by this dialog.
+  virtual int GetNumEnemies() const { ASSERT(false); return 0; }
+
   // Returns true if the given sprite is involved in this dialog.
   virtual bool IsInvolved(const engine::Sprite& sprite) const { return false; }
-
-  // Returns a string used to label the given involved monster in the UI.
-  virtual std::string GetLabel(
-      const engine::Sprite& sprite) const { return ""; }
 
   // Executes an attack when the target is involved in the dialog.
   // Returns true if the dialog is now over.
@@ -54,11 +56,11 @@ class TransliterationCombatDialog : public Dialog {
 
 class ReverseTransliterationDialog : public Dialog {
  public:
-  ReverseTransliterationDialog(const std::vector<engine::Sprite*>& sprites);
+  ReverseTransliterationDialog(int max_num_enemies);
 
+  void AddEnemy(engine::Sprite* sprite);
+  int GetNumEnemies() const override;
   bool IsInvolved(const engine::Sprite& sprite) const override;
-
-  std::string GetLabel(const engine::Sprite& sprite) const override;
 
   bool OnAttack(
       engine::GameState* game_state, engine::EventHandler* handler,
@@ -66,9 +68,9 @@ class ReverseTransliterationDialog : public Dialog {
 
  private:
   std::set<engine::sid> ids_;
-  std::map<engine::sid,std::string> text_;
   std::vector<engine::sid> order_;
   int index_ = 0;
+  int num_enemies_ = 0;
 };
 
 }  // namespace dialog

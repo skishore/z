@@ -1,7 +1,9 @@
 class @DialogPage
   # These static variables should be overridden by subclasses.
   # @name will always be set to the class name by CoffeeScript.
-  @height = '0px'
+  @template = 'the name of the Meteor template for this dialog'
+  @height = 'the height of the dialog, eg. 2.2em'
+  @trap_input = 'true if this dialog traps user input'
 
   accepts_input: (char) ->
     # Returns true if the dialog accepts the given input.
@@ -10,6 +12,10 @@ class @DialogPage
   active: ->
     # Returns true if the dialog is still active.
     assert false, "#{@constructor.name}.active is not implemented!"
+
+  get_label: ->
+    # Used if this dialog causes the game to show enemy labels.
+    # By default, the dialog does not label any enemies.
 
   get_data: ->
     # Returns the data needed to instantiate this dialog's Handlebars template.
@@ -30,7 +36,7 @@ class @DialogManager
   @on_input: (char) ->
     if @_next?
       return true
-    if @_current?
+    if @_current?.constructor.trap_input
       @_redraw 'current' if @_current._on_input char
       return true
     false

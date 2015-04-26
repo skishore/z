@@ -17,8 +17,8 @@ namespace babel {
 namespace dialog {
 namespace {
 
-// The maximum number of enemies that will be spawned in a group.
-static const int kMaxEnemiesInGroup = 6;
+// The maximum density of enemies spawned by the enemy group trap.
+static const double kMaxEnemyDensity = 0.16;
 
 }  // namespace
 
@@ -29,13 +29,8 @@ DialogGroupTrap::DialogGroupTrap(const vector<Point>& squares) {
 }
 
 void DialogGroupTrap::Trigger(GameState* game_state, EventHandler* handler) {
-  vector<Point> blocking_squares = GetBlockingSquares(*game_state, squares_);
-  for (const Point& square : blocking_squares) {
-    game_state->map->SetTile(square, Tile::FENCE);
-  }
-  game_state->RecomputePlayerVision();
-  handler->OnSnapshot();
-
+  // Compute the number of enemies we have room to spawn and check if we can
+  // launch a dialog with that many enemies.
   vector<Point> free_squares;
   for (const Point& square : squares_) {
     if (!game_state->map->IsSquareBlocked(square) &&
@@ -43,21 +38,33 @@ void DialogGroupTrap::Trigger(GameState* game_state, EventHandler* handler) {
       free_squares.push_back(square);
     }
   }
-  std::random_shuffle(free_squares.begin(), free_squares.end());
-
-  game_state->log.AddLine("You are ambushed by a group of " +
-                          kCreatures[mDrone].appearance.name + "s!");
-
-  const int num_to_spawn = min(int(free_squares.size()), kMaxEnemiesInGroup);
-  vector<Sprite*> sprites{};
-  for (int i = 0; i < num_to_spawn; i++) {
-    Sprite* sprite = new Sprite(free_squares[i], mDrone);
-    game_state->AddNPC(sprite);
-    sprites.push_back(sprite);
-    sprite->ConsumeEnergy();
+  const int max_num_enemies = kMaxEnemyDensity*free_squares.size();
+  std::unique_ptr<ReverseTransliterationDialog> dialog(
+      new ReverseTransliterationDialog(max_num_enemies));
+  const int num_enemies = dialog->GetNumEnemies();
+  if (num_enemies == 0) {
+    return;
   }
 
-  game_state->dialog.reset(new ReverseTransliterationDialog(sprites));
+  // Block off the player within the trapped area.
+  vector<Point> blocking_squares = GetBlockingSquares(*game_state, squares_);
+  for (const Point& square : blocking_squares) {
+    game_state->map->SetTile(square, Tile::FENCE);
+  }
+  game_state->RecomputePlayerVision();
+  handler->OnSnapshot();
+
+  // Spawn the new enemies and set the game's dialog to the new state.
+  std::random_shuffle(free_squares.begin(), free_squares.end());
+  for (int i = 0; i < num_enemies; i++) {
+    Sprite* sprite = new Sprite(free_squares[i], mDrone);
+    game_state->AddNPC(sprite);
+    sprite->ConsumeEnergy();
+    dialog->AddEnemy(sprite);
+  }
+  game_state->log.AddLine("You are ambushed by a group of " +
+                          kCreatures[mDrone].appearance.name + "s!");
+  game_state->dialog.reset(dialog.release());
 }
 
 }  // namespace dialog

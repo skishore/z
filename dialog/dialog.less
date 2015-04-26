@@ -1,6 +1,10 @@
 .dialog-wrapper.ui-element {
   background-color: #002266;
 
+  .line {
+    margin-bottom: 0;
+  }
+
   .dialog {
     margin: 0 auto;
     overflow: hidden;
@@ -9,7 +13,7 @@
 
     color: white;
     font-family: Times New Roman, serif;
-    font-size: 24px;
+    font-size: 20px;
     text-align: center;
     width: 100%;
 
@@ -26,42 +30,18 @@
         transform: translateY(-50%);
 
         > .multiple-choice-translit {
-          > .questions {
-            font-size: 80%;
-            height: 1.6em;
+          > .question, .interstitial, .answer {
+            float: left;
+            line-height: 2em;
           }
 
-          > .answers {
-            font-size: 40%;
-            height: 4em;
-
-            .text {
-              transition: all 0.2s;
-              top: 3em;
-
-              &.done, &.correct, &.wrong {
-                top: 0;
-              }
-            }
+          > .question {
+            text-align: right;
+            width: 47%;
           }
 
-          > .questions, .answers {
-            position: relative;
-            width: 100%;
-
-            > .text {
-              display: inline-block;
-              position: absolute;
-              transform: translateX(-50%);
-
-              &.correct {
-                color: #8f4;
-              }
-
-              &.wrong {
-                color: #f62;
-              }
-            }
+          .interstitial {
+            width: 6%;
           }
         }
 
