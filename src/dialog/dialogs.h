@@ -67,9 +67,7 @@ class ReverseTransliterationDialog : public Dialog {
       engine::Sprite* sprite, engine::Sprite* target) override;
 
  private:
-  std::set<engine::sid> ids_;
-  std::vector<engine::sid> order_;
-  int index_ = 0;
+  std::set<engine::Sprite*> sprites_;
   int num_enemies_ = 0;
 };
 
