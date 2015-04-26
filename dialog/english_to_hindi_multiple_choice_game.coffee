@@ -1,6 +1,6 @@
 class @EnglishToHindiMultipleChoiceGame extends DialogPage
   @template = 'multiple_choice_translit'
-  @height: '2.2em'
+  @height: '1.6em'
   @trap_input: false
 
   constructor: ->
