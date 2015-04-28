@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -11,6 +12,7 @@ typedef babel::engine::TileMap::Room Room;
 
 using babel::engine::Graphic;
 using babel::engine::Tile;
+using std::deque;
 using std::max;
 using std::string;
 using std::unordered_map;
@@ -53,7 +55,7 @@ inline bool IsTileBlocked(Tile tile) {
 
 void AddDoor(const Point& square, const Room& room,
              TileArray* tiles, Array2d<bool>* diggable) {
-  for (const Point& step : kRookMoves) {
+  for (const Point& step : kKingMoves) {
     const Point neighbor = square + step;
     if (IsTileBlocked((*tiles)[neighbor.x][neighbor.y])) {
       (*diggable)[neighbor.x][neighbor.y] = false;
@@ -103,6 +105,17 @@ bool CanErodeSquare(
     gaps += 1;
   }
   return gaps <= 1 && has_free_orthogonal_neighbor;
+}
+
+bool HasNeighborInRoom(const Array2d<rid>& rids, const Point& square,
+                       rid room_index, Point* neighbor_in_room) {
+  for (const Point& step : kRookMoves) {
+    *neighbor_in_room = square + step;
+    if (rids[neighbor_in_room->x][neighbor_in_room->y] == room_index) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace
@@ -187,7 +200,7 @@ bool Level::DigCorridor(const vector<Room>& rooms, int index1,
 
   // Truncate the path to only include sections outside the two rooms.
   // Guarantee that the first element of the path is in r2 and the last in r1.
-  vector<Point> truncated_path;
+  deque<Point> truncated_path;
   for (const Point& node : path) {
     if (rids[node.x][node.y] == index2 + 1) {
       truncated_path.clear();
@@ -198,8 +211,26 @@ bool Level::DigCorridor(const vector<Room>& rooms, int index1,
     }
   }
 
-  // Dig the corridor, but don't dig through doors.
+  // Truncate the path further: remove nodes from the beginning until there
+  // is exactly one vertex on the path with a rook neighbor in the second room.
+  // Do the same at the end until there is exactly one vertex on the path with
+  // a rook neighbor in the first room.
   ASSERT(truncated_path.size() > 2);
+  Point neighbor_in_room;
+  while (HasNeighborInRoom(rids, truncated_path[2],
+                           index2 + 1, &neighbor_in_room)) {
+    truncated_path.pop_front();
+    truncated_path.pop_front();
+    truncated_path.push_front(neighbor_in_room);
+  }
+  while (HasNeighborInRoom(rids, truncated_path[truncated_path.size() - 3],
+                           index1 + 1, &neighbor_in_room)) {
+    truncated_path.pop_back();
+    truncated_path.pop_back();
+    truncated_path.push_back(neighbor_in_room);
+  }
+
+  // Dig the corridor, but don't dig through doors.
   for (int i = 1; i < truncated_path.size() - 1; i++) {
     const Point& node = truncated_path[i];
     if (IsTileBlocked(tiles[node.x][node.y])) {
