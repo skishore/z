@@ -48,7 +48,7 @@ inline bool InBounds(const Point& square, const Point& size) {
 }
 
 inline bool IsTileBlocked(Tile tile) {
-  return tile == Tile::DEFAULT;
+  return tile == Tile::DEFAULT || tile == Tile::WALL;
 }
 
 void AddDoor(const Point& square, const Room& room,
@@ -115,7 +115,7 @@ Level::Level(const Point& s)
 void Level::AddWalls() {
   for (int x = 0; x < size.x; x++) {
     for (int y = 0; y < size.y; y++) {
-      if (tiles[x][y] != Tile::FREE) {
+      if (IsTileBlocked(tiles[x][y])) {
         continue;
       }
       for (const Point& step : kKingMoves) {
@@ -198,11 +198,13 @@ bool Level::DigCorridor(const vector<Room>& rooms, int index1,
     }
   }
 
-  // Dig the corridor.
+  // Dig the corridor, but don't dig through doors.
   ASSERT(truncated_path.size() > 2);
   for (int i = 1; i < truncated_path.size() - 1; i++) {
     const Point& node = truncated_path[i];
-    tiles[node.x][node.y] = Tile::FREE;
+    if (IsTileBlocked(tiles[node.x][node.y])) {
+      tiles[node.x][node.y] = Tile::FREE;
+    }
   }
   AddDoor(truncated_path[1], r2, &tiles, &diggable);
   AddDoor(truncated_path[truncated_path.size() - 2], r1, &tiles, &diggable);
@@ -258,7 +260,17 @@ void Level::ExtractFinalRooms(int n, vector<Room>* rooms) {
       for (const Point& step : kBishopMoves) {
         const Point neighbor = Point(x, y) + step;
         if (IsTileBlocked(tiles[neighbor.x][neighbor.y])) {
-          diggable[neighbor.x][neighbor.y] = false;
+          bool adjacent_to_room = false;
+          for (const Point& step_two : kRookMoves) {
+            const Point neighbor_two = neighbor + step_two;
+            if (InBounds(neighbor_two, size) &&
+                room_index == rids[neighbor_two.x][neighbor_two.y]) {
+              adjacent_to_room = true;
+            }
+          }
+          if (!adjacent_to_room) {
+            diggable[neighbor.x][neighbor.y] = false;
+          }
         }
       }
     }
