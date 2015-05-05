@@ -75,7 +75,7 @@ bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       graph[i][j] = RectToRectDistance(rects[i], rects[j]);
-      ASSERT(i == j || graph[i][j] > 0);
+      ASSERT((i == j) == (graph[i][j] == 0));
     }
   }
   vector<Point> edges = MinimumSpanningTree(graph);
@@ -96,7 +96,7 @@ bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
         }
       }
     }
-    if (best_ratio < 3.0) {
+    if (best_ratio < 2.0) {
       break;
     }
     edges.push_back(best_edge);
@@ -118,7 +118,7 @@ bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
   }
   level.ExtractFinalRooms(n, &rooms_);
 
-  const double windiness = rand() % 3;
+  const double windiness = 1.0;
   for (const Point& edge : edges) {
     ASSERT(edge.x != edge.y);
     if (!level.DigCorridor(rooms_, edge.x, edge.y, windiness)) {
