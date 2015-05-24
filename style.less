@@ -1,0 +1,36 @@
+@cell-size: 32px;
+
+.grid-container {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+
+  position: absolute;
+  text-align: center;
+
+  .grid {
+    display: inline-block;
+    margin: @cell-size/2 auto;
+
+    .cell {
+      width: @cell-size;
+      height: @cell-size;
+      margin: @cell-size/16;
+
+      float: left;
+
+      &.color0 {
+        background-color: #ccc;
+      }
+
+      &.color1 {
+        background-color: black;
+      }
+    }
+
+    .break {
+      clear: both;
+    }
+  }
+}

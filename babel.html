@@ -1,0 +1,23 @@
+<head>
+  <title>babel</title>
+</head>
+<body>
+  {{> grid}}
+</body>
+
+<template name="grid">
+  <div class="grid-container">
+    <div class="grid">
+      {{#each cells}}
+        {{> row this}}
+      {{/each}}
+    </div>
+  </div>
+</template>
+
+<template name="row">
+  {{#each this}}
+    <div class="cell color{{this}}"></div>
+  {{/each}}
+  <div class="break"></div>
+</template>
