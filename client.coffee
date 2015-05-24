@@ -6,7 +6,12 @@ Template.grid.events {
 }
 
 Template.grid.helpers {
-  cells: -> transpose Session.get 'cells'
+  cells: ->
+    result = transpose Session.get 'cells'
+    for row, y in result
+      for color, x in row
+        row[x] = color: color
+    result
 }
 
 transpose = (array) -> _.zip.apply _, array
@@ -18,27 +23,30 @@ sum_neighbors = (array, x, y) ->
       sum += array[x + dx]?[y + dy] or 0
   sum - array[x][y]
 
+live_probability = [
+  [0.0, 0.1, 0.4, 0.8, 0.4, 0.2, 0.1, 0.1],
+  [0.2, 0.4, 0.6, 0.8, 0.8, 0.6, 0.4, 0.2]
+]
+
 iterate = (array) ->
   result = _.map array, _.clone
   for x in [0...width]
     for y in [0...height]
-      neighbors = sum_neighbors array, x, y
-      if array[x][y] == 1
-        result[x][y] = if (neighbors == 2 or neighbors == 3) then 1 else 0
-      else
-        result[x][y] = if neighbors == 3 then 1 else 0
+      if x == 0 and (do Math.random) < 0.1
+        result[x][y] = 1
+        continue
+      neighbors = (sum_neighbors array, x, y) + (Math.max 1 - x, 0)
+      cutoff = live_probability[array[x][y]][neighbors]
+      if (cutoff > 0 and (do Math.random) < cutoff) != (array[x][y] == 1)
+        result[x][y] = if (do Math.random) < 0.2 \
+                       then 1 - array[x][y] else array[x][y]
   result
 
-width = 3
-height = 3
+width = 32
+height = 16
 
 cells = []
 for i in [0...width]
   cells.push (0 for y in [0...height])
-
-for x in [0...width]
-  for y in [0...height]
-    if (do Math.random) < 0.2
-      cells[x][y] = 1
 
 Session.set 'cells', cells
