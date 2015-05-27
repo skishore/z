@@ -9,7 +9,7 @@ CELL_SIZE = 20
 
 chunk = (data) ->
   assert data.length > 0
-  result = [{length: 0, value: 0}]
+  result = [{length: 0, value: data[0]}]
   for value in data
     if value != result[result.length - 1].value
       result.push {length: 0, value: value}
@@ -29,8 +29,11 @@ chunk_max_size = (data, value, max_size) ->
       block.length -= subblock
     subblocks.push block.length
     for subblock in _.shuffle subblocks
-      result.push {length: subblock, value: block.value, \
-                   text: get_word_for_length subblock}
+      if (do Math.random) < 0.5
+        result.push {length: subblock, value: block.value, \
+                     text: get_word_for_length subblock}
+      else
+        result.push {length: subblock, value: 2}
   result
 
 get_word_for_length = (length) ->
@@ -40,14 +43,14 @@ get_word_for_length = (length) ->
   word
 
 generate_grid = (size) ->
-  map = new gen.RoomAndCorridorMap size
+  map = new gen.NoiseMap size, true
   grid = []
   for y in [0...size.y]
     row = (map.tiles[x][y] for x in [0...size.x])
     row = ((if tile == 2 then 0 else tile) for tile in row)
     row = chunk_max_size (chunk row), 0, 3
     for block in row
-      border = if block.value == 0 then 2 else 0
+      border = if block.value == 1 then 0 else 2
       block.width = "#{CELL_SIZE*block.length - border}px"
       block.height = "#{CELL_SIZE - border}px"
     grid.push row

@@ -13,7 +13,7 @@ gen.rect_to_rect_distance = (rect1, rect2) ->
   do distance.length
 
 
-@Tile = {DEFAULT: 0, FREE: 1, WALL: 2, DOOR: 3, FENCE: 4}
+gen.Tile = {DEFAULT: 0, FREE: 1, WALL: 2, DOOR: 3, FENCE: 4}
 
 
 class gen.Rect
@@ -30,7 +30,7 @@ class gen.Room
 
 class gen.Level
   constructor: (@size) ->
-    @tiles = gen.construct_2d_array @size, Tile.DEFAULT
+    @tiles = gen.construct_2d_array @size, gen.Tile.DEFAULT
     @rids = gen.construct_2d_array @size, 0
     @diggable = gen.construct_2d_array @size, true
 
@@ -43,8 +43,8 @@ class gen.Level
         for move in _KING_MOVES
           square = new Point x + move.x, y + move.y
           if ((_in_bounds square, @size) and
-              @tiles[square.x][square.y] == Tile.DEFAULT)
-            @tiles[square.x][square.y] = Tile.WALL
+              @tiles[square.x][square.y] == gen.Tile.DEFAULT)
+            @tiles[square.x][square.y] = gen.Tile.WALL
  
   # Digs a corridor between the two rooms, modifying tiles and diggable.
   # Returns true if the corridor was successfully dug.
@@ -130,7 +130,7 @@ class gen.Level
     for i in [1...truncated_path.length - 1]
       node = truncated_path[i]
       if _is_tile_blocked @tiles[node.x][node.y]
-        @tiles[node.x][node.y] = Tile.FREE
+        @tiles[node.x][node.y] = gen.Tile.FREE
     _add_door truncated_path[1], @tiles, @diggable
     _add_door(truncated_path[truncated_path.length - 2], @tiles, @diggable)
     true
@@ -163,7 +163,7 @@ class gen.Level
             changed = (_.random 8*inverse_free_to_blocked - 1) < cutoff
         if changed
           new_rids[x][y] = if blocked then room_index else 0
-          @tiles[x][y] = if blocked then Tile.FREE else Tile.DEFAULT
+          @tiles[x][y] = if blocked then gen.Tile.FREE else gen.Tile.DEFAULT
     @rids = new_rids
 
   # Returns a rooms array filled with the final (non-rectangular) rooms.
@@ -198,7 +198,7 @@ class gen.Level
     room_index = rects.length + 1
     for x in [0...rect.size.x]
       for y in [0...rect.size.y]
-        @tiles[x + rect.position.x][y + rect.position.y] = Tile.FREE
+        @tiles[x + rect.position.x][y + rect.position.y] = gen.Tile.FREE
         @rids[x + rect.position.x][y + rect.position.y] = room_index
     rects.push rect
     true
@@ -234,7 +234,7 @@ _add_door = (square, tiles, diggable) ->
     if _is_tile_blocked tiles[neighbor.x][neighbor.y]
       diggable[neigbor.x][neighbor.y] = false
   if (do Math.random) < 0.5
-    tiles[square.x][square.y] = Tile.DOOR
+    tiles[square.x][square.y] = gen.Tile.DOOR
 
 # Returns true if it is possible to erode the given square in the map.
 # A square may be immune to erosion if:
@@ -285,4 +285,4 @@ _in_bounds = (point, size) ->
   0 <= point.x < size.x and 0 <= point.y < size.y
 
 _is_tile_blocked = (tile) ->
-  tile == Tile.DEFAULT or tile == Tile.WALL
+  tile == gen.Tile.DEFAULT or tile == gen.Tile.WALL
