@@ -17,7 +17,8 @@
 
 <template name="row">
   {{#each this}}
-    <div class="block color{{value}}" style="width: {{width}}"></div>
+    <div class="block color{{value}}"
+     style="height: {{height}}; width: {{width}};">{{text}}</div>
   {{/each}}
   <div class="break"></div>
 </template>

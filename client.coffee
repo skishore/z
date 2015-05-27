@@ -5,7 +5,7 @@ Template.grid.helpers {
   rows: -> Session.get 'grid'
 }
 
-CELL_SIZE = 16
+CELL_SIZE = 20
 
 chunk = (data) ->
   assert data.length > 0
@@ -16,13 +16,40 @@ chunk = (data) ->
     result[result.length - 1].length += 1
   result
 
+chunk_max_size = (data, value, max_size) ->
+  result = []
+  for block in data
+    if block.value != value
+      result.push block
+      continue
+    subblocks = []
+    while block.length > max_size
+      subblock = _.random 1, max_size
+      subblocks.push subblock
+      block.length -= subblock
+    subblocks.push block.length
+    for subblock in _.shuffle subblocks
+      result.push {length: subblock, value: block.value, \
+                   text: get_word_for_length subblock}
+  result
+
+get_word_for_length = (length) ->
+  word = ''
+  while word.length == 0 or word.length > 3*length - 1
+    word = _.sample WORDS
+  word
+
 generate_grid = (size) ->
   map = new gen.RoomAndCorridorMap size
   grid = []
   for y in [0...size.y]
-    row = chunk (map.tiles[x][y] for x in [0...size.x])
+    row = (map.tiles[x][y] for x in [0...size.x])
+    row = ((if tile == 2 then 0 else tile) for tile in row)
+    row = chunk_max_size (chunk row), 0, 3
     for block in row
-      block.width = "#{CELL_SIZE*block.length}px"
+      border = if block.value == 0 then 2 else 0
+      block.width = "#{CELL_SIZE*block.length - border}px"
+      block.height = "#{CELL_SIZE - border}px"
     grid.push row
   Session.set 'grid', grid
 
