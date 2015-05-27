@@ -16,11 +16,13 @@ chunk = (data) ->
     result[result.length - 1].length += 1
   result
 
-chunk_max_size = (data, value, max_size) ->
+chunk_max_size = (data, value, max_size, parity) ->
   result = []
   for block in data
     if block.value != value
-      result.push block
+      for i in [0...block.length]
+        result.push {length: 1, value: block.value, highlight: parity % 2 == 0}
+        parity += 1
       continue
     subblocks = []
     while block.length > max_size
@@ -34,6 +36,7 @@ chunk_max_size = (data, value, max_size) ->
                      text: get_word_for_length subblock}
       else
         result.push {length: subblock, value: 2}
+      parity += subblock
   result
 
 get_word_for_length = (length) ->
@@ -48,7 +51,7 @@ generate_grid = (size) ->
   for y in [0...size.y]
     row = (map.tiles[x][y] for x in [0...size.x])
     row = ((if tile == 2 then 0 else tile) for tile in row)
-    row = chunk_max_size (chunk row), 0, 3
+    row = chunk_max_size (chunk row), 0, 3, y % 2
     for block in row
       border = if block.value == 1 then 0 else 2
       block.width = "#{CELL_SIZE*block.length - border}px"
