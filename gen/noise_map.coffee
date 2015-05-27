@@ -2,21 +2,20 @@
 
 
 class gen.NoiseMap
-  constructor: (@size, verbose) ->
+  constructor: (@size, threshold, verbose) ->
     level = new gen.Level @size
     noise.seed do Math.random
 
     # scale is the wavelength of the Perlin noise.
-    # threshold is the fraction of squares that are free.
+    # threshold is the fraction of squares that are blocked.
     scale = 0.2
-    threshold = 0.5
     free_squares = []
 
     for x in [0...@size.x]
       for y in [0...@size.y]
         sample = ((noise.perlin2 x/(scale*@size.x), y/(scale*@size.y)) + 1)/2
         level.tiles[x][y] = if sample > threshold \
-                            then gen.Tile.DEFAULT else gen.Tile.FREE
+                            then gen.Tile.FREE else gen.Tile.DEFAULT
 
     do level.add_walls
     @rooms = []

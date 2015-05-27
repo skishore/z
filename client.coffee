@@ -16,7 +16,7 @@ chunk = (data) ->
     result[result.length - 1].length += 1
   result
 
-chunk_max_size = (data, value, max_size, parity) ->
+chunk_max_size = (data, value, max_size, parity, fraction_words) ->
   result = []
   for block in data
     if block.value != value
@@ -31,7 +31,7 @@ chunk_max_size = (data, value, max_size, parity) ->
       block.length -= subblock
     subblocks.push block.length
     for subblock in _.shuffle subblocks
-      if (do Math.random) < 0.5
+      if (do Math.random) < fraction_words
         result.push {length: subblock, value: block.value, \
                      text: get_word_for_length subblock}
       else
@@ -45,13 +45,13 @@ get_word_for_length = (length) ->
     word = _.sample WORDS
   word
 
-generate_grid = (size) ->
-  map = new gen.NoiseMap size, true
+@generate_grid = (size, fraction_blocked, fraction_words) ->
+  map = new gen.NoiseMap size, fraction_blocked, true
   grid = []
   for y in [0...size.y]
     row = (map.tiles[x][y] for x in [0...size.x])
     row = ((if tile == 2 then 0 else tile) for tile in row)
-    row = chunk_max_size (chunk row), 0, 3, y % 2
+    row = chunk_max_size (chunk row), 0, 3, y % 2, fraction_words
     for block in row
       border = if block.value == 1 then 0 else 2
       block.width = "#{CELL_SIZE*block.length - border}px"
@@ -66,4 +66,4 @@ window.onkeypress = (e) ->
   key = String.fromCharCode e.which
 
 Meteor.startup ->
-  generate_grid new Point 48, 24
+  generate_grid (new Point 48, 24), 0.5, 0.5
