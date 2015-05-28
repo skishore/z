@@ -20,7 +20,7 @@ namespace babel {
 namespace engine {
 namespace {
 
-const Point kMapSize(64, 64);
+const Point kMapSize(48, 24);
 
 }  // namespace
 

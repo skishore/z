@@ -16,12 +16,10 @@ function ASSERT(condition, message) {
   }
 }
 
-function BabelAnimation(engine, graphics, radius) {
+function BabelAnimation(engine, graphics, size) {
   this.engine = engine;
   this.graphics = graphics;
-  this.radius = radius;
-
-  this.size = {x: 2*this.radius.x + 1, y: 2*this.radius.y + 1};
+  this.size = size;
 
   this.last = this.Snapshot();
   this.tween = null;
@@ -76,7 +74,7 @@ BabelAnimation.prototype.Update = function() {
 
 BabelAnimation.prototype.Snapshot = function() {
   var result = {};
-  var view = this.engine.GetView(this.radius);
+  var view = this.engine.GetView(this.size);
 
   result.offset = view.offset;
 

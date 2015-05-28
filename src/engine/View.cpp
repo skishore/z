@@ -11,9 +11,8 @@ using std::vector;
 namespace babel {
 namespace engine {
 
-View::View(const Point& radius, const GameState& game_state)
-    : size(2*radius + Point(1, 1)), offset(game_state.player->square - radius),
-      tiles(size.x, vector<TileView>(size.y)) {
+View::View(const Point& s, const GameState& game_state)
+    : size(s), offset(0, 0), tiles(size.x, vector<TileView>(size.y)) {
   const int vision = game_state.player->creature->stats.vision_radius;
   for (int x = 0; x < size.x; x++) {
     for (int y = 0; y < size.y; y++) {

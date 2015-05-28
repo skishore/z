@@ -1,12 +1,10 @@
 window.BabelGraphics = function() {
 "use strict";
 
-function BabelGraphics(target, radius, onload) {
+function BabelGraphics(target, size, onload) {
   this.target = target;
-  this.radius = radius;
+  this.size = size;
   this.onload = onload;
-
-  this.size = {x: 2*this.radius.x + 1, y: 2*this.radius.y + 1};
 
   this.log = this.target.find('.log');
   this.status = $('<div>').addClass('line');
@@ -33,11 +31,11 @@ function BabelGraphics(target, radius, onload) {
   this.container = new PIXI.DisplayObjectContainer();
   this.stage.addChild(this.container);
 
-  this.width = (this.size.x - 2)*this.square;
-  this.height = (this.size.y - 2)*this.square;
+  this.width = this.size.x*this.square;
+  this.height = this.size.y*this.square;
   this.renderer = PIXI.autoDetectRenderer(this.width, this.height);
 
-  this.scale = 1.5;
+  this.scale = 1.25;
   this.renderer.view.style.width = Math.floor(this.scale*this.width) + "px";
   this.renderer.view.style.height = Math.floor(this.scale*this.height) + "px";
 
@@ -50,7 +48,7 @@ function BabelGraphics(target, radius, onload) {
   this.stats.domElement.style.top = "0px";
   this.stats.domElement.style.left = "0px";
 
-  this.layout = new BabelLayout(this.scale, this.square, this.radius);
+  this.layout = new BabelLayout(this.scale, this.square, this.size);
 }
 
 BabelGraphics.prototype.OnAssetsLoaded = function() {
@@ -63,8 +61,8 @@ BabelGraphics.prototype.OnAssetsLoaded = function() {
   for (var x = 0; x < this.size.x; x++) {
     for (var y = 0; y < this.size.y; y++) {
       var tile = new PIXI.Sprite(this.tile_textures[0]);
-      tile.x = this.square*(x - 1);
-      tile.y = this.square*(y - 1);
+      tile.x = this.square*x;
+      tile.y = this.square*y;
       tile.visible = false;
       this.tiles.push(tile);
       this.container.addChild(tile);
@@ -128,8 +126,8 @@ BabelGraphics.prototype.DrawSprites = function(view, transform) {
             offset.y += transform.sprite_offsets[id].y;
           }
         }
-        sprite.x = this.square*(sprite_view.square.x - 1) + offset.x;
-        sprite.y = this.square*(sprite_view.square.y - 1) + offset.y;
+        sprite.x = this.square*sprite_view.square.x + offset.x;
+        sprite.y = this.square*sprite_view.square.y + offset.y;
         sprite.tint = 0xffffff;
 
         var graphic = sprite_view.graphic;

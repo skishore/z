@@ -97,8 +97,8 @@ bool Engine::Update() {
   return changed;
 }
 
-View* Engine::GetView(const Point& radius) const {
-  return new View(radius, game_state_);
+View* Engine::GetView(const Point& size) const {
+  return new View(size, game_state_);
 }
 
 }  // namespace engine
