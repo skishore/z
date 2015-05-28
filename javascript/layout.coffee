@@ -39,6 +39,10 @@ class @BabelLayout
       ids.push id
     ids = do ids.sort
 
+    # HACK: Look for the player's position and use it to bias directionality.
+    if 0 of sprites
+      @center = {x: @scale*sprites[0].x, y: @scale*sprites[0].y}
+
     labels = []
     for sprite_view in (view.sprites[id] for id in ids)
       id = sprite_view.id
