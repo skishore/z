@@ -59,7 +59,8 @@ bool RoomAndCorridorMap::TryBuildMap(const Point& size, bool verbose) {
   int tries_left = tries;
 
   while (tries_left > 0) {
-    const Point size{RandInt(min_size, max_size), RandInt(min_size, max_size)};
+    const Point size{RandInt(min_size, max_size),
+                     RandInt(min_size/2, max_size/2)};
     const Rect rect{size, {RandInt(1, size_.x - size.x - 1),
                            RandInt(1, size_.y - size.y - 1)}};
     if (!level.PlaceRectangularRoom(rect, separation, &rects)) {
