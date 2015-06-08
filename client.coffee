@@ -1,69 +1,75 @@
-if Meteor.isServer
-  return
-
-Template.grid.helpers {
-  rows: -> Session.get 'grid'
-}
-
-CELL_SIZE = 20
-
-chunk = (data) ->
-  assert data.length > 0
-  result = [{length: 0, value: data[0]}]
-  for value in data
-    if value != result[result.length - 1].value
-      result.push {length: 0, value: value}
-    result[result.length - 1].length += 1
-  result
-
-chunk_max_size = (data, value, max_size, parity, fraction_words) ->
-  result = []
-  for block in data
-    if block.value != value
-      for i in [0...block.length]
-        result.push {length: 1, value: block.value, highlight: parity % 2 == 0}
-        parity += 1
-      continue
-    subblocks = []
-    while block.length > max_size
-      subblock = _.random 1, max_size
-      subblocks.push subblock
-      block.length -= subblock
-    subblocks.push block.length
-    for subblock in _.shuffle subblocks
-      if (do Math.random) < fraction_words
-        result.push {length: subblock, value: block.value, \
-                     text: get_word_for_length subblock}
-      else
-        result.push {length: subblock, value: 2}
-      parity += subblock
-  result
-
-get_word_for_length = (length) ->
-  word = ''
-  while word.length == 0 or word.length > 3*length - 1
-    word = _.sample WORDS
-  word
-
-@generate_grid = (size, fraction_blocked, fraction_words) ->
-  map = new gen.NoiseMap size, fraction_blocked, true
-  grid = []
-  for y in [0...size.y]
-    row = (map.tiles[x][y] for x in [0...size.x])
-    row = ((if tile == 2 then 0 else tile) for tile in row)
-    row = chunk_max_size (chunk row), 0, 3, y % 2, fraction_words
-    for block in row
-      border = if block.value == 1 then 0 else 2
-      block.width = "#{CELL_SIZE*block.length - border}px"
-      block.height = "#{CELL_SIZE - border}px"
-    grid.push row
-  Session.set 'grid', grid
-
-keys = {h: [-1, 0], j: [0, 1], k: [0, -1], l: [1, 0], \
-        y: [-1, -1], u: [1, -1], b: [-1, 1], n: [1, 1]}
-
-window.onkeypress = (e) ->
+_get_key = (e) ->
   key = String.fromCharCode e.which
+  if not e.shiftKey
+    key = do key.toLowerCase
+  key
 
-Meteor.startup ->
-  generate_grid (new Point 48, 24), 0.5, 0.5
+
+class Sprite
+  constructor: (position, size) ->
+    @position = Point.copy position
+    @size = Point.copy size
+
+  move: (surface, vector) ->
+    x = @position.x + vector.x
+    y = @position.y + vector.y
+    @position.x = Math.min (Math.max x, 0), surface.x - @size.x
+    @position.y = Math.min (Math.max y, 0), surface.y - @size.y
+
+  redraw: ->
+    if not @_last_position?
+      @_element = $('<div>').addClass 'sprite'
+      @_element.css {width: @size.x, height: @size.y}
+      $('.surface').append @_element
+      @_last_position = new Point null, null
+    if not @_last_position.equals @position
+      @_element.css {left: @position.x, top: @position.y}
+      @_last_position = Point.copy @position
+      
+
+class Game
+  constructor: ->
+    # Set up constants.
+    @keys = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
+    @sprite_size = new Point 16, 16
+    @surface = new Point 640, 360
+    # Set up instance variables and handlers.
+    @player = new Sprite @sprite_size, @sprite_size
+    @pressed = {}
+    window.onkeydown = @onkeydown.bind @
+    window.onkeyup = @onkeyup.bind @
+    window.requestAnimationFrame @loop.bind @
+
+  loop: ->
+    do @update
+    do @redraw
+    window.requestAnimationFrame @loop.bind @
+
+  redraw: ->
+    do @player.redraw
+
+  update: ->
+    move = new Point 0, 0
+    for key of @pressed
+      [x, y] = @keys[key]
+      move.x += x
+      move.y += y
+    if not do move.zero
+      @player.move @surface, move.scale_to 4
+
+  onkeydown: (e) ->
+    key = _get_key e
+    if key not of @keys
+      return
+    @pressed[key] = true
+
+  onkeyup: (e) ->
+    key = _get_key e
+    if key not of @keys
+      return
+    delete @pressed[key]
+
+
+if Meteor.isClient
+  Meteor.startup ->
+    game = new Game

@@ -6,7 +6,7 @@ body {
   background-color: @background-color;
 }
 
-.grid-container {
+.surface-container {
   top: 0;
   bottom: 0;
   right: 0;
@@ -15,41 +15,18 @@ body {
   position: absolute;
   text-align: center;
 
-  .grid {
+  .surface {
+    background-color: white;
     display: inline-block;
-    margin: @font-size/2 auto;
+    margin: 16px  auto;
+    position: relative;
 
-    .block {
-      font-size: @font-size;
-      line-height: @line-height;
+    height: 360px;
+    width: 640px;
 
-      float: left;
-      font-family: "Helvetica Neue", Helvetica, sans-serif;
-
-      &.color0 {
-        background-color: white;
-        border: 1px solid gray;
-        box-shadow: black 1px 1px;
-      }
-
-      &.color1 {
-        background-color: none;
-
-        &.true {
-          background-color: white;
-          opacity: 0.1;
-        }
-      }
-
-      &.color2 {
-        background-color: lightgray;
-        border: 1px solid gray;
-        box-shadow: black 1px 1px;
-      }
-    }
-
-    .break {
-      clear: both;
+    .sprite {
+      background-color: black;
+      position: absolute;
     }
   }
 }

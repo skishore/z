@@ -1,11 +1,24 @@
 class @Point
   constructor: (@x, @y) ->
 
-  equal: (other) ->
+  equals: (other) ->
     @x == other.x and @y == other.y
 
   length: ->
     Math.sqrt @x*@x + @y*@y
+
+  scale: (factor) ->
+    new Point (Math.round factor*@x), (Math.round factor*@y)
+
+  scale_to: (length) ->
+    assert not do @zero
+    @scale length/(do @length)
+
+  zero: ->
+    @x == 0 and @y == 0
+
+  @copy: (other) ->
+    new Point other.x, other.y
 
   @sum: (point1, point2) ->
     new Point point1.x + point2.x, point1.y + point2.y

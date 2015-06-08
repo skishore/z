@@ -2,23 +2,7 @@
   <title>babel</title>
 </head>
 <body>
-  {{> grid}}
-</body>
-
-<template name="grid">
-  <div class="grid-container">
-    <div class="grid">
-      {{#each rows}}
-        {{> row this}}
-      {{/each}}
-    </div>
+  <div class="surface-container">
+    <div class="surface"></div>
   </div>
-</template>
-
-<template name="row">
-  {{#each this}}
-    <div class="block color{{value}} {{highlight}}"
-     style="height: {{height}}; width: {{width}};">{{text}}</div>
-  {{/each}}
-  <div class="break"></div>
-</template>
+</body>
