@@ -1,3 +1,5 @@
+_twips = 1024
+
 _get_key = (e) ->
   key = String.fromCharCode e.which
   if not e.shiftKey
@@ -19,15 +21,25 @@ class Sprite
     @position.y = Math.min (Math.max y, 0), @surface.y - @size.y
 
   redraw: ->
-    if not @_last_position?
+    if not @_last_css?
       @_element = $('<div>').addClass 'sprite'
-      @_element.css 'background-color', @color
-      @_element.css {width: @size.x, height: @size.y}
       $('.surface').append @_element
-      @_last_position = new Point null, null
-    if not @_last_position.equals @position
-      @_element.css {left: @position.x, top: @position.y}
-      @_last_position = Point.copy @position
+      @_last_css = {}
+    css = do @_get_css
+    update = {}
+    for key of css
+      if @_last_css[key] != css[key]
+        update[key] = css[key]
+    if (_.keys update).length > 0
+      @_element.css update
+      @_last_css = css
+
+  _get_css: ->
+    'background-color': @color
+    left: Math.floor @position.x/_twips
+    top: Math.floor @position.y/_twips
+    width: Math.floor @size.x/_twips
+    height: Math.floor @size.y/_twips
 
 
 class Enemy extends Sprite
@@ -35,10 +47,11 @@ class Enemy extends Sprite
     super surface, size
     @color = 'red'
 
-  get_move: (player) ->
-    move = new Point (_.random -4, 4), (_.random -4, 4)
-    move.x += (if player.position.x > @position.x then 1 else -1)
-    move.y += (if player.position.y > @position.y then 1 else -1)
+  get_move: (player, speed) ->
+    move = new Point (_.random -speed, speed), (_.random -speed, speed)
+    approach = Math.floor speed/4
+    move.x += approach*(if player.position.x > @position.x then 1 else -1)
+    move.y += approach*(if player.position.y > @position.y then 1 else -1)
     move
 
 
@@ -47,8 +60,9 @@ class Game
     # Set up constants.
     @keys = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
     @num_enemies = 8
-    @sprite_size = new Point 16, 16
-    @surface = new Point 640, 360
+    @speed = 4*_twips
+    @sprite_size = new Point 16*_twips, 16*_twips
+    @surface = new Point 640*_twips, 360*_twips
     # Set up instance variables.
     @enemies = (new Enemy @surface, @sprite_size for i in [0...@num_enemies])
     @player = new Sprite @surface, @sprite_size
@@ -75,9 +89,9 @@ class Game
       move.x += x
       move.y += y
     if not do move.zero
-      @player.move move.scale_to 4
+      @player.move move.scale_to @speed
     for enemy in @enemies
-      enemy.move enemy.get_move @player
+      enemy.move enemy.get_move @player, @speed
 
   onkeydown: (e) ->
     key = _get_key e
