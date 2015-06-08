@@ -49,10 +49,10 @@ class Enemy extends Sprite
 
   get_move: (player, speed) ->
     move = new Point (_.random -speed, speed), (_.random -speed, speed)
-    approach = Math.floor speed/4
-    move.x += approach*(if player.position.x > @position.x then 1 else -1)
-    move.y += approach*(if player.position.y > @position.y then 1 else -1)
-    move
+    approach = new Point player.position.x - @position.x, \
+                         player.position.y - @position.y
+    approach = approach.scale_to speed/4
+    Point.sum move, approach
 
 
 class Game
