@@ -49,10 +49,10 @@ class Enemy extends Sprite
 
   get_move: (player, speed) ->
     move = new Point (_.random -speed, speed), (_.random -speed, speed)
-    approach = new Point player.position.x - @position.x, \
-                         player.position.y - @position.y
+    approach = Point.difference player.position, @position
     approach = approach.scale_to speed/4
-    Point.sum move, approach
+    #Point.sum move, approach
+    approach
 
 
 class Game
@@ -61,7 +61,7 @@ class Game
     @keys = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
     @num_enemies = 8
     @speed = 4*_twips
-    @sprite_size = new Point 16*_twips, 16*_twips
+    @sprite_size = new Point 32*_twips, 32*_twips
     @surface = new Point 640*_twips, 360*_twips
     # Set up instance variables.
     @enemies = (new Enemy @surface, @sprite_size for i in [0...@num_enemies])
@@ -91,7 +91,20 @@ class Game
     if not do move.zero
       @player.move move.scale_to @speed
     for enemy in @enemies
-      enemy.move enemy.get_move @player, @speed
+      move = enemy.get_move @player, @speed
+      move = @_apply_kinematic_constraints enemy, move
+      enemy.move move
+
+  _apply_kinematic_constraints: (enemy, move) ->
+    for other in @enemies
+      if other == enemy
+        continue
+      diff = Point.difference enemy.position, other.position
+      if do diff.zero
+        continue
+      diff = diff.scale_to (enemy.size.x*_twips)/(do diff.length)/4
+      move = Point.sum move, diff
+    move
 
   onkeydown: (e) ->
     key = _get_key e

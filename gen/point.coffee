@@ -20,6 +20,9 @@ class @Point
   @copy: (other) ->
     new Point other.x, other.y
 
+  @difference: (point1, point2) ->
+    new Point point1.x - point2.x, point1.y - point2.y
+
   @sum: (point1, point2) ->
     new Point point1.x + point2.x, point1.y + point2.y
 
