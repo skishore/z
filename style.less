@@ -7,18 +7,19 @@ body {
 }
 
 .surface-container {
+  position: absolute;
+  text-align: center;
+
   top: 0;
   bottom: 0;
   right: 0;
   left: 0;
 
-  position: absolute;
-  text-align: center;
-
   .surface {
     background-color: white;
     display: inline-block;
     margin: 16px  auto;
+    overflow: hidden;
     position: relative;
 
     height: 360px;
@@ -26,6 +27,15 @@ body {
 
     .sprite {
       position: absolute;
+
+      &:after {
+        content: "test";
+        position: absolute;
+
+        left: 50%;
+        top: 100%;
+        transform: translateX(-50%);
+      }
     }
   }
 }
