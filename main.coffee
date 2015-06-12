@@ -110,10 +110,58 @@ class Sprite
     @position = start.scale Constants.grid
 
   move: (vector) ->
-    x = @position.x + Math.round vector.x
-    y = @position.y + Math.round vector.y
-    @position.x = Math.max x, 0
-    @position.y = Math.max y, 0
+    vector = @_check_squares vector
+    @position = Point.sum @position, vector
+
+  _check_squares: (move) ->
+    move = new Point (Math.round move.x), (Math.round move.y)
+    if do move.zero
+      return move
+
+    half_grid = Math.ceil 0.5*Constants.grid
+    tolerance = Math.ceil 0.2*Constants.grid
+
+    overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
+    overlap.x -= if overlap.x < half_grid then 0 else Constants.grid
+    overlap.y -= if overlap.y < half_grid then 0 else Constants.grid
+
+    square = Point.difference @position, overlap
+    assert (square.x % Constants.grid == 0) and (square.y % Constants.grid == 0)
+    square.x /= Constants.grid
+    square.y /= Constants.grid
+
+    offset = new Point 0, 0
+    collided = false
+    speed = Math.floor do move.length
+
+    # Check if we cross a horizontal grid boundary going up or down.
+    if move.y < 0 and (@_gmod @position.y + tolerance) < -move.y
+      offset.y = -1
+    else if move.y > 0 and (@_gmod -@position.y) < move.y
+      offset.y = 1
+    # If we cross a horizontal boundary, check that the next square is open.
+    if offset.y != 0
+      offset.x = if overlap.x > 0 then 1 else -1
+      if not @_check_square new Point square.x, square.y + offset.y
+        collided = true
+      else if (Math.abs overlap.x) > tolerance and \
+           not @_check_square Point.sum square, offset
+        collided = true
+        if (Math.abs overlap.x) <= half_grid and offset.x*move.x <= 0
+          move.x = -offset.x*speed
+    if collided
+      if offset.y < 0
+        move.y = Constants.grid - tolerance - @_gmod @position.y
+      else
+        move.y = @_gmod -@position.y
+    move
+
+  _check_square: (square) ->
+    (@stage.map.get_tile square) == '.'
+
+  _gmod: (value) ->
+    result = value % Constants.grid
+    if result >= 0 then result else result + Constants.grid
 
 
 class Stage
