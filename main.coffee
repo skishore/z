@@ -14,8 +14,8 @@ class Constants
 
 class Graphics
   constructor: (@stage, @element, callback) ->
-    @size = @stage.map.size.scale Constants.grid_in_pixels
     @scale = 2
+    @size = @stage.map.size.scale @scale*Constants.grid_in_pixels
 
     # TODO(skishore): The number of tiles and sprites should be read from JSON.
     @num_tiles = 8
@@ -24,13 +24,13 @@ class Graphics
     @sprite_textures = []
     @tiles = []
 
+    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
     @renderer = PIXI.autoDetectRenderer @size.x, @size.y
-    @renderer.view.style.width = "#{Math.floor @scale*@size.x}px"
-    @renderer.view.style.height = "#{Math.floor @scale*@size.y}px"
     @element.append @renderer.view
 
     @context = new PIXI.Stage 0x00000000
     @container = new PIXI.DisplayObjectContainer
+    @container.scale = new PIXI.Point @scale, @scale
     @context.addChild @container
 
     do @_initialize_stats
@@ -53,6 +53,8 @@ class Graphics
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
         type = if (@stage.map.get_tile new Point x, y) == '.' then 0 else 4
+        if type == 0
+          type = Math.floor 4*(do Math.random)
         tile = new PIXI.Sprite @tile_textures[type]
         tile.x = Constants.grid_in_pixels*x
         tile.y = Constants.grid_in_pixels*y
