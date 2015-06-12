@@ -132,7 +132,7 @@ class Sprite
 
     offset = new Point 0, 0
     collided = false
-    speed = Math.floor (do move.length)/2
+    speed = Math.floor do move.length
 
     # Check if we cross a horizontal grid boundary going up or down.
     if move.y < 0 and (@_gmod @position.y + tolerance) < -move.y
@@ -148,7 +148,8 @@ class Sprite
            not @_check_square Point.sum square, offset
         collided = true
         if (Math.abs overlap.x) <= half_grid and offset.x*move.x <= 0
-          move.x = -offset.x*speed
+          shove = Math.min speed, (Math.abs overlap.x) - tolerance
+          move.x = -offset.x*shove
       if collided
         if offset.y < 0
           move.y = Constants.grid - tolerance - @_gmod @position.y
@@ -175,8 +176,9 @@ class Sprite
           # Check that we have space to shove away in the y direction.
           # We skip this check when shoving in the x direction because the
           # full x check is after the y check.
+          shove = Math.min speed, Math.max overlap.y, -overlap.y - tolerance
           move.y = if (@_check_square new Point square.x, square.y + offset.y) \
-                      then -offset.y*speed else 0
+                      then -offset.y*shove else 0
       if collided
         if offset.x < 0
           move.x = Constants.grid - tolerance - @_gmod @position.x
