@@ -27,16 +27,23 @@ class Graphics
     @renderer = PIXI.autoDetectRenderer @size.x, @size.y
     @renderer.view.style.width = "#{Math.floor @scale*@size.x}px"
     @renderer.view.style.height = "#{Math.floor @scale*@size.y}px"
-    @element.append $ @renderer.view
+    @element.append @renderer.view
 
     @context = new PIXI.Stage 0x00000000
     @container = new PIXI.DisplayObjectContainer
     @context.addChild @container
 
+    do @_initialize_stats
+
     assets_to_load = ['tileset.json', 'sprites.json']
     loader = new PIXI.AssetLoader assets_to_load
     loader.onComplete = @_on_assets_loaded.bind @
     do loader.load
+
+  _initialize_stats: ->
+    @stats = new PIXI.Stats
+    $('body').append @stats.domElement
+    $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
   _on_assets_loaded: ->
     for i in [0...@num_tiles]
@@ -117,9 +124,11 @@ class Stage
     @graphics = new Graphics @, $('.surface')
 
   loop: ->
+    do @graphics.stats.begin
     do @update
     do @graphics.draw
     window.requestAnimationFrame @loop.bind @
+    do @graphics.stats.end
 
   update: ->
     move = new Point 0, 0
