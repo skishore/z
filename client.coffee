@@ -28,18 +28,43 @@ class Input
     delete @_pressed[@_get_key e]
 
 
+class Graphics
+  constructor: (@stage, @element) ->
+    @element.css {
+      width: Constants.to_pixels @stage.map.size.x*Constants.sprite_size.x
+      height: Constants.to_pixels @stage.map.size.y*Constants.sprite_size.y
+    }
+
+
+class Map
+  constructor: (@size) ->
+    assert @size.x > 0 and @size.y > 0
+    @_tiles = (do @_get_random_tile for i in [0...@size.x*@size.y])
+    @_tiles[0] = '.'
+
+  get_starting_square: ->
+    new Point 0, 0
+
+  get_tile: (square) ->
+    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
+     @_tiles[square.x*@size.y + square.y]
+    '#'
+
+  _get_random_tile: ->
+    if (do Math.random) < 0.2 then '#' else '.'
+
+
 class Sprite
-  constructor: (@surface, size) ->
+  constructor: (@stage, start) ->
     @color = 'black'
-    @position = new Point (_.random @surface.x - size.x), \
-                          (_.random @surface.y - size.y)
-    @size = do size.clone
+    @position = start.scale Constants.twips_per_pixel
+    @size = do Constants.sprite_size.clone
 
   move: (vector) ->
     x = @position.x + Math.round vector.x
     y = @position.y + Math.round vector.y
-    @position.x = Math.min (Math.max x, 0), @surface.x - @size.x
-    @position.y = Math.min (Math.max y, 0), @surface.y - @size.y
+    @position.x = Math.max x, 0
+    @position.y = Math.max y, 0
 
   redraw: ->
     if not @_last_css?
@@ -63,24 +88,12 @@ class Sprite
     height: Constants.to_pixels @size.y
 
 
-class Enemy extends Sprite
-  constructor: (surface, size) ->
-    super surface, size
-    @color = 'red'
-
-  get_move: (player, speed) ->
-    move = new Point (_.random -speed, speed), (_.random -speed, speed)
-    approach = Point.difference player.position, @position
-    if not do approach.zero
-      approach = approach.scale_to speed/4
-    #Point.sum move, approach
-    approach
-
-
-class Game
+class Stage
   constructor: ->
     @input = new Input
-    @player = new Sprite Constants.surface, Constants.sprite_size
+    @map = new Map new Point 16, 9
+    @player = new Sprite @, do @map.get_starting_square
+    @graphics = new Graphics @, $('.surface')
     window.requestAnimationFrame @loop.bind @
 
   loop: ->
@@ -102,6 +115,4 @@ class Game
       @player.move move.scale_to Constants.speed
 
 
-if Meteor.isClient
-  Meteor.startup ->
-    game = new Game
+Meteor.startup (-> stage = new Stage) if Meteor.isClient
