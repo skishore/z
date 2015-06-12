@@ -1,9 +1,5 @@
-@font-size: 12px;
-@line-height: 18px;
-@background-color: #48c;
-
 body {
-  background-color: @background-color;
+  background-color: #48c;
 }
 
 .surface-container {
@@ -16,23 +12,7 @@ body {
   left: 0;
 
   .surface {
-    background-color: white;
     display: inline-block;
     margin: 16px  auto;
-    overflow: hidden;
-    position: relative;
-
-    .sprite {
-      position: absolute;
-
-      &:after {
-        content: "test";
-        position: absolute;
-
-        left: 50%;
-        top: 100%;
-        transform: translateX(-50%);
-      }
-    }
   }
 }
