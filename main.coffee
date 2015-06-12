@@ -19,7 +19,7 @@ class Graphics
 
     # TODO(skishore): The number of tiles and sprites should be read from JSON.
     @num_tiles = 8
-    @num_sprites = 3
+    @num_sprites = 2
     @tile_textures = []
     @sprite_textures = []
     @tiles = []
