@@ -3,7 +3,7 @@ class Constants
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
-  @speed = 0.125*@grid
+  @speed = 0.12*@grid
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -132,7 +132,7 @@ class Sprite
 
     offset = new Point 0, 0
     collided = false
-    speed = Math.floor do move.length
+    speed = Math.floor (do move.length)/2
 
     # Check if we cross a horizontal grid boundary going up or down.
     if move.y < 0 and (@_gmod @position.y + tolerance) < -move.y
@@ -149,11 +149,39 @@ class Sprite
         collided = true
         if (Math.abs overlap.x) <= half_grid and offset.x*move.x <= 0
           move.x = -offset.x*speed
-    if collided
-      if offset.y < 0
-        move.y = Constants.grid - tolerance - @_gmod @position.y
-      else
-        move.y = @_gmod -@position.y
+      if collided
+        if offset.y < 0
+          move.y = Constants.grid - tolerance - @_gmod @position.y
+        else
+          move.y = @_gmod -@position.y
+    # Run similar checks for crossing a vertical boundary going right or left.
+    offset.x = 0
+    if move.x < 0 and (@_gmod @position.x + tolerance) < -move.x
+      offset.x = -1
+    else if move.x > 0 and (@_gmod tolerance - @position.x) < move.x
+      offset.x = 1
+    if offset.x != 0
+      # If we've crossed a horizontal boundary (which is true iff offset.y != 0
+      # and collided is false) then run an extra check in the x direction.
+      collided = offset.y != 0 and not collided and \
+                 not @_check_square Point.sum square, offset
+      offset.y = if overlap.y > 0 then 1 else -1
+      if not @_check_square new Point square.x + offset.x, square.y
+        collided = true
+      else if (overlap.y > 0 or -overlap.y > tolerance) and
+              not @_check_square Point.sum square, offset
+        collided = true
+        if (Math.abs overlap.y) <= half_grid and offset.y*move.y <= 0
+          # Check that we have space to shove away in the y direction.
+          # We skip this check when shoving in the x direction because the
+          # full x check is after the y check.
+          move.y = if (@_check_square new Point square.x, square.y + offset.y) \
+                      then -offset.y*speed else 0
+      if collided
+        if offset.x < 0
+          move.x = Constants.grid - tolerance - @_gmod @position.x
+        else
+          move.x = tolerance - @_gmod @position.x
     move
 
   _check_square: (square) ->
