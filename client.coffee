@@ -1,4 +1,12 @@
-_twips = 1024
+class Constants
+  @moves = {W: [0, -1], A: [-1, 0], S: [0, 1], D: [1, 0]}
+  @twips_per_pixel = 1024
+  @speed = 4*@twips_per_pixel
+  @sprite_size = (new Point 32, 32).scale @twips_per_pixel
+  @surface = (new Point 640, 360).scale @twips_per_pixel
+
+  @to_pixels = (twips) ->
+    Math.round twips/@twips_per_pixel
 
 
 class Input
@@ -49,10 +57,10 @@ class Sprite
 
   _get_css: ->
     'background-color': @color
-    left: Math.floor @position.x/_twips
-    top: Math.floor @position.y/_twips
-    width: Math.floor @size.x/_twips
-    height: Math.floor @size.y/_twips
+    left: Constants.to_pixels @position.x
+    top: Constants.to_pixels @position.y
+    width: Constants.to_pixels @size.x
+    height: Constants.to_pixels @size.y
 
 
 class Enemy extends Sprite
@@ -71,18 +79,8 @@ class Enemy extends Sprite
 
 class Game
   constructor: ->
-    # Set up constants.
-    @keys = {W: [0, -1], A: [-1, 0], S: [0, 1], D: [1, 0]}
-    @num_enemies = 8
-    @speed = 4*_twips
-    @sprite_size = new Point 32*_twips, 32*_twips
-    @surface = new Point 640*_twips, 360*_twips
-    # Set up instance variables.
-    @enemies = (new Enemy @surface, @sprite_size for i in [0...@num_enemies])
-    @player = new Sprite @surface, @sprite_size
-    @sprites = [@player].concat @enemies
-    # Set up handlers.
     @input = new Input
+    @player = new Sprite Constants.surface, Constants.sprite_size
     window.requestAnimationFrame @loop.bind @
 
   loop: ->
@@ -91,33 +89,17 @@ class Game
     window.requestAnimationFrame @loop.bind @
 
   redraw: ->
-    for sprite in @sprites
-      do sprite.redraw
+    do @player.redraw
 
   update: ->
     move = new Point 0, 0
     for key of do @input.get_keys_pressed
-      if key of @keys
-        [x, y] = @keys[key]
+      if key of Constants.moves
+        [x, y] = Constants.moves[key]
         move.x += x
         move.y += y
     if not do move.zero
-      @player.move move.scale_to @speed
-    for enemy in @enemies
-      move = enemy.get_move @player, @speed
-      move = @_apply_kinematic_constraints enemy, move
-      enemy.move move
-
-  _apply_kinematic_constraints: (enemy, move) ->
-    for other in @enemies
-      if other == enemy
-        continue
-      diff = Point.difference enemy.position, other.position
-      if do diff.zero
-        continue
-      diff = diff.scale_to (enemy.size.x*_twips)/(do diff.length)/4
-      move = Point.sum move, diff
-    move
+      @player.move move.scale_to Constants.speed
 
 
 if Meteor.isClient
