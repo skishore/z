@@ -8,6 +8,9 @@ class Constants
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
 
+  @to_square = (position) ->
+    new Point (Math.round position.x/@grid), (Math.round position.y/@grid)
+
 
 class Graphics
   constructor: (@stage, @element, callback) ->
@@ -97,8 +100,7 @@ class Map
 
 class Sprite
   constructor: (@stage, start) ->
-    @color = 'black'
-    @position = start.scale Constants.twips_per_pixel
+    @position = start.scale Constants.grid
 
   move: (vector) ->
     x = @position.x + Math.round vector.x
