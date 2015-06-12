@@ -1,14 +1,20 @@
 class @Point
   constructor: (@x, @y) ->
 
+  clone: ->
+    new Point @x, @y
+
   equals: (other) ->
     @x == other.x and @y == other.y
 
   length: ->
     Math.sqrt @x*@x + @y*@y
 
+  round: ->
+    new Point (Math.round @x), (Math.round @y)
+
   scale: (factor) ->
-    new Point (Math.round factor*@x), (Math.round factor*@y)
+    new Point factor*@x, factor*@y
 
   scale_to: (length) ->
     assert not do @zero
@@ -16,9 +22,6 @@ class @Point
 
   zero: ->
     @x == 0 and @y == 0
-
-  @copy: (other) ->
-    new Point other.x, other.y
 
   @difference: (point1, point2) ->
     new Point point1.x - point2.x, point1.y - point2.y

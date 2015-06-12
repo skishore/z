@@ -12,11 +12,11 @@ class Sprite
     @color = 'black'
     @position = new Point (_.random @surface.x - size.x), \
                           (_.random @surface.y - size.y)
-    @size = Point.copy size
+    @size = do size.clone
 
   move: (vector) ->
-    x = @position.x + vector.x
-    y = @position.y + vector.y
+    x = @position.x + Math.round vector.x
+    y = @position.y + Math.round vector.y
     @position.x = Math.min (Math.max x, 0), @surface.x - @size.x
     @position.y = Math.min (Math.max y, 0), @surface.y - @size.y
 
