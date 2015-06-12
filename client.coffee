@@ -1,10 +1,23 @@
 _twips = 1024
 
-_get_key = (e) ->
-  key = String.fromCharCode e.which
-  if not e.shiftKey
-    key = do key.toLowerCase
-  key
+
+class Input
+  constructor: ->
+    window.onkeydown = @_onkeydown.bind @
+    window.onkeyup = @_onkeyup.bind @
+    @_pressed = {}
+
+  get_keys_pressed: ->
+    _.clone @_pressed
+
+  _get_key: (e) ->
+    String.fromCharCode e.which
+
+  _onkeydown: (e) ->
+    @_pressed[@_get_key e] = true
+
+  _onkeyup: (e) ->
+    delete @_pressed[@_get_key e]
 
 
 class Sprite
@@ -59,7 +72,7 @@ class Enemy extends Sprite
 class Game
   constructor: ->
     # Set up constants.
-    @keys = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
+    @keys = {W: [0, -1], A: [-1, 0], S: [0, 1], D: [1, 0]}
     @num_enemies = 8
     @speed = 4*_twips
     @sprite_size = new Point 32*_twips, 32*_twips
@@ -67,11 +80,9 @@ class Game
     # Set up instance variables.
     @enemies = (new Enemy @surface, @sprite_size for i in [0...@num_enemies])
     @player = new Sprite @surface, @sprite_size
-    @pressed = {}
     @sprites = [@player].concat @enemies
     # Set up handlers.
-    window.onkeydown = @onkeydown.bind @
-    window.onkeyup = @onkeyup.bind @
+    @input = new Input
     window.requestAnimationFrame @loop.bind @
 
   loop: ->
@@ -85,10 +96,11 @@ class Game
 
   update: ->
     move = new Point 0, 0
-    for key of @pressed
-      [x, y] = @keys[key]
-      move.x += x
-      move.y += y
+    for key of do @input.get_keys_pressed
+      if key of @keys
+        [x, y] = @keys[key]
+        move.x += x
+        move.y += y
     if not do move.zero
       @player.move move.scale_to @speed
     for enemy in @enemies
@@ -106,18 +118,6 @@ class Game
       diff = diff.scale_to (enemy.size.x*_twips)/(do diff.length)/4
       move = Point.sum move, diff
     move
-
-  onkeydown: (e) ->
-    key = _get_key e
-    if key not of @keys
-      return
-    @pressed[key] = true
-
-  onkeyup: (e) ->
-    key = _get_key e
-    if key not of @keys
-      return
-    delete @pressed[key]
 
 
 if Meteor.isClient
