@@ -47,7 +47,7 @@ class Graphics
 
     do @_initialize_stats
 
-    assets_to_load = ['tileset.json', 'sprites.json']
+    assets_to_load = ['enemies.json', 'player.json', 'tileset.json']
     loader = new PIXI.AssetLoader assets_to_load
     loader.onComplete = @_on_assets_loaded.bind @
     do loader.load
@@ -81,7 +81,7 @@ class Graphics
   _draw_sprite: (sprite, pixi) ->
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y
-    texture_name = "#{sprite.direction}-#{sprite.frame}.png"
+    texture_name = "#{sprite.image}-#{sprite.direction}-#{sprite.frame}.png"
     pixi.setTexture PIXI.Texture.fromFrame texture_name
 
 
@@ -123,7 +123,7 @@ class Map
 
 
 class Sprite
-  constructor: (@stage, start, state) ->
+  constructor: (@stage, @image, start, state) ->
     @direction = Direction.DOWN
     @frame = 'standing'
     @position = start.scale Constants.grid
@@ -252,7 +252,7 @@ class Stage
   constructor: ->
     @_input = new Input
     @map = new Map new Point 16, 9
-    @player = new Sprite @, (do @map.get_starting_square), new WalkingState
+    @player = do @_construct_player
     @_graphics = new Graphics @, $('.surface')
 
   loop: ->
@@ -265,6 +265,9 @@ class Stage
   update: ->
     keys = do @_input.get_keys_pressed
     @player.state.update keys
+
+  _construct_player: ->
+    new Sprite @, 'player', (do @map.get_starting_square), new WalkingState
 
 
 Meteor.startup (-> stage = new Stage) if Meteor.isClient

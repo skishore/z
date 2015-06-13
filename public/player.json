@@ -1,0 +1,13 @@
+{
+  "frames": {
+    "player-up-standing.png": { "frame": {"x":275,"y":30,"w":16,"h":16} },
+    "player-up-walking.png": { "frame": {"x":289,"y":30,"w":16,"h":16} },
+    "player-right-standing.png": { "frame": {"x":304,"y":30,"w":16,"h":16} },
+    "player-right-walking.png": { "frame": {"x":319,"y":30,"w":16,"h":16} },
+    "player-left-walking.png": { "frame": {"x":334,"y":30,"w":16,"h":16} },
+    "player-left-standing.png": { "frame": {"x":349,"y":30,"w":16,"h":16} },
+    "player-down-standing.png": { "frame": {"x":365,"y":30,"w":16,"h":16} },
+    "player-down-walking.png": { "frame": {"x":379,"y":30,"w":16,"h":16} }
+  },
+  "meta": { "image": "player.png" }
+}
