@@ -1,7 +1,13 @@
 {
   "frames": {
-    "sprite0.png": { "frame": {"x":275,"y":30,"w":16,"h":16} },
-    "sprite1.png": { "frame": {"x":289,"y":30,"w":16,"h":16} }
+    "up-standing.png": { "frame": {"x":275,"y":30,"w":16,"h":16} },
+    "up-walking.png": { "frame": {"x":289,"y":30,"w":16,"h":16} },
+    "right-standing.png": { "frame": {"x":304,"y":30,"w":16,"h":16} },
+    "right-walking.png": { "frame": {"x":319,"y":30,"w":16,"h":16} },
+    "left-walking.png": { "frame": {"x":334,"y":30,"w":16,"h":16} },
+    "left-standing.png": { "frame": {"x":349,"y":30,"w":16,"h":16} },
+    "down-standing.png": { "frame": {"x":365,"y":30,"w":16,"h":16} },
+    "down-walking.png": { "frame": {"x":379,"y":30,"w":16,"h":16} }
   },
   "meta": { "image": "sprites.png" }
 }

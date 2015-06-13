@@ -3,13 +3,30 @@ class Constants
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
-  @speed = 0.12*@grid
+  @speed = 0.1*@grid
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
 
   @to_square = (position) ->
     new Point (Math.round position.x/@grid), (Math.round position.y/@grid)
+
+
+class Direction
+  @UP = 'up'
+  @RIGHT = 'right'
+  @DOWN = 'down'
+  @LEFT = 'left'
+
+  @get_move_direction: (move, last_direction) ->
+    options = []
+    options.push Direction.UP if move.y < 0
+    options.push Direction.RIGHT if move.x > 0
+    options.push Direction.DOWN if move.y > 0
+    options.push Direction.LEFT if move.x < 0
+    if options.length > 0 and (_.indexOf options, last_direction) < 0
+      return options[0]
+    last_direction
 
 
 class Graphics
@@ -19,9 +36,7 @@ class Graphics
 
     # TODO(skishore): The number of tiles and sprites should be read from JSON.
     @num_tiles = 8
-    @num_sprites = 2
     @tile_textures = []
-    @sprite_textures = []
     @tiles = []
 
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
@@ -48,8 +63,6 @@ class Graphics
   _on_assets_loaded: ->
     for i in [0...@num_tiles]
       @tile_textures.push new PIXI.Texture.fromFrame "tile#{i}.png"
-    for i in [0...@num_sprites]
-      @sprite_textures.push new PIXI.Texture.fromFrame "sprite#{i}.png"
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
         type = if (@stage.map.get_tile new Point x, y) == '.' then 0 else 4
@@ -60,14 +73,19 @@ class Graphics
         tile.y = Constants.grid_in_pixels*y
         @tiles.push tile
         @container.addChild tile
-    @player = new PIXI.Sprite @sprite_textures[0]
+    @player = new PIXI.Sprite
     @container.addChild @player
     do @stage.loop.bind @stage
 
   draw: ->
-    @player.x = Constants.to_pixels @stage.player.position.x
-    @player.y = Constants.to_pixels @stage.player.position.y
+    @_draw_sprite @stage.player, @player
     @renderer.render @context
+
+  _draw_sprite: (sprite, pixi) ->
+    pixi.x = Constants.to_pixels sprite.position.x
+    pixi.y = Constants.to_pixels sprite.position.y
+    texture_name = "#{sprite.direction}-#{sprite.frame}.png"
+    pixi.setTexture new PIXI.Texture.fromFrame texture_name
 
 
 class Input
@@ -108,12 +126,21 @@ class Map
 
 
 class Sprite
-  constructor: (@stage, start) ->
+  constructor: (@stage, start, state) ->
+    @direction = Direction.DOWN
+    @frame = 'standing'
     @position = start.scale Constants.grid
+    @set_state state
 
   move: (vector) ->
     vector = @_check_squares vector
     @position = Point.sum @position, vector
+    vector
+
+  set_state: (state) ->
+    @state = state
+    @state.sprite = @
+    @state.stage = @stage
 
   _check_squares: (move) ->
     move = new Point (Math.round move.x), (Math.round move.y)
@@ -196,29 +223,51 @@ class Sprite
     if result >= 0 then result else result + Constants.grid
 
 
-class Stage
+class WalkingState
+  @_period = 8
+
   constructor: ->
-    @input = new Input
-    @map = new Map new Point 16, 9
-    @player = new Sprite @, do @map.get_starting_square
-    @graphics = new Graphics @, $('.surface')
+    @_anim_num = 0
 
-  loop: ->
-    do @graphics.stats.begin
-    do @update
-    do @graphics.draw
-    window.requestAnimationFrame @loop.bind @
-    do @graphics.stats.end
+  update: (keys) ->
+    attempt = @_get_move keys
+    move = @sprite.move attempt
+    if not do move.zero
+      period = Math.floor WalkingState._period*Constants.speed/(do move.length)
+      period = Math.max period, 1
+      if @_anim_num % (2*period) >= period
+        animate = true
+      @_anim_num = (@_anim_num + 1) % (2*period)
+    @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
+    @sprite.frame = if animate then 'walking' else 'standing'
 
-  update: ->
+  _get_move: (keys) ->
     move = new Point 0, 0
-    for key of do @input.get_keys_pressed
+    for key of keys
       if key of Constants.moves
         [x, y] = Constants.moves[key]
         move.x += x
         move.y += y
-    if not do move.zero
-      @player.move move.scale_to Constants.speed
+    if (do move.zero) then move else move.scale_to Constants.speed
+
+
+class Stage
+  constructor: ->
+    @_input = new Input
+    @map = new Map new Point 16, 9
+    @player = new Sprite @, (do @map.get_starting_square), new WalkingState
+    @_graphics = new Graphics @, $('.surface')
+
+  loop: ->
+    do @_graphics.stats.begin
+    do @update
+    do @_graphics.draw
+    window.requestAnimationFrame @loop.bind @
+    do @_graphics.stats.end
+
+  update: ->
+    keys = do @_input.get_keys_pressed
+    @player.state.update keys
 
 
 Meteor.startup (-> stage = new Stage) if Meteor.isClient
