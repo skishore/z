@@ -46,16 +46,20 @@ class Graphics
     @element.append @renderer.view
 
     @context = new PIXI.Stage 0x00000000
-    @container = new PIXI.DisplayObjectContainer
-    @container.scale = new PIXI.Point @scale, @scale
-    @context.addChild @container
-
+    @map_container = do @_add_container
+    @sprite_container = do @_add_container
     do @_initialize_stats
 
     assets_to_load = ['enemies.json', 'player.json', 'tileset.json']
     loader = new PIXI.AssetLoader assets_to_load
     loader.onComplete = @_on_assets_loaded.bind @
     do loader.load
+
+  _add_container: ->
+    container = new PIXI.DisplayObjectContainer
+    container.scale = new PIXI.Point @scale, @scale
+    @context.addChild container
+    container
 
   _initialize_stats: ->
     @stats = new PIXI.Stats
@@ -74,7 +78,7 @@ class Graphics
         tile.x = Constants.grid_in_pixels*x
         tile.y = Constants.grid_in_pixels*y
         @tiles.push tile
-        @container.addChild tile
+        @map_container.addChild tile
     do @stage.loop.bind @stage
 
   draw: ->
@@ -85,12 +89,13 @@ class Graphics
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
       delete @sprites[id]
+    @sprite_container.children.sort (a, b) -> Math.sign a.y - b.y
     @renderer.render @context
 
   _draw_sprite: (sprite) ->
     if not sprite._pixi_id?
       pixi = new PIXI.Sprite
-      @container.addChild pixi
+      @sprite_container.addChild pixi
       sprite._pixi_id = @sprite_index
       @sprites[@sprite_index] = pixi
       @sprite_index += 1
