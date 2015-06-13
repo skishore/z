@@ -33,6 +33,8 @@ class Graphics
 
     # TODO(skishore): The number of tiles should be read from JSON.
     @num_tiles = 8
+    @sprites = {}
+    @sprite_index = 0
     @tile_textures = []
     @tiles = []
 
@@ -70,17 +72,26 @@ class Graphics
         tile.y = Constants.grid_in_pixels*y
         @tiles.push tile
         @container.addChild tile
-    @sprites = (new PIXI.Sprite for sprite in @stage.sprites)
-    for sprite in @sprites
-      @container.addChild sprite
     do @stage.loop.bind @stage
 
   draw: ->
-    for i in [0...@stage.sprites.length]
-      @_draw_sprite @stage.sprites[i], @sprites[i]
+    drawn = {}
+    for sprite in @stage.sprites
+      @_draw_sprite sprite
+      drawn[sprite._pixi_id] = true
+    ids_to_remove = (id for id of @sprites when not drawn[id])
+    for id in ids_to_remove
+      delete @sprites[id]
     @renderer.render @context
 
-  _draw_sprite: (sprite, pixi) ->
+  _draw_sprite: (sprite) ->
+    if not sprite._pixi_id?
+      pixi = new PIXI.Sprite
+      @container.addChild pixi
+      sprite._pixi_id = @sprite_index
+      @sprites[@sprite_index] = pixi
+      @sprite_index += 1
+    pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y
     texture_name = "#{sprite.image}-#{sprite.direction}-#{sprite.frame}.png"
