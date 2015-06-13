@@ -8,9 +8,6 @@ class Constants
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
 
-  @to_square = (position) ->
-    new Point (Math.round position.x/@grid), (Math.round position.y/@grid)
-
 
 class Direction
   @UP = 'up'
@@ -62,7 +59,7 @@ class Graphics
 
   _on_assets_loaded: ->
     for i in [0...@num_tiles]
-      @tile_textures.push new PIXI.Texture.fromFrame "tile#{i}.png"
+      @tile_textures.push PIXI.Texture.fromFrame "tile#{i}.png"
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
         type = if (@stage.map.get_tile new Point x, y) == '.' then 0 else 4
@@ -85,7 +82,7 @@ class Graphics
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y
     texture_name = "#{sprite.direction}-#{sprite.frame}.png"
-    pixi.setTexture new PIXI.Texture.fromFrame texture_name
+    pixi.setTexture PIXI.Texture.fromFrame texture_name
 
 
 class Input
