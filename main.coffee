@@ -5,8 +5,8 @@ class Constants
   @grid = @grid_in_pixels*@twips_per_pixel
   # Constants related to specific sprite states.
   @player_speed = 0.1*@grid
-  @enemy_speed = 0.06*@grid
-  @walking_animation_frames = 8
+  @enemy_speed = 0.05*@grid
+  @walking_animation_frames = 6
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -281,6 +281,20 @@ _move_sprite = (attempt) ->
   @sprite.frame = if animate then 'walking' else 'standing'
 
 
+class PausedState
+  constructor: ->
+    speed = Constants.enemy_speed
+    base_steps = Math.floor Constants.grid/speed
+    @_steps = _.random -base_steps, base_steps
+
+  update: (keys) ->
+    @_steps -= 1
+    if @_steps < 0
+      @sprite.set_state new RandomWalkState
+      return @sprite.state.update keys
+    @sprite.frame = 'standing'
+
+
 class RandomWalkState
   constructor: ->
     @_anim_num = 0
@@ -288,15 +302,15 @@ class RandomWalkState
 
   on_register: ->
     speed = Constants.enemy_speed
-    max_steps = Math.floor 4*Constants.grid/speed
+    base_steps = Math.floor Constants.grid/speed
     [x, y] = do @sprite.get_free_direction
     @_move = (new Point x, y).scale_to speed
-    @_steps = _.random 1, max_steps
+    @_steps = _.random 1, 4*base_steps
 
   update: (keys) ->
     @_steps -= 1
     if @_steps < 0
-      @sprite.set_state new RandomWalkState
+      @sprite.set_state new PausedState
       return @sprite.state.update keys
     _move_sprite.call @, @_move
 
@@ -324,7 +338,7 @@ class Stage
     @_input = new Input
     @map = new Map new Point 16, 9
     @player = do @_construct_player
-    @sprites = [@player].concat (do @_construct_enemy for i in [0...8])
+    @sprites = [@player].concat (do @_construct_enemy for i in [0...4])
     @_graphics = new Graphics @, $('.surface')
 
   loop: ->
@@ -340,7 +354,7 @@ class Stage
       sprite.state.update keys
 
   _construct_enemy: ->
-    new Sprite @, 'enemy', (do @map.get_random_free_square), new RandomWalkState
+    new Sprite @, 'enemy', (do @map.get_random_free_square), new PausedState
 
   _construct_player: ->
     new Sprite @, 'player', (do @map.get_starting_square), new WalkingState
