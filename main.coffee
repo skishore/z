@@ -3,7 +3,10 @@ class Constants
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
-  @speed = 0.1*@grid
+  # Constants related to specific sprite states.
+  @player_speed = 0.1*@grid
+  @enemy_speed = 0.06*@grid
+  @walking_animation_frames = 8
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -158,6 +161,7 @@ class Sprite
     @state = state
     @state.sprite = @
     @state.stage = @stage
+    @state.on_register?()
 
   _check_squares: (move) ->
     move = new Point (Math.round move.x), (Math.round move.y)
@@ -240,23 +244,45 @@ class Sprite
     if result >= 0 then result else result + Constants.grid
 
 
-class WalkingState
-  @_period = 8
+_move_sprite = (attempt) ->
+  move = @sprite.move attempt
+  if not do move.zero
+    period = Math.floor @_period*Constants.player_speed/(do move.length)
+    period = Math.max period, 1
+    if @_anim_num % (2*period) >= period
+      animate = true
+    @_anim_num = (@_anim_num + 1) % (2*period)
+  @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
+  @sprite.frame = if animate then 'walking' else 'standing'
 
+
+class RandomWalkState
   constructor: ->
     @_anim_num = 0
+    @_period = Constants.walking_animation_frames
+
+  on_register: ->
+    speed = Constants.enemy_speed
+    max_steps = Math.floor 4*Constants.grid/speed
+    [x, y] = Constants.moves[_.sample _.keys Constants.moves]
+    @_move = (new Point x, y).scale_to speed
+    @_steps = _.random 1, max_steps
 
   update: (keys) ->
-    attempt = @_get_move keys
-    move = @sprite.move attempt
-    if not do move.zero
-      period = Math.floor WalkingState._period*Constants.speed/(do move.length)
-      period = Math.max period, 1
-      if @_anim_num % (2*period) >= period
-        animate = true
-      @_anim_num = (@_anim_num + 1) % (2*period)
-    @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
-    @sprite.frame = if animate then 'walking' else 'standing'
+    @_steps -= 1
+    if @_steps < 0
+      @sprite.set_state new RandomWalkState
+      return @sprite.state.update keys
+    _move_sprite.call @, @_move
+
+
+class WalkingState
+  constructor: ->
+    @_anim_num = 0
+    @_period = Constants.walking_animation_frames
+
+  update: (keys) ->
+    _move_sprite.call @, @_get_move keys
 
   _get_move: (keys) ->
     move = new Point 0, 0
@@ -265,7 +291,7 @@ class WalkingState
         [x, y] = Constants.moves[key]
         move.x += x
         move.y += y
-    if (do move.zero) then move else move.scale_to Constants.speed
+    if (do move.zero) then move else move.scale_to Constants.player_speed
 
 
 class Stage
@@ -289,7 +315,7 @@ class Stage
       sprite.state.update keys
 
   _construct_enemy: ->
-    new Sprite @, 'enemy', (do @map.get_random_free_square), new WalkingState
+    new Sprite @, 'enemy', (do @map.get_random_free_square), new RandomWalkState
 
   _construct_player: ->
     new Sprite @, 'player', (do @map.get_starting_square), new WalkingState
