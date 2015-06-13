@@ -31,7 +31,7 @@ class Graphics
     @scale = 2
     @size = @stage.map.size.scale @scale*Constants.grid_in_pixels
 
-    # TODO(skishore): The number of tiles and sprites should be read from JSON.
+    # TODO(skishore): The number of tiles should be read from JSON.
     @num_tiles = 8
     @tile_textures = []
     @tiles = []
@@ -70,12 +70,14 @@ class Graphics
         tile.y = Constants.grid_in_pixels*y
         @tiles.push tile
         @container.addChild tile
-    @player = new PIXI.Sprite
-    @container.addChild @player
+    @sprites = (new PIXI.Sprite for sprite in @stage.sprites)
+    for sprite in @sprites
+      @container.addChild sprite
     do @stage.loop.bind @stage
 
   draw: ->
-    @_draw_sprite @stage.player, @player
+    for i in [0...@stage.sprites.length]
+      @_draw_sprite @stage.sprites[i], @sprites[i]
     @renderer.render @context
 
   _draw_sprite: (sprite, pixi) ->
@@ -109,6 +111,13 @@ class Map
     assert @size.x > 0 and @size.y > 0
     @_tiles = (do @_get_random_tile for i in [0...@size.x*@size.y])
     @_tiles[0] = '.'
+
+  get_random_free_square: ->
+    result = new Point -1, -1
+    while (@get_tile result) == '#'
+      result.x = _.random (@size.x - 1)
+      result.y = _.random (@size.y - 1)
+    result
 
   get_starting_square: ->
     new Point 0, 0
@@ -253,6 +262,7 @@ class Stage
     @_input = new Input
     @map = new Map new Point 16, 9
     @player = do @_construct_player
+    @sprites = [@player].concat (do @_construct_enemy for i in [0...8])
     @_graphics = new Graphics @, $('.surface')
 
   loop: ->
@@ -264,7 +274,11 @@ class Stage
 
   update: ->
     keys = do @_input.get_keys_pressed
-    @player.state.update keys
+    for sprite in @sprites
+      sprite.state.update keys
+
+  _construct_enemy: ->
+    new Sprite @, 'enemy', (do @map.get_random_free_square), new WalkingState
 
   _construct_player: ->
     new Sprite @, 'player', (do @map.get_starting_square), new WalkingState
