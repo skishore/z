@@ -155,11 +155,24 @@ class Sprite
     @direction = Direction.DOWN
     @frame = 'standing'
     @position = start.scale Constants.grid
+    @square = start
     @set_state state
+
+  get_free_direction: ->
+    options = []
+    for key, move of Constants.moves
+      square = new Point @square.x + move[0], @square.y + move[1]
+      if @_check_square square
+        options.push key
+    if options.length == 0
+      options = _.keys Constants.moves
+    Constants.moves[_.sample options]
 
   move: (vector) ->
     vector = @_check_squares vector
-    @position = Point.sum @position, vector
+    if not do vector.zero
+      @position = Point.sum @position, vector
+      [@square, _] = do @_get_square_and_overlap
     vector
 
   set_state: (state) ->
@@ -176,15 +189,7 @@ class Sprite
     half_grid = Math.ceil 0.5*Constants.grid
     tolerance = Math.ceil 0.2*Constants.grid
 
-    overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
-    overlap.x -= if overlap.x < half_grid then 0 else Constants.grid
-    overlap.y -= if overlap.y < half_grid then 0 else Constants.grid
-
-    square = Point.difference @position, overlap
-    assert (square.x % Constants.grid == 0) and (square.y % Constants.grid == 0)
-    square.x /= Constants.grid
-    square.y /= Constants.grid
-
+    [square, overlap] = do @_get_square_and_overlap
     offset = new Point 0, 0
     collided = false
     speed = Math.floor do move.length
@@ -244,6 +249,21 @@ class Sprite
   _check_square: (square) ->
     (@stage.map.get_tile square) == '.'
 
+  _get_square_and_overlap: ->
+    # We first compute an overlap, which is a point (x, y) where each coordinate
+    # lies in the interval [-half_grid, half_grid). The overlap is the
+    # "remainder" of our position with respect to the grid.
+    half_grid = Math.ceil 0.5*Constants.grid
+    overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
+    overlap.x -= if overlap.x < half_grid then 0 else Constants.grid
+    overlap.y -= if overlap.y < half_grid then 0 else Constants.grid
+    # By subtracting the overlap from our position we round it to a grid square.
+    square = Point.difference @position, overlap
+    assert (square.x % Constants.grid == 0) and (square.y % Constants.grid == 0)
+    square.x /= Constants.grid
+    square.y /= Constants.grid
+    [square, overlap]
+
   _gmod: (value) ->
     result = value % Constants.grid
     if result >= 0 then result else result + Constants.grid
@@ -269,7 +289,7 @@ class RandomWalkState
   on_register: ->
     speed = Constants.enemy_speed
     max_steps = Math.floor 4*Constants.grid/speed
-    [x, y] = Constants.moves[_.sample _.keys Constants.moves]
+    [x, y] = do @sprite.get_free_direction
     @_move = (new Point x, y).scale_to speed
     @_steps = _.random 1, max_steps
 
