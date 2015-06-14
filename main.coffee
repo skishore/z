@@ -334,9 +334,9 @@ _move_sprite = (attempt) ->
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
   @sprite.frame = if animate then 'walking' else 'standing'
 
-_switch_state = (sprite, keys, new_state) ->
+_switch_state = (sprite, new_state) ->
   sprite.set_state new_state
-  sprite.state.update keys
+  do sprite.state.update
 
 
 class JumpingState
@@ -347,10 +347,11 @@ class JumpingState
   on_exit: ->
     delete @sprite._pixi_y_offset
 
-  update: (keys) ->
+  update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, keys, new WalkingState
+      return _switch_state @sprite, new WalkingState
+    keys = do @sprite.stage.input.get_keys_pressed
     _move_sprite.call @, _get_move keys, Constants.jump_speed
     @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
     @sprite._pixi_y_offset = do @_get_y_offset
@@ -369,10 +370,10 @@ class KnockbackState
     @_direction = @sprite.direction
     @sprite.invulnerability_frames = Constants.invulnerability_frames
 
-  update: (keys) ->
+  update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, keys, new WalkingState
+      return _switch_state @sprite, new WalkingState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
     @sprite.direction = @_direction
@@ -384,10 +385,10 @@ class PausedState
     base_steps = Math.floor Constants.grid/speed
     @_steps = _.random -base_steps, base_steps
 
-  update: (keys) ->
+  update: ->
     @_steps -= 1
     if @_steps < 0
-      return _switch_state @sprite, keys, new RandomWalkState
+      return _switch_state @sprite, new RandomWalkState
     @sprite.frame = 'standing'
 
 
@@ -403,10 +404,10 @@ class RandomWalkState
     @_move = (new Point x, y).scale_to speed
     @_steps = _.random 1, 4*base_steps
 
-  update: (keys) ->
+  update: ->
     @_steps -= 1
     if @_steps < 0
-      return _switch_state @sprite, keys, new PausedState
+      return _switch_state @sprite, new PausedState
     _move_sprite.call @, @_move
 
 
@@ -415,19 +416,20 @@ class WalkingState
     @_anim_num = 0
     @_period = Constants.walking_animation_frames
 
-  update: (keys) ->
+  update: ->
     if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
-      return _switch_state @sprite, keys, new KnockbackState
+      return _switch_state @sprite, new KnockbackState
+    keys = do @sprite.stage.input.get_keys_pressed
     if keys.J?
-      @sprite.stage._input.block_key 'J'
-      return _switch_state @sprite, keys, new JumpingState
+      @sprite.stage.input.block_key 'J'
+      return _switch_state @sprite, new JumpingState
     _move_sprite.call @, _get_move keys, Constants.player_speed
 
 
 
 class Stage
   constructor: ->
-    @_input = new Input
+    @input = new Input
     @map = new Map new Point 16, 9
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...4])
@@ -441,9 +443,7 @@ class Stage
     do @_graphics.stats.end
 
   update: ->
-    keys = do @_input.get_keys_pressed
-    for sprite in @sprites
-      sprite.update keys
+    do sprite.update for sprite in @sprites
 
   _construct_enemy: ->
     new Sprite @, 'enemy', (do @map.get_random_free_square), new PausedState
