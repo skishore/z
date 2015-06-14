@@ -10,6 +10,7 @@ class Constants
   @jump_height = 0.8*@grid
   @jump_length = 2.4*@grid
   @jump_speed = @player_speed
+  @knockback_animation_frames = 4
   @knockback_length = 1.2*@grid
   @knockback_speed = 2*@player_speed
 
@@ -112,6 +113,8 @@ class Graphics
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
     pixi.setTexture PIXI.Texture.fromFrame texture_name
+    pixi.filters = if sprite._pixi_inverted \
+                   then [new PIXI.InvertFilter] else null
 
 
 class Input
@@ -342,6 +345,9 @@ class KnockbackState
   on_enter: ->
     @_direction = @sprite.direction
 
+  on_exit: ->
+    delete @sprite._pixi_inverted
+
   update: (keys) ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
@@ -349,6 +355,8 @@ class KnockbackState
       return @sprite.state.update keys
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
+    period = Constants.knockback_animation_frames
+    @sprite._pixi_inverted = @_cur_frame % (2*period) <= period
     @sprite.direction = @_direction
 
 
