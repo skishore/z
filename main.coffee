@@ -105,7 +105,7 @@ class Graphics
     pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y
-    texture_name = "#{sprite.image}-#{sprite.direction}-#{sprite.frame}.png"
+    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
     pixi.setTexture PIXI.Texture.fromFrame texture_name
 
 

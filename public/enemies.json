@@ -1,13 +1,13 @@
 {
   "frames": {
-    "enemy-up-standing.png": { "frame": {"x":249,"y":15,"w":16,"h":16} },
-    "enemy-up-walking.png": { "frame": {"x":266,"y":15,"w":16,"h":16} },
-    "enemy-down-walking.png": { "frame": {"x":249,"y":33,"w":16,"h":16} },
-    "enemy-down-standing.png": { "frame": {"x":266,"y":33,"w":16,"h":16} },
-    "enemy-right-walking.png": { "frame": {"x":249,"y":49,"w":16,"h":16} },
-    "enemy-right-standing.png": { "frame": {"x":267,"y":50,"w":16,"h":16} },
-    "enemy-left-standing.png": { "frame": {"x":249,"y":67,"w":16,"h":16} },
-    "enemy-left-walking.png": { "frame": {"x":267,"y":66,"w":16,"h":16} }
+    "enemy-standing-up.png": { "frame": {"x":249,"y":15,"w":16,"h":16} },
+    "enemy-standing-right.png": { "frame": {"x":267,"y":50,"w":16,"h":16} },
+    "enemy-standing-down.png": { "frame": {"x":266,"y":33,"w":16,"h":16} },
+    "enemy-standing-left.png": { "frame": {"x":249,"y":67,"w":16,"h":16} },
+    "enemy-walking-up.png": { "frame": {"x":266,"y":15,"w":16,"h":16} },
+    "enemy-walking-right.png": { "frame": {"x":249,"y":49,"w":16,"h":16} },
+    "enemy-walking-down.png": { "frame": {"x":249,"y":33,"w":16,"h":16} },
+    "enemy-walking-left.png": { "frame": {"x":267,"y":66,"w":16,"h":16} }
   },
   "meta": { "image": "enemies.png" }
 }
