@@ -129,10 +129,14 @@ class Input
   constructor: ->
     window.onkeydown = @_onkeydown.bind @
     window.onkeyup = @_onkeyup.bind @
+    @_blocked = {}
     @_pressed = {}
 
+  block_key: (key) ->
+    @_blocked[key] = true
+
   get_keys_pressed: ->
-    _.clone @_pressed
+    _.omit @_pressed, _.keys @_blocked
 
   _get_key: (e) ->
     String.fromCharCode e.which
@@ -141,7 +145,9 @@ class Input
     @_pressed[@_get_key e] = true
 
   _onkeyup: (e) ->
-    delete @_pressed[@_get_key e]
+    key = @_get_key e
+    delete @_blocked[key]
+    delete @_pressed[key]
 
 
 class Map
@@ -413,6 +419,7 @@ class WalkingState
     if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
       return _switch_state @sprite, keys, new KnockbackState
     if keys.J?
+      @sprite.stage._input.block_key 'J'
       return _switch_state @sprite, keys, new JumpingState
     _move_sprite.call @, _get_move keys, Constants.player_speed
 
