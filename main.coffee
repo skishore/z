@@ -3,16 +3,20 @@ class Constants
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
-  # Constants related to specific sprite states.
+  # Constants for walking states.
   @player_speed = 0.1*@grid
   @enemy_speed = 0.05*@grid
   @walking_animation_frames = 6
-  @jump_height = 0.8*@grid
-  @jump_length = 2.4*@grid
-  @jump_speed = @player_speed
-  @knockback_animation_frames = 4
-  @knockback_length = 1.2*@grid
-  @knockback_speed = 2*@player_speed
+  # Constants for the jumping state.
+  @jump_height = 1.0*@grid
+  @jump_length = 3.0*@grid
+  @jump_speed = 1.2*@player_speed
+  # Constants for the knockback state.
+  @knockback_length = 1.5*@grid
+  @knockback_speed = 3*@player_speed
+  @knockback_frames = Math.floor @knockback_length/@knockback_speed
+  @invulnerability_animation_frames = 6
+  @invulnerability_frames = @knockback_frames + 15
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -113,8 +117,12 @@ class Graphics
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
     pixi.setTexture PIXI.Texture.fromFrame texture_name
-    pixi.filters = if sprite._pixi_inverted \
-                   then [new PIXI.InvertFilter] else null
+    if sprite.invulnerability_frames == 0
+      pixi.filters = null
+    else
+      period = Constants.invulnerability_animation_frames
+      pixi.filters = if sprite.invulnerability_frames % (2*period) <= period \
+                     then [new PIXI.InvertFilter] else null
 
 
 class Input
@@ -165,6 +173,7 @@ class Sprite
   constructor: (@stage, @image, start, state) ->
     @direction = Direction.DOWN
     @frame = 'standing'
+    @invulnerability_frames = 0
     @position = start.scale Constants.grid
     @square = start
     @set_state state
@@ -205,6 +214,11 @@ class Sprite
     @state.sprite = @
     @state.stage = @stage
     @state.on_enter?()
+
+  update: (keys) ->
+    if @invulnerability_frames > 0
+      @invulnerability_frames -= 1
+    @state.update keys
 
   _check_squares: (move) ->
     move = new Point (Math.round move.x), (Math.round move.y)
@@ -347,9 +361,7 @@ class KnockbackState
 
   on_enter: ->
     @_direction = @sprite.direction
-
-  on_exit: ->
-    delete @sprite._pixi_inverted
+    @sprite.invulnerability_frames = Constants.invulnerability_frames
 
   update: (keys) ->
     @_cur_frame += 1
@@ -357,8 +369,6 @@ class KnockbackState
       return _switch_state @sprite, keys, new WalkingState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
-    period = Constants.knockback_animation_frames
-    @sprite._pixi_inverted = @_cur_frame % (2*period) <= period
     @sprite.direction = @_direction
 
 
@@ -400,7 +410,7 @@ class WalkingState
     @_period = Constants.walking_animation_frames
 
   update: (keys) ->
-    if do @sprite.collides_with_any
+    if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
       return _switch_state @sprite, keys, new KnockbackState
     if keys.J?
       return _switch_state @sprite, keys, new JumpingState
@@ -426,7 +436,7 @@ class Stage
   update: ->
     keys = do @_input.get_keys_pressed
     for sprite in @sprites
-      sprite.state.update keys
+      sprite.update keys
 
   _construct_enemy: ->
     new Sprite @, 'enemy', (do @map.get_random_free_square), new PausedState
