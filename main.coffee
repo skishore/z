@@ -234,10 +234,15 @@ class Sprite
     half_grid = Math.ceil 0.5*Constants.grid
     tolerance = Math.ceil 0.2*Constants.grid
 
+    # Sprites may not move faster than our collision detection can handle.
+    # If this restriction becomes a problem, we can get around it by breaking
+    # the move up into several steps.
+    speed = Math.floor do move.length
+    assert speed < half_grid
+
     [square, overlap] = do @_get_square_and_overlap
     offset = new Point 0, 0
     collided = false
-    speed = Math.floor do move.length
 
     # Check if we cross a horizontal grid boundary going up or down.
     if move.y < 0 and (@_gmod @position.y + tolerance) < -move.y
