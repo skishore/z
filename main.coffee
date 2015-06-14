@@ -10,6 +10,8 @@ class Constants
   @jump_height = 0.8*@grid
   @jump_length = 2.4*@grid
   @jump_speed = @player_speed
+  @knockback_length = 1.2*@grid
+  @knockback_speed = 2*@player_speed
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -20,6 +22,8 @@ class Direction
   @RIGHT = 'right'
   @DOWN = 'down'
   @LEFT = 'left'
+
+  @UNIT_VECTOR = {up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0]}
 
   @get_move_direction: (move, last_direction) ->
     options = []
@@ -162,6 +166,19 @@ class Sprite
     @square = start
     @set_state state
 
+  collides: (sprite) ->
+    grid = Constants.grid
+    (not (@position.x + grid <= sprite.position.x or
+          sprite.position.x + grid <= @position.x)) and
+    (not (@position.y + grid <= sprite.position.y or
+          sprite.position.y + grid <= @position.y))
+
+  collides_with_any: ->
+    for sprite in @stage.sprites
+      if sprite != @ and @collides sprite
+        return true
+    false
+
   get_free_direction: ->
     options = []
     for key, move of Constants.moves
@@ -285,7 +302,7 @@ _get_move = (keys, speed) ->
 
 _move_sprite = (attempt) ->
   move = @sprite.move attempt
-  if not do move.zero
+  if not do move.zero and @_period?
     period = Math.floor @_period*Constants.player_speed/(do move.length)
     period = Math.max period, 1
     if @_anim_num % (2*period) >= period
@@ -297,8 +314,6 @@ _move_sprite = (attempt) ->
 
 class JumpingState
   constructor: ->
-    @_anim_num = 0
-    @_period = Constants.walking_animation_frames
     @_cur_frame = 0
     @_max_frame = Math.ceil Constants.jump_length/Constants.jump_speed
 
@@ -317,6 +332,24 @@ class JumpingState
   _get_y_offset: ->
     arc_position = (Math.pow 2*@_cur_frame/@_max_frame - 1, 2) - 1
     Math.floor Constants.jump_height*arc_position
+
+
+class KnockbackState
+  constructor: ->
+    @_cur_frame = 0
+    @_max_frame = Math.ceil Constants.knockback_length/Constants.knockback_speed
+
+  on_enter: ->
+    @_direction = @sprite.direction
+
+  update: (keys) ->
+    @_cur_frame += 1
+    if @_cur_frame >= @_max_frame
+      @sprite.set_state new WalkingState
+      return @sprite.state.update keys
+    [x, y] = Direction.UNIT_VECTOR[@_direction]
+    _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
+    @sprite.direction = @_direction
 
 
 class PausedState
@@ -359,10 +392,14 @@ class WalkingState
     @_period = Constants.walking_animation_frames
 
   update: (keys) ->
+    if do @sprite.collides_with_any
+      @sprite.set_state new KnockbackState
+      return @sprite.state.update keys
     if keys.J?
       @sprite.set_state new JumpingState
       return @sprite.state.update keys
     _move_sprite.call @, _get_move keys, Constants.player_speed
+
 
 
 class Stage
