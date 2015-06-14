@@ -102,10 +102,11 @@ class Graphics
       sprite._pixi_id = @sprite_index
       @sprites[@sprite_index] = pixi
       @sprite_index += 1
+    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
+    y_offset = if sprite._pixi_y_offset? then sprite._pixi_y_offset else 0
     pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
-    pixi.y = Constants.to_pixels sprite.position.y
-    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
+    pixi.y = Constants.to_pixels sprite.position.y + y_offset
     pixi.setTexture PIXI.Texture.fromFrame texture_name
 
 
@@ -179,10 +180,11 @@ class Sprite
     vector
 
   set_state: (state) ->
+    @state?.on_exit?()
     @state = state
     @state.sprite = @
     @state.stage = @stage
-    @state.on_register?()
+    @state.on_enter?()
 
   _check_squares: (move) ->
     move = new Point (Math.round move.x), (Math.round move.y)
@@ -300,18 +302,20 @@ class JumpingState
     @_cur_frame = 0
     @_max_frame = Math.ceil Constants.jump_length/Constants.jump_speed
 
+  on_exit: ->
+    delete @sprite._pixi_y_offset
+
   update: (keys) ->
-    @sprite.position.y += do @_get_y_offset
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
       @sprite.set_state new WalkingState
       return @sprite.state.update keys
     _move_sprite.call @, _get_move keys, Constants.jump_speed
     @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
-    @sprite.position.y -= do @_get_y_offset
+    @sprite._pixi_y_offset = do @_get_y_offset
 
   _get_y_offset: ->
-    arc_position = 1 - (Math.pow 2*@_cur_frame/@_max_frame - 1, 2)
+    arc_position = (Math.pow 2*@_cur_frame/@_max_frame - 1, 2) - 1
     Math.floor Constants.jump_height*arc_position
 
 
@@ -334,7 +338,7 @@ class RandomWalkState
     @_anim_num = 0
     @_period = Constants.walking_animation_frames
 
-  on_register: ->
+  on_enter: ->
     speed = Constants.enemy_speed
     base_steps = Math.floor Constants.grid/speed
     [x, y] = do @sprite.get_free_direction
