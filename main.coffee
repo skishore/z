@@ -7,6 +7,9 @@ class Constants
   @player_speed = 0.1*@grid
   @enemy_speed = 0.05*@grid
   @walking_animation_frames = 6
+  @jump_height = 0.8*@grid
+  @jump_length = 2.4*@grid
+  @jump_speed = @player_speed
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -269,6 +272,15 @@ class Sprite
     if result >= 0 then result else result + Constants.grid
 
 
+_get_move = (keys, speed) ->
+  move = new Point 0, 0
+  for key of keys
+    if key of Constants.moves
+      [x, y] = Constants.moves[key]
+      move.x += x
+      move.y += y
+  if (do move.zero) then move else move.scale_to speed
+
 _move_sprite = (attempt) ->
   move = @sprite.move attempt
   if not do move.zero
@@ -279,6 +291,27 @@ _move_sprite = (attempt) ->
     @_anim_num = (@_anim_num + 1) % (2*period)
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
   @sprite.frame = if animate then 'walking' else 'standing'
+
+
+class JumpingState
+  constructor: ->
+    @_anim_num = 0
+    @_period = Constants.walking_animation_frames
+    @_cur_frame = 0
+    @_max_frame = Math.ceil Constants.jump_length/Constants.jump_speed
+
+  update: (keys) ->
+    @sprite.position.y += do @_get_y_offset
+    @_cur_frame += 1
+    if @_cur_frame >= @_max_frame
+      @sprite.set_state new WalkingState
+      return @sprite.state.update keys
+    _move_sprite.call @, _get_move keys, Constants.jump_speed
+    @sprite.position.y -= do @_get_y_offset
+
+  _get_y_offset: ->
+    arc_position = 1 - (Math.pow 2*@_cur_frame/@_max_frame - 1, 2)
+    Math.floor Constants.jump_height*arc_position
 
 
 class PausedState
@@ -321,16 +354,10 @@ class WalkingState
     @_period = Constants.walking_animation_frames
 
   update: (keys) ->
-    _move_sprite.call @, @_get_move keys
-
-  _get_move: (keys) ->
-    move = new Point 0, 0
-    for key of keys
-      if key of Constants.moves
-        [x, y] = Constants.moves[key]
-        move.x += x
-        move.y += y
-    if (do move.zero) then move else move.scale_to Constants.player_speed
+    if keys.J?
+      @sprite.set_state new JumpingState
+      return @sprite.state.update keys
+    _move_sprite.call @, _get_move keys, Constants.player_speed
 
 
 class Stage
