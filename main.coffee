@@ -314,6 +314,10 @@ _move_sprite = (attempt) ->
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
   @sprite.frame = if animate then 'walking' else 'standing'
 
+_switch_state = (sprite, keys, new_state) ->
+  sprite.set_state new_state
+  sprite.state.update keys
+
 
 class JumpingState
   constructor: ->
@@ -326,8 +330,7 @@ class JumpingState
   update: (keys) ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      @sprite.set_state new WalkingState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new WalkingState
     _move_sprite.call @, _get_move keys, Constants.jump_speed
     @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
     @sprite._pixi_y_offset = do @_get_y_offset
@@ -351,8 +354,7 @@ class KnockbackState
   update: (keys) ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      @sprite.set_state new WalkingState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new WalkingState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
     period = Constants.knockback_animation_frames
@@ -369,8 +371,7 @@ class PausedState
   update: (keys) ->
     @_steps -= 1
     if @_steps < 0
-      @sprite.set_state new RandomWalkState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new RandomWalkState
     @sprite.frame = 'standing'
 
 
@@ -389,8 +390,7 @@ class RandomWalkState
   update: (keys) ->
     @_steps -= 1
     if @_steps < 0
-      @sprite.set_state new PausedState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new PausedState
     _move_sprite.call @, @_move
 
 
@@ -401,11 +401,9 @@ class WalkingState
 
   update: (keys) ->
     if do @sprite.collides_with_any
-      @sprite.set_state new KnockbackState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new KnockbackState
     if keys.J?
-      @sprite.set_state new JumpingState
-      return @sprite.state.update keys
+      return _switch_state @sprite, keys, new JumpingState
     _move_sprite.call @, _get_move keys, Constants.player_speed
 
 
