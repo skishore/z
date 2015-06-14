@@ -307,6 +307,7 @@ class JumpingState
       @sprite.set_state new WalkingState
       return @sprite.state.update keys
     _move_sprite.call @, _get_move keys, Constants.jump_speed
+    @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
     @sprite.position.y -= do @_get_y_offset
 
   _get_y_offset: ->
