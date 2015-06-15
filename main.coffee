@@ -209,12 +209,13 @@ class Sprite
     @square = start
     do @set_state
 
-  collides: (sprite) ->
+  collides: (sprite, tolerance) ->
     grid = Constants.grid
-    (not (@position.x + grid <= sprite.position.x or
-          sprite.position.x + grid <= @position.x)) and
-    (not (@position.y + grid <= sprite.position.y or
-          sprite.position.y + grid <= @position.y))
+    tolerance = tolerance or new Point 0, 0
+    (not (@position.x + grid - tolerance.x <= sprite.position.x or
+          sprite.position.x + grid - tolerance.x <= @position.x)) and
+    (not (@position.y + grid - tolerance.y <= sprite.position.y or
+          sprite.position.y + grid - tolerance.y <= @position.y))
 
   get_free_direction: ->
     options = []
@@ -255,8 +256,10 @@ class Sprite
     not (@state instanceof JumpingState)
 
   _collides_with_any: ->
+    tolerance = (new Point 4, 4).scale Constants.twips_per_pixel
     for sprite in @stage.sprites
-      if sprite != @ and (do sprite._can_collide) and @collides sprite
+      if sprite != @ and (do sprite._can_collide) and \
+         @collides sprite, tolerance
         return true
     false
 
