@@ -101,7 +101,7 @@ class Graphics
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
       delete @sprites[id]
-    @sprite_container.children.sort (a, b) -> Math.sign a.y - b.y
+    @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @renderer.render @context
 
   _draw_sprite: (sprite) ->
@@ -116,6 +116,7 @@ class Graphics
     pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
+    pixi.z = -sprite.position.y + Constants.grid*y_offset
     pixi.setTexture PIXI.Texture.fromFrame texture_name
     if sprite.invulnerability_frames == 0
       pixi.filters = null
