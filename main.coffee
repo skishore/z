@@ -28,6 +28,7 @@ class Direction
   @DOWN = 'down'
   @LEFT = 'left'
 
+  @OPPOSITE = {up: 'down', right: 'left', down: 'up', left: 'right'}
   @UNIT_VECTOR = {up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0]}
 
   @get_move_direction: (move, last_direction) ->
@@ -425,6 +426,7 @@ class AttackingState
     @sprite.position.y += offset.y
     for sprite in @sprite.stage.sprites
       if sprite != @sprite and @sprite.collides sprite
+        sprite.direction = Direction.OPPOSITE[@sprite.direction]
         sprite.set_state new KnockbackState
     @sprite.position.x -= offset.x
     @sprite.position.y -= offset.y
