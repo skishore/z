@@ -296,7 +296,7 @@ class Sprite
           move.x = -offset.x*shove
       if collided
         if offset.y < 0
-          move.y = Constants.grid - tolerance - @_gmod @position.y
+          move.y = -@_gmod @position.y + tolerance
         else
           move.y = @_gmod -@position.y
     # Run similar checks for crossing a vertical boundary going right or left.
@@ -325,9 +325,9 @@ class Sprite
                       then -offset.y*shove else 0
       if collided
         if offset.x < 0
-          move.x = Constants.grid - tolerance - @_gmod @position.x
+          move.x = -@_gmod @position.x + tolerance
         else
-          move.x = tolerance - @_gmod @position.x
+          move.x = @_gmod tolerance - @position.x
     move
 
   _check_square: (square) ->
