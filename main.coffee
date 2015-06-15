@@ -112,7 +112,7 @@ class Graphics
       @sprites[@sprite_index] = pixi
       @sprite_index += 1
     texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
-    y_offset = if sprite._pixi_y_offset? then sprite._pixi_y_offset else 0
+    y_offset = sprite._pixi_y_offset or 0
     pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
