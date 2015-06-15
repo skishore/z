@@ -19,7 +19,8 @@
     "player-walking-up.png": { "frame": {"x":289,"y":30,"w":16,"h":16} },
     "player-walking-right.png": { "frame": {"x":319,"y":30,"w":16,"h":16} },
     "player-walking-down.png": { "frame": {"x":379,"y":30,"w":16,"h":16} },
-    "player-walking-left.png": { "frame": {"x":334,"y":30,"w":16,"h":16} }
+    "player-walking-left.png": { "frame": {"x":334,"y":30,"w":16,"h":16} },
+    "shadow.png": { "frame": {"x":258,"y":184,"w":16,"h":16} }
   },
   "meta": { "image": "player.png" }
 }

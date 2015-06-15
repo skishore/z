@@ -98,22 +98,20 @@ class Graphics
     for sprite in @stage.sprites
       @_draw_sprite sprite
       drawn[sprite._pixi_id] = true
+      if sprite._pixi_shadow?
+        @_draw_shadow sprite
+        drawn[@_get_pixi_id sprite, true] = true
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
+      @sprite_container.removeChild @sprites[id]
       delete @sprites[id]
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @renderer.render @context
 
   _draw_sprite: (sprite) ->
-    if not sprite._pixi_id?
-      pixi = new PIXI.Sprite
-      @sprite_container.addChild pixi
-      sprite._pixi_id = @sprite_index
-      @sprites[@sprite_index] = pixi
-      @sprite_index += 1
+    pixi = @_get_pixi_sprite sprite
     texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
     y_offset = sprite._pixi_y_offset or 0
-    pixi = @sprites[sprite._pixi_id]
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
     pixi.z = -sprite.position.y + Constants.grid*y_offset
@@ -124,6 +122,31 @@ class Graphics
       period = Constants.invulnerability_animation_frames
       pixi.filters = if sprite.invulnerability_frames % (2*period) <= period \
                      then [new PIXI.InvertFilter] else null
+
+  _draw_shadow: (sprite, shadow) ->
+    shadow = sprite._pixi_shadow
+    pixi = @_get_pixi_sprite sprite, true
+    pixi.x = Constants.to_pixels sprite.position.x
+    pixi.y = Constants.to_pixels sprite.position.y
+    pixi.z = -sprite.position.y + (shadow.z_offset or 0)
+    pixi.setTexture PIXI.Texture.fromFrame "#{shadow.image}.png"
+    delete sprite._pixi_shadow
+
+  _get_pixi_id: (sprite, shadow) ->
+    if not sprite._pixi_id?
+      sprite._pixi_id = @sprite_index
+      @sprite_index += 1
+    "#{sprite._pixi_id}#{if shadow then 'shadow' else ''}"
+
+  _get_pixi_sprite: (sprite, shadow) ->
+    @_get_sprite_for_id @_get_pixi_id sprite, shadow
+
+  _get_sprite_for_id: (id) ->
+    if not @sprites[id]?
+      pixi = new PIXI.Sprite
+      @sprite_container.addChild pixi
+      @sprites[id] = pixi
+    @sprites[id]
 
 
 class Input
@@ -360,6 +383,7 @@ class JumpingState
     keys = do @sprite.stage.input.get_keys_pressed
     _move_sprite.call @, _get_move keys, Constants.jump_speed
     @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
+    @sprite._pixi_shadow = {image: 'shadow'}
     @sprite._pixi_y_offset = do @_get_y_offset
 
   _get_y_offset: ->
