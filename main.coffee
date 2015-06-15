@@ -7,6 +7,8 @@ class Constants
   @player_speed = 0.1*@grid
   @enemy_speed = 0.05*@grid
   @walking_animation_frames = 6
+  # Constants for the attacking state.
+  @attack_frames = 20
   # Constants for the jumping state.
   @jump_height = 1.0*@grid
   @jump_length = 3.0*@grid
@@ -368,6 +370,22 @@ _switch_state = (sprite, new_state) ->
   do sprite.state.update
 
 
+class AttackingState
+  on_enter: ->
+    @_cur_frame = 0
+    @_direction = @sprite.direction
+
+  update: ->
+    if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
+      return _switch_state @sprite, new KnockbackState
+    @_cur_frame += 1
+    if @_cur_frame > 3*Constants.attack_frames
+      return _switch_state @sprite, new WalkingState
+    index = Math.floor (@_cur_frame - 1)/Constants.attack_frames
+    @sprite.direction = @_direction
+    @sprite.frame = "attacking#{index}"
+
+
 class JumpingState
   constructor: ->
     @_cur_frame = 0
@@ -450,11 +468,16 @@ class WalkingState
     if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
       return _switch_state @sprite, new KnockbackState
     keys = do @sprite.stage.input.get_keys_pressed
-    if keys.J?
-      @sprite.stage.input.block_key 'J'
+    if @_consume_input keys, 'J'
       return _switch_state @sprite, new JumpingState
+    else if @_consume_input keys, 'K'
+      return _switch_state @sprite, new AttackingState
     _move_sprite.call @, _get_move keys, Constants.player_speed
 
+  _consume_input: (keys, key) ->
+    if keys[key]?
+      @sprite.stage.input.block_key key
+      return true
 
 
 class Stage
