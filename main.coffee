@@ -4,8 +4,8 @@ class Constants
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
   # Constants for walking states.
-  @player_speed = 0.1*@grid
-  @enemy_speed = 0.05*@grid
+  @player_speed = 0.08*@grid
+  @enemy_speed = 0.04*@grid
   @walking_animation_frames = 6
   # Constants for the jumping state.
   @jump_height = 1.0*@grid
@@ -232,6 +232,9 @@ class Sprite
       options = _.keys Constants.moves
     Constants.moves[_.sample options]
 
+  is_player: ->
+    @default_state == WalkingState
+
   move: (vector) ->
     vector = @_check_squares vector
     if not do vector.zero
@@ -370,14 +373,14 @@ _switch_state = (sprite, new_state) ->
 
 
 class AttackingState
-  ATTACK_FRAMES = [2, 2, 4]
+  ATTACK_FRAMES = [1, 2, 3]
   ATTACK_FRAME_MAP = {
     up: [['ur', 13, -13], ['uu', -2, -15], ['ul', -13, -13]]
     right: [['ur', 13, -13], ['rr', 15, 2], ['dr', 13, 13]]
     down: [['dl', -13, 13], ['dd', 2, 15], ['dr', 13, 13]]
     left: [['ul', -13, -13], ['ll', -15, 2], ['dl', -13, 13]]
   }
-  ATTACK_LENGTH = 15
+  ATTACK_LENGTH = 18
 
   on_enter: ->
     @_cur_frame = 0
@@ -467,6 +470,10 @@ class KnockbackState
     @_direction = @sprite.direction
     @sprite.invulnerability_frames = Constants.invulnerability_frames
 
+  on_exit: ->
+    if not do @sprite.is_player
+      @sprite.invulnerability_frames = 0
+
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
@@ -477,10 +484,10 @@ class KnockbackState
 
 
 class PausedState
-  constructor: ->
+  constructor: (random) ->
     speed = Constants.enemy_speed
     base_steps = Math.floor Constants.grid/speed
-    @_steps = _.random -base_steps, base_steps
+    @_steps = if random then (_.random -base_steps, base_steps) else base_steps
 
   update: ->
     @_steps -= 1
@@ -504,7 +511,7 @@ class RandomWalkState
   update: ->
     @_steps -= 1
     if @_steps < 0
-      return _switch_state @sprite, new PausedState
+      return _switch_state @sprite, new PausedState true
     _move_sprite.call @, @_move
 
 
