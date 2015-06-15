@@ -7,8 +7,6 @@ class Constants
   @player_speed = 0.1*@grid
   @enemy_speed = 0.05*@grid
   @walking_animation_frames = 6
-  # Constants for the attacking state.
-  @attack_frames = 20
   # Constants for the jumping state.
   @jump_height = 1.0*@grid
   @jump_length = 3.0*@grid
@@ -128,8 +126,8 @@ class Graphics
   _draw_shadow: (sprite, shadow) ->
     shadow = sprite._pixi_shadow
     pixi = @_get_pixi_sprite sprite, true
-    pixi.x = Constants.to_pixels sprite.position.x
-    pixi.y = Constants.to_pixels sprite.position.y
+    pixi.x = Constants.to_pixels sprite.position.x + (shadow.x_offset or 0)
+    pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
     pixi.setTexture PIXI.Texture.fromFrame shadow.image
     delete sprite._pixi_shadow
@@ -371,6 +369,14 @@ _switch_state = (sprite, new_state) ->
 
 
 class AttackingState
+  ATTACK_FRAMES = [2, 2, 4]
+  ATTACK_FRAME_MAP = {
+    up: [['ur', 13, -13], ['uu', -2, -15], ['ul', -13, -13]]
+    right: [['ur', 13, -13], ['rr', 15, 2], ['dr', 13, 13]]
+    down: [['dl', -13, 13], ['dd', 2, 15], ['dr', 13, 13]]
+    left: [['ul', -13, -13], ['ll', -15, 2], ['dl', -13, 13]]
+  }
+
   on_enter: ->
     @_cur_frame = 0
     @_direction = @sprite.direction
@@ -379,11 +385,26 @@ class AttackingState
     if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
       return _switch_state @sprite, new KnockbackState
     @_cur_frame += 1
-    if @_cur_frame > 3*Constants.attack_frames
+    index = do @_get_index
+    if index > 2
       return _switch_state @sprite, new WalkingState
-    index = Math.floor (@_cur_frame - 1)/Constants.attack_frames
     @sprite.direction = @_direction
     @sprite.frame = "attacking#{index}"
+    @sprite._pixi_shadow = @_get_sword_frame index
+
+  _get_index: ->
+    value = @_cur_frame - 1
+    for i in [0...ATTACK_FRAMES.length]
+      value -= ATTACK_FRAMES[i]
+      if value < 0
+        return i
+    ATTACK_FRAMES.length
+
+  _get_sword_frame: (index) ->
+    data = ATTACK_FRAME_MAP[@_direction][index]
+    image: "sword-#{data[0]}"
+    x_offset: Constants.twips_per_pixel*data[1]
+    y_offset: Constants.twips_per_pixel*data[2]
 
 
 class JumpingState

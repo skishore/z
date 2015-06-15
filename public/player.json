@@ -32,7 +32,15 @@
     "player-walking-right": { "frame": {"x":319,"y":30,"w":16,"h":16} },
     "player-walking-down": { "frame": {"x":379,"y":30,"w":16,"h":16} },
     "player-walking-left": { "frame": {"x":334,"y":30,"w":16,"h":16} },
-    "shadow": { "frame": {"x":258,"y":184,"w":16,"h":16} }
+    "shadow": { "frame": {"x":258,"y":184,"w":16,"h":16} },
+    "sword-ul": { "frame": {"x":144,"y":192,"w":16,"h":16} },
+    "sword-uu": { "frame": {"x":160,"y":192,"w":16,"h":16} },
+    "sword-ur": { "frame": {"x":176,"y":192,"w":16,"h":16} },
+    "sword-rr": { "frame": {"x":176,"y":208,"w":16,"h":16} },
+    "sword-dr": { "frame": {"x":176,"y":224,"w":16,"h":16} },
+    "sword-dd": { "frame": {"x":160,"y":224,"w":16,"h":16} },
+    "sword-dl": { "frame": {"x":144,"y":224,"w":16,"h":16} },
+    "sword-ll": { "frame": {"x":144,"y":208,"w":16,"h":16} }
   },
   "meta": { "image": "player.png" }
 }
