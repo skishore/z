@@ -201,13 +201,13 @@ class Map
 
 
 class Sprite
-  constructor: (@stage, @image, start, state) ->
+  constructor: (@stage, @image, @default_state, start) ->
     @direction = Direction.DOWN
     @frame = 'standing'
     @invulnerability_frames = 0
     @position = start.scale Constants.grid
     @square = start
-    @set_state state
+    do @set_state
 
   collides: (sprite) ->
     grid = Constants.grid
@@ -241,7 +241,7 @@ class Sprite
 
   set_state: (state) ->
     @state?.on_exit?()
-    @state = state
+    @state = state or new @default_state
     @state.sprite = @
     @state.stage = @stage
     @state.on_enter?()
@@ -470,7 +470,7 @@ class KnockbackState
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, new WalkingState
+      return _switch_state @sprite
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
     @sprite.direction = @_direction
@@ -548,10 +548,10 @@ class Stage
     do sprite.update for sprite in @sprites
 
   _construct_enemy: ->
-    new Sprite @, 'enemy', (do @map.get_random_free_square), new PausedState
+    new Sprite @, 'enemy', PausedState, (do @map.get_random_free_square)
 
   _construct_player: ->
-    new Sprite @, 'player', (do @map.get_starting_square), new WalkingState
+    new Sprite @, 'player', WalkingState, (do @map.get_starting_square)
 
 
 Meteor.startup (-> stage = new Stage) if Meteor.isClient
