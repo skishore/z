@@ -376,6 +376,7 @@ class AttackingState
     down: [['dl', -13, 13], ['dd', 2, 15], ['dr', 13, 13]]
     left: [['ul', -13, -13], ['ll', -15, 2], ['dl', -13, 13]]
   }
+  ATTACK_LENGTH = 15
 
   on_enter: ->
     @_cur_frame = 0
@@ -391,6 +392,7 @@ class AttackingState
     @sprite.direction = @_direction
     @sprite.frame = "attacking#{index}"
     @sprite._pixi_shadow = @_get_sword_frame index
+    do @_maybe_hit_enemies
 
   _get_index: ->
     value = @_cur_frame - 1
@@ -405,6 +407,30 @@ class AttackingState
     image: "sword-#{data[0]}"
     x_offset: Constants.twips_per_pixel*data[1]
     y_offset: Constants.twips_per_pixel*data[2]
+
+  _maybe_hit_enemies: ->
+    # As a hack, we move the player to the sword's position and use it to
+    # simulate collision with enemies. As a further hack, we read the sword's
+    # position offset from the _pixi_shadow graphics implementation detail.
+    # TODO(skishore): Clean up this computation.
+    shadow = @sprite._pixi_shadow
+    base_offset = new Point shadow.x_offset, shadow.y_offset
+    unit_offset = new Point (@_round base_offset.x), (@_round base_offset.y)
+    reach = unit_offset.scale_to Constants.twips_per_pixel*ATTACK_LENGTH
+    offset = Point.sum (Point.difference base_offset, unit_offset), reach
+    offset.x = Math.round offset.x
+    offset.y = Math.round offset.y
+    # Shift the sprite, check for collisions, and shift back.
+    @sprite.position.x += offset.x
+    @sprite.position.y += offset.y
+    for sprite in @sprite.stage.sprites
+      if sprite != @sprite and @sprite.collides sprite
+        sprite.set_state new KnockbackState
+    @sprite.position.x -= offset.x
+    @sprite.position.y -= offset.y
+
+  _round: (value) ->
+    Constants.grid*(Math.round value/Constants.grid)
 
 
 class JumpingState
