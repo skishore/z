@@ -216,12 +216,6 @@ class Sprite
     (not (@position.y + grid <= sprite.position.y or
           sprite.position.y + grid <= @position.y))
 
-  collides_with_any: ->
-    for sprite in @stage.sprites
-      if sprite != @ and @collides sprite
-        return true
-    false
-
   get_free_direction: ->
     options = []
     for key, move of Constants.moves
@@ -252,7 +246,19 @@ class Sprite
   update: (keys) ->
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
+    else if (do @is_player) and (do @_can_collide) and (do @_collides_with_any)
+      @set_state new KnockbackState
     @state.update keys
+
+  _can_collide: ->
+    not (@state instanceof KnockbackState) and \
+    not (@state instanceof JumpingState)
+
+  _collides_with_any: ->
+    for sprite in @stage.sprites
+      if sprite != @ and (do sprite._can_collide) and @collides sprite
+        return true
+    false
 
   _check_squares: (move) ->
     move = new Point (Math.round move.x), (Math.round move.y)
@@ -387,8 +393,6 @@ class AttackingState
     @_direction = @sprite.direction
 
   update: ->
-    if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
-      return _switch_state @sprite, new KnockbackState
     @_cur_frame += 1
     index = do @_get_index
     if index > 2
@@ -521,8 +525,6 @@ class WalkingState
     @_period = Constants.walking_animation_frames
 
   update: ->
-    if @sprite.invulnerability_frames == 0 and do @sprite.collides_with_any
-      return _switch_state @sprite, new KnockbackState
     keys = do @sprite.stage.input.get_keys_pressed
     if @_consume_input keys, 'J'
       return _switch_state @sprite, new JumpingState
