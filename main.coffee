@@ -80,7 +80,7 @@ class Graphics
 
   _on_assets_loaded: ->
     for i in [0...@num_tiles]
-      @tile_textures.push PIXI.Texture.fromFrame "tile#{i}.png"
+      @tile_textures.push PIXI.Texture.fromFrame "tile#{i}"
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
         type = if (@stage.map.get_tile new Point x, y) == '.' then 0 else 4
@@ -110,7 +110,7 @@ class Graphics
 
   _draw_sprite: (sprite) ->
     pixi = @_get_pixi_sprite sprite
-    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}.png"
+    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}"
     y_offset = sprite._pixi_y_offset or 0
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y + y_offset
@@ -129,7 +129,7 @@ class Graphics
     pixi.x = Constants.to_pixels sprite.position.x
     pixi.y = Constants.to_pixels sprite.position.y
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
-    pixi.setTexture PIXI.Texture.fromFrame "#{shadow.image}.png"
+    pixi.setTexture PIXI.Texture.fromFrame shadow.image
     delete sprite._pixi_shadow
 
   _get_pixi_id: (sprite, shadow) ->
