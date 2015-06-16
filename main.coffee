@@ -63,8 +63,8 @@ class Graphics
     @sprite_container = do @_add_container
     do @_initialize_stats
 
-    assets_to_load = ['enemies.json', 'player.json', 'tileset.json']
-    loader = new PIXI.AssetLoader assets_to_load
+    assets_to_load = ['effects', 'enemies', 'player', 'tileset']
+    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets_to_load)
     loader.onComplete = @_on_assets_loaded.bind @
     do loader.load
 
@@ -210,6 +210,8 @@ class Sprite
     do @set_state
 
   collides: (sprite, tolerance) ->
+    if not do sprite._can_collide
+      return false
     grid = Constants.grid
     tolerance = tolerance or new Point 0, 0
     (not (@position.x + grid - tolerance.x <= sprite.position.x or
@@ -228,7 +230,7 @@ class Sprite
     Constants.moves[_.sample options]
 
   is_player: ->
-    @default_state == WalkingState
+    @ == @stage.player
 
   move: (vector) ->
     vector = @_check_squares vector
@@ -247,19 +249,21 @@ class Sprite
   update: (keys) ->
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
-    else if (do @is_player) and (do @_can_collide) and (do @_collides_with_any)
+    else if (do @is_player) and (do @_collides_with_any)
       @set_state new KnockbackState
     @state.update keys
 
   _can_collide: ->
-    not (@state instanceof KnockbackState) and \
-    not (@state instanceof JumpingState)
+    not (@state instanceof DeathState) and \
+    not (@state instanceof JumpingState) and \
+    not (@state instanceof KnockbackState)
 
   _collides_with_any: ->
+    if not do @_can_collide
+      return false
     tolerance = (new Point 4, 4).scale Constants.twips_per_pixel
     for sprite in @stage.sprites
-      if sprite != @ and (do sprite._can_collide) and \
-         @collides sprite, tolerance
+      if sprite != @ and @collides sprite, tolerance
         return true
     false
 
@@ -445,6 +449,22 @@ class AttackingState
     Constants.grid*(Math.round value/Constants.grid)
 
 
+class DeathState
+  DEATH_FRAMES = 4
+
+  on_enter: ->
+    @_cur_frame = 0
+    @sprite.direction = ''
+    @sprite.image = 'explosion'
+
+  update: ->
+    @_cur_frame += 1
+    index = Math.floor (@_cur_frame - 1)/DEATH_FRAMES
+    if index > 1
+      return @sprite.stage.destruct @sprite
+    @sprite.frame = "red#{index}"
+
+
 class JumpingState
   constructor: ->
     @_cur_frame = 0
@@ -484,7 +504,7 @@ class KnockbackState
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite
+      return _switch_state @sprite, new DeathState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
     @sprite.direction = @_direction
@@ -548,6 +568,10 @@ class Stage
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...4])
     @_graphics = new Graphics @, $('.surface')
+    @_sprites_to_destruct = []
+
+  destruct: (sprite) ->
+    @_sprites_to_destruct.push sprite
 
   loop: ->
     do @_graphics.stats.begin
@@ -557,7 +581,13 @@ class Stage
     do @_graphics.stats.end
 
   update: ->
-    do sprite.update for sprite in @sprites
+    for sprite in @sprites
+      do sprite.update
+    for sprite in @_sprites_to_destruct
+      @sprites = _.without @sprites, sprite
+      if sprite == @player
+        delete @player
+    @_sprites_to_destruct.length = 0
 
   _construct_enemy: ->
     new Sprite @, 'enemy', PausedState, (do @map.get_random_free_square)

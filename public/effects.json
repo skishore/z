@@ -1,0 +1,7 @@
+{
+  "frames": {
+    "explosion-red0-": { "frame": {"x":5,"y":43,"w":16,"h":16} },
+    "explosion-red1-": { "frame": {"x":5,"y":59,"w":16,"h":16} }
+  },
+  "meta": { "image": "effects.png" }
+}
