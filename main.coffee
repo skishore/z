@@ -204,6 +204,7 @@ class Sprite
   constructor: (@stage, @image, @default_state, start) ->
     @direction = Direction.DOWN
     @frame = 'standing'
+    @health = 4
     @invulnerability_frames = 0
     @position = start.scale Constants.grid
     @square = start
@@ -495,6 +496,7 @@ class KnockbackState
 
   on_enter: ->
     @_direction = @sprite.direction
+    @sprite.health -= 1
     @sprite.invulnerability_frames = Constants.invulnerability_frames
 
   on_exit: ->
@@ -504,7 +506,7 @@ class KnockbackState
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, new DeathState
+      return _switch_state @sprite, if @sprite.health <= 0 then new DeathState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
     _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
     @sprite.direction = @_direction
