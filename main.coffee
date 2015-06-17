@@ -163,7 +163,7 @@ class Graphics
   _get_text_for_id: (id) ->
     if $("#pixi-text-#{id}.pixi-text").length == 0
       element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
-      element.text 'test'
+      element.text _.sample WORDS
       $('.surface').append element
     $("#pixi-text-#{id}.pixi-text")
 
