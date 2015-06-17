@@ -104,8 +104,7 @@ class Graphics
         drawn[@_get_pixi_id sprite, true] = true
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
-      @sprite_container.removeChild @sprites[id]
-      delete @sprites[id]
+      @_remove_sprite_for_id id
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @renderer.render @context
 
@@ -123,6 +122,8 @@ class Graphics
       period = Constants.invulnerability_animation_frames
       pixi.filters = if sprite.invulnerability_frames % (2*period) <= period \
                      then [new PIXI.InvertFilter] else null
+    if not do sprite.is_player
+      @_draw_text_for_sprite sprite
 
   _draw_shadow: (sprite, shadow) ->
     shadow = sprite._pixi_shadow
@@ -133,6 +134,13 @@ class Graphics
     pixi.setTexture PIXI.Texture.fromFrame shadow.image
     delete sprite._pixi_shadow
 
+  _draw_text_for_sprite: (sprite) ->
+    element = @_get_pixi_text sprite
+    element.css {
+      top: @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)
+      left: @scale*Constants.to_pixels sprite.position.x + Constants.grid/2
+    }
+
   _get_pixi_id: (sprite, shadow) ->
     if not sprite._pixi_id?
       sprite._pixi_id = @sprite_index
@@ -142,12 +150,27 @@ class Graphics
   _get_pixi_sprite: (sprite, shadow) ->
     @_get_sprite_for_id @_get_pixi_id sprite, shadow
 
+  _get_pixi_text: (sprite) ->
+    @_get_text_for_id @_get_pixi_id sprite
+
   _get_sprite_for_id: (id) ->
     if not @sprites[id]?
       pixi = new PIXI.Sprite
       @sprite_container.addChild pixi
       @sprites[id] = pixi
     @sprites[id]
+
+  _get_text_for_id: (id) ->
+    if $("#pixi-text-#{id}.pixi-text").length == 0
+      element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
+      element.text 'test'
+      $('.surface').append element
+    $("#pixi-text-#{id}.pixi-text")
+
+  _remove_sprite_for_id: (id) ->
+    @sprite_container.removeChild @sprites[id]
+    do $("#pixi-text-#{id}.pixi-text").remove
+    delete @sprites[id]
 
 
 class Input

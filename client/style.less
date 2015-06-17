@@ -14,5 +14,15 @@ body {
   .surface {
     display: inline-block;
     margin: 16px  auto;
+    overflow: hidden;
+    position: relative;
+
+    .pixi-text {
+      background-color: black;
+      color: white;
+      position: absolute;
+      padding: 0 0.2em;
+      transform: translateX(-50%);
+    }
   }
 }
