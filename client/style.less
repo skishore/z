@@ -1,15 +1,18 @@
+.full-size {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+}
+
 body {
   background-color: #48c;
 }
 
 .surface-container {
-  position: absolute;
+  .full-size;
   text-align: center;
-
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: 0;
 
   .surface {
     display: inline-block;
@@ -18,11 +21,17 @@ body {
     position: relative;
 
     .pixi-text {
-      background-color: black;
       color: white;
       position: absolute;
       padding: 0 0.2em;
       transform: translateX(-50%);
+
+      &:after {
+        .full-size;
+        background-color: black;
+        content: " ";
+        z-index: -1;
+      }
     }
   }
 }
