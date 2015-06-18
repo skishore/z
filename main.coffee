@@ -202,7 +202,13 @@ class Map
   constructor: (@size) ->
     assert @size.x > 0 and @size.y > 0
     @_tiles = (do @_get_random_tile for i in [0...@size.x*@size.y])
-    @_tiles[0] = '.'
+    for x in [0...@size.x]
+      @_set_tile (new Point x, 0), '#'
+      @_set_tile (new Point x, @size.y - 1), '#'
+    for y in [0...@size.y]
+      @_set_tile (new Point 0, y), '#'
+      @_set_tile (new Point @size.x - 1, y), '#'
+    @_set_tile (new Point 1, 1), '.'
 
   get_random_free_square: ->
     result = new Point -1, -1
@@ -212,7 +218,7 @@ class Map
     result
 
   get_starting_square: ->
-    new Point 0, 0
+    new Point 1, 1
 
   get_tile: (square) ->
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
@@ -221,6 +227,10 @@ class Map
 
   _get_random_tile: ->
     if (do Math.random) < 0.2 then '#' else '.'
+
+  _set_tile: (square, tile) ->
+    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
+      @_tiles[square.x*@size.y + square.y] = tile
 
 
 class Sprite
@@ -589,7 +599,7 @@ class WalkingState
 class Stage
   constructor: ->
     @input = new Input
-    @map = new Map new Point 16, 9
+    @map = new Map new Point 18, 11
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...4])
     @_graphics = new Graphics @, $('.surface')
