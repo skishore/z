@@ -36,7 +36,9 @@ class @DialogPage
     assert false, "#{@constructor.name}.on_input is not implemented!"
 
   signal: (callback) ->
-    Module["Dialog_#{callback}"] bindings.engine
+    if callback == 'OnPageCompletion' and \
+       DialogManager._current instanceof HindiToEnglishShortAnswerGame
+      DialogManager.set_page new HindiToEnglishShortAnswerGame
 
   _on_input: (char) ->
     (do @active) and (@accepts_input char) and (@on_input char)

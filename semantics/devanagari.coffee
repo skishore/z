@@ -39,11 +39,9 @@ class semantics.Devanagari
   @CONSONANTS = [].concat.apply [], @CONSONANT_ROWS
   @ALPHABET = @VOWELS.concat @CONSONANTS
   @ALL = @ALPHABET.concat @DIGITS
-  assert (typeof @ALL) == 'object', "typeof(ALL) is #{typeof @ALL}"
 
   @REVERSE_SIGNS = {}
   for vowel, sign of @SIGNS
-    assert sign not of @REVERSE_SIGNS
     @REVERSE_SIGNS[sign] = vowel
 
   @get_segment: ->

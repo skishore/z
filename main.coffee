@@ -1,5 +1,5 @@
 class Constants
-  @moves = {W: [0, -1], A: [-1, 0], S: [0, 1], D: [1, 0]}
+  @moves = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
@@ -56,7 +56,7 @@ class Graphics
 
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
     @renderer = PIXI.autoDetectRenderer @size.x, @size.y
-    @element.append @renderer.view
+    @element.prepend @renderer.view
 
     @context = new PIXI.Stage 0x00000000
     @map_container = do @_add_container
@@ -187,10 +187,15 @@ class Input
     _.omit @_pressed, _.keys @_blocked
 
   _get_key: (e) ->
-    String.fromCharCode e.which
+    key = String.fromCharCode e.which
+    if not e.shiftKey
+      key = do key.toLowerCase
+    key
 
   _onkeydown: (e) ->
-    @_pressed[@_get_key e] = true
+    key = @_get_key e
+    if not DialogManager.on_input key
+      @_pressed[key] = true
 
   _onkeyup: (e) ->
     key = @_get_key e
@@ -584,9 +589,9 @@ class WalkingState
 
   update: ->
     keys = do @sprite.stage.input.get_keys_pressed
-    if @_consume_input keys, 'J'
+    if @_consume_input keys, 'j'
       return _switch_state @sprite, new JumpingState
-    else if @_consume_input keys, 'K'
+    else if @_consume_input keys, 'k'
       return _switch_state @sprite, new AttackingState
     _move_sprite.call @, _get_move keys, Constants.player_speed
 
