@@ -14,7 +14,7 @@ class @HindiToEnglishShortAnswerGame extends DialogPage
     @i = 0
 
   accepts_input: (char) ->
-    semantics.ENGLISH[char] or char == ' '
+    /^[a-z ]$/i.test char
 
   active: ->
     @i < @hindi.length
