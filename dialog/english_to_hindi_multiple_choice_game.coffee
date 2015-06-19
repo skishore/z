@@ -4,15 +4,15 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
   @trap_input: false
 
   constructor: ->
-    n = 3
-    m = 4
+    n = _.random 4, 6
+    m = n
     @permutation = _.shuffle [0...m]
 
     hindi = []
     english = []
     for i in [0...m]
       while true
-        new_hindi = do semantics.Devanagari.get_segment
+        new_hindi = _.sample semantics.Devanagari.ALPHABET
         new_english = semantics.HindiToEnglish.unsafe new_hindi
         if (english.indexOf new_english) < 0
           break
@@ -36,8 +36,15 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
   get_num_enemies: ->
     return @_num_enemies
 
+  can_attack: (sid) ->
+    if sid not of @_sid_to_index
+      return false
+    index = @_sid_to_index[sid]
+    @permutation[index] == @_num_enemies_hit
+
   on_attack: (sid) ->
-    assert sid of @_sid_to_index
+    if sid not of @_sid_to_index
+      return DialogAttackResult.WRONG_ENEMY
     index = @_sid_to_index[sid]
     if @permutation[index] != @_num_enemies_hit
       return DialogAttackResult.WRONG_ENEMY

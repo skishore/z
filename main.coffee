@@ -122,8 +122,7 @@ class Graphics
       period = Constants.invulnerability_animation_frames
       pixi.filters = if sprite.invulnerability_frames % (2*period) <= period \
                      then [new PIXI.InvertFilter] else null
-    if not do sprite.is_player
-      @_draw_text_for_sprite sprite
+    @_draw_text_for_sprite sprite
 
   _draw_shadow: (sprite, shadow) ->
     shadow = sprite._pixi_shadow
@@ -136,7 +135,7 @@ class Graphics
 
   _draw_text_for_sprite: (sprite) ->
     element = @_get_pixi_text sprite
-    element.css {
+    element?.css {
       top: @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)
       left: @scale*Constants.to_pixels sprite.position.x + Constants.grid/2
     }
@@ -151,7 +150,7 @@ class Graphics
     @_get_sprite_for_id @_get_pixi_id sprite, shadow
 
   _get_pixi_text: (sprite) ->
-    @_get_text_for_id @_get_pixi_id sprite
+    @_get_text_for_id (@_get_pixi_id sprite), sprite._dialog_id
 
   _get_sprite_for_id: (id) ->
     if not @sprites[id]?
@@ -160,10 +159,11 @@ class Graphics
       @sprites[id] = pixi
     @sprites[id]
 
-  _get_text_for_id: (id) ->
-    if $("#pixi-text-#{id}.pixi-text").length == 0
+  _get_text_for_id: (id, dialog_id) ->
+    label = DialogManager._current?.get_label dialog_id
+    if label? and $("#pixi-text-#{id}.pixi-text").length == 0
       element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
-      element.text _.sample semantics.WORDS
+      (element.text label.text).addClass label.cls
       $('.surface').append element
     $("#pixi-text-#{id}.pixi-text")
 
@@ -463,6 +463,16 @@ class AttackingState
     y_offset: Constants.twips_per_pixel*data[2]
 
   _maybe_hit_enemies: ->
+    enemies_hit = do @_get_enemies_hit
+    for enemy in enemies_hit
+      id = enemy._dialog_id
+      if DialogManager._current? and not DialogManager._current.can_attack id
+        return @sprite.set_state new KnockbackState
+    for enemy in enemies_hit
+      enemy.direction = Direction.OPPOSITE[@sprite.direction]
+      enemy.set_state new KnockbackState
+
+  _get_enemies_hit: ->
     # As a hack, we move the player to the sword's position and use it to
     # simulate collision with enemies. As a further hack, we read the sword's
     # position offset from the _pixi_shadow graphics implementation detail.
@@ -475,14 +485,15 @@ class AttackingState
     offset.x = Math.round offset.x
     offset.y = Math.round offset.y
     # Shift the sprite, check for collisions, and shift back.
+    result = []
     @sprite.position.x += offset.x
     @sprite.position.y += offset.y
     for sprite in @sprite.stage.sprites
       if sprite != @sprite and @sprite.collides sprite
-        sprite.direction = Direction.OPPOSITE[@sprite.direction]
-        sprite.set_state new KnockbackState
+        result.push sprite
     @sprite.position.x -= offset.x
     @sprite.position.y -= offset.y
+    result
 
   _round: (value) ->
     Constants.grid*(Math.round value/Constants.grid)
@@ -603,15 +614,26 @@ class WalkingState
 
 class Stage
   constructor: ->
+    # Construct the dialog so we know how many enemies we need.
+    DialogManager.set_page new EnglishToHindiMultipleChoiceGame
+    num = do DialogManager._current?.get_num_enemies or 4
+    # Initialize the normal game state.
     @input = new Input
     @map = new Map new Point 18, 11
     @player = do @_construct_player
-    @sprites = [@player].concat (do @_construct_enemy for i in [0...4])
+    @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @_graphics = new Graphics @, $('.surface')
     @_sprites_to_destruct = []
+    # Update the dialog with the enemy ids.
+    for sprite, i in @sprites
+      if sprite != @player
+        sprite._dialog_id = i
+        DialogManager._current?.add_enemy sprite._dialog_id
 
   destruct: (sprite) ->
     @_sprites_to_destruct.push sprite
+    DialogManager._current?.on_attack sprite._dialog_id
+    # TODO(skishore): Advance to the next dialog here.
 
   loop: ->
     do @_graphics.stats.begin

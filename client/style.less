@@ -23,8 +23,16 @@ body {
     .pixi-text {
       color: white;
       position: absolute;
-      padding: 0 0.2em;
+      padding: 1px 4px;
       transform: translateX(-50%);
+
+      &.hindi {
+        font-size: 22px;
+        height: 24px;
+        line-height: 24px;
+        overflow: hidden;
+        width: 20px;
+      }
 
       &:after {
         .full-size;
