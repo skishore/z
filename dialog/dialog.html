@@ -1,0 +1,51 @@
+<template name="dialog">
+  <div class="dialog-wrapper ui-element" style="display: {{display}};">
+    <div class="line">{{text}}</div>
+    <div class="dialog" style="height: {{current.height}};">
+      <div class="scroller">
+        {{> subdialog last}}
+        {{> subdialog current}}
+      </div>
+    </div>
+    <div class="line"></div>
+  </div>
+</template>
+
+<template name="subdialog">
+  <div class="subdialog">
+    {{> Template.dynamic template=name data=data}}
+  </div>
+</template>
+
+<template name="multiple_choice_translit">
+  <div class="multiple-choice-translit">
+    <div class="question">{{question}}</div>
+    <div class="interstitial">➙</div>
+    <div class="answer">{{answer}}</div>
+  </div>
+</template>
+
+<template name="short_answer_translit">
+  <div class="short-answer-translit">
+    {{#each segments}}
+      <div class="segment {{class}}" style="width: {{width}}">
+        <div class="text">{{segment}}</div>
+        {{> entry entry}}
+      </div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="entry">
+  <div class="answer">
+    <div class="text">{{text}}</div><!--
+ -->{{#if show_cursor}}<!--
+   -->{{#if cursor.length}}<!--
+     --><div class="cursor">{{cursor}}</div><!--
+   -->{{else}}<!--
+     --><div class="fixed-width cursor">&nbsp;</div><!--
+   -->{{/if}}<!--
+ -->{{/if}}<!--
+ --><div class="guide">{{guide}}</div>
+  </div>
+</template>

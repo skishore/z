@@ -1,0 +1,88 @@
+.dialog-wrapper.ui-element {
+  background-color: #002266;
+
+  .line {
+    margin-bottom: 0;
+  }
+
+  .dialog {
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+    transition: height 0.4s;
+
+    color: white;
+    font-family: Times New Roman, serif;
+    font-size: 24px;
+    text-align: center;
+    width: 100%;
+
+    > .scroller {
+      position: relative;
+      height: 100%;
+      width: 100%;
+
+      > .subdialog {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+
+        > .multiple-choice-translit {
+          font-size: 0.8em;
+
+          > .question, .interstitial, .answer {
+            float: left;
+            line-height: 100%;
+          }
+
+          > .question {
+            text-align: right;
+            width: 47%;
+          }
+
+          .interstitial {
+            width: 6%;
+          }
+        }
+
+        > .short-answer-translit {
+          > .segment {
+            float: left;
+
+            &.correct {
+              color: #8f4;
+            }
+
+            &.wrong {
+              color: #f62;
+            }
+
+            > .answer {
+              font-size: 60%;
+
+              > .cursor, .text, .guide {
+                display: inline-block;
+                font-size: 100%;
+              }
+
+              > .cursor {
+                background-color: #666;
+                color: #ccc;
+
+                &.fixed-width {
+                  width: 0.5em;
+                }
+              }
+
+              > .guide {
+                color: #ccc;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

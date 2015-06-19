@@ -1,4 +1,6 @@
-@WORDS = [ \
+@semantics = @semantics or {}
+
+semantics.WORDS = [ \
 'ability',
 'able',
 'about',
