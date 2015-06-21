@@ -1,3 +1,4 @@
+import json
 import sys
 
 
@@ -39,7 +40,7 @@ class Converter(object):
       else:
         result.extend(self.symbol_map[symbol])
       last_symbol = symbol
-    return ' '.join(result)
+    return result
 
 
 if __name__ == '__main__':
@@ -83,10 +84,13 @@ if __name__ == '__main__':
       if not word in words:
         continue
       converted = converter.convert(pronunciation)
-      if converted and len(converted.split()) <= 8:
-        result.append('%s  %s\n' % (word, converted))
+      if converted and len(converted) <= 8:
+        result.append([word, converted])
 
-  output_file = 'data/gen/cmudict'
+  output_file = 'data/gen/cmudict.coffee'
   with open(output_file, 'w') as output:
+    output.write('@semantics = @semantics or {}\n\n')
+    output.write('semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS = [ \\\n')
     for line in result:
-      output.write(line)
+      output.write('%s,\n' % (json.dumps(line),))
+    output.write(']')

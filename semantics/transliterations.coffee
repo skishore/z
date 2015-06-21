@@ -84,3 +84,9 @@ semantics.TRANSLITERATIONS = {
   '।': '|'
   '॥': '||'
 }
+
+semantics.REVERSE_TRANSLITERATIONS = {}
+for hindi, english of semantics.TRANSLITERATIONS
+  if not semantics.REVERSE_TRANSLITERATIONS[english]?
+    semantics.REVERSE_TRANSLITERATIONS[english] = []
+  semantics.REVERSE_TRANSLITERATIONS[english].push hindi

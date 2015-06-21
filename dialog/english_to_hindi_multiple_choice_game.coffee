@@ -4,65 +4,56 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
   @trap_input: false
 
   constructor: ->
-    n = _.random 4, 6
-    m = n
-    @permutation = _.shuffle [0...m]
-
-    hindi = []
-    english = []
-    for i in [0...m]
-      while true
-        new_hindi = _.sample semantics.Devanagari.ALPHABET
-        new_english = semantics.HindiToEnglish.unsafe new_hindi
-        if (english.indexOf new_english) < 0
-          break
-      hindi.push new_hindi
-      english.push new_english
-
-    @questions = (english[i] for i in [0...n])
-    @answers = (hindi[j] for j in @permutation)
-    @_active = true
-
+    data = undefined
+    while (not data?) or data[1].length > 6
+      data = _.sample semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS
+    [@english, @hindi] = data
+    RT = semantics.REVERSE_TRANSLITERATIONS
+    @answers = (_.sample RT[hindi] for hindi in @hindi)
     # Fields needed to connect this game with the battle.
-    @_num_enemies = m
-    @_num_enemies_added = 0
-    @_num_enemies_hit = 0
-    @_sid_to_index = {}
+    @enemies_attacked = []
+    @sid_to_answer = {}
 
   add_enemy: (sid) ->
-    @_sid_to_index[sid] = @_num_enemies_added
-    @_num_enemies_added += 1
-
-  get_num_enemies: ->
-    return @_num_enemies
+    index = (_.keys @sid_to_answer).length
+    @sid_to_answer[sid] = @answers[index]
 
   can_attack: (sid) ->
-    if sid not of @_sid_to_index
-      return false
-    index = @_sid_to_index[sid]
-    @permutation[index] == @_num_enemies_hit
+    transliteration = semantics.TRANSLITERATIONS[@sid_to_answer[sid]]
+    transliteration == @hindi[@enemies_attacked.length]
+
+  get_num_enemies: ->
+    return @answers.length
 
   on_attack: (sid) ->
-    if sid not of @_sid_to_index
+    if not @can_attack sid
       return DialogAttackResult.WRONG_ENEMY
-    index = @_sid_to_index[sid]
-    if @permutation[index] != @_num_enemies_hit
-      return DialogAttackResult.WRONG_ENEMY
-    @_num_enemies_hit += 1
+    @enemies_attacked.push sid
     DialogManager._redraw 'current'
-    if @_num_enemies_hit == @questions.length
+    if @enemies_attacked.length == @hindi.length
       return DialogAttackResult.COMBAT_WON
     return DialogAttackResult.RIGHT_ENEMY
 
   get_data: ->
-    data = {question: '', answer: ''}
-    for question in @questions
-      data.question += semantics.HindiToEnglish.english_to_display question
-    for i in [0...@_num_enemies_hit]
-      data.answer += @answers[@permutation.indexOf i]
-    data
+    characters = (@sid_to_answer[sid] for sid in @enemies_attacked)
+    {question: @english, answer: @_concatenate_hindi_characters characters}
 
   get_label: (sid) ->
-    if sid not of @_sid_to_index
+    if sid not of @sid_to_answer
       return undefined
-    return {cls: 'hindi', text: @answers[@_sid_to_index[sid]]}
+    return {cls: 'hindi', text: @sid_to_answer[sid]}
+
+  _concatenate_hindi_characters: (characters) ->
+    # TODO(skishore): Move this logic out into a semantics utility method.
+    last_was_consonant = false
+    result = ''
+    for character in characters
+      is_consonant = character not of semantics.Devanagari.SIGNS
+      if last_was_consonant
+        if is_consonant
+          result += semantics.Devanagari.VIRAMA
+        else
+          character = semantics.Devanagari.SIGNS[character]
+      last_was_consonant = is_consonant
+      result += character
+    result
