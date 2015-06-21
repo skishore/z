@@ -4,8 +4,14 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
   @trap_input: false
 
   constructor: ->
+    # TODO(skishore): There is a race condition in the game engine where,
+    # if there are two distinct enemies with the same answer on them,
+    # they can be attacked and destroyed simultaneously. This condition exists
+    # because the API between the game engine and the dialog is now extremely
+    # loose and complicated. As a temporary workaround, we ignore all
+    # transliteration problems which contain duplicated answers.
     data = undefined
-    while (not data?) or data[1].length > 6
+    while (not data?) or data[1].length > 6 or not @_distinct data[1]
       data = _.sample semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS
     [@english, @hindi] = data
     RT = semantics.REVERSE_TRANSLITERATIONS
@@ -57,3 +63,6 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
       last_was_consonant = is_consonant
       result += character
     result
+
+  _distinct: (values) ->
+    (_.union values).length == values.length
