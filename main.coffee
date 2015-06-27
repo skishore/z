@@ -136,10 +136,9 @@ class Graphics
 
   _draw_text_for_sprite: (sprite) ->
     element = @_get_pixi_text sprite
-    element?.css {
-      top: @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)
-      left: @scale*Constants.to_pixels sprite.position.x + Constants.grid/2
-    }
+    element?.css 'transform', "translateX(-50%) translate(#{
+      @scale*Constants.to_pixels sprite.position.x + Constants.grid/2}px, #{
+      @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)}px)"
 
   _get_pixi_id: (sprite, shadow) ->
     if not sprite._pixi_id?
@@ -166,7 +165,7 @@ class Graphics
       element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
       (element.text label.text).addClass label.cls
       $('.surface').append element
-    $("#pixi-text-#{id}.pixi-text")
+    if label? then $("#pixi-text-#{id}.pixi-text")
 
   _remove_sprite_for_id: (id) ->
     @sprite_container.removeChild @sprites[id]
