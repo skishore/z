@@ -106,6 +106,8 @@ class Graphics
     for id in ids_to_remove
       @_remove_sprite_for_id id
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
+    @context.filters = if @stage._pixi_invert \
+                       then [new PIXI.InvertFilter] else null
     @renderer.render @context
 
   _draw_sprite: (sprite) ->
@@ -120,7 +122,7 @@ class Graphics
       pixi.filters = null
     else
       period = Constants.invulnerability_animation_frames
-      pixi.filters = if sprite.invulnerability_frames % (2*period) <= period \
+      pixi.filters = if sprite.invulnerability_frames % (2*period) < period \
                      then [new PIXI.InvertFilter] else null
     @_draw_text_for_sprite sprite
 
@@ -131,7 +133,6 @@ class Graphics
     pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
     pixi.setTexture PIXI.Texture.fromFrame shadow.image
-    delete sprite._pixi_shadow
 
   _draw_text_for_sprite: (sprite) ->
     element = @_get_pixi_text sprite
@@ -282,10 +283,10 @@ class Sprite
     @state?.on_exit?()
     @state = state or new @default_state
     @state.sprite = @
-    @state.stage = @stage
     @state.on_enter?()
 
   update: (keys) ->
+    delete @_pixi_shadow
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
     else if (do @is_player) and (do @_collides_with_any)
@@ -467,7 +468,7 @@ class AttackingState
     for enemy in enemies_hit
       id = enemy._dialog_id
       if DialogManager._current? and not DialogManager._current.can_attack id
-        return @sprite.set_state new KnockbackState
+        return @sprite.stage.set_state new ShockState
     for enemy in enemies_hit
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
       enemy.set_state new KnockbackState
@@ -622,6 +623,7 @@ class Stage
     @map = new Map new Point 18, 11
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
+    @set_state new GameplayState
     @_graphics = new Graphics @, $('.surface')
     @_sprites_to_destruct = []
     # Update the dialog with the enemy ids.
@@ -642,9 +644,12 @@ class Stage
     window.requestAnimationFrame @loop.bind @
     do @_graphics.stats.end
 
+  set_state: (state) ->
+    @state = state
+    @state.stage = @
+
   update: ->
-    for sprite in @sprites
-      do sprite.update
+    do @state.update
     for sprite in @_sprites_to_destruct
       @sprites = _.without @sprites, sprite
       if sprite == @player
@@ -656,6 +661,30 @@ class Stage
 
   _construct_player: ->
     new Sprite @, 'player', WalkingState, (do @map.get_starting_square)
+
+
+class GameplayState
+  update: ->
+    for sprite in @stage.sprites
+      do sprite.update
+      # When a sprite update changes the game state, we should not continue
+      # by updating the other sprites. Doing so could cause strange race
+      # conditions (eg. the player scrolls the screen but is then killed).
+      if @stage.state != @
+        break
+
+
+class ShockState
+  constructor: ->
+    @_frames_left = Constants.invulnerability_frames/2
+
+  update: ->
+    @_frames_left -= 1
+    if @_frames_left < 0
+      delete @stage._pixi_invert
+      @stage.player.set_state new KnockbackState
+      return @stage.set_state new GameplayState
+    @stage._pixi_invert = true
 
 
 Meteor.startup (-> stage = new Stage) if Meteor.isClient
