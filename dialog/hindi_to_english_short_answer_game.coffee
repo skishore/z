@@ -1,6 +1,6 @@
 class @HindiToEnglishShortAnswerGame extends DialogPage
   @template = 'short_answer_translit'
-  @height = '2.8em'
+  @height = '3.6em'
   @trap_input: true
 
   constructor: (show_guides) ->
@@ -20,7 +20,7 @@ class @HindiToEnglishShortAnswerGame extends DialogPage
     @i < @hindi.length
 
   get_data: ->
-    data = {segments: []}
+    data = {class: 'short-answer-game', segments: []}
     for hindi, i in @hindi
       data.segments.push
         segment: hindi

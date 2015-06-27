@@ -7,7 +7,7 @@
 
     color: white;
     font-family: Times New Roman, serif;
-    font-size: 24px;
+    font-size: 20px;
     text-align: center;
     width: 100%;
 
@@ -24,8 +24,6 @@
         transform: translateY(-50%);
 
         > .multiple-choice-translit {
-          font-size: 0.8em;
-
           > .question, .interstitial, .answer {
             float: left;
             line-height: 100%;
@@ -54,8 +52,6 @@
             }
 
             > .answer {
-              font-size: 60%;
-
               > .cursor, .text, .guide {
                 display: inline-block;
                 font-size: 100%;
@@ -74,6 +70,19 @@
                 color: #ccc;
               }
             }
+          }
+
+          &.short-answer-game > .segment {
+            font-size: 1.2em;
+
+            .answer {
+              font-size: 0.8em;
+            }
+          }
+
+          &.matching-game.flipped > .segment > .answer {
+            height: 1.5em;
+            line-height: 1.5em;
           }
         }
       }

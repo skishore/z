@@ -615,7 +615,9 @@ class WalkingState
 class Stage
   constructor: ->
     # Construct the dialog so we know how many enemies we need.
-    DialogManager.set_page new EnglishToHindiMultipleChoiceGame
+    game_type = if (do Math.random) < 0.5 then TransliterationMatchingGame \
+                else EnglishToHindiMultipleChoiceGame
+    DialogManager.set_page new game_type
     num = do DialogManager._current?.get_num_enemies or 4
     # Initialize the normal game state.
     @input = new Input

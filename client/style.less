@@ -22,17 +22,27 @@ body {
 
     .pixi-text {
       color: white;
+      overflow: hidden;
       position: absolute;
       padding: 1px 4px;
       top: 0;
       left: 0;
 
+      &.english {
+        font-size: 18px;
+        height: 20px;
+        line-height: 20px;
+      }
+
       &.hindi {
-        font-size: 22px;
+        font-size: 20px;
         height: 24px;
         line-height: 24px;
-        overflow: hidden;
-        width: 20px;
+        min-width: 20px;
+
+        &.character {
+          font-size: 22px;
+        }
       }
 
       &:after {

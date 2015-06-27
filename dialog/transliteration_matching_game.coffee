@@ -1,21 +1,24 @@
-class @EnglishToHindiMultipleChoiceGame extends DialogPage
-  @template = 'multiple_choice_translit'
-  @height: '1.6em'
+class @TransliterationMatchingGame extends DialogPage
+  @template = 'short_answer_translit'
+  @height: '3.6em'
   @trap_input: false
 
   constructor: ->
-    # TODO(skishore): There is a race condition in the game engine where,
-    # if there are two distinct enemies with the same answer on them,
-    # they can be attacked and destroyed simultaneously. This condition exists
-    # because the API between the game engine and the dialog is now extremely
-    # loose and complicated. As a temporary workaround, we ignore all
-    # transliteration problems which contain duplicated answers.
-    data = undefined
-    while (not data?) or data[1].length > 6 or not @_distinct data[1]
-      data = _.sample semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS
-    [@english, @hindi] = data
+    EWWT = semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS
     RT = semantics.REVERSE_TRANSLITERATIONS
-    @answers = (_.sample RT[hindi] for hindi in @hindi)
+    n = _.random 2, 4
+    data = undefined
+    while (not data?) or not @_distinct (row[0] for row in data)
+      data = (_.sample EWWT for i in [0...n])
+    @questions = []
+    @answers = []
+    for row in data
+      characters = (_.sample RT[entry] for entry in row[1])
+      @questions.push @_concatenate_hindi_characters characters
+      @answers.push row[0]
+    @flipped = (do Math.random) < 0.5
+    if @flipped
+      [@questions, @answers] = [@answers, @questions]
     # Fields needed to connect this game with the battle.
     @enemies_attacked = []
     @sid_to_answer = {}
@@ -25,8 +28,7 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
     @sid_to_answer[sid] = @answers[index]
 
   can_attack: (sid) ->
-    transliteration = semantics.TRANSLITERATIONS[@sid_to_answer[sid]]
-    transliteration == @hindi[@enemies_attacked.length]
+    @sid_to_answer[sid] == @answers[@enemies_attacked.length]
 
   get_num_enemies: ->
     return @answers.length
@@ -36,18 +38,25 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
       return DialogAttackResult.WRONG_ENEMY
     @enemies_attacked.push sid
     DialogManager._redraw 'current'
-    if @enemies_attacked.length == @hindi.length
+    if @enemies_attacked.length == @answers.length
       return DialogAttackResult.COMBAT_WON
     return DialogAttackResult.RIGHT_ENEMY
 
   get_data: ->
-    characters = (@sid_to_answer[sid] for sid in @enemies_attacked)
-    {question: @english, answer: @_concatenate_hindi_characters characters}
+    data = {class: "matching-game #{if @flipped then 'flipped'}", segments: []}
+    for question, i in @questions
+      data.segments.push
+        segment: question
+        entry: {text: if i < @enemies_attacked.length then @answers[i]}
+        class: if i < @enemies_attacked.length then 'correct'
+        width: "#{Math.floor 100/@answers.length}%"
+    data
 
   get_label: (sid) ->
     if sid not of @sid_to_answer
       return undefined
-    return {cls: 'hindi character', text: @sid_to_answer[sid]}
+    cls: if @flipped then 'hindi' else 'english'
+    text: @sid_to_answer[sid]
 
   _concatenate_hindi_characters: (characters) ->
     # TODO(skishore): Move this logic out into a semantics utility method.
