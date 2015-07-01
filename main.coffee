@@ -278,7 +278,6 @@ class Sprite
     @state.on_enter?()
 
   update: (keys) ->
-    delete @_pixi_shadow
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
     else if (do @is_player) and (do @_collides_with_any)
@@ -431,6 +430,9 @@ class AttackingState
     @_cur_frame = 0
     @_direction = @sprite.direction
 
+  on_exit: ->
+    delete @sprite._pixi_shadow
+
   update: ->
     @_cur_frame += 1
     index = do @_get_index
@@ -518,6 +520,7 @@ class JumpingState
     @_max_frame = Math.ceil JUMP_LENGTH/JUMP_SPEED
 
   on_exit: ->
+    delete @sprite._pixi_shadow
     delete @sprite._pixi_y_offset
 
   update: ->
