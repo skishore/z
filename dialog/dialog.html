@@ -1,13 +1,11 @@
 <template name="dialog">
   <div class="dialog-wrapper ui-element" style="display: {{display}};">
-    <div class="line">{{text}}</div>
     <div class="dialog" style="height: {{current.height}};">
       <div class="scroller">
         {{> subdialog last}}
         {{> subdialog current}}
       </div>
     </div>
-    <div class="line"></div>
   </div>
 </template>
 

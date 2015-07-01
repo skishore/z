@@ -9,7 +9,6 @@ class @DialogManager
     @_current = null
     @_next = null
     Session.set 'dialog.active', false
-    Session.set 'dialog.text', undefined
     Session.set 'dialog.last', undefined
     Session.set 'dialog.current', undefined
 
@@ -21,9 +20,6 @@ class @DialogManager
       @_current = page
       @_redraw 'current'
       Session.set 'dialog.active', true
-
-  @set_text: (text) ->
-    Session.set 'dialog.text', text
 
   @_animate: =>
     $('.dialog > .scroller > *:last-child').css 'top', '150%'
@@ -45,19 +41,15 @@ class @DialogManager
       data: do @_current.get_data
 
 
-_helpers = {
-  display: -> if Session.get 'dialog.active' then 'block' else 'none'
-  text: -> Session.get 'dialog.text'
-  last: ->
-    data = Session.get 'dialog.last'
-    if data?
-      Meteor.setTimeout DialogManager._animate, 0
-    data
-  current: ->
-    Session.get 'dialog.current'
-}
-
-
 if Meteor.isClient
   do DialogManager.reset
-  Template.dialog.helpers _helpers
+  Template.dialog.helpers {
+    display: -> if Session.get 'dialog.active' then 'block' else 'none'
+    last: ->
+      data = Session.get 'dialog.last'
+      if data?
+        Meteor.setTimeout DialogManager._animate, 0
+      data
+    current: ->
+      Session.get 'dialog.current'
+  }
