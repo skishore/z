@@ -43,7 +43,6 @@ class Graphics
     # TODO(skishore): The number of tiles should be read from JSON.
     @num_tiles = 8
     @sprites = {}
-    @sprite_index = 0
     @tile_textures = []
     @tiles = []
 
@@ -90,77 +89,68 @@ class Graphics
   draw: ->
     drawn = {}
     for sprite in @stage.sprites
-      @_draw_sprite sprite
-      drawn[sprite._pixi_id] = true
-      if sprite._pixi_shadow?
-        @_draw_shadow sprite
-        drawn[@_get_pixi_id sprite, true] = true
+      @_draw_sprite sprite._pixi_data, drawn
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
-      @_remove_sprite_for_id id
+      @_remove_sprite id
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @context.filters = if @stage._pixi_invert \
                        then [new PIXI.InvertFilter] else null
     @renderer.render @context
 
-  _draw_sprite: (sprite) ->
-    pixi = @_get_pixi_sprite sprite
-    texture_name = "#{sprite.image}-#{sprite.frame}-#{sprite.direction}"
-    y_offset = sprite._pixi_y_offset or 0
+  _draw_sprite: (sprite, drawn) ->
+    pixi = @_get_sprite sprite.id
     pixi.x = Constants.to_pixels sprite.position.x
-    pixi.y = Constants.to_pixels sprite.position.y + y_offset
-    pixi.z = -sprite.position.y + Constants.grid*y_offset
-    pixi.setTexture PIXI.Texture.fromFrame texture_name
+    pixi.y = Constants.to_pixels sprite.position.y + sprite.y_offset
+    pixi.z = -sprite.position.y + Constants.grid*sprite.y_offset
+    pixi.setTexture PIXI.Texture.fromFrame sprite.frame
     if sprite.invulnerability_frames == 0
       pixi.filters = null
     else
       period = Constants.invulnerability_animation_frames
       pixi.filters = if sprite.invulnerability_frames % (2*period) < period \
                      then [new PIXI.InvertFilter] else null
-    @_draw_text_for_sprite sprite
+    drawn[sprite.id] = true
+    @_draw_shadow sprite, drawn
+    @_draw_text sprite
 
-  _draw_shadow: (sprite, shadow) ->
-    shadow = sprite._pixi_shadow
-    pixi = @_get_pixi_sprite sprite, true
+  _draw_shadow: (sprite, drawn) ->
+    if not sprite.shadow?
+      return
+    shadow = sprite.shadow
+    shadow_id = "#{sprite.id}shadow"
+    pixi = @_get_sprite shadow_id
     pixi.x = Constants.to_pixels sprite.position.x + (shadow.x_offset or 0)
     pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
     pixi.setTexture PIXI.Texture.fromFrame shadow.image
+    drawn[shadow_id] = true
 
-  _draw_text_for_sprite: (sprite) ->
-    element = @_get_pixi_text sprite
+  _draw_text: (sprite) ->
+    if not sprite.label?
+      return
+    element = @_get_text sprite.id, sprite.label
     element?.css 'transform', "translateX(-50%) translate(#{
       @scale*Constants.to_pixels sprite.position.x + Constants.grid/2}px, #{
       @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)}px)"
 
-  _get_pixi_id: (sprite, shadow) ->
-    if not sprite._pixi_id?
-      sprite._pixi_id = @sprite_index
-      @sprite_index += 1
-    "#{sprite._pixi_id}#{if shadow then 'shadow' else ''}"
-
-  _get_pixi_sprite: (sprite, shadow) ->
-    @_get_sprite_for_id @_get_pixi_id sprite, shadow
-
-  _get_pixi_text: (sprite) ->
-    @_get_text_for_id (@_get_pixi_id sprite), sprite._dialog_id
-
-  _get_sprite_for_id: (id) ->
+  _get_sprite: (id) ->
     if not @sprites[id]?
       pixi = new PIXI.Sprite
       @sprite_container.addChild pixi
       @sprites[id] = pixi
     @sprites[id]
 
-  _get_text_for_id: (id, dialog_id) ->
-    label = DialogManager._current?.get_label dialog_id
-    if label? and $("#pixi-text-#{id}.pixi-text").length == 0
+  _get_text: (id, label) ->
+    # TODO(skishore): Use Meteor to display sprite labels instead of this hack.
+    selector = "#pixi-text-#{id}.pixi-text"
+    if $(selector).length == 0
       element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
       (element.text label.text).addClass label.cls
       $('.surface').append element
-    if label? then $("#pixi-text-#{id}.pixi-text")
+    $(selector)
 
-  _remove_sprite_for_id: (id) ->
+  _remove_sprite: (id) ->
     @sprite_container.removeChild @sprites[id]
     do $("#pixi-text-#{id}.pixi-text").remove
     delete @sprites[id]
@@ -231,14 +221,40 @@ class Map
       @_tiles[square.x*@size.y + square.y] = tile
 
 
+class PixiData
+  sprite_index = -1
+
+  constructor: (@data) ->
+    # data allows keys in ['frame', 'shadow', 'y_offset'].
+    # data.shadow allows keys in ['image', 'x_offset', 'y_offset', 'z_offset'].
+    _.extend @, data
+
+  update: (data) ->
+    frame = data.frame or 'standing'
+    @frame = "#{@_sprite.image}-#{frame}-#{@_sprite.direction}"
+    @invulnerability_frames = @_sprite.invulnerability_frames
+    @position = @_sprite.position
+    @shadow = data.shadow
+    @y_offset = data.y_offset or 0
+    # TODO(skishore): Once we have better dialog management, drop this field.
+    @label = DialogManager._current?.get_label @_sprite._dialog_id
+
+  @initialize: (sprite) ->
+    sprite_index += 1
+    new PixiData {
+      id: sprite_index
+      _sprite: sprite
+    }
+
+
 class Sprite
-  constructor: (@stage, @image, @default_state, start) ->
+  constructor: (@stage, @image, @_default_state, start) ->
     @direction = Direction.DOWN
-    @frame = 'standing'
     @health = 4
     @invulnerability_frames = 0
     @position = start.scale Constants.grid
     @square = start
+    @_pixi_data = PixiData.initialize @
     do @set_state
 
   collides: (sprite, tolerance) ->
@@ -273,16 +289,16 @@ class Sprite
 
   set_state: (state) ->
     @state?.on_exit?()
-    @state = state or new @default_state
+    @state = state or new @_default_state
     @state.sprite = @
     @state.on_enter?()
 
-  update: (keys) ->
+  update: ->
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
     else if (do @is_player) and (do @_collides_with_any)
       @set_state new KnockbackState
-    @state.update keys
+    @_pixi_data.update do @state.update
 
   _can_collide: ->
     not (@state instanceof DeathState) and \
@@ -409,7 +425,7 @@ _move_sprite = (attempt) ->
       animate = true
     @_anim_num = (@_anim_num + 1) % (2*period)
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
-  @sprite.frame = if animate then 'walking' else 'standing'
+  new PixiData frame: if animate then 'walking' else 'standing'
 
 _switch_state = (sprite, new_state) ->
   sprite.set_state new_state
@@ -426,22 +442,20 @@ class AttackingState
   }
   ATTACK_LENGTH = 18
 
-  on_enter: ->
+  constructor: ->
     @_cur_frame = 0
-    @_direction = @sprite.direction
-
-  on_exit: ->
-    delete @sprite._pixi_shadow
 
   update: ->
     @_cur_frame += 1
     index = do @_get_index
     if index > 2
       return _switch_state @sprite, new WalkingState
-    @sprite.direction = @_direction
-    @sprite.frame = "attacking#{index}"
-    @sprite._pixi_shadow = @_get_sword_frame index
-    do @_maybe_hit_enemies
+    sword_frame = @_get_sword_frame index
+    @_maybe_hit_enemies sword_frame
+    new PixiData {
+      frame: "attacking#{index}"
+      shadow: sword_frame
+    }
 
   _get_index: ->
     value = @_cur_frame - 1
@@ -452,13 +466,13 @@ class AttackingState
     ATTACK_FRAMES.length
 
   _get_sword_frame: (index) ->
-    data = ATTACK_FRAME_MAP[@_direction][index]
+    data = ATTACK_FRAME_MAP[@sprite.direction][index]
     image: "sword-#{data[0]}"
     x_offset: Constants.twips_per_pixel*data[1]
     y_offset: Constants.twips_per_pixel*data[2]
 
-  _maybe_hit_enemies: ->
-    enemies_hit = do @_get_enemies_hit
+  _maybe_hit_enemies: (sword_frame) ->
+    enemies_hit = @_get_enemies_hit sword_frame
     for enemy in enemies_hit
       id = enemy._dialog_id
       if DialogManager._current? and not DialogManager._current.can_attack id
@@ -467,13 +481,10 @@ class AttackingState
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
       enemy.set_state new KnockbackState
 
-  _get_enemies_hit: ->
-    # As a hack, we move the player to the sword's position and use it to
-    # simulate collision with enemies. As a further hack, we read the sword's
-    # position offset from the _pixi_shadow graphics implementation detail.
-    # TODO(skishore): Clean up this computation.
-    shadow = @sprite._pixi_shadow
-    base_offset = new Point shadow.x_offset, shadow.y_offset
+  _get_enemies_hit: (sword_frame) ->
+    # The sword tile extends further than the last pixel in the sword blade.
+    # Compute an adjusted sword offset that takes the blade length into account.
+    base_offset = new Point sword_frame.x_offset, sword_frame.y_offset
     unit_offset = new Point (@_round base_offset.x), (@_round base_offset.y)
     reach = unit_offset.scale_to Constants.twips_per_pixel*ATTACK_LENGTH
     offset = Point.sum (Point.difference base_offset, unit_offset), reach
@@ -507,7 +518,7 @@ class DeathState
     index = Math.floor (@_cur_frame - 1)/DEATH_FRAMES
     if index > 1
       return @sprite.stage.destruct @sprite
-    @sprite.frame = "red#{index}"
+    new PixiData frame: "red#{index}"
 
 
 class JumpingState
@@ -519,19 +530,17 @@ class JumpingState
     @_cur_frame = 0
     @_max_frame = Math.ceil JUMP_LENGTH/JUMP_SPEED
 
-  on_exit: ->
-    delete @sprite._pixi_shadow
-    delete @sprite._pixi_y_offset
-
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
       return _switch_state @sprite, new WalkingState
     keys = do @sprite.stage.input.get_keys_pressed
     _move_sprite.call @, _get_move keys, JUMP_SPEED
-    @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
-    @sprite._pixi_shadow = {image: 'shadow'}
-    @sprite._pixi_y_offset = do @_get_y_offset
+    new PixiData {
+      frame: "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
+      shadow: {image: 'shadow'}
+      y_offset: do @_get_y_offset
+    }
 
   _get_y_offset: ->
     arc_position = (Math.pow 2*@_cur_frame/@_max_frame - 1, 2) - 1
@@ -547,7 +556,6 @@ class KnockbackState
     @_max_frame = Math.ceil KNOCKBACK_LENGTH/KNOCKBACK_SPEED
 
   on_enter: ->
-    @_direction = @sprite.direction
     @sprite.health -= 1
     @sprite.invulnerability_frames = \
         @_max_frame + Constants.extra_invulnerability_frames
@@ -560,9 +568,11 @@ class KnockbackState
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
       return _switch_state @sprite, if @sprite.health <= 0 then new DeathState
-    [x, y] = Direction.UNIT_VECTOR[@_direction]
-    _move_sprite.call @, (new Point x, y).scale_to -KNOCKBACK_SPEED
-    @sprite.direction = @_direction
+    [x, y] = Direction.UNIT_VECTOR[@sprite.direction]
+    result = _move_sprite.call @, (new Point x, y).scale_to -KNOCKBACK_SPEED
+    # Calling _move_sprite will flip the sprite direction, so we flip it back.
+    @sprite.direction = Direction.OPPOSITE[@sprite.direction]
+    result
 
 
 class PausedState
@@ -575,7 +585,7 @@ class PausedState
     @_steps -= 1
     if @_steps < 0
       return _switch_state @sprite, new RandomWalkState
-    @sprite.frame = 'standing'
+    new PixiData frame: 'standing'
 
 
 class RandomWalkState
