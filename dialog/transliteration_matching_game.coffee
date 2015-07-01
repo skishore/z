@@ -55,7 +55,7 @@ class @TransliterationMatchingGame extends DialogPage
   get_label: (sid) ->
     if sid not of @sid_to_answer
       return undefined
-    cls: if @flipped then 'hindi' else 'english'
+    class: if @flipped then 'hindi' else 'english'
     text: @sid_to_answer[sid]
 
   _concatenate_hindi_characters: (characters) ->

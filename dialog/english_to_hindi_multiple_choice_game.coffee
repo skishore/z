@@ -42,12 +42,14 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
 
   get_data: ->
     characters = (@sid_to_answer[sid] for sid in @enemies_attacked)
-    {question: @english, answer: @_concatenate_hindi_characters characters}
+    question: @english
+    answer: @_concatenate_hindi_characters characters
 
   get_label: (sid) ->
     if sid not of @sid_to_answer
       return undefined
-    return {cls: 'hindi character', text: @sid_to_answer[sid]}
+    class: 'hindi character'
+    text: @sid_to_answer[sid]
 
   _concatenate_hindi_characters: (characters) ->
     # TODO(skishore): Move this logic out into a semantics utility method.

@@ -146,7 +146,7 @@ class Graphics
     selector = "#pixi-text-#{id}.pixi-text"
     if $(selector).length == 0
       element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
-      (element.text label.text).addClass label.cls
+      (element.text label.text).addClass label.class
       $('.surface').append element
     $(selector)
 
