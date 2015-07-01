@@ -3,20 +3,13 @@ class Constants
   @grid_in_pixels = 16
   @twips_per_pixel = 1024
   @grid = @grid_in_pixels*@twips_per_pixel
-  # Constants for walking states.
+  # Base constants walking states, used to compute other constants.
   @player_speed = 0.08*@grid
   @enemy_speed = 0.04*@grid
   @walking_animation_frames = 6
-  # Constants for the jumping state.
-  @jump_height = 1.0*@grid
-  @jump_length = 3.0*@grid
-  @jump_speed = 1.2*@player_speed
-  # Constants for the knockback state.
-  @knockback_length = 1.5*@grid
-  @knockback_speed = 3*@player_speed
-  @knockback_frames = Math.floor @knockback_length/@knockback_speed
+  # Constants for the knockback state, used in multiple places.
+  @extra_invulnerability_frames = 15
   @invulnerability_animation_frames = 6
-  @invulnerability_frames = @knockback_frames + 15
 
   @to_pixels = (twips) ->
     Math.round twips/@twips_per_pixel
@@ -467,7 +460,7 @@ class AttackingState
     for enemy in enemies_hit
       id = enemy._dialog_id
       if DialogManager._current? and not DialogManager._current.can_attack id
-        return @sprite.stage.set_state new ShockState
+        return @sprite.stage.set_state new InvertState
     for enemy in enemies_hit
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
       enemy.set_state new KnockbackState
@@ -516,9 +509,13 @@ class DeathState
 
 
 class JumpingState
+  JUMP_HEIGHT = 1.0*Constants.grid
+  JUMP_LENGTH = 3.0*Constants.grid
+  JUMP_SPEED = 1.2*Constants.player_speed
+
   constructor: ->
     @_cur_frame = 0
-    @_max_frame = Math.ceil Constants.jump_length/Constants.jump_speed
+    @_max_frame = Math.ceil JUMP_LENGTH/JUMP_SPEED
 
   on_exit: ->
     delete @sprite._pixi_y_offset
@@ -528,25 +525,29 @@ class JumpingState
     if @_cur_frame >= @_max_frame
       return _switch_state @sprite, new WalkingState
     keys = do @sprite.stage.input.get_keys_pressed
-    _move_sprite.call @, _get_move keys, Constants.jump_speed
+    _move_sprite.call @, _get_move keys, JUMP_SPEED
     @sprite.frame = "jumping#{Math.floor 3*(@_cur_frame - 1)/@_max_frame}"
     @sprite._pixi_shadow = {image: 'shadow'}
     @sprite._pixi_y_offset = do @_get_y_offset
 
   _get_y_offset: ->
     arc_position = (Math.pow 2*@_cur_frame/@_max_frame - 1, 2) - 1
-    Math.floor Constants.jump_height*arc_position
+    Math.floor JUMP_HEIGHT*arc_position
 
 
 class KnockbackState
+  KNOCKBACK_LENGTH = 1.5*Constants.grid
+  KNOCKBACK_SPEED = 3*Constants.player_speed
+
   constructor: ->
     @_cur_frame = 0
-    @_max_frame = Math.ceil Constants.knockback_length/Constants.knockback_speed
+    @_max_frame = Math.ceil KNOCKBACK_LENGTH/KNOCKBACK_SPEED
 
   on_enter: ->
     @_direction = @sprite.direction
     @sprite.health -= 1
-    @sprite.invulnerability_frames = Constants.invulnerability_frames
+    @sprite.invulnerability_frames = \
+        @_max_frame + Constants.extra_invulnerability_frames
 
   on_exit: ->
     if not do @sprite.is_player
@@ -557,7 +558,7 @@ class KnockbackState
     if @_cur_frame >= @_max_frame
       return _switch_state @sprite, if @sprite.health <= 0 then new DeathState
     [x, y] = Direction.UNIT_VECTOR[@_direction]
-    _move_sprite.call @, (new Point x, y).scale_to -Constants.knockback_speed
+    _move_sprite.call @, (new Point x, y).scale_to -KNOCKBACK_SPEED
     @sprite.direction = @_direction
 
 
@@ -675,9 +676,9 @@ class GameplayState
         break
 
 
-class ShockState
+class InvertState
   constructor: ->
-    @_frames_left = Constants.invulnerability_frames/2
+    @_frames_left = 2*Constants.invulnerability_animation_frames
 
   update: ->
     @_frames_left -= 1
