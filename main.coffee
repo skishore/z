@@ -232,29 +232,27 @@ class PixiData
   update: (data) ->
     frame = data.frame or 'standing'
     @frame = "#{@_sprite.image}-#{frame}-#{@_sprite.direction}"
+    @id = @_sprite.id
     @invulnerability_frames = @_sprite.invulnerability_frames
     @position = @_sprite.position
     @shadow = data.shadow
     @y_offset = data.y_offset or 0
     # TODO(skishore): Once we have better dialog management, drop this field.
-    @label = DialogManager._current?.get_label @_sprite._dialog_id
-
-  @initialize: (sprite) ->
-    sprite_index += 1
-    new PixiData {
-      id: sprite_index
-      _sprite: sprite
-    }
+    @label = DialogManager._current?.get_label @_sprite.id
 
 
 class Sprite
+  sprite_index = -1
+
   constructor: (@stage, @image, @_default_state, start) ->
+    sprite_index += 1
     @direction = Direction.DOWN
     @health = 4
+    @id = sprite_index
     @invulnerability_frames = 0
     @position = start.scale Constants.grid
     @square = start
-    @_pixi_data = PixiData.initialize @
+    @_pixi_data = new PixiData _sprite: @
     do @set_state
 
   collides: (sprite, tolerance) ->
@@ -474,8 +472,8 @@ class AttackingState
   _maybe_hit_enemies: (sword_frame) ->
     enemies_hit = @_get_enemies_hit sword_frame
     for enemy in enemies_hit
-      id = enemy._dialog_id
-      if DialogManager._current? and not DialogManager._current.can_attack id
+      if DialogManager._current? and \
+         not DialogManager._current.can_attack enemy.id
         return @sprite.stage.set_state new InvertState
     for enemy in enemies_hit
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
@@ -642,14 +640,13 @@ class Stage
     @_graphics = new Graphics @, $('.surface')
     @_sprites_to_destruct = []
     # Update the dialog with the enemy ids.
-    for sprite, i in @sprites
+    for sprite in @sprites
       if sprite != @player
-        sprite._dialog_id = i
-        DialogManager._current?.add_enemy sprite._dialog_id
+        DialogManager._current?.add_enemy sprite.id
 
   destruct: (sprite) ->
     @_sprites_to_destruct.push sprite
-    DialogManager._current?.on_attack sprite._dialog_id
+    DialogManager._current?.on_attack sprite.id
     # TODO(skishore): Advance to the next dialog here.
 
   loop: ->
