@@ -30,7 +30,7 @@ class Direction
     options.push Direction.RIGHT if move.x > 0
     options.push Direction.DOWN if move.y > 0
     options.push Direction.LEFT if move.x < 0
-    if options.length > 0 and (_.indexOf options, last_direction) < 0
+    if options.length > 0 and (options.indexOf last_direction) < 0
       return options[0]
     last_direction
 
@@ -167,7 +167,7 @@ class Input
     @_blocked[key] = true
 
   get_keys_pressed: ->
-    _.omit @_pressed, _.keys @_blocked
+    _.fast_omit @_pressed, @_blocked
 
   _get_key: (e) ->
     key = String.fromCharCode e.which
@@ -224,10 +224,10 @@ class Map
 class PixiData
   sprite_index = -1
 
-  constructor: (@data) ->
+  constructor: (data) ->
     # data allows keys in ['frame', 'shadow', 'y_offset'].
     # data.shadow allows keys in ['image', 'x_offset', 'y_offset', 'z_offset'].
-    _.extend @, data
+    _.fast_extend @, data
 
   update: (data) ->
     frame = data.frame or 'standing'
