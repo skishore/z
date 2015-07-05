@@ -627,13 +627,13 @@ class WalkingState
 class Stage
   constructor: ->
     # Construct the dialog so we know how many enemies we need.
-    game_type = if (do Math.random) < 0.5 then TransliterationMatchingGame \
-                else EnglishToHindiMultipleChoiceGame
-    DialogManager.set_page new game_type
-    num = do DialogManager._current?.get_num_enemies or 4
+    dialog = new (if (do Math.random) < 0.5 then TransliterationMatchingGame \
+                  else EnglishToHindiMultipleChoiceGame)
+    num = do dialog.get_num_enemies
+    DialogManager.set_page dialog
     # Initialize the normal game state.
     @input = new Input
-    @map = new Map new Point 18, 11
+    @map = new Map new Point 19, 11
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @set_state new GameplayState

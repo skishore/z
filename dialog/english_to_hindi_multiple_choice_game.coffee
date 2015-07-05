@@ -11,7 +11,7 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
     # loose and complicated. As a temporary workaround, we ignore all
     # transliteration problems which contain duplicated answers.
     data = undefined
-    while (not data?) or data[1].length > 6 or not @_distinct data[1]
+    while (not data?) or not @_distinct data[1]
       data = _.sample semantics.ENGLISH_WORDS_WITH_TRANSLITERATIONS
     [@english, @hindi] = data
     RT = semantics.REVERSE_TRANSLITERATIONS
