@@ -1,6 +1,9 @@
 class @Point
   constructor: (@x, @y) ->
 
+  add: (other) ->
+    new Point @x + other.x, @y + other.y
+
   clone: ->
     new Point @x, @y
 
@@ -20,14 +23,11 @@ class @Point
     assert not do @zero
     @scale length/(do @length)
 
+  subtract: (other) ->
+    new Point @x - other.x, @y - other.y
+
   zero: ->
     @x == 0 and @y == 0
-
-  @difference: (point1, point2) ->
-    new Point point1.x - point2.x, point1.y - point2.y
-
-  @sum: (point1, point2) ->
-    new Point point1.x + point2.x, point1.y + point2.y
 
 
 class @PointMap

@@ -154,7 +154,7 @@ class Map
     image = tile.image
     if tile.edging?
       for [direction, x, y] in EDGES
-        other = @get_tile Point.sum square, new Point x, y
+        other = @get_tile square.add new Point x, y
         if not tile.edging other
           image += direction
     image

@@ -281,7 +281,7 @@ class Sprite
   move: (vector) ->
     vector = @_check_squares vector
     if not do vector.zero
-      @position = Point.sum @position, vector
+      @position = @position.add vector
       [@square, _] = do @_get_square_and_overlap
     vector
 
@@ -341,7 +341,7 @@ class Sprite
       if not @_check_square new Point square.x, square.y + offset.y
         collided = true
       else if (Math.abs overlap.x) > tolerance and \
-           not @_check_square Point.sum square, offset
+           not @_check_square square.add offset
         collided = true
         if (Math.abs overlap.x) <= half_grid and offset.x*move.x <= 0
           shove = Math.min speed, (Math.abs overlap.x) - tolerance
@@ -361,12 +361,12 @@ class Sprite
       # If we've crossed a horizontal boundary (which is true iff offset.y != 0
       # and collided is false) then run an extra check in the x direction.
       collided = offset.y != 0 and not collided and \
-                 not @_check_square Point.sum square, offset
+                 not @_check_square square.add offset
       offset.y = if overlap.y > 0 then 1 else -1
       if not @_check_square new Point square.x + offset.x, square.y
         collided = true
       else if (overlap.y > 0 or -overlap.y > tolerance) and
-              not @_check_square Point.sum square, offset
+              not @_check_square square.add offset
         collided = true
         if (Math.abs overlap.y) <= half_grid and offset.y*move.y <= 0
           # Check that we have space to shove away in the y direction.
@@ -394,7 +394,7 @@ class Sprite
     overlap.x -= if overlap.x < half_grid then 0 else Constants.grid
     overlap.y -= if overlap.y < half_grid then 0 else Constants.grid
     # By subtracting the overlap from our position we round it to a grid square.
-    square = Point.difference @position, overlap
+    square = @position.subtract overlap
     assert (square.x % Constants.grid == 0) and (square.y % Constants.grid == 0)
     square.x /= Constants.grid
     square.y /= Constants.grid
@@ -485,7 +485,7 @@ class AttackingState
     base_offset = new Point sword_frame.x_offset, sword_frame.y_offset
     unit_offset = new Point (@_round base_offset.x), (@_round base_offset.y)
     reach = unit_offset.scale_to Constants.twips_per_pixel*ATTACK_LENGTH
-    offset = Point.sum (Point.difference base_offset, unit_offset), reach
+    offset = (base_offset.subtract unit_offset).add reach
     offset.x = Math.round offset.x
     offset.y = Math.round offset.y
     # Shift the sprite, check for collisions, and shift back.
