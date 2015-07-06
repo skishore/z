@@ -1,68 +1,53 @@
 {
   "frames": {
-    "tile0": {
-      "frame": {"x":0,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile1": {
-      "frame": {"x":16,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile2": {
-      "frame": {"x":32,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile3": {
-      "frame": {"x":48,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile4": {
-      "frame": {"x":64,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile5": {
-      "frame": {"x":80,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile6": {
-      "frame": {"x":96,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    },
-    "tile7": {
-      "frame": {"x":112,"y":0,"w":16,"h":16},
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-      "sourceSize": {"w":16,"h":16}
-    }
+    "grass-green-ul": { "frame": {"x":0,"y":48,"w":16,"h":16} },
+    "grass-green-u": { "frame": {"x":16,"y":48,"w":16,"h":16} },
+    "grass-green-ur": { "frame": {"x":32,"y":48,"w":16,"h":16} },
+    "grass-green-l": { "frame": {"x":0,"y":64,"w":16,"h":16} },
+    "grass-green-": { "frame": {"x":16,"y":64,"w":16,"h":16} },
+    "grass-green-r": { "frame": {"x":32,"y":64,"w":16,"h":16} },
+    "grass-green-dl": { "frame": {"x":0,"y":80,"w":16,"h":16} },
+    "grass-green-d": { "frame": {"x":16,"y":80,"w":16,"h":16} },
+    "grass-green-dr": { "frame": {"x":32,"y":80,"w":16,"h":16} },
+    "grass-green-url": { "frame": {"x":48,"y":48,"w":16,"h":16} },
+    "grass-green-rl": { "frame": {"x":48,"y":64,"w":16,"h":16} },
+    "grass-green-drl": { "frame": {"x":48,"y":80,"w":16,"h":16} },
+    "grass-green-udl": { "frame": {"x":64,"y":48,"w":16,"h":16} },
+    "grass-green-ud": { "frame": {"x":80,"y":48,"w":16,"h":16} },
+    "grass-green-udr": { "frame": {"x":96,"y":48,"w":16,"h":16} },
+    "grass-green-udrl": { "frame": {"x":64,"y":64,"w":16,"h":16} },
+    "grass-green-flat": { "frame": {"x":64,"y":80,"w":16,"h":16} },
+    "grass-green-flower": { "frame": {"x":80,"y":64,"w":16,"h":16} },
+    "grass-green-tall": { "frame": {"x":96,"y":64,"w":16,"h":16} },
+    "grass-yellow-ul": { "frame": {"x":0,"y":0,"w":16,"h":16} },
+    "grass-yellow-u": { "frame": {"x":16,"y":0,"w":16,"h":16} },
+    "grass-yellow-ur": { "frame": {"x":32,"y":0,"w":16,"h":16} },
+    "grass-yellow-l": { "frame": {"x":0,"y":16,"w":16,"h":16} },
+    "grass-yellow-": { "frame": {"x":16,"y":16,"w":16,"h":16} },
+    "grass-yellow-r": { "frame": {"x":32,"y":16,"w":16,"h":16} },
+    "grass-yellow-dl": { "frame": {"x":0,"y":32,"w":16,"h":16} },
+    "grass-yellow-d": { "frame": {"x":16,"y":32,"w":16,"h":16} },
+    "grass-yellow-dr": { "frame": {"x":32,"y":32,"w":16,"h":16} },
+    "grass-yellow-url": { "frame": {"x":48,"y":0,"w":16,"h":16} },
+    "grass-yellow-rl": { "frame": {"x":48,"y":16,"w":16,"h":16} },
+    "grass-yellow-drl": { "frame": {"x":48,"y":32,"w":16,"h":16} },
+    "grass-yellow-udl": { "frame": {"x":64,"y":0,"w":16,"h":16} },
+    "grass-yellow-ud": { "frame": {"x":80,"y":0,"w":16,"h":16} },
+    "grass-yellow-udr": { "frame": {"x":96,"y":0,"w":16,"h":16} },
+    "grass-yellow-udrl": { "frame": {"x":64,"y":16,"w":16,"h":16} },
+    "grass-yellow-flat": { "frame": {"x":64,"y":32,"w":16,"h":16} },
+    "bush": { "frame": {"x":80,"y":16,"w":16,"h":16} },
+    "flower": { "frame": {"x":96,"y":16,"w":16,"h":16} },
+    "rock": { "frame": {"x":80,"y":32,"w":16,"h":16} },
+    "sign": { "frame": {"x":96,"y":32,"w":16,"h":16} },
+    "tree-ul": { "frame": {"x":0,"y":96,"w":16,"h":16} },
+    "tree-ur": { "frame": {"x":16,"y":96,"w":16,"h":16} },
+    "tree-dl": { "frame": {"x":0,"y":112,"w":16,"h":16} },
+    "tree-dr": { "frame": {"x":16,"y":112,"w":16,"h":16} },
+    "tree-ul-dr": { "frame": {"x":32,"y":112,"w":16,"h":16} },
+    "tree-ur-dl": { "frame": {"x":48,"y":112,"w":16,"h":16} },
+    "water": { "frame": {"x":32,"y":96,"w":16,"h":16} },
+    "water-1": { "frame": {"x":48,"y":96,"w":16,"h":16} }
   },
-  "meta": {
-    "app": "http://www.texturepacker.com",
-    "version": "1.0",
-    "image": "tileset.png",
-    "format": "RGBA8888",
-    "size": {"w":96,"h":16},
-    "scale": "1"
-  }
+  "meta": { "image" : "tileset.png" }
 }
