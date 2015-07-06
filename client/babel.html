@@ -5,6 +5,19 @@
   <div class="surface-container">
     <div class="surface">
       {{> dialog}}
+      {{> tilist}}
     </div>
   </div>
 </body>
+
+<template name="tilist">
+  <div class="tilist">
+    {{#if has_cursor}}
+      {{#with cursor}}
+        <div class="cursor"
+         style="left: {{left}}; top: {{top}};
+                width: {{width}}; height: {{height}};"></div>
+      {{/with}}
+    {{/if}}
+  </div>
+</template>

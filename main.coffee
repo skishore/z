@@ -699,4 +699,4 @@ class InvertState
     @stage._pixi_invert = true
 
 
-Meteor.startup (-> stage = new Stage) if Meteor.isClient
+#Meteor.startup (-> stage = new Stage) if Meteor.isClient
