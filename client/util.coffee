@@ -11,3 +11,4 @@ _.fast_omit = (data, keys_to_drop) ->
 _.fast_extend = (target, source) ->
   for key of source
     target[key] = source[key]
+  target

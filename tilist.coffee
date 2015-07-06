@@ -155,7 +155,7 @@ class Map
     if tile.edging?
       for [direction, x, y] in EDGES
         other = @get_tile square.add new Point x, y
-        if not tile.edging other
+        if (not other.default) and (not tile.edging other)
           image += direction
     image
 
@@ -163,11 +163,39 @@ class Map
     window.map = @
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
       return @tileset.tiles[@_tiles[square.x*@size.y + square.y]]
-    @tileset.default_tile
+    _.fast_extend {default: true}, @tileset.default_tile
 
   set_tile: (square, tile) ->
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
       @_tiles[square.x*@size.y + square.y] = tile.index
+      @_fix_constraints square
+
+  _fix_constraints: (square) ->
+    tile = @get_tile square
+    for [direction, x, y] in EDGES
+      other_square = square.add new Point x, y
+      other = @get_tile other_square
+      if @_violates_constraint tile, other
+        for alternative in @_get_sorted_alternatives other
+          if not @_violates_constraint tile, alternative
+            @set_tile other_square, alternative
+            break
+
+  _get_sorted_alternatives: (tile) ->
+    good_alternatives = []
+    bad_alternatives = []
+    for alternative in @tileset.fallback_tiles
+      if @_violates_constraint tile, alternative
+        bad_alternatives.push alternative
+      else
+        good_alternatives.push alternative
+    good_alternatives.concat bad_alternatives
+
+  _violates_constraint: (tile1, tile2) ->
+    if tile1.default or tile2.default
+      return false
+    (tile1.constraint? and not tile1.constraint tile2) or \
+    (tile2.constraint? and not tile2.constraint tile1)
 
 
 class Stage
@@ -227,28 +255,34 @@ class Stage
 
 class Tileset
   constructor: ->
+    is_green = (tile) -> tile.image.startsWith 'grass-green'
+    is_solid = (tile) -> tile.image != 'water'
+    is_yellow = (tile) -> tile.image in ['grass-yellow-', 'water']
     @tiles = [
-      {image: 'grass-green-', edging: (t) -> t.image.startsWith 'grass-green'}
-      {image: 'grass-green-flat'}
-      {image: 'grass-green-flower'}
-      {image: 'grass-green-tall'}
-      {image: 'bush'}
-      {image: 'flower'}
-      {image: 'rock'}
-      {image: 'sign'}
-      {image: 'tree-ul', tree: true}
-      {image: 'tree-ur', tree: true}
-      {image: 'tree-dl', tree: true}
-      {image: 'tree-dr', tree: true}
-      {image: 'grass-yellow-', edging: (t) -> t.image != 'water'}
-      {image: 'grass-yellow-flat'}
-      {image: 'water'}
+      {image: 'grass-green-', edging: is_green}
+      {image: 'grass-green-flat', constraint: is_green}
+      {image: 'grass-green-flower', constraint: is_green}
+      {image: 'grass-green-tall', constraint: is_green}
+      {image: 'grass-yellow-', edging: is_solid}
+      {image: 'grass-yellow-flat', constraint: is_solid}
+      {image: 'water', constraint: is_yellow}
     ]
+    #@doodads = [
+    #  {image: 'bush'}
+    #  {image: 'flower'}
+    #  {image: 'rock'}
+    #  {image: 'sign'}
+    #  {image: 'tree-ul', tree: true}
+    #  {image: 'tree-ur', tree: true}
+    #  {image: 'tree-dl', tree: true}
+    #  {image: 'tree-dr', tree: true}
+    #]
     @tiles_by_image = {}
     for tile, i in @tiles
       tile.index = i
       @tiles_by_image[tile.image] = tile
-    @default_tile = @tiles[0]
+    @default_tile = @tiles_by_image['grass-green-']
+    @fallback_tiles = [@default_tile, @tiles_by_image['grass-yellow-']]
 
 
 if Meteor.isClient
