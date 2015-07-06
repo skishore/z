@@ -12,12 +12,11 @@
 
 <template name="tilist">
   <div class="tilist">
-    {{#if has_cursor}}
-      {{#with cursor}}
-        <div class="cursor"
-         style="left: {{left}}; top: {{top}};
-                width: {{width}}; height: {{height}};"></div>
-      {{/with}}
-    {{/if}}
+    {{#each outlines}}
+      <div class="cursor"
+       style="left: {{left}}; top: {{top}};
+              width: {{grid}}; height: {{grid}};
+              line-height: {{grid}}; font-size: {{font_size}};">{{text}}</div>
+    {{/each}}
   </div>
 </template>

@@ -1,4 +1,5 @@
 class Graphics
+  BORDER_IN_PIXELS = 2
   GRID_IN_PIXELS = 16
 
   constructor: (@stage, @element, callback) ->
@@ -36,41 +37,52 @@ class Graphics
     $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
   _on_assets_loaded: ->
-    size = @stage.map.size
-    for x in [0...size.x]
-      for y in [0...size.y]
+    for x in [0...@stage.map.size.x]
+      for y in [0...@stage.map.size.y]
         image = (@stage.map.get_tile new Point x, y).image
         tile = new PIXI.Sprite PIXI.Texture.fromFrame image
         tile.x = GRID_IN_PIXELS*x
         tile.y = GRID_IN_PIXELS*y
+        tile._tilist_image = image
         @tiles.push tile
         @map_container.addChild tile
     for choice, i in @stage.map.tileset.tiles
+      square = @get_tileset_square i
       tile = new PIXI.Sprite PIXI.Texture.fromFrame choice.image
-      tile.x = GRID_IN_PIXELS*(i % size.x)
-      tile.y = GRID_IN_PIXELS*(size.y + (Math.floor i/size.x) + 1)
+      tile.x = GRID_IN_PIXELS*square.x
+      tile.y = GRID_IN_PIXELS*square.y
       @tileset.push tile
       @map_container.addChild tile
     do @stage.loop.bind @stage
 
   draw: ->
+    for x in [0...@stage.map.size.x]
+      for y in [0...@stage.map.size.y]
+        image = (@stage.map.get_tile new Point x, y).image
+        tile = @tiles[x*@stage.map.size.y + y]
+        if tile._tilist_image != image
+          tile.setTexture PIXI.Texture.fromFrame image
+          tile._tilist_image = image
     @renderer.render @context
+
+  get_outline: (square) ->
+    grid = @scale*GRID_IN_PIXELS
+    outline = {
+      left: "#{square.x*grid}px"
+      top: "#{square.y*grid}px"
+      font_size: "#{Math.floor 0.75*grid - BORDER_IN_PIXELS}px"
+      grid: "#{grid - BORDER_IN_PIXELS}px"
+    }
 
   get_target: (position) ->
     offset = do @element.offset
     position = do position.clone
     position.x -= offset.left
     position.y -= offset.top
-    grid = @scale*GRID_IN_PIXELS
     square = new Point \
         (Math.floor position.x/(@scale*GRID_IN_PIXELS)),
         (Math.floor position.y/(@scale*GRID_IN_PIXELS))
-    outline = {
-      left: square.x*grid
-      top: square.y*grid
-      width: grid
-      height: grid
-    }
+    outline = @get_outline square
     size = @stage.map.size
     if 0 <= square.x < size.x
       if 0 <= square.y < size.y
@@ -87,6 +99,10 @@ class Graphics
           index: index
         }
     type: 'none'
+
+  get_tileset_square: (index) ->
+    size = @stage.map.size
+    new Point (index % size.x), (size.y + (Math.floor index/size.x) + 1)
 
 
 class Input
@@ -137,16 +153,24 @@ class Map
       return @tileset.tiles[@_tiles[square.x*@size.y + square.y]]
     @tileset.default_tile
 
-  _set_tile: (square, tile) ->
+  set_tile: (square, tile) ->
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
       @_tiles[square.x*@size.y + square.y] = tile.index
 
 
 class Stage
+  HOTKEYS = ['q', 'w', 'e', 'r']
+
   constructor: ->
     @input = new Input
     @map = new Map (new Point 18, 11), new Tileset
     @_graphics = new Graphics @, $('.surface')
+    @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
+    assert @_num_hotkeys > 0
+    @_hotkeys = {}
+    for i in [0...@_num_hotkeys]
+      @_hotkeys[i] = i
+    do @_redraw_hotkeys
 
   loop: ->
     do @_graphics.stats.begin
@@ -157,7 +181,36 @@ class Stage
 
   update: ->
     target = @_graphics.get_target do @input.get_mouse_position
-    Session.set 'cursor', target.outline
+    if target.type == 'tile'
+      Session.set 'tilist.cursor', target.outline
+    else
+      Session.set 'tilist.cursor', null
+    for key of do @input.get_keys_pressed
+      index = '1234567890'.indexOf key
+      if index >= 0
+        for i in [0...@_num_hotkeys]
+          @_set_hotkey i, index*@_num_hotkeys + i
+        do @_redraw_hotkeys
+        @input.block_key key
+      index = HOTKEYS.indexOf key
+      if index >= 0 and target.type == 'tile' and @_hotkeys[index]?
+        map.set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
+
+  _redraw_hotkeys: ->
+    hotkeys = []
+    for i in [0...@_num_hotkeys]
+      if not @_hotkeys[i]?
+        continue
+      square = @_graphics.get_tileset_square @_hotkeys[i]
+      hotkeys.push @_graphics.get_outline square
+      hotkeys[hotkeys.length - 1].text = do HOTKEYS[i].toUpperCase
+    Session.set 'tilist.hotkeys', hotkeys
+
+  _set_hotkey: (hotkey, value) ->
+    if value < @map.tileset.tiles.length
+      @_hotkeys[hotkey] = value
+    else
+      delete @_hotkeys[hotkey]
 
 
 class Tileset
@@ -190,7 +243,11 @@ class Tileset
 
 if Meteor.isClient
   Template.tilist.helpers {
-    has_cursor: -> (Session.get 'cursor')?
-    cursor: -> Session.get 'cursor'
+    outlines: ->
+      result = Session.get 'tilist.hotkeys'
+      cursor = Session.get 'tilist.cursor'
+      if cursor?
+        result.push cursor
+      result
   }
   Meteor.startup (-> stage = new Stage)
