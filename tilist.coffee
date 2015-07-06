@@ -10,14 +10,15 @@ class Graphics
     @scale = 2
     @size = size.scale @scale*GRID_IN_PIXELS
     @tiles = []
-    @tileset = []
+    @features = []
 
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
     @renderer = PIXI.autoDetectRenderer @size.x, @size.y, {transparent: true}
     @element.prepend @renderer.view
 
     @context = new PIXI.Stage 0x00000000
-    @map_container = do @_add_container
+    @tile_container = do @_add_container
+    @feature_container = do @_add_container
     do @_initialize_stats
 
     assets_to_load = ['tileset']
@@ -36,23 +37,27 @@ class Graphics
     $('body').append @stats.domElement
     $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
+  _make_tile: (square, image) ->
+    tile = new PIXI.Sprite
+    if image?
+      tile.setTexture PIXI.Texture.fromFrame image
+      tile._tilist_image = image
+    tile.x = GRID_IN_PIXELS*square.x
+    tile.y = GRID_IN_PIXELS*square.y
+    tile
+
   _on_assets_loaded: ->
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
-        image = @stage.map.get_image new Point x, y
-        tile = new PIXI.Sprite PIXI.Texture.fromFrame image
-        tile.x = GRID_IN_PIXELS*x
-        tile.y = GRID_IN_PIXELS*y
-        tile._tilist_image = image
+        square = new Point x, y
+        tile = @_make_tile square, @stage.map.get_image square
+        @tile_container.addChild tile
         @tiles.push tile
-        @map_container.addChild tile
+        feature = @_make_tile square
+        @feature_container.addChild feature
+        @features.push feature
     for choice, i in @stage.map.tileset.tiles
-      square = @get_tileset_square i
-      tile = new PIXI.Sprite PIXI.Texture.fromFrame choice.image
-      tile.x = GRID_IN_PIXELS*square.x
-      tile.y = GRID_IN_PIXELS*square.y
-      @tileset.push tile
-      @map_container.addChild tile
+      @tile_container.addChild @_make_tile (@get_tileset_square i), choice.image
     do @stage.loop.bind @stage
 
   draw: ->
@@ -63,6 +68,14 @@ class Graphics
         if tile._tilist_image != image
           tile.setTexture PIXI.Texture.fromFrame image
           tile._tilist_image = image
+        image = @stage.map.get_feature_image new Point x, y
+        feature = @features[x*@stage.map.size.y + y]
+        if feature._tilist_image != image
+          if image?
+            feature.setTexture PIXI.Texture.fromFrame image
+          else
+            feature.setTexture PIXI.Texture.emptyTexture
+          feature._tilist_image = image
     @renderer.render @context
 
   get_outline: (square) ->
@@ -148,6 +161,11 @@ class Map
   constructor: (@size, @tileset) ->
     assert @size.x > 0 and @size.y > 0
     @_tiles = (@tileset.default_tile.index for i in [0...@size.x*@size.y])
+    @_features = (undefined for i in [0...@size.x*@size.y])
+
+  clear_feature: (square) ->
+    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
+      delete @_features[square.x*@size.y + square.y]
 
   get_image: (square) ->
     tile = @get_tile square
@@ -159,6 +177,13 @@ class Map
           image += direction
     image
 
+  get_feature_image: (square) ->
+    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
+      feature = @_features[square.x*@size.y + square.y]
+      if feature?
+        return @tileset.tiles[feature].image
+    undefined
+
   get_tile: (square) ->
     window.map = @
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
@@ -166,9 +191,19 @@ class Map
     _.fast_extend {default: true}, @tileset.default_tile
 
   set_tile: (square, tile) ->
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      @_tiles[square.x*@size.y + square.y] = tile.index
+    if not (0 <= square.x < @size.x and 0 <= square.y < @size.y)
+      return
+    index = square.x*@size.y + square.y
+    if tile.feature
+      base = @tileset.tiles[@_tiles[index]]
+      if tile.constraint? and not tile.constraint base
+        alternatives = @_get_sorted_alternatives base
+        @set_tile square, (_.filter alternatives, tile.constraint)[0]
+      @_features[index] = tile.index
+    else
+      @_tiles[index] = tile.index
       @_fix_constraints square
+      @clear_feature square
 
   _fix_constraints: (square) ->
     tile = @get_tile square
@@ -199,7 +234,7 @@ class Map
 
 
 class Stage
-  HOTKEYS = ['q', 'w', 'e', 'r']
+  HOTKEYS = 'qwertyu12345678'
 
   constructor: ->
     @input = new Input
@@ -221,19 +256,15 @@ class Stage
 
   update: ->
     target = @_graphics.get_target do @input.get_mouse_position
-    if target.type == 'tile'
-      Session.set 'tilist.cursor', target.outline
-    else
-      Session.set 'tilist.cursor', null
+    if target.type != 'tile'
+      return Session.set 'tilist.cursor', null
+    Session.set 'tilist.cursor', target.outline
     for key of do @input.get_keys_pressed
-      index = '1234567890'.indexOf key
-      if index >= 0
-        for i in [0...@_num_hotkeys]
-          @_set_hotkey i, index*@_num_hotkeys + i
-        do @_redraw_hotkeys
-        @input.block_key key
+      if key == 'x'
+        map.clear_feature target.square
+        continue
       index = HOTKEYS.indexOf key
-      if index >= 0 and target.type == 'tile' and @_hotkeys[index]?
+      if index >= 0 and @_hotkeys[index]?
         map.set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
 
   _redraw_hotkeys: ->
@@ -255,9 +286,10 @@ class Stage
 
 class Tileset
   constructor: ->
+    can_border_water = (tile) -> tile.image in ['grass-yellow-', 'water']
     is_green = (tile) -> tile.image.startsWith 'grass-green'
     is_solid = (tile) -> tile.image != 'water'
-    is_yellow = (tile) -> tile.image in ['grass-yellow-', 'water']
+    is_yellow = (tile) -> tile.image == 'grass-yellow-'
     @tiles = [
       {image: 'grass-green-', edging: is_green}
       {image: 'grass-green-flat', constraint: is_green}
@@ -265,18 +297,21 @@ class Tileset
       {image: 'grass-green-tall', constraint: is_green}
       {image: 'grass-yellow-', edging: is_solid}
       {image: 'grass-yellow-flat', constraint: is_solid}
-      {image: 'water', constraint: is_yellow}
+      {image: 'water', constraint: can_border_water}
     ]
-    #@doodads = [
-    #  {image: 'bush'}
-    #  {image: 'flower'}
-    #  {image: 'rock'}
-    #  {image: 'sign'}
-    #  {image: 'tree-ul', tree: true}
-    #  {image: 'tree-ur', tree: true}
-    #  {image: 'tree-dl', tree: true}
-    #  {image: 'tree-dr', tree: true}
-    #]
+    features = [
+      {image: 'bush', constraint: is_yellow}
+      {image: 'flower', constraint: is_yellow}
+      {image: 'rock', constraint: is_yellow}
+      {image: 'sign', constraint: is_yellow}
+      {image: 'tree-ul', tree_offset: [0, 0], constraint: is_yellow}
+      {image: 'tree-ur', tree_offset: [1, 0], constraint: is_yellow}
+      {image: 'tree-dl', tree_offset: [0, 1], constraint: is_yellow}
+      {image: 'tree-dr', tree_offset: [1, 1], constraint: is_yellow}
+    ]
+    for feature in features
+      feature.feature = true
+      @tiles.push feature
     @tiles_by_image = {}
     for tile, i in @tiles
       tile.index = i
