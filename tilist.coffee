@@ -39,7 +39,7 @@ class Graphics
   _on_assets_loaded: ->
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
-        image = (@stage.map.get_tile new Point x, y).image
+        image = @stage.map.get_image new Point x, y
         tile = new PIXI.Sprite PIXI.Texture.fromFrame image
         tile.x = GRID_IN_PIXELS*x
         tile.y = GRID_IN_PIXELS*y
@@ -58,7 +58,7 @@ class Graphics
   draw: ->
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
-        image = (@stage.map.get_tile new Point x, y).image
+        image = @stage.map.get_image new Point x, y
         tile = @tiles[x*@stage.map.size.y + y]
         if tile._tilist_image != image
           tile.setTexture PIXI.Texture.fromFrame image
@@ -70,8 +70,8 @@ class Graphics
     outline = {
       left: "#{square.x*grid}px"
       top: "#{square.y*grid}px"
-      font_size: "#{Math.floor 0.75*grid - BORDER_IN_PIXELS}px"
-      grid: "#{grid - BORDER_IN_PIXELS}px"
+      font_size: "#{Math.floor 0.75*grid - 2*BORDER_IN_PIXELS}px"
+      grid: "#{grid - 2*BORDER_IN_PIXELS}px"
     }
 
   get_target: (position) ->
@@ -143,9 +143,21 @@ class Input
 
 
 class Map
+  EDGES = [['u', 0, -1], ['d', 0, 1], ['r', 1, 0], ['l', -1, 0]]
+
   constructor: (@size, @tileset) ->
     assert @size.x > 0 and @size.y > 0
     @_tiles = (@tileset.default_tile.index for i in [0...@size.x*@size.y])
+
+  get_image: (square) ->
+    tile = @get_tile square
+    image = tile.image
+    if tile.edging?
+      for [direction, x, y] in EDGES
+        other = @get_tile Point.sum square, new Point x, y
+        if not tile.edging other
+          image += direction
+    image
 
   get_tile: (square) ->
     window.map = @
@@ -220,8 +232,6 @@ class Tileset
       {image: 'grass-green-flat'}
       {image: 'grass-green-flower'}
       {image: 'grass-green-tall'}
-      {image: 'grass-yellow-', edging: (t) -> t.image != 'water'}
-      {image: 'grass-yellow-flat'}
       {image: 'bush'}
       {image: 'flower'}
       {image: 'rock'}
@@ -230,8 +240,8 @@ class Tileset
       {image: 'tree-ur', tree: true}
       {image: 'tree-dl', tree: true}
       {image: 'tree-dr', tree: true}
-      {image: 'tree-ul-dr', tree: true}
-      {image: 'tree-ur-dl', tree: true}
+      {image: 'grass-yellow-', edging: (t) -> t.image != 'water'}
+      {image: 'grass-yellow-flat'}
       {image: 'water'}
     ]
     @tiles_by_image = {}
