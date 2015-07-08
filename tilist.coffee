@@ -172,6 +172,8 @@ class Map
         other = @get_tile square.add new Point x, y
         if (not other.default) and (not tile.edging other)
           image += direction
+      if image == tile.image and @_features[square.x][square.y]?
+        image += 'flat'
     image
 
   get_feature_image: (square) ->
