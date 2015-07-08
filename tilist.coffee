@@ -160,15 +160,12 @@ class Map
 
   constructor: (@size, @tileset) ->
     assert @size.x > 0 and @size.y > 0
-    @_tiles = (@tileset.default_tile.index for i in [0...@size.x*@size.y])
-    @_features = (undefined for i in [0...@size.x*@size.y])
-
-  clear_feature: (square) ->
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      delete @_features[square.x*@size.y + square.y]
+    @_tiles = @_construct_2d_array @tileset.default_tile.index
+    @_features = @_construct_2d_array undefined
 
   get_image: (square) ->
-    tile = @get_tile square
+    assert @_in_bounds square
+    tile = @tileset.tiles[@_tiles[square.x][square.y]]
     image = tile.image
     if tile.edging?
       for [direction, x, y] in EDGES
@@ -178,32 +175,30 @@ class Map
     image
 
   get_feature_image: (square) ->
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      feature = @_features[square.x*@size.y + square.y]
-      if feature?
-        return @tileset.tiles[feature].image
-    undefined
+    assert @_in_bounds square
+    feature = @_features[square.x][square.y]
+    if feature? then @tileset.tiles[feature].image
 
   get_tile: (square) ->
-    window.map = @
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      return @tileset.tiles[@_tiles[square.x*@size.y + square.y]]
+    if @_in_bounds square
+      return @tileset.tiles[@_tiles[square.x][square.y]]
     _.fast_extend {default: true}, @tileset.default_tile
 
   set_tile: (square, tile) ->
-    if not (0 <= square.x < @size.x and 0 <= square.y < @size.y)
-      return
-    index = square.x*@size.y + square.y
+    assert @_in_bounds square
     if tile.feature
-      base = @tileset.tiles[@_tiles[index]]
+      base = @tileset.tiles[@_tiles[square.x][square.y]]
       if tile.constraint? and not tile.constraint base
         alternatives = @_get_sorted_alternatives base
         @set_tile square, (_.filter alternatives, tile.constraint)[0]
-      @_features[index] = tile.index
+      @_features[square.x][square.y] = tile.index
     else
-      @_tiles[index] = tile.index
+      @_tiles[square.x][square.y] = tile.index
+      @_features[square.x][square.y] = undefined
       @_fix_constraints square
-      @clear_feature square
+
+  _construct_2d_array: (value) ->
+    ((value for y in [0...@size.y]) for x in [0...@size.x])
 
   _fix_constraints: (square) ->
     tile = @get_tile square
@@ -225,6 +220,9 @@ class Map
       else
         good_alternatives.push alternative
     good_alternatives.concat bad_alternatives
+
+  _in_bounds: (square) ->
+    0 <= square.x < @size.x and 0 <= square.y < @size.y
 
   _violates_constraint: (tile1, tile2) ->
     if tile1.default or tile2.default
@@ -260,12 +258,9 @@ class Stage
       return Session.set 'tilist.cursor', null
     Session.set 'tilist.cursor', target.outline
     for key of do @input.get_keys_pressed
-      if key == 'x'
-        map.clear_feature target.square
-        continue
       index = HOTKEYS.indexOf key
       if index >= 0 and @_hotkeys[index]?
-        map.set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
+        @map.set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
 
   _redraw_hotkeys: ->
     hotkeys = []
