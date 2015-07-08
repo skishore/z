@@ -189,7 +189,7 @@ class Map
     if tile.feature
       base = @tileset.tiles[@_tiles[square.x][square.y]]
       if tile.constraint? and not tile.constraint base
-        alternatives = @_get_sorted_alternatives base
+        alternatives = @tileset.get_sorted_alternatives base
         @set_tile square, (_.filter alternatives, tile.constraint)[0]
       @_features[square.x][square.y] = tile.index
     else
@@ -205,30 +205,14 @@ class Map
     for [direction, x, y] in EDGES
       other_square = square.add new Point x, y
       other = @get_tile other_square
-      if @_violates_constraint tile, other
-        for alternative in @_get_sorted_alternatives other
-          if not @_violates_constraint tile, alternative
+      if @tileset.violates_constraint tile, other
+        for alternative in @tileset.get_sorted_alternatives other
+          if not @tileset.violates_constraint tile, alternative
             @set_tile other_square, alternative
             break
 
-  _get_sorted_alternatives: (tile) ->
-    good_alternatives = []
-    bad_alternatives = []
-    for alternative in @tileset.fallback_tiles
-      if @_violates_constraint tile, alternative
-        bad_alternatives.push alternative
-      else
-        good_alternatives.push alternative
-    good_alternatives.concat bad_alternatives
-
   _in_bounds: (square) ->
     0 <= square.x < @size.x and 0 <= square.y < @size.y
-
-  _violates_constraint: (tile1, tile2) ->
-    if tile1.default or tile2.default
-      return false
-    (tile1.constraint? and not tile1.constraint tile2) or \
-    (tile2.constraint? and not tile2.constraint tile1)
 
 
 class Stage
@@ -285,6 +269,9 @@ class Tileset
     is_green = (tile) -> tile.image.startsWith 'grass-green'
     is_solid = (tile) -> tile.image != 'water'
     is_yellow = (tile) -> tile.image == 'grass-yellow-'
+    # For a regular tile, a constraint is a predicate that must be true of the
+    # four tiles adjacent by cardinal directions. For a feature, a constraint
+    # is a predicate that must be true of the tile underneath it.
     @tiles = [
       {image: 'grass-green-', edging: is_green}
       {image: 'grass-green-flat', constraint: is_green}
@@ -307,12 +294,35 @@ class Tileset
     for feature in features
       feature.feature = true
       @tiles.push feature
-    @tiles_by_image = {}
+    tiles_by_image = {}
     for tile, i in @tiles
       tile.index = i
-      @tiles_by_image[tile.image] = tile
-    @default_tile = @tiles_by_image['grass-green-']
-    @fallback_tiles = [@default_tile, @tiles_by_image['grass-yellow-']]
+      tiles_by_image[tile.image] = tile
+    @default_tile = tiles_by_image['grass-green-']
+    # A constraint is valid if at least one of the fallback tiles satisfies it.
+    @_fallback_tiles = [@default_tile, tiles_by_image['grass-yellow-']]
+    do @_check_constraint_validity
+
+  get_sorted_alternatives: (tile) ->
+    good_alternatives = []
+    bad_alternatives = []
+    for alternative in @_fallback_tiles
+      if @violates_constraint tile, alternative
+        bad_alternatives.push alternative
+      else
+        good_alternatives.push alternative
+    good_alternatives.concat bad_alternatives
+
+  violates_constraint: (tile1, tile2) ->
+    if tile1.default or tile2.default
+      return false
+    (tile1.constraint? and not tile1.constraint tile2) or \
+    (tile2.constraint? and not tile2.constraint tile1)
+
+  _check_constraint_validity: ->
+    for tile in @tiles
+      assert (not tile.constraint?) or \
+             _.any (tile.constraint fallback for fallback in @_fallback_tiles)
 
 
 if Meteor.isClient
