@@ -1,18 +1,15 @@
-class Constants
-  @moves = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
-  @grid_in_pixels = 16
-  @twips_per_pixel = 1024
-  @grid = @grid_in_pixels*@twips_per_pixel
-  # Base constants walking states, used to compute other constants.
-  @player_speed = 0.08*@grid
-  @enemy_speed = 0.04*@grid
-  @walking_animation_frames = 6
-  # Constants for the knockback state, used in multiple places.
-  @extra_invulnerability_frames = 15
-  @invulnerability_animation_frames = 6
+TWIPS_PER_PIXEL = 1024
+GRID = base.grid_in_pixels*TWIPS_PER_PIXEL
+MOVEMENT_KEYS = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
 
-  @to_pixels = (twips) ->
-    Math.round twips/@twips_per_pixel
+# Base speeds used to compute other speed.
+PLAYER_SPEED = 0.08*GRID
+ENEMY_SPEED = 0.04*GRID
+WALKING_ANIMATION_FRAMES = 6
+
+# Constants for the knockback state, used in multiple places.
+EXTRA_INVULNERABILITY_FRAMES = 15
+INVULNERABILITY_ANIMATION_FRAMES = 6
 
 
 class Direction
@@ -59,22 +56,22 @@ class Graphics extends base.Graphics
     shadow = sprite.shadow
     shadow_id = "#{sprite.id}shadow"
     pixi = @_get_sprite shadow_id
-    pixi.x = Constants.to_pixels sprite.position.x + (shadow.x_offset or 0)
-    pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
+    pixi.x = @_to_pixels sprite.position.x + (shadow.x_offset or 0)
+    pixi.y = @_to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
     pixi.setTexture PIXI.Texture.fromFrame shadow.image
     drawn[shadow_id] = true
 
   _draw_sprite: (sprite, drawn) ->
     pixi = @_get_sprite sprite.id
-    pixi.x = Constants.to_pixels sprite.position.x
-    pixi.y = Constants.to_pixels sprite.position.y + sprite.y_offset
-    pixi.z = -sprite.position.y + Constants.grid*sprite.y_offset
+    pixi.x = @_to_pixels sprite.position.x
+    pixi.y = @_to_pixels sprite.position.y + sprite.y_offset
+    pixi.z = -sprite.position.y + GRID*sprite.y_offset
     pixi.setTexture PIXI.Texture.fromFrame sprite.frame
     if sprite.invulnerability_frames == 0
       pixi.filters = null
     else
-      period = Constants.invulnerability_animation_frames
+      period = INVULNERABILITY_ANIMATION_FRAMES
       pixi.filters = if sprite.invulnerability_frames % (2*period) < period \
                      then [new PIXI.InvertFilter] else null
     drawn[sprite.id] = true
@@ -86,8 +83,8 @@ class Graphics extends base.Graphics
       return
     element = @_get_text sprite.id, sprite.label
     element?.css 'transform', "translateX(-50%) translate(#{
-      @scale*Constants.to_pixels sprite.position.x + Constants.grid/2}px, #{
-      @scale*((Constants.to_pixels sprite.position.y + Constants.grid) + 1)}px)"
+      @scale*@_to_pixels sprite.position.x + GRID/2}px, #{
+      @scale*((@_to_pixels sprite.position.y + GRID) + 1)}px)"
 
   _get_sprite: (id) ->
     if not @sprites[id]?
@@ -109,6 +106,9 @@ class Graphics extends base.Graphics
     @sprite_container.removeChild @sprites[id]
     do $("#pixi-text-#{id}.pixi-text").remove
     delete @sprites[id]
+
+  _to_pixels: (twips) ->
+    Math.round twips/TWIPS_PER_PIXEL
 
 
 class Map
@@ -180,7 +180,7 @@ class Sprite
     @health = 4
     @id = sprite_index
     @invulnerability_frames = 0
-    @position = start.scale Constants.grid
+    @position = start.scale GRID
     @square = start
     @_pixi_data = new PixiData _sprite: @
     do @set_state
@@ -188,22 +188,21 @@ class Sprite
   collides: (sprite, tolerance) ->
     if not do sprite._can_collide
       return false
-    grid = Constants.grid
     tolerance = tolerance or new Point 0, 0
-    (not (@position.x + grid - tolerance.x <= sprite.position.x or
-          sprite.position.x + grid - tolerance.x <= @position.x)) and
-    (not (@position.y + grid - tolerance.y <= sprite.position.y or
-          sprite.position.y + grid - tolerance.y <= @position.y))
+    (not (@position.x + GRID - tolerance.x <= sprite.position.x or
+          sprite.position.x + GRID - tolerance.x <= @position.x)) and
+    (not (@position.y + GRID - tolerance.y <= sprite.position.y or
+          sprite.position.y + GRID - tolerance.y <= @position.y))
 
   get_free_direction: ->
     options = []
-    for key, move of Constants.moves
+    for key, move of MOVEMENT_KEYS
       square = new Point @square.x + move[0], @square.y + move[1]
       if @_check_square square
         options.push key
     if options.length == 0
-      options = _.keys Constants.moves
-    Constants.moves[_.sample options]
+      options = _.keys MOVEMENT_KEYS
+    MOVEMENT_KEYS[_.sample options]
 
   is_player: ->
     @ == @stage.player
@@ -236,7 +235,7 @@ class Sprite
   _collides_with_any: ->
     if not do @_can_collide
       return false
-    tolerance = (new Point 4, 4).scale Constants.twips_per_pixel
+    tolerance = new Point 0.25*GRID, 0.25*GRID
     for sprite in @stage.sprites
       if sprite != @ and @collides sprite, tolerance
         return true
@@ -247,8 +246,8 @@ class Sprite
     if do move.zero
       return move
 
-    half_grid = Math.ceil 0.5*Constants.grid
-    tolerance = Math.ceil 0.2*Constants.grid
+    half_grid = Math.ceil 0.5*GRID
+    tolerance = Math.ceil 0.2*GRID
 
     # Sprites may not move faster than our collision detection can handle.
     # If this restriction becomes a problem, we can get around it by breaking
@@ -319,27 +318,27 @@ class Sprite
     # We first compute an overlap, which is a point (x, y) where each coordinate
     # lies in the interval [-half_grid, half_grid). The overlap is the
     # "remainder" of our position with respect to the grid.
-    half_grid = Math.ceil 0.5*Constants.grid
+    half_grid = Math.ceil 0.5*GRID
     overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
-    overlap.x -= if overlap.x < half_grid then 0 else Constants.grid
-    overlap.y -= if overlap.y < half_grid then 0 else Constants.grid
+    overlap.x -= if overlap.x < half_grid then 0 else GRID
+    overlap.y -= if overlap.y < half_grid then 0 else GRID
     # By subtracting the overlap from our position we round it to a grid square.
     square = @position.subtract overlap
-    assert (square.x % Constants.grid == 0) and (square.y % Constants.grid == 0)
-    square.x /= Constants.grid
-    square.y /= Constants.grid
+    assert (square.x % GRID == 0) and (square.y % GRID == 0)
+    square.x /= GRID
+    square.y /= GRID
     [square, overlap]
 
   _gmod: (value) ->
-    result = value % Constants.grid
-    if result >= 0 then result else result + Constants.grid
+    result = value % GRID
+    if result >= 0 then result else result + GRID
 
 
 _get_move = (keys, speed) ->
   move = new Point 0, 0
   for key of keys
-    if key of Constants.moves
-      [x, y] = Constants.moves[key]
+    if key of MOVEMENT_KEYS
+      [x, y] = MOVEMENT_KEYS[key]
       move.x += x
       move.y += y
   if (do move.zero) then move else move.scale_to speed
@@ -347,7 +346,7 @@ _get_move = (keys, speed) ->
 _move_sprite = (attempt) ->
   move = @sprite.move attempt
   if not do move.zero and @_period?
-    period = Math.floor @_period*Constants.player_speed/(do move.length)
+    period = Math.floor @_period*PLAYER_SPEED/(do move.length)
     period = Math.max period, 1
     if @_anim_num % (2*period) >= period
       animate = true
@@ -396,8 +395,8 @@ class AttackingState
   _get_sword_frame: (index) ->
     data = ATTACK_FRAME_MAP[@sprite.direction][index]
     image: "sword-#{data[0]}"
-    x_offset: Constants.twips_per_pixel*data[1]
-    y_offset: Constants.twips_per_pixel*data[2]
+    x_offset: TWIPS_PER_PIXEL*data[1]
+    y_offset: TWIPS_PER_PIXEL*data[2]
 
   _maybe_hit_enemies: (sword_frame) ->
     enemies_hit = @_get_enemies_hit sword_frame
@@ -414,10 +413,10 @@ class AttackingState
     # Compute an adjusted sword offset that takes the blade length into account.
     base_offset = new Point sword_frame.x_offset, sword_frame.y_offset
     unit_offset = new Point (@_round base_offset.x), (@_round base_offset.y)
-    reach = unit_offset.scale_to Constants.twips_per_pixel*ATTACK_LENGTH
+    reach = unit_offset.scale_to TWIPS_PER_PIXEL*ATTACK_LENGTH
     offset = (base_offset.subtract unit_offset).add reach
-    offset.x = Math.round offset.x
-    offset.y = Math.round offset.y
+    offset.x = @_round offset.x
+    offset.y = @_round offset.y
     # Shift the sprite, check for collisions, and shift back.
     result = []
     @sprite.position.x += offset.x
@@ -430,7 +429,7 @@ class AttackingState
     result
 
   _round: (value) ->
-    Constants.grid*(Math.round value/Constants.grid)
+    GRID*Math.round value/GRID
 
 
 class DeathState
@@ -450,9 +449,9 @@ class DeathState
 
 
 class JumpingState
-  JUMP_HEIGHT = 1.0*Constants.grid
-  JUMP_LENGTH = 3.0*Constants.grid
-  JUMP_SPEED = 1.2*Constants.player_speed
+  JUMP_HEIGHT = 1.0*GRID
+  JUMP_LENGTH = 3.0*GRID
+  JUMP_SPEED = 1.2*PLAYER_SPEED
 
   constructor: ->
     @_cur_frame = 0
@@ -476,8 +475,8 @@ class JumpingState
 
 
 class KnockbackState
-  KNOCKBACK_LENGTH = 1.5*Constants.grid
-  KNOCKBACK_SPEED = 3*Constants.player_speed
+  KNOCKBACK_LENGTH = 1.5*GRID
+  KNOCKBACK_SPEED = 3*PLAYER_SPEED
 
   constructor: ->
     @_cur_frame = 0
@@ -485,8 +484,7 @@ class KnockbackState
 
   on_enter: ->
     @sprite.health -= 1
-    @sprite.invulnerability_frames = \
-        @_max_frame + Constants.extra_invulnerability_frames
+    @sprite.invulnerability_frames = @_max_frame + EXTRA_INVULNERABILITY_FRAMES
 
   on_exit: ->
     if not do @sprite.is_player
@@ -505,8 +503,7 @@ class KnockbackState
 
 class PausedState
   constructor: (random) ->
-    speed = Constants.enemy_speed
-    base_steps = Math.floor Constants.grid/speed
+    base_steps = Math.floor GRID/ENEMY_SPEED
     @_steps = if random then (_.random -base_steps, base_steps) else base_steps
 
   update: ->
@@ -519,13 +516,12 @@ class PausedState
 class RandomWalkState
   constructor: ->
     @_anim_num = 0
-    @_period = Constants.walking_animation_frames
+    @_period = WALKING_ANIMATION_FRAMES
 
   on_enter: ->
-    speed = Constants.enemy_speed
-    base_steps = Math.floor Constants.grid/speed
+    base_steps = Math.floor GRID/ENEMY_SPEED
     [x, y] = do @sprite.get_free_direction
-    @_move = (new Point x, y).scale_to speed
+    @_move = (new Point x, y).scale_to ENEMY_SPEED
     @_steps = _.random 1, 4*base_steps
 
   update: ->
@@ -538,7 +534,7 @@ class RandomWalkState
 class WalkingState
   constructor: ->
     @_anim_num = 0
-    @_period = Constants.walking_animation_frames
+    @_period = WALKING_ANIMATION_FRAMES
 
   update: ->
     keys = do @sprite.stage.input.get_keys_pressed
@@ -546,7 +542,7 @@ class WalkingState
       return _switch_state @sprite, new JumpingState
     else if @_consume_input keys, 'k'
       return _switch_state @sprite, new AttackingState
-    _move_sprite.call @, _get_move keys, Constants.player_speed
+    _move_sprite.call @, _get_move keys, PLAYER_SPEED
 
   _consume_input: (keys, key) ->
     if keys[key]?
@@ -618,7 +614,7 @@ class GameplayState
 
 class InvertState
   constructor: ->
-    @_frames_left = 2*Constants.invulnerability_animation_frames
+    @_frames_left = 2*INVULNERABILITY_ANIMATION_FRAMES
 
   update: ->
     @_frames_left -= 1

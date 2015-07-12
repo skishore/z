@@ -1,7 +1,7 @@
 @base = @base or {}
 
 base.grid_in_pixels = 16
-base.mode = 'tilist'
+base.mode = 'main'
 
 
 class base.Graphics
