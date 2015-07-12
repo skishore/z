@@ -44,8 +44,8 @@
     "tree-ur": { "frame": {"x":16,"y":96,"w":16,"h":16} },
     "tree-dl": { "frame": {"x":0,"y":112,"w":16,"h":16} },
     "tree-dr": { "frame": {"x":16,"y":112,"w":16,"h":16} },
-    "tree-ul-dr": { "frame": {"x":32,"y":112,"w":16,"h":16} },
-    "tree-ur-dl": { "frame": {"x":48,"y":112,"w":16,"h":16} },
+    "tree-dl-tree-ur": { "frame": {"x":32,"y":112,"w":16,"h":16} },
+    "tree-dr-tree-ul": { "frame": {"x":48,"y":112,"w":16,"h":16} },
     "water": { "frame": {"x":32,"y":96,"w":16,"h":16} },
     "water-1": { "frame": {"x":48,"y":96,"w":16,"h":16} }
   },

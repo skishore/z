@@ -161,7 +161,7 @@ class Map
   constructor: (@size, @tileset) ->
     assert @size.x > 0 and @size.y > 0
     @_tiles = @_construct_2d_array @tileset.default_tile.index
-    @_features = @_construct_2d_array undefined
+    @_features = @_construct_2d_array []
 
   get_image: (square) ->
     assert @_in_bounds square
@@ -172,14 +172,14 @@ class Map
         other = @get_tile square.add new Point x, y
         if (not other.default) and (not tile.edging other)
           image += direction
-      if image == tile.image and @_features[square.x][square.y]?
+      if image == tile.image and @_features[square.x][square.y].length > 0
         image += 'flat'
     image
 
   get_feature_image: (square) ->
     assert @_in_bounds square
-    feature = @_features[square.x][square.y]
-    if feature? then @tileset.tiles[feature].image
+    images = (@tileset.tiles[i].image for i in @_features[square.x][square.y])
+    if images.length > 0 then (do images.sort).join '-'
 
   get_tile: (square) ->
     if @_in_bounds square
@@ -187,20 +187,25 @@ class Map
     _.fast_extend {default: true}, @tileset.default_tile
 
   set_tile: (square, tile) ->
-    assert @_in_bounds square
+    if not @_in_bounds square
+      return
     if tile.feature
       base = @tileset.tiles[@_tiles[square.x][square.y]]
       if tile.constraint? and not tile.constraint base
         alternatives = @tileset.get_sorted_alternatives base
+        # If we have to modify the tile below, we try to preserve any existing
+        # features on it in case they are compatible with the new feature.
+        features = _.clone @_features[square.x][square.y]
         @set_tile square, (_.filter alternatives, tile.constraint)[0]
-      @_features[square.x][square.y] = tile.index
+        @_features[square.x][square.y] = features
+      @_set_feature square, tile
     else
       @_tiles[square.x][square.y] = tile.index
-      @_features[square.x][square.y] = undefined
+      @_features[square.x][square.y].length = 0
       @_fix_constraints square
 
   _construct_2d_array: (value) ->
-    ((value for y in [0...@size.y]) for x in [0...@size.x])
+    (((_.clone value) for y in [0...@size.y]) for x in [0...@size.x])
 
   _fix_constraints: (square) ->
     tile = @get_tile square
@@ -215,6 +220,20 @@ class Map
 
   _in_bounds: (square) ->
     0 <= square.x < @size.x and 0 <= square.y < @size.y
+
+  _set_feature: (square, feature) ->
+    assert @_in_bounds square
+    assert feature.feature
+    if @_features[square.x][square.y].length == 0
+      @_features[square.x][square.y] = [feature.index]
+      return
+    if feature.index in @_features[square.x][square.y]
+      return
+    features = @_features[square.x][square.y].concat feature.index
+    image = (do (@tileset.tiles[i].image for i in features).sort).join '-'
+    if image not of PIXI.TextureCache
+      @_features[square.x][square.y].length = 0
+    @_features[square.x][square.y].push feature.index
 
 
 class Stage
@@ -246,7 +265,7 @@ class Stage
     for key of do @input.get_keys_pressed
       index = HOTKEYS.indexOf key
       if index >= 0 and @_hotkeys[index]?
-        @map.set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
+        @_set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
 
   _redraw_hotkeys: ->
     hotkeys = []
@@ -263,6 +282,16 @@ class Stage
       @_hotkeys[hotkey] = value
     else
       delete @_hotkeys[hotkey]
+
+  _set_tile: (square, tile) ->
+    if tile.tree_offset?
+      [x, y] = tile.tree_offset
+      top_left = square.subtract new Point x, y
+      for [suffix, x, y] in @map.tileset.tree_data
+        tree = @map.tileset.tiles_by_image["tree-#{suffix}"]
+        @map.set_tile (top_left.add new Point x, y), tree
+    else
+      @map.set_tile square, tile
 
 
 class Tileset
@@ -288,21 +317,22 @@ class Tileset
       {image: 'flower', constraint: is_yellow}
       {image: 'rock', constraint: is_yellow}
       {image: 'sign', constraint: is_yellow}
-      {image: 'tree-ul', tree_offset: [0, 0], constraint: is_yellow}
-      {image: 'tree-ur', tree_offset: [1, 0], constraint: is_yellow}
+      {image: 'tree-ul', tree_offset: [0, 0]}
+      {image: 'tree-ur', tree_offset: [1, 0]}
       {image: 'tree-dl', tree_offset: [0, 1], constraint: is_yellow}
       {image: 'tree-dr', tree_offset: [1, 1], constraint: is_yellow}
     ]
+    @tree_data = [['ul', 0, 0], ['ur', 1, 0], ['dl', 0, 1], ['dr', 1, 1]]
     for feature in features
       feature.feature = true
       @tiles.push feature
-    tiles_by_image = {}
+    @tiles_by_image = {}
     for tile, i in @tiles
       tile.index = i
-      tiles_by_image[tile.image] = tile
-    @default_tile = tiles_by_image['grass-green-']
+      @tiles_by_image[tile.image] = tile
+    @default_tile = @tiles_by_image['grass-green-']
     # A constraint is valid if at least one of the fallback tiles satisfies it.
-    @_fallback_tiles = [@default_tile, tiles_by_image['grass-yellow-']]
+    @_fallback_tiles = [@default_tile, @tiles_by_image['grass-yellow-']]
     do @_check_constraint_validity
 
   get_sorted_alternatives: (tile) ->
