@@ -9,7 +9,11 @@ reset = ->
   base.stage?.loop = ->
   base.stage?._graphics.draw = ->
   do base.stage?._graphics.context.removeChildren
-  base.stage = new base.modes[Session.get 'menu.mode']
+  mode = Session.get 'menu.mode'
+  Meteor.setTimeout ->
+    if base._current_mode != mode
+      base.stage = new base.modes[mode]
+      base._current_mode = mode
 
 Template.menu.events {
   'click .button': (e) ->

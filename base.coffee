@@ -179,7 +179,7 @@ class base.Map
       for y in [0...@size.y]
         square = new Point x, y
         document.tiles[x][y] = @get_tile_image square
-        document.features[x][y] = @get_tile_image square
+        document.features[x][y] = @get_feature_image square
     document.raw = {tiles: @_tiles, features: @_features}
     id = (base.collection.findOne {name: name})?._id
     if id?

@@ -101,7 +101,8 @@ class Map extends base.Map
         @_features[square.x][square.y] = features
       @_set_feature square, tile
     else
-      if tile.index == @_tiles[square.x][square.y]
+      if tile.index == @_tiles[square.x][square.y] and \
+         @_features[square.x][square.y].length == 0
         return false
       @_tiles[square.x][square.y] = tile.index
       @_features[square.x][square.y].length = 0
