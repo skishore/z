@@ -1,85 +1,19 @@
-class Graphics
+class Graphics extends base.Graphics
   BORDER_IN_PIXELS = 2
-  GRID_IN_PIXELS = 16
 
   constructor: (@stage, @element, callback) ->
     num_tiles = @stage.map.tileset.tiles.length
     size = do @stage.map.size.clone
     size.y += (Math.ceil num_tiles/size.x) + 1
-
-    @scale = 2
-    @size = size.scale @scale*GRID_IN_PIXELS
-    @tiles = []
-    @features = []
-
-    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
-    @renderer = PIXI.autoDetectRenderer @size.x, @size.y, {transparent: true}
-    @element.prepend @renderer.view
-
-    @context = new PIXI.Stage 0x00000000
-    @tile_container = do @_add_container
-    @feature_container = do @_add_container
-    do @_initialize_stats
-
-    assets_to_load = ['tileset']
-    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets_to_load)
-    loader.onComplete = @_on_assets_loaded.bind @
-    do loader.load
-
-  _add_container: ->
-    container = new PIXI.DisplayObjectContainer
-    container.scale = new PIXI.Point @scale, @scale
-    @context.addChild container
-    container
-
-  _initialize_stats: ->
-    @stats = new PIXI.Stats
-    $('body').append @stats.domElement
-    $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
-
-  _make_tile: (square, image) ->
-    tile = new PIXI.Sprite
-    if image?
-      tile.setTexture PIXI.Texture.fromFrame image
-      tile._tilist_image = image
-    tile.x = GRID_IN_PIXELS*square.x
-    tile.y = GRID_IN_PIXELS*square.y
-    tile
+    super @stage, @element, {assets: ['tileset'], size: size, transparent: true}
 
   _on_assets_loaded: ->
-    for x in [0...@stage.map.size.x]
-      for y in [0...@stage.map.size.y]
-        square = new Point x, y
-        tile = @_make_tile square, @stage.map.get_image square
-        @tile_container.addChild tile
-        @tiles.push tile
-        feature = @_make_tile square
-        @feature_container.addChild feature
-        @features.push feature
     for choice, i in @stage.map.tileset.tiles
-      @tile_container.addChild @_make_tile (@get_tileset_square i), choice.image
-    do @stage.loop.bind @stage
-
-  draw: ->
-    for x in [0...@stage.map.size.x]
-      for y in [0...@stage.map.size.y]
-        image = @stage.map.get_image new Point x, y
-        tile = @tiles[x*@stage.map.size.y + y]
-        if tile._tilist_image != image
-          tile.setTexture PIXI.Texture.fromFrame image
-          tile._tilist_image = image
-        image = @stage.map.get_feature_image new Point x, y
-        feature = @features[x*@stage.map.size.y + y]
-        if feature._tilist_image != image
-          if image?
-            feature.setTexture PIXI.Texture.fromFrame image
-          else
-            feature.setTexture PIXI.Texture.emptyTexture
-          feature._tilist_image = image
-    @renderer.render @context
+      @_make_tile (@get_tileset_square i), choice.image, @tile_container
+    super
 
   get_outline: (square) ->
-    grid = @scale*GRID_IN_PIXELS
+    grid = @scale*base.grid_in_pixels
     outline = {
       left: "#{square.x*grid}px"
       top: "#{square.y*grid}px"
@@ -93,8 +27,8 @@ class Graphics
     position.x -= offset.left
     position.y -= offset.top
     square = new Point \
-        (Math.floor position.x/(@scale*GRID_IN_PIXELS)),
-        (Math.floor position.y/(@scale*GRID_IN_PIXELS))
+        (Math.floor position.x/(@scale*base.grid_in_pixels)),
+        (Math.floor position.y/(@scale*base.grid_in_pixels))
     outline = @get_outline square
     size = @stage.map.size
     if 0 <= square.x < size.x
@@ -126,7 +60,17 @@ class Map
     @_tiles = @_construct_2d_array @tileset.default_tile.index
     @_features = @_construct_2d_array []
 
-  get_image: (square) ->
+  get_feature_image: (square) ->
+    assert @_in_bounds square
+    images = (@tileset.tiles[i].image for i in @_features[square.x][square.y])
+    if images.length > 0 then (do images.sort).join '-'
+
+  get_tile: (square) ->
+    if @_in_bounds square
+      return @tileset.tiles[@_tiles[square.x][square.y]]
+    _.fast_extend {default: true}, @tileset.default_tile
+
+  get_tile_image: (square) ->
     assert @_in_bounds square
     tile = @tileset.tiles[@_tiles[square.x][square.y]]
     image = tile.image
@@ -138,16 +82,6 @@ class Map
       if image == tile.image and @_features[square.x][square.y].length > 0
         image += 'flat'
     image
-
-  get_feature_image: (square) ->
-    assert @_in_bounds square
-    images = (@tileset.tiles[i].image for i in @_features[square.x][square.y])
-    if images.length > 0 then (do images.sort).join '-'
-
-  get_tile: (square) ->
-    if @_in_bounds square
-      return @tileset.tiles[@_tiles[square.x][square.y]]
-    _.fast_extend {default: true}, @tileset.default_tile
 
   set_tile: (square, tile) ->
     if not @_in_bounds square

@@ -35,52 +35,11 @@ class Direction
     last_direction
 
 
-class Graphics
-  constructor: (@stage, @element, callback) ->
-    @scale = 2
-    @size = @stage.map.size.scale @scale*Constants.grid_in_pixels
-
-    # TODO(skishore): The number of tiles should be read from JSON.
-    @num_tiles = 8
-    @sprites = {}
-    @tiles = []
-
-    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
-    @renderer = PIXI.autoDetectRenderer @size.x, @size.y
-    @element.prepend @renderer.view
-
-    @context = new PIXI.Stage 0x00000000
-    @map_container = do @_add_container
+class Graphics extends base.Graphics
+  constructor: (@stage, @element) ->
+    super @stage, @element
     @sprite_container = do @_add_container
-    do @_initialize_stats
-
-    assets_to_load = ['effects', 'enemies', 'player', 'tileset']
-    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets_to_load)
-    loader.onComplete = @_on_assets_loaded.bind @
-    do loader.load
-
-  _add_container: ->
-    container = new PIXI.DisplayObjectContainer
-    container.scale = new PIXI.Point @scale, @scale
-    @context.addChild container
-    container
-
-  _initialize_stats: ->
-    @stats = new PIXI.Stats
-    $('body').append @stats.domElement
-    $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
-
-  _on_assets_loaded: ->
-    for x in [0...@stage.map.size.x]
-      for y in [0...@stage.map.size.y]
-        type = @stage.map.get_tile new Point x, y
-        image = if type == '.' then 'grass-yellow-' else 'rock'
-        tile = new PIXI.Sprite PIXI.Texture.fromFrame image
-        tile.x = Constants.grid_in_pixels*x
-        tile.y = Constants.grid_in_pixels*y
-        @tiles.push tile
-        @map_container.addChild tile
-    do @stage.loop.bind @stage
+    @sprites = {}
 
   draw: ->
     drawn = {}
@@ -92,7 +51,19 @@ class Graphics
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @context.filters = if @stage._pixi_invert \
                        then [new PIXI.InvertFilter] else null
-    @renderer.render @context
+    super
+
+  _draw_shadow: (sprite, drawn) ->
+    if not sprite.shadow?
+      return
+    shadow = sprite.shadow
+    shadow_id = "#{sprite.id}shadow"
+    pixi = @_get_sprite shadow_id
+    pixi.x = Constants.to_pixels sprite.position.x + (shadow.x_offset or 0)
+    pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
+    pixi.z = -sprite.position.y + (shadow.z_offset or 0)
+    pixi.setTexture PIXI.Texture.fromFrame shadow.image
+    drawn[shadow_id] = true
 
   _draw_sprite: (sprite, drawn) ->
     pixi = @_get_sprite sprite.id
@@ -109,18 +80,6 @@ class Graphics
     drawn[sprite.id] = true
     @_draw_shadow sprite, drawn
     @_draw_text sprite
-
-  _draw_shadow: (sprite, drawn) ->
-    if not sprite.shadow?
-      return
-    shadow = sprite.shadow
-    shadow_id = "#{sprite.id}shadow"
-    pixi = @_get_sprite shadow_id
-    pixi.x = Constants.to_pixels sprite.position.x + (shadow.x_offset or 0)
-    pixi.y = Constants.to_pixels sprite.position.y + (shadow.y_offset or 0)
-    pixi.z = -sprite.position.y + (shadow.z_offset or 0)
-    pixi.setTexture PIXI.Texture.fromFrame shadow.image
-    drawn[shadow_id] = true
 
   _draw_text: (sprite) ->
     if not sprite.label?
@@ -164,6 +123,8 @@ class Map
       @_set_tile (new Point @size.x - 1, y), '#'
     @_set_tile (new Point 1, 1), '.'
 
+  get_feature_image: (square) ->
+
   get_random_free_square: ->
     result = new Point -1, -1
     while (@get_tile result) == '#'
@@ -178,6 +139,9 @@ class Map
     if 0 <= square.x < @size.x and 0 <= square.y < @size.y
       return @_tiles[square.x*@size.y + square.y]
     '#'
+
+  get_tile_image: (square) ->
+    if (@get_tile square) == '.' then 'grass-yellow-' else 'rock'
 
   _get_random_tile: ->
     if (do Math.random) < 0.2 then '#' else '.'
