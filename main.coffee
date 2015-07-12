@@ -43,7 +43,6 @@ class Graphics
     # TODO(skishore): The number of tiles should be read from JSON.
     @num_tiles = 8
     @sprites = {}
-    @tile_textures = []
     @tiles = []
 
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
@@ -72,14 +71,11 @@ class Graphics
     $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
   _on_assets_loaded: ->
-    for i in [0...@num_tiles]
-      @tile_textures.push PIXI.Texture.fromFrame "tile#{i}"
     for x in [0...@stage.map.size.x]
       for y in [0...@stage.map.size.y]
-        type = if (@stage.map.get_tile new Point x, y) == '.' then 0 else 4
-        if type == 0
-          type = Math.floor 4*(do Math.random)
-        tile = new PIXI.Sprite @tile_textures[type]
+        type = @stage.map.get_tile new Point x, y
+        image = if type == '.' then 'grass-yellow-' else 'rock'
+        tile = new PIXI.Sprite PIXI.Texture.fromFrame image
         tile.x = Constants.grid_in_pixels*x
         tile.y = Constants.grid_in_pixels*y
         @tiles.push tile
@@ -154,36 +150,6 @@ class Graphics
     @sprite_container.removeChild @sprites[id]
     do $("#pixi-text-#{id}.pixi-text").remove
     delete @sprites[id]
-
-
-class Input
-  constructor: ->
-    window.onkeydown = @_onkeydown.bind @
-    window.onkeyup = @_onkeyup.bind @
-    @_blocked = {}
-    @_pressed = {}
-
-  block_key: (key) ->
-    @_blocked[key] = true
-
-  get_keys_pressed: ->
-    _.fast_omit @_pressed, @_blocked
-
-  _get_key: (e) ->
-    key = String.fromCharCode e.which
-    if not e.shiftKey
-      key = do key.toLowerCase
-    key
-
-  _onkeydown: (e) ->
-    key = @_get_key e
-    if not DialogManager.on_input key
-      @_pressed[key] = true
-
-  _onkeyup: (e) ->
-    key = @_get_key e
-    delete @_blocked[key]
-    delete @_pressed[key]
 
 
 class Map
@@ -632,7 +598,7 @@ class Stage
     num = do dialog.get_num_enemies
     DialogManager.set_page dialog
     # Initialize the normal game state.
-    @input = new Input
+    @input = new base.Input {keyboard: true}
     @map = new Map new Point 19, 11
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
@@ -699,4 +665,5 @@ class InvertState
     @stage._pixi_invert = true
 
 
-#Meteor.startup (-> stage = new Stage) if Meteor.isClient
+if Meteor.isClient and base.mode == 'main'
+  Meteor.startup (-> stage = new Stage)

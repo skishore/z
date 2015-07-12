@@ -118,43 +118,6 @@ class Graphics
     new Point (index % size.x), (size.y + (Math.floor index/size.x) + 1)
 
 
-class Input
-  constructor: ->
-    window.onkeydown = @_onkeydown.bind @
-    window.onkeyup = @_onkeyup.bind @
-    window.onmousemove = @_onmousemove.bind @
-    @_blocked = {}
-    @_pressed = {}
-    @_mouse_position = new Point 0, 0
-
-  block_key: (key) ->
-    @_blocked[key] = true
-
-  get_keys_pressed: ->
-    _.fast_omit @_pressed, @_blocked
-
-  get_mouse_position: ->
-    @_mouse_position
-
-  _get_key: (e) ->
-    key = String.fromCharCode e.which
-    if not e.shiftKey
-      key = do key.toLowerCase
-    key
-
-  _onkeydown: (e) ->
-    @_pressed[@_get_key e] = true
-
-  _onkeyup: (e) ->
-    key = @_get_key e
-    delete @_blocked[key]
-    delete @_pressed[key]
-
-  _onmousemove: (e) ->
-    @_mouse_position.x = e.x
-    @_mouse_position.y = e.y
-
-
 class Map
   EDGES = [['u', 0, -1], ['d', 0, 1], ['r', 1, 0], ['l', -1, 0]]
 
@@ -240,7 +203,7 @@ class Stage
   HOTKEYS = 'qwertyu12345678'
 
   constructor: ->
-    @input = new Input
+    @input = new base.Input {keyboard: true, mouse: true}
     @map = new Map (new Point 18, 11), new Tileset
     @_graphics = new Graphics @, $('.surface')
     @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
@@ -357,7 +320,7 @@ class Tileset
              _.any (tile.constraint fallback for fallback in @_fallback_tiles)
 
 
-if Meteor.isClient
+if Meteor.isClient and base.mode == 'tilist'
   Template.tilist.helpers {
     outlines: ->
       result = Session.get 'tilist.hotkeys'
