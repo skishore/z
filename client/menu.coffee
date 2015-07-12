@@ -10,10 +10,11 @@ reset = ->
   base.stage?._graphics.draw = ->
   do base.stage?._graphics.context.removeChildren
   mode = Session.get 'menu.mode'
-  Meteor.setTimeout ->
-    if base._current_mode != mode
-      base.stage = new base.modes[mode]
-      base._current_mode = mode
+  if mode == 'tilist'
+    Meteor.setTimeout -> base.stage = new base.modes[mode]
+  else
+    base.stage = new base.modes[mode]
+
 
 Template.menu.events {
   'click .button': (e) ->
