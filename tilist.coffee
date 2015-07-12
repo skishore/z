@@ -138,7 +138,7 @@ class Stage
 
   constructor: ->
     @input = new base.Input {keyboard: true, mouse: true}
-    @map = new Map (new Point 18, 11), new Tileset
+    @map = new Map (new Point base.map_size[0], base.map_size[1]), new Tileset
     @_graphics = new Graphics @, $('.surface')
     @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
     assert @_num_hotkeys > 0
@@ -254,7 +254,7 @@ class Tileset
              _.any (tile.constraint fallback for fallback in @_fallback_tiles)
 
 
-if Meteor.isClient and base.mode == 'tilist'
+if Meteor.isClient
   Template.tilist.helpers {
     outlines: ->
       result = Session.get 'tilist.hotkeys'
@@ -263,4 +263,4 @@ if Meteor.isClient and base.mode == 'tilist'
         result.push cursor
       result
   }
-  Meteor.startup (-> stage = new Stage)
+  base.modes.tilist = Stage

@@ -2,6 +2,7 @@
   <title>babel</title>
 </head>
 <body>
+  {{> menu}}
   <div class="surface-container">
     <div class="surface">
       {{> dialog}}
@@ -9,6 +10,14 @@
     </div>
   </div>
 </body>
+
+<template name="menu">
+  <div class="menu">
+    {{#each buttons}}
+      <div class="button {{class}}">{{text}}</div>
+    {{/each}}
+  </div>
+</template>
 
 <template name="tilist">
   <div class="tilist">

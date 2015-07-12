@@ -559,7 +559,7 @@ class Stage
     DialogManager.set_page dialog
     # Initialize the normal game state.
     @input = new base.Input {keyboard: true}
-    @map = new Map new Point 19, 11
+    @map = new Map new Point base.map_size[0], base.map_size[1]
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @set_state new GameplayState
@@ -625,5 +625,4 @@ class InvertState
     @stage._pixi_invert = true
 
 
-if Meteor.isClient and base.mode == 'main'
-  Meteor.startup (-> stage = new Stage)
+base.modes.main = Stage

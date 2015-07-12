@@ -42,7 +42,6 @@ class @DialogManager
 
 
 if Meteor.isClient
-  do DialogManager.reset
   Template.dialog.helpers {
     display: -> if Session.get 'dialog.active' then 'block' else 'none'
     last: ->

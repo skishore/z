@@ -1,36 +1,60 @@
 @base = @base or {}
 
 base.grid_in_pixels = 16
-base.mode = 'main'
+base.map_size = [18, 11]
+base.modes = {}
+
+
+class Renderer
+  singleton = null
+
+  constructor: (element, callback) ->
+    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
+    @context = new PIXI.Stage 0x00000000
+    @_renderer = PIXI.autoDetectRenderer 0, 0, {transparent: true}
+    element.prepend @_renderer.view
+    do @_initialize_stats
+    # Load assets and run the callback when done.
+    assets = ['effects', 'enemies', 'player', 'tileset']
+    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets)
+    loader.onComplete = callback
+    do loader.load
+
+  draw: ->
+    @_renderer.render @context
+
+  resize: (size) ->
+    @_renderer.resize size.x, size.y
+
+  @get_singleton: (element, callback) ->
+    if singleton?
+      Meteor.setTimeout callback
+    else
+      singleton = new Renderer element, callback
+    singleton
+
+  _initialize_stats: ->
+    @stats = new PIXI.Stats
+    $('body').append @stats.domElement
+    $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
 
 class base.Graphics
   constructor: (@stage, @element, options) ->
     # Graphics currently supports the following options:
-    # - assets: List of asset files to load
     # - size: Point that controls the size of the surface, in grid cells
-    # - transparent: Set to true to make the surface transparent
     options = options or {}
     @scale = options.scale or 2
-    @size = (options.size or @stage.map.size).scale @scale*base.grid_in_pixels
-
-    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
-    renderer_options = {transparent: options?.transparent}
-    @renderer = PIXI.autoDetectRenderer @size.x, @size.y, renderer_options
-    @element.prepend @renderer.view
-
-    @context = new PIXI.Stage 0x00000000
+    size = (options.size or @stage.map.size).scale @scale*base.grid_in_pixels
+    @renderer = Renderer.get_singleton @element, @_on_assets_loaded.bind @
+    @renderer.resize size
+    @context = @renderer.context
+    @stats = @renderer.stats
+    # Containers for the various layers of the game. Earlier layers are lower.
     @tile_container = do @_add_container
     @feature_container = do @_add_container
-    do @_initialize_stats
-
     @tiles = []
     @features = []
-
-    assets = options.assets or ['effects', 'enemies', 'player', 'tileset']
-    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets)
-    loader.onComplete = @_on_assets_loaded.bind @
-    do loader.load
 
   draw: ->
     for x in [0...@stage.map.size.x]
@@ -39,7 +63,7 @@ class base.Graphics
         square = new Point x, y
         @_draw_tile @tiles[index], @stage.map.get_tile_image square
         @_draw_tile @features[index], @stage.map.get_feature_image square
-    @renderer.render @context
+    do @renderer.draw
 
   _add_container: ->
     container = new PIXI.DisplayObjectContainer
@@ -54,11 +78,6 @@ class base.Graphics
       else
         tile.setTexture PIXI.Texture.emptyTexture
       tile._tilist_image = image
-
-  _initialize_stats: ->
-    @stats = new PIXI.Stats
-    $('body').append @stats.domElement
-    $(@stats.domElement).css {position: 'fixed', top: 0, left: 0}
 
   _make_tile: (square, image, container) ->
     tile = new PIXI.Sprite
