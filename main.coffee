@@ -112,8 +112,12 @@ class Graphics extends base.Graphics
 
 
 class Map extends base.Map
+  FRAMES = 4
+  PERIOD = 12
+
   constructor: ->
     super 'default'
+    @frame = 0
 
   get_random_free_square: ->
     result = new Point -1, -1
@@ -123,10 +127,24 @@ class Map extends base.Map
     result
 
   get_starting_square: ->
-    new Point (Math.ceil @size.x/2), 0
+    new Point (Math.floor @size.x/2), 0
+
+  get_tile_image: (square) ->
+    result = super square
+    if result == 'water'
+      index = Math.floor (@frame % (FRAMES*PERIOD))/PERIOD
+      return "water-#{index}"
+    result
 
   is_free: (square) ->
-    @_in_bounds square
+    if not @_in_bounds square
+      return false
+    tile = @_tiles[square.x][square.y]
+    feature = @_features[square.x][square.y]
+    (not feature?) and tile != 'water'
+
+  update: ->
+    @frame = (@frame + 1) % (FRAMES*PERIOD)
 
 
 class PixiData
@@ -581,6 +599,7 @@ class Stage
 
 class GameplayState
   update: ->
+    do @stage.map.update
     for sprite in @stage.sprites
       do sprite.update
       # When a sprite update changes the game state, we should not continue
