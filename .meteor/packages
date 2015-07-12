@@ -7,3 +7,5 @@
 meteor-platform
 coffeescript
 less
+insecure
+autopublish

@@ -111,44 +111,22 @@ class Graphics extends base.Graphics
     Math.round twips/TWIPS_PER_PIXEL
 
 
-class Map
-  constructor: (@size) ->
-    assert @size.x > 0 and @size.y > 0
-    @_tiles = (do @_get_random_tile for i in [0...@size.x*@size.y])
-    for x in [0...@size.x]
-      @_set_tile (new Point x, 0), '#'
-      @_set_tile (new Point x, @size.y - 1), '#'
-    for y in [0...@size.y]
-      @_set_tile (new Point 0, y), '#'
-      @_set_tile (new Point @size.x - 1, y), '#'
-    @_set_tile (new Point 1, 1), '.'
-
-  get_feature_image: (square) ->
+class Map extends base.Map
+  constructor: ->
+    super 'default'
 
   get_random_free_square: ->
     result = new Point -1, -1
-    while (@get_tile result) == '#'
+    while not @is_free result
       result.x = _.random (@size.x - 1)
       result.y = _.random (@size.y - 1)
     result
 
   get_starting_square: ->
-    new Point 1, 1
+    new Point (Math.ceil @size.x/2), 0
 
-  get_tile: (square) ->
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      return @_tiles[square.x*@size.y + square.y]
-    '#'
-
-  get_tile_image: (square) ->
-    if (@get_tile square) == '.' then 'grass-yellow-' else 'rock'
-
-  _get_random_tile: ->
-    if (do Math.random) < 0.2 then '#' else '.'
-
-  _set_tile: (square, tile) ->
-    if 0 <= square.x < @size.x and 0 <= square.y < @size.y
-      @_tiles[square.x*@size.y + square.y] = tile
+  is_free: (square) ->
+    @_in_bounds square
 
 
 class PixiData
@@ -312,7 +290,7 @@ class Sprite
     move
 
   _check_square: (square) ->
-    (@stage.map.get_tile square) == '.'
+    @stage.map.is_free square
 
   _get_square_and_overlap: ->
     # We first compute an overlap, which is a point (x, y) where each coordinate

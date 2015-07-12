@@ -1,5 +1,6 @@
 @base = @base or {}
 
+base.collection = new Meteor.Collection 'maps'
 base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}
@@ -139,3 +140,68 @@ class base.Input
   _onmousemove: (e) ->
     @_mouse_position.x = e.x
     @_mouse_position.y = e.y
+
+
+class base.Map
+  constructor: (name, options) ->
+    # Map currently supports the following options:
+    # - raw: If true, the map data will be loaded from its raw values.
+    options = options or {}
+    @size = new Point base.map_size[0], base.map_size[1]
+    @_tiles = @_tiles or do @_construct_2d_array
+    @_features = @_features or do @_construct_2d_array
+    @load name, options.raw
+
+  get_feature_image: (square) ->
+    @_features[square.x][square.y]
+
+  get_tile_image: (square) ->
+    @_tiles[square.x][square.y]
+
+  load: (name, raw) ->
+    document = base.collection.findOne {name: name}
+    if not document?
+      document = @_build_default_document name
+    if raw and document.raw?
+      @_tiles = document.raw.tiles
+      @_features = document.raw.features
+      return
+    for x in [0...@size.x]
+      for y in [0...@size.y]
+        square = new Point x, y
+        @_set_tile_image square, document.tiles[x][y]
+        @_set_feature_image square, document.features[x][y]
+
+  save: (name) ->
+    check name, String
+    document = @_build_default_document name
+    for x in [0...@size.x]
+      for y in [0...@size.y]
+        square = new Point x, y
+        document.tiles[x][y] = @get_tile_image square
+        document.features[x][y] = @get_tile_image square
+    document.raw = {tiles: @_tiles, features: @_features}
+    id = (base.collection.findOne {name: name})?._id
+    if id?
+      base.collection.update {_id: id}, {$set: document}
+    else
+      base.collection.insert document
+
+  _build_default_document: (name) ->
+    name: name
+    tiles: @_construct_2d_array 'grass-green-'
+    features: @_construct_2d_array undefined
+
+  _construct_2d_array: (value) ->
+    (((_.clone value) for y in [0...@size.y]) for x in [0...@size.x])
+
+  _in_bounds: (square) ->
+    0 <= square.x < @size.x and 0 <= square.y < @size.y
+
+  _set_feature_image: (square, image) ->
+    assert @_in_bounds square
+    @_features[square.x][square.y] = image
+
+  _set_tile_image: (square, image) ->
+    assert @_in_bounds square
+    @_tiles[square.x][square.y] = image

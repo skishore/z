@@ -52,18 +52,19 @@ class Graphics extends base.Graphics
     new Point (index % size.x), (size.y + (Math.floor index/size.x) + 1)
 
 
-class Map
+class Map extends base.Map
   EDGES = [['u', 0, -1], ['d', 0, 1], ['r', 1, 0], ['l', -1, 0]]
 
-  constructor: (@size, @tileset) ->
-    assert @size.x > 0 and @size.y > 0
+  constructor: (name, @tileset) ->
+    @size = new Point base.map_size[0], base.map_size[1]
     @_tiles = @_construct_2d_array @tileset.default_tile.index
     @_features = @_construct_2d_array []
+    @load name, {raw: true}
 
   get_feature_image: (square) ->
     assert @_in_bounds square
     images = (@tileset.tiles[i].image for i in @_features[square.x][square.y])
-    if images.length > 0 then (do images.sort).join '-'
+    if images.length > 0 then (do images.sort).join ' '
 
   get_tile: (square) ->
     if @_in_bounds square
@@ -84,9 +85,12 @@ class Map
     image
 
   set_tile: (square, tile) ->
+    # Returns true if a tile changed.
     if not @_in_bounds square
-      return
+      return false
     if tile.feature
+      if tile.index in @_features[square.x][square.y]
+        return false
       base = @tileset.tiles[@_tiles[square.x][square.y]]
       if tile.constraint? and not tile.constraint base
         alternatives = @tileset.get_sorted_alternatives base
@@ -97,12 +101,12 @@ class Map
         @_features[square.x][square.y] = features
       @_set_feature square, tile
     else
+      if tile.index == @_tiles[square.x][square.y]
+        return false
       @_tiles[square.x][square.y] = tile.index
       @_features[square.x][square.y].length = 0
       @_fix_constraints square
-
-  _construct_2d_array: (value) ->
-    (((_.clone value) for y in [0...@size.y]) for x in [0...@size.x])
+    true
 
   _fix_constraints: (square) ->
     tile = @get_tile square
@@ -115,9 +119,6 @@ class Map
             @set_tile other_square, alternative
             break
 
-  _in_bounds: (square) ->
-    0 <= square.x < @size.x and 0 <= square.y < @size.y
-
   _set_feature: (square, feature) ->
     assert @_in_bounds square
     assert feature.feature
@@ -127,10 +128,20 @@ class Map
     if feature.index in @_features[square.x][square.y]
       return
     features = @_features[square.x][square.y].concat feature.index
-    image = (do (@tileset.tiles[i].image for i in features).sort).join '-'
+    image = (do (@tileset.tiles[i].image for i in features).sort).join ' '
     if image not of PIXI.TextureCache
       @_features[square.x][square.y].length = 0
     @_features[square.x][square.y].push feature.index
+
+  _set_feature_image: (square, image) ->
+    if image?
+      indices = (@tileset.tiles_by_image[x].index for x in image.split ' ')
+      @_features[square.x][square.y] = indices
+    else
+      @_features[square.x][square.y].length = 0
+
+  _set_tile_image: (square, image) ->
+    @_tiles[square.x][square.y] = @tileset.tiles_by_image[image].index
 
 
 class Stage
@@ -138,7 +149,7 @@ class Stage
 
   constructor: ->
     @input = new base.Input {keyboard: true, mouse: true}
-    @map = new Map (new Point base.map_size[0], base.map_size[1]), new Tileset
+    @map = new Map 'default', new Tileset
     @_graphics = new Graphics @, $('.surface')
     @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
     assert @_num_hotkeys > 0
@@ -181,14 +192,17 @@ class Stage
       delete @_hotkeys[hotkey]
 
   _set_tile: (square, tile) ->
+    changed = false
     if tile.tree_offset?
       [x, y] = tile.tree_offset
       top_left = square.subtract new Point x, y
       for [suffix, x, y] in @map.tileset.tree_data
         tree = @map.tileset.tiles_by_image["tree-#{suffix}"]
-        @map.set_tile (top_left.add new Point x, y), tree
+        changed = (@map.set_tile (top_left.add new Point x, y), tree) or changed
     else
-      @map.set_tile square, tile
+      changed = @map.set_tile square, tile
+    if changed
+      @map.save 'default'
 
 
 class Tileset
