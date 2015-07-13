@@ -1,5 +1,7 @@
 {
   "frames": {
+    "drowning-0-": { "frame": {"x":64,"y":0,"w":16,"h":16} },
+    "drowning-1-": { "frame": {"x":80,"y":0,"w":16,"h":16} },
     "player-attacking0-up": { "frame": {"x":208,"y":240,"w":16,"h":16} },
     "player-attacking1-up": { "frame": {"x":272,"y":240,"w":16,"h":16} },
     "player-attacking2-up": { "frame": {"x":336,"y":240,"w":16,"h":16} },

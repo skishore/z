@@ -116,7 +116,7 @@ class Map extends base.Map
   TILESET = {
     bush: {blocked: true, cuttable: true}
     flower: {blocked: true, cuttable: true}
-    water: {animation: {frames: 4, period: 12}, blocked: true}
+    water: {animation: {frames: 4, period: 12}, blocked: true, water: true}
     default: {blocked: true}
     free: {}
   }
@@ -148,6 +148,9 @@ class Map extends base.Map
 
   is_free: (square) ->
     not (@_get_data square).blocked
+
+  is_water: (square) ->
+    (@_get_data square).water
 
   on_attack: (square) ->
     if (@_get_data square).cuttable
@@ -192,13 +195,11 @@ class Sprite
 
   constructor: (@stage, @image, @_default_state, start) ->
     sprite_index += 1
-    @direction = Direction.DOWN
     @health = 4
     @id = sprite_index
     @invulnerability_frames = 0
-    @position = start.scale GRID
-    @square = start
     @_pixi_data = new PixiData _sprite: @
+    @reposition start
     do @set_state
 
   collides: (sprite, tolerance) ->
@@ -227,8 +228,13 @@ class Sprite
     vector = @_check_squares vector
     if not do vector.zero
       @position = @position.add vector
-      [@square, _] = do @_get_square_and_overlap
+      do @_set_square_and_overlap
     vector
+
+  reposition: (square) ->
+    @direction = Direction.DOWN
+    @position = square.scale GRID
+    do @_set_square_and_overlap
 
   set_state: (state) ->
     @state?.on_exit?()
@@ -236,17 +242,28 @@ class Sprite
     @state.sprite = @
     @state.on_enter?()
 
+  switch_state: (state) ->
+    @set_state state
+    if @invulnerability_frames == 0 and
+       (do @is_player) and (do @_collides_with_any)
+      @set_state new KnockbackState
+    do @_check_static_conditions
+    do @state.update
+
   update: ->
+    square = do @square.clone
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
     else if (do @is_player) and (do @_collides_with_any)
       @set_state new KnockbackState
+    do @_check_static_conditions
     @_pixi_data.update do @state.update
 
   _can_collide: ->
-    not (@state instanceof DeathState) and \
-    not (@state instanceof JumpingState) and \
-    not (@state instanceof KnockbackState)
+    (@state not instanceof DeathState) and \
+    (@state not instanceof DrowningState) and \
+    (@state not instanceof JumpingState) and \
+    (@state not instanceof KnockbackState)
 
   _collides_with_any: ->
     if not do @_can_collide
@@ -270,8 +287,6 @@ class Sprite
     # the move up into several steps.
     speed = Math.floor do move.length
     assert speed < half_grid
-
-    [square, overlap] = do @_get_square_and_overlap
     offset = new Point 0, 0
     collided = false
 
@@ -282,14 +297,14 @@ class Sprite
       offset.y = 1
     # If we cross a horizontal boundary, check that the next square is open.
     if offset.y != 0
-      offset.x = if overlap.x > 0 then 1 else -1
-      if not @_check_square new Point square.x, square.y + offset.y
+      offset.x = if @overlap.x > 0 then 1 else -1
+      if not @_check_square new Point @square.x, @square.y + offset.y
         collided = true
-      else if (Math.abs overlap.x) > tolerance and \
-           not @_check_square square.add offset
+      else if (Math.abs @overlap.x) > tolerance and \
+           not @_check_square @square.add offset
         collided = true
-        if (Math.abs overlap.x) <= half_grid and offset.x*move.x <= 0
-          shove = Math.min speed, (Math.abs overlap.x) - tolerance
+        if (Math.abs @overlap.x) <= half_grid and offset.x*move.x <= 0
+          shove = Math.min speed, (Math.abs @overlap.x) - tolerance
           move.x = -offset.x*shove
       if collided
         if offset.y < 0
@@ -306,20 +321,20 @@ class Sprite
       # If we've crossed a horizontal boundary (which is true iff offset.y != 0
       # and collided is false) then run an extra check in the x direction.
       collided = offset.y != 0 and not collided and \
-                 not @_check_square square.add offset
-      offset.y = if overlap.y > 0 then 1 else -1
-      if not @_check_square new Point square.x + offset.x, square.y
+                 not @_check_square @square.add offset
+      offset.y = if @overlap.y > 0 then 1 else -1
+      if not @_check_square new Point @square.x + offset.x, @square.y
         collided = true
-      else if (overlap.y > 0 or -overlap.y > tolerance) and
-              not @_check_square square.add offset
+      else if (@overlap.y > 0 or -@overlap.y > tolerance) and
+              not @_check_square @square.add offset
         collided = true
-        if (Math.abs overlap.y) <= half_grid and offset.y*move.y <= 0
+        if (Math.abs @overlap.y) <= half_grid and offset.y*move.y <= 0
           # Check that we have space to shove away in the y direction.
           # We skip this check when shoving in the x direction because the
           # full x check is after the y check.
-          shove = Math.min speed, Math.max overlap.y, -overlap.y - tolerance
-          move.y = if (@_check_square new Point square.x, square.y + offset.y) \
-                      then -offset.y*shove else 0
+          shove = Math.min speed, Math.max @overlap.y, -@overlap.y - tolerance
+          square = new Point @square.x, @square.y + offset.y
+          move.y = if @_check_square square then -offset.y*shove else 0
       if collided
         if offset.x < 0
           move.x = -@_gmod @position.x + tolerance
@@ -328,26 +343,37 @@ class Sprite
     move
 
   _check_square: (square) ->
-    @stage.map.is_free square
+    can_move_on_water = ((do @is_player) or @state instanceof KnockbackState)
+    (@stage.map.is_free square) or \
+    (can_move_on_water and @stage.map.is_water square)
 
-  _get_square_and_overlap: ->
-    # We first compute an overlap, which is a point (x, y) where each coordinate
-    # lies in the interval [-half_grid, half_grid). The overlap is the
-    # "remainder" of our position with respect to the grid.
-    half_grid = Math.ceil 0.5*GRID
-    overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
-    overlap.x -= if overlap.x < half_grid then 0 else GRID
-    overlap.y -= if overlap.y < half_grid then 0 else GRID
-    # By subtracting the overlap from our position we round it to a grid square.
-    square = @position.subtract overlap
-    assert (square.x % GRID == 0) and (square.y % GRID == 0)
-    square.x /= GRID
-    square.y /= GRID
-    [square, overlap]
+  _check_static_conditions: ->
+    if (not do @_can_collide) and @state not instanceof KnockbackState
+      return
+    if @stage.map.is_water @square
+      @set_state new DrowningState
+    else if @overlap.y > 0
+      one_square_down = new Point @square.x, @square.y + 1
+      if @stage.map.is_water one_square_down
+        @set_state new DrowningState
 
   _gmod: (value) ->
     result = value % GRID
     if result >= 0 then result else result + GRID
+
+  _set_square_and_overlap: ->
+    # We first compute an overlap, which is a point (x, y) where each coordinate
+    # lies in the interval [-half_grid, half_grid). The overlap is the
+    # "remainder" of our position with respect to the grid.
+    half_grid = Math.ceil 0.5*GRID
+    @overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
+    @overlap.x -= if @overlap.x < half_grid then 0 else GRID
+    @overlap.y -= if @overlap.y < half_grid then 0 else GRID
+    # By subtracting the overlap from our position we round it to a grid square.
+    @square = @position.subtract @overlap
+    assert (@square.x % GRID == 0) and (@square.y % GRID == 0)
+    @square.x /= GRID
+    @square.y /= GRID
 
 
 _get_move = (keys, speed) ->
@@ -370,10 +396,6 @@ _move_sprite = (attempt) ->
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
   new PixiData frame: if animate then 'walking' else 'standing'
 
-_switch_state = (sprite, new_state) ->
-  sprite.set_state new_state
-  do sprite.state.update
-
 
 class AttackingState
   ATTACK_FRAMES = [1, 2, 3]
@@ -392,7 +414,7 @@ class AttackingState
     @_cur_frame += 1
     index = do @_get_index
     if index > 2
-      return _switch_state @sprite, new WalkingState
+      return @sprite.switch_state new WalkingState
     sword_frame = @_get_sword_frame index
     @_maybe_hit_enemies sword_frame
     @_maybe_hit_features sword_frame
@@ -472,9 +494,33 @@ class DeathState
     new PixiData frame: "red#{index}"
 
 
+class DrowningState
+  DROWNING_FRAMES = 16
+
+  on_enter: ->
+    @_cur_frame = 0
+    @sprite.direction = ''
+    @sprite.health -= 1
+    [@_image, @sprite.image] = [@sprite.image, 'drowning']
+
+  on_exit: ->
+    @sprite.image = @_image
+    @sprite.invulnerability_frames = EXTRA_INVULNERABILITY_FRAMES
+    @sprite.reposition do @sprite.stage.map.get_starting_square
+
+  update: ->
+    @_cur_frame += 1
+    index = Math.floor (@_cur_frame - 1)/DROWNING_FRAMES
+    if index > 1
+      if do @sprite.is_player
+        return @sprite.switch_state if @sprite.health <= 0 then new DeathState
+      @sprite.stage.destruct @sprite
+    new PixiData frame: "#{index}"
+
+
 class JumpingState
   JUMP_HEIGHT = 1.0*GRID
-  JUMP_LENGTH = 3.0*GRID
+  JUMP_LENGTH = 3.2*GRID
   JUMP_SPEED = 1.2*PLAYER_SPEED
 
   constructor: ->
@@ -484,7 +530,7 @@ class JumpingState
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, new WalkingState
+      return @sprite.switch_state new WalkingState
     keys = do @sprite.stage.input.get_keys_pressed
     _move_sprite.call @, _get_move keys, JUMP_SPEED
     new PixiData {
@@ -517,7 +563,7 @@ class KnockbackState
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
-      return _switch_state @sprite, if @sprite.health <= 0 then new DeathState
+      return @sprite.switch_state if @sprite.health <= 0 then new DeathState
     [x, y] = Direction.UNIT_VECTOR[@sprite.direction]
     result = _move_sprite.call @, (new Point x, y).scale_to -KNOCKBACK_SPEED
     # Calling _move_sprite will flip the sprite direction, so we flip it back.
@@ -533,7 +579,7 @@ class PausedState
   update: ->
     @_steps -= 1
     if @_steps < 0
-      return _switch_state @sprite, new RandomWalkState
+      return @sprite.switch_state new RandomWalkState
     new PixiData frame: 'standing'
 
 
@@ -551,7 +597,7 @@ class RandomWalkState
   update: ->
     @_steps -= 1
     if @_steps < 0
-      return _switch_state @sprite, new PausedState true
+      return @sprite.switch_state new PausedState true
     _move_sprite.call @, @_move
 
 
@@ -563,9 +609,9 @@ class WalkingState
   update: ->
     keys = do @sprite.stage.input.get_keys_pressed
     if @_consume_input keys, 'j'
-      return _switch_state @sprite, new JumpingState
+      return @sprite.switch_state new JumpingState
     else if @_consume_input keys, 'k'
-      return _switch_state @sprite, new AttackingState
+      return @sprite.switch_state new AttackingState
     _move_sprite.call @, _get_move keys, PLAYER_SPEED
 
   _consume_input: (keys, key) ->
