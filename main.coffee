@@ -112,8 +112,14 @@ class Graphics extends base.Graphics
 
 
 class Map extends base.Map
-  FRAMES = 4
-  PERIOD = 12
+  PERIOD = 720
+  TILESET = {
+    bush: {blocked: true, cuttable: true}
+    flower: {blocked: true, cuttable: true}
+    water: {animation: {frames: 4, period: 12}, blocked: true}
+    default: {blocked: true}
+    free: {}
+  }
 
   constructor: ->
     super 'default'
@@ -131,20 +137,34 @@ class Map extends base.Map
 
   get_tile_image: (square) ->
     result = super square
-    if result == 'water'
-      index = Math.floor (@frame % (FRAMES*PERIOD))/PERIOD
-      return "water-#{index}"
+    animation = TILESET[result]?.animation
+    if animation?
+      period = animation.frames*animation.period
+      index = Math.floor (@frame % period)/animation.period
+      return "#{result}-#{index}"
+    if result[result.length - 1] == '-' and @_features[square.x][square.y]?
+      result += 'flat'
     result
 
   is_free: (square) ->
-    if not @_in_bounds square
-      return false
-    tile = @_tiles[square.x][square.y]
-    feature = @_features[square.x][square.y]
-    (not feature?) and tile != 'water'
+    not (@_get_data square).blocked
+
+  on_attack: (square) ->
+    if (@_get_data square).cuttable
+      @_features[square.x][square.y] = undefined
 
   update: ->
-    @frame = (@frame + 1) % (FRAMES*PERIOD)
+    @frame = (@frame + 1) % PERIOD
+
+  _get_data: (square) ->
+    if not @_in_bounds square
+      return {blocked: true}
+    feature = @_features[square.x][square.y]
+    if feature?
+      data = TILESET[feature]
+      return if data? then data else TILESET.default
+    data = TILESET[@_tiles[square.x][square.y]]
+    return if data? then data else TILESET.free
 
 
 class PixiData
@@ -375,6 +395,7 @@ class AttackingState
       return _switch_state @sprite, new WalkingState
     sword_frame = @_get_sword_frame index
     @_maybe_hit_enemies sword_frame
+    @_maybe_hit_features sword_frame
     new PixiData {
       frame: "attacking#{index}"
       shadow: sword_frame
@@ -403,6 +424,13 @@ class AttackingState
     for enemy in enemies_hit
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
       enemy.set_state new KnockbackState
+
+  _maybe_hit_features: (sword_frame) ->
+    diff = new Point (@_round sword_frame.x_offset), \
+                     (@_round sword_frame.y_offset)
+    diff.x /= GRID
+    diff.y /= GRID
+    @sprite.stage.map.on_attack @sprite.square.add diff
 
   _get_enemies_hit: (sword_frame) ->
     # The sword tile extends further than the last pixel in the sword blade.
@@ -555,7 +583,7 @@ class Stage
     DialogManager.set_page dialog
     # Initialize the normal game state.
     @input = new base.Input {keyboard: true}
-    @map = new Map new Point base.map_size[0], base.map_size[1]
+    @map = new Map
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @set_state new GameplayState

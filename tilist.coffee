@@ -80,8 +80,6 @@ class Map extends base.Map
         other = @get_tile square.add new Point x, y
         if (not other.default) and (not tile.edging other)
           image += direction
-      if image == tile.image and @_features[square.x][square.y].length > 0
-        image += 'flat'
     image
 
   set_tile: (square, tile) ->
