@@ -116,7 +116,7 @@ class Map extends base.Map
   TILESET = {
     bush: {blocked: true, cuttable: true}
     flower: {blocked: true, cuttable: true}
-    water: {animation: {frames: 4, period: 12}, blocked: true, water: true}
+    water: {animation: {frames: 4, period: 24}, blocked: true, water: true}
     default: {blocked: true}
     free: {}
   }
@@ -495,7 +495,7 @@ class DeathState
 
 
 class DrowningState
-  DROWNING_FRAMES = 16
+  DROWNING_FRAMES = 12
 
   on_enter: ->
     @_cur_frame = 0
