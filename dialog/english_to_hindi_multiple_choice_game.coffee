@@ -32,7 +32,7 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
     return @answers.length
 
   on_attack: (sid) ->
-    if not @can_attack sid
+    if sid not of @sid_to_answer or not @can_attack sid
       return DialogAttackResult.WRONG_ENEMY
     @enemies_attacked.push sid
     DialogManager._redraw 'current'
