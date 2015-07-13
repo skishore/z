@@ -5,6 +5,9 @@ base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}
 
+if Meteor.isServer
+  Meteor.publish 'maps', -> do base.collection.find
+
 
 class Renderer
   singleton = null

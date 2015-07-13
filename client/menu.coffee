@@ -1,4 +1,9 @@
+subscription = {}
+
+
 reset = ->
+  if not do subscription.ready
+    return
   # TODO(skishore): This reset function is a hack that manually destructs
   # all sorts of internal state of the stage. Each stage implementation
   # should provide a cleanup method instead.
@@ -10,10 +15,7 @@ reset = ->
   base.stage?._graphics.draw = ->
   do base.stage?._graphics.context.removeChildren
   mode = Session.get 'menu.mode'
-  if mode == 'tilist'
-    Meteor.setTimeout -> base.stage = new base.modes[mode]
-  else
-    base.stage = new base.modes[mode]
+  Meteor.setTimeout -> base.stage = new base.modes[mode]
 
 
 Template.menu.events {
@@ -38,5 +40,6 @@ Template.menu.helpers {
 
 Meteor.startup ->
   if Meteor.isClient
+    subscription = Meteor.subscribe 'maps'
     Session.set 'menu.mode', 'main'
     Deps.autorun reset
