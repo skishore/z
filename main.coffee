@@ -486,6 +486,7 @@ class DeathState
     @_cur_frame = 0
     @sprite.direction = ''
     @sprite.image = 'explosion'
+    @sprite.invulnerability_frames = 0
 
   update: ->
     @_cur_frame += 1
@@ -555,11 +556,9 @@ class KnockbackState
 
   on_enter: ->
     @sprite.health -= 1
-    @sprite.invulnerability_frames = @_max_frame + EXTRA_INVULNERABILITY_FRAMES
-
-  on_exit: ->
-    if not do @sprite.is_player
-      @sprite.invulnerability_frames = 0
+    @sprite.invulnerability_frames = @_max_frame
+    if do @sprite.is_player
+      @sprite.invulnerability_frames += EXTRA_INVULNERABILITY_FRAMES
 
   update: ->
     @_cur_frame += 1
