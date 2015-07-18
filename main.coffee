@@ -203,7 +203,7 @@ class Sprite
     do @set_state
 
   collides: (sprite, tolerance) ->
-    if not do sprite._can_collide
+    if not sprite.state.collides
       return false
     tolerance = tolerance or new Point 0, 0
     (not (@position.x + GRID - tolerance.x <= sprite.position.x or
@@ -253,12 +253,6 @@ class Sprite
       @invulnerability_frames -= 1
     do @_check_static_conditions
     @_pixi_data.update do @state.update
-
-  _can_collide: ->
-    (@state not instanceof DeathState) and \
-    (@state not instanceof DrowningState) and \
-    (@state not instanceof JumpingState) and \
-    (@state not instanceof KnockbackState)
 
   _collides_with_any: ->
     tolerance = new Point 0.25*GRID, 0.25*GRID
@@ -341,12 +335,11 @@ class Sprite
     (can_move_on_water and @stage.map.is_water square)
 
   _check_static_conditions: ->
-    can_collide = do @_can_collide
     # Check if the sprite can be hurt by contact, and if so, check if they do.
-    if (do @is_player) and can_collide and (do @_collides_with_any)
+    if @state.collides and (do @is_player) and (do @_collides_with_any)
       @set_state new KnockbackState
     # Check if the sprite can drown, and if so, check if they are on water.
-    if can_collide or @state instanceof KnockbackState
+    if @state.collides or @state instanceof KnockbackState
       if @stage.map.is_water @square
         @set_state new DrowningState
       else if @overlap.y > 0
@@ -406,6 +399,7 @@ class AttackingState
 
   constructor: ->
     @_cur_frame = 0
+    @collides = true
 
   update: ->
     @_cur_frame += 1
@@ -572,6 +566,7 @@ class PausedState
   constructor: (random) ->
     base_steps = Math.floor GRID/ENEMY_SPEED
     @_steps = if random then (_.random -base_steps, base_steps) else base_steps
+    @collides = true
 
   update: ->
     @_steps -= 1
@@ -584,6 +579,7 @@ class RandomWalkState
   constructor: ->
     @_anim_num = 0
     @_period = WALKING_ANIMATION_FRAMES
+    @collides = true
 
   on_enter: ->
     base_steps = Math.floor GRID/ENEMY_SPEED
@@ -602,6 +598,7 @@ class WalkingState
   constructor: ->
     @_anim_num = 0
     @_period = WALKING_ANIMATION_FRAMES
+    @collides = true
 
   update: ->
     keys = do @sprite.stage.input.get_keys_pressed
