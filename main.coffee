@@ -244,9 +244,6 @@ class Sprite
 
   switch_state: (state) ->
     @set_state state
-    if @invulnerability_frames == 0 and
-       (do @is_player) and (do @_collides_with_any)
-      @set_state new KnockbackState
     do @_check_static_conditions
     do @state.update
 
@@ -254,8 +251,6 @@ class Sprite
     square = do @square.clone
     if @invulnerability_frames > 0
       @invulnerability_frames -= 1
-    else if (do @is_player) and (do @_collides_with_any)
-      @set_state new KnockbackState
     do @_check_static_conditions
     @_pixi_data.update do @state.update
 
@@ -266,8 +261,6 @@ class Sprite
     (@state not instanceof KnockbackState)
 
   _collides_with_any: ->
-    if not do @_can_collide
-      return false
     tolerance = new Point 0.25*GRID, 0.25*GRID
     for sprite in @stage.sprites
       if sprite != @ and @collides sprite, tolerance
@@ -348,14 +341,18 @@ class Sprite
     (can_move_on_water and @stage.map.is_water square)
 
   _check_static_conditions: ->
-    if (not do @_can_collide) and @state not instanceof KnockbackState
-      return
-    if @stage.map.is_water @square
-      @set_state new DrowningState
-    else if @overlap.y > 0
-      one_square_down = new Point @square.x, @square.y + 1
-      if @stage.map.is_water one_square_down
+    can_collide = do @_can_collide
+    # Check if the sprite can be hurt by contact, and if so, check if they do.
+    if (do @is_player) and can_collide and (do @_collides_with_any)
+      @set_state new KnockbackState
+    # Check if the sprite can drown, and if so, check if they are on water.
+    if can_collide or @state instanceof KnockbackState
+      if @stage.map.is_water @square
         @set_state new DrowningState
+      else if @overlap.y > 0
+        one_square_down = new Point @square.x, @square.y + 1
+        if @stage.map.is_water one_square_down
+          @set_state new DrowningState
 
   _gmod: (value) ->
     result = value % GRID
