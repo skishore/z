@@ -1,7 +1,15 @@
 {
   "frames": {
     "explosion-red0-": { "frame": {"x":5,"y":43,"w":16,"h":16} },
-    "explosion-red1-": { "frame": {"x":5,"y":59,"w":16,"h":16} }
+    "explosion-red1-": { "frame": {"x":5,"y":59,"w":16,"h":16} },
+    "leaf-ul-": { "frame": {"x":5,"y":96,"w":8,"h":6} },
+    "leaf-ur-": { "frame": {"x":14,"y":96,"w":8,"h":6} },
+    "leaf-dl-": { "frame": {"x":5,"y":103,"w":8,"h":6} },
+    "leaf-dr-": { "frame": {"x":14,"y":103,"w":8,"h":6} },
+    "petal-ul-": { "frame": {"x":24,"y":96,"w":8,"h":6} },
+    "petal-ur-": { "frame": {"x":33,"y":96,"w":8,"h":6} },
+    "petal-dl-": { "frame": {"x":24,"y":103,"w":8,"h":6} },
+    "petal-dr-": { "frame": {"x":33,"y":103,"w":8,"h":6} }
   },
   "meta": { "image": "effects.png" }
 }

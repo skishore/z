@@ -63,6 +63,8 @@ class Graphics extends base.Graphics
     drawn[shadow_id] = true
 
   _draw_sprite: (sprite, drawn) ->
+    if not sprite.id?
+      return
     pixi = @_get_sprite sprite.id
     pixi.x = @_to_pixels sprite.position.x
     pixi.y = @_to_pixels sprite.position.y + sprite.y_offset
@@ -114,14 +116,18 @@ class Graphics extends base.Graphics
 class Map extends base.Map
   PERIOD = 720
   TILESET = {
-    bush: {blocked: true, cuttable: true}
-    flower: {blocked: true, cuttable: true}
+    bush: {blocked: true, cuttable: true, particles: {num: 4, images: ['leaf']}}
+    flower: {
+      blocked: true
+      cuttable: true
+      particles: {num: 4, images: ['leaf', 'petal']}
+    }
     water: {animation: {frames: 4, period: 24}, blocked: true, water: true}
     default: {blocked: true}
     free: {}
   }
 
-  constructor: ->
+  constructor: (@stage) ->
     super 'default'
     @frame = 0
 
@@ -153,8 +159,12 @@ class Map extends base.Map
     (@_get_data square).water
 
   on_attack: (square) ->
-    if (@_get_data square).cuttable
+    data = @_get_data square
+    if data.cuttable
       @_features[square.x][square.y] = undefined
+      for i in [0...(data.particles?.num or 0)]
+        image = _.sample data.particles.images
+        @stage.sprites.push new Sprite @stage, image, ParticleState, square
 
   update: ->
     @frame = (@frame + 1) % PERIOD
@@ -562,6 +572,40 @@ class KnockbackState
     result
 
 
+class ParticleState
+  DISTANCE = 0.5*GRID
+  MIN_SPEED = 0.25*PLAYER_SPEED
+  SIZE = [8, 6]
+
+  constructor: ->
+    while (not @velocity?) or (do @velocity.length) < MIN_SPEED
+      @velocity = (new Point (do @_normal), (do @_normal)).scale 2*MIN_SPEED
+    v = @velocity
+    @frame = "#{if v.y < 0 then 'u' else 'd'}#{if v.x < 0 then 'l' else 'r'}"
+    @_frames_left = DISTANCE/(do @velocity.length)
+
+  on_enter: ->
+    [x, y] = SIZE
+    @sprite.direction = ''
+    @sprite.position.x += _.random TWIPS_PER_PIXEL*x
+    @sprite.position.y += _.random TWIPS_PER_PIXEL*x
+
+  update: ->
+    @_frames_left -= 1
+    if @_frames_left < 0
+      @sprite.stage.destruct @sprite
+    @sprite.position = @sprite.position.add @velocity
+    new PixiData frame: @frame
+
+  _normal: ->
+    u = 2*(do Math.random) - 1
+    v = 2*(do Math.random) - 1
+    r = u*u + v*v
+    if 0 < r <= 1
+      return u*Math.sqrt -2*(Math.log r)/r
+    do @_normal
+
+
 class PausedState
   constructor: (random) ->
     base_steps = Math.floor GRID/ENEMY_SPEED
@@ -623,7 +667,7 @@ class Stage
     DialogManager.set_page dialog
     # Initialize the normal game state.
     @input = new base.Input {keyboard: true}
-    @map = new Map
+    @map = new Map @
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @set_state new GameplayState
