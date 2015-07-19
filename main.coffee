@@ -346,7 +346,8 @@ class Sprite
 
   _check_static_conditions: ->
     # Check if the sprite can be hurt by contact, and if so, check if they do.
-    if @state.collides and (do @is_player) and (do @_collides_with_any)
+    if @state.collides and (do @is_player) and \
+       @invulnerability_frames == 0 and (do @_collides_with_any)
       @set_state new KnockbackState
     # Check if the sprite can drown, and if so, check if they are on water.
     if @state.collides or @state instanceof KnockbackState
