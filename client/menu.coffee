@@ -13,7 +13,8 @@ reset = ->
   Session.set 'tilist.hotkeys', null
   base.stage?.loop = ->
   base.stage?._graphics.draw = ->
-  do base.stage?._graphics.context.removeChildren
+  for type, layer of base.stage?._graphics.layers
+    do layer.removeChildren
   mode = Session.get 'menu.mode'
   Meteor.setTimeout -> base.stage = new base.modes[mode]
 

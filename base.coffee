@@ -10,14 +10,17 @@ if Meteor.isServer
 
 
 class Renderer
+  LAYERS = ['game', 'ui']
   singleton = null
 
   constructor: (element, callback) ->
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
-    @context = new PIXI.DisplayObjectContainer
     @_renderer = PIXI.autoDetectRenderer 0, 0, {transparent: true}
     @_stage = new PIXI.Stage 0x00000000
-    @_stage.addChild @context
+    @layers = {}
+    for layer in LAYERS
+      @layers[layer] = new PIXI.DisplayObjectContainer
+      @_stage.addChild @layers[layer]
     element.prepend @_renderer.view
     do @_initialize_stats
     # Load assets and run the callback when done.
@@ -30,7 +33,7 @@ class Renderer
     @_renderer.render @_stage
 
   generate_texture: ->
-    @context.generateTexture 1, PIXI.scaleModes.NEAREST, @_renderer
+    @layers.game.generateTexture 1, PIXI.scaleModes.NEAREST, @_renderer
 
   resize: (size) ->
     @_renderer.resize size.x, size.y
@@ -57,11 +60,11 @@ class base.Graphics
     size = (options.size or @stage.map.size).scale @scale*base.grid_in_pixels
     @renderer = Renderer.get_singleton @element, @_on_assets_loaded.bind @
     @renderer.resize size
-    @context = @renderer.context
+    @layers = @renderer.layers
     @stats = @renderer.stats
     # Containers for the various layers of the game. Earlier layers are lower.
-    @tile_container = do @_add_container
-    @feature_container = do @_add_container
+    @tile_container = @_add_container @layers.game
+    @feature_container = @_add_container @layers.game
     @tiles = []
     @features = []
 
@@ -80,13 +83,13 @@ class base.Graphics
     size = @stage.map.size.scale @scale*base.grid_in_pixels
     offset = new Point diff.x*size.x, diff.y*size.y
     # When we call generateTexture, the texture may be slightly larger than
-    # the expected size to accomodate any sprites that are outside the context's
+    # the expected size to accomodate any sprites that are outside the game's
     # normal bounds. Shift it to account for this fact.
-    bounds = do @context.getBounds
+    bounds = do @layers.game.getBounds
     sprite = new PIXI.Sprite do @renderer.generate_texture
     sprite.x = -offset.x + bounds.x
     sprite.y = -offset.y + bounds.y
-    @context.addChildAt sprite, 0
+    @layers.game.addChildAt sprite, 0
     @_scroll = {
       cur_frame: -1
       max_frame: Math.ceil (do offset.length)/speed
@@ -99,20 +102,20 @@ class base.Graphics
     assert @_scroll?
     @_scroll.cur_frame += 1
     factor = (@_scroll.max_frame - @_scroll.cur_frame)/@_scroll.max_frame
-    @context.x = Math.floor @_scroll.offset.x*factor
-    @context.y = Math.floor @_scroll.offset.y*factor
+    @layers.game.x = Math.floor @_scroll.offset.x*factor
+    @layers.game.y = Math.floor @_scroll.offset.y*factor
     # Destroy the texture and return true if the scroll is complete.
     complete = @_scroll.cur_frame >= @_scroll.max_frame
     if complete
-      @context.removeChild @_scroll.sprite
+      @layers.game.removeChild @_scroll.sprite
       @_scroll.sprite.texture.destroy true
       delete @_scroll
     complete
 
-  _add_container: ->
+  _add_container: (layer) ->
     container = new PIXI.DisplayObjectContainer
     container.scale = new PIXI.Point @scale, @scale
-    @context.addChild container
+    layer.addChild container
     container
 
   _draw_tile: (tile, image) ->

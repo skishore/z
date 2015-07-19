@@ -6,10 +6,11 @@ class Graphics extends base.Graphics
     size = do @stage.map.size.clone
     size.y += (Math.ceil num_tiles/size.x) + 1
     super @stage, @element, {assets: ['tileset'], size: size, transparent: true}
+    @tileset_container = @_add_container @layers.ui
 
   _on_assets_loaded: ->
     for choice, i in @stage.map.tileset.tiles
-      @_make_tile (@get_tileset_square i), choice.image, @tile_container
+      @_make_tile (@get_tileset_square i), choice.image, @tileset_container
     super
 
   get_outline: (square) ->
@@ -145,6 +146,8 @@ class Map extends base.Map
 
 class Stage
   HOTKEYS = 'qwertyu12345678'
+  SCROLL_KEYS = {h: [-1, 0], j: [0, 1], k: [0, -1], l: [1, 0]}
+  SCROLL_SPEED = 32
 
   constructor: ->
     @input = new base.Input {keyboard: true, mouse: true}
@@ -165,6 +168,8 @@ class Stage
     do @_graphics.stats.end
 
   update: ->
+    if do @_maybe_scroll
+      return
     target = @_graphics.get_target do @input.get_mouse_position
     if target.type != 'tile'
       return Session.set 'tilist.cursor', null
@@ -173,6 +178,17 @@ class Stage
       index = HOTKEYS.indexOf key
       if index >= 0 and @_hotkeys[index]?
         @_set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
+
+  _maybe_scroll: ->
+    if @_scrolling and not do @_graphics.scroll
+      return true
+    @_scrolling = false
+    for key of do @input.get_keys_pressed
+      if key of SCROLL_KEYS
+        offset = new Point SCROLL_KEYS[key][0], SCROLL_KEYS[key][1]
+        @_graphics.prepare_scroll SCROLL_SPEED, offset
+        @_scrolling = true
+    @_scrolling
 
   _redraw_hotkeys: ->
     hotkeys = []

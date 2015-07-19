@@ -35,7 +35,7 @@ class Direction
 class Graphics extends base.Graphics
   constructor: (@stage, @element) ->
     super @stage, @element
-    @sprite_container = do @_add_container
+    @sprite_container = @_add_container @layers.game
     @sprites = {}
 
   draw: ->
@@ -46,8 +46,8 @@ class Graphics extends base.Graphics
     for id in ids_to_remove
       @_remove_sprite id
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
-    @context.filters = if @stage._pixi_invert \
-                       then [new PIXI.InvertFilter] else null
+    @layers.game.filters = if @stage._pixi_invert \
+                           then [new PIXI.InvertFilter] else null
     super
 
   prepare_scroll: (speed, offset) ->
