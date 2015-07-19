@@ -79,23 +79,28 @@ class base.Graphics
       return
     size = @stage.map.size.scale @scale*base.grid_in_pixels
     offset = new Point diff.x*size.x, diff.y*size.y
+    # When we call generateTexture, the texture may be slightly larger than
+    # the expected size to accomodate any sprites that are outside the context's
+    # normal bounds. Shift it to account for this fact.
+    bounds = do @context.getBounds
     sprite = new PIXI.Sprite do @renderer.generate_texture
-    sprite.position.x = -offset.x
-    sprite.position.y = -offset.y
-    @context.addChild sprite
+    sprite.x = -offset.x + bounds.x
+    sprite.y = -offset.y + bounds.y
+    @context.addChildAt sprite, 0
     @_scroll = {
-      cur_frame: 0
+      cur_frame: -1
       max_frame: frames
       offset: offset
       sprite: sprite
     }
+    assert not do @scroll
 
   scroll: ->
     assert @_scroll?
     @_scroll.cur_frame += 1
     factor = (@_scroll.max_frame - @_scroll.cur_frame)/@_scroll.max_frame
-    @context.position.x = Math.floor @_scroll.offset.x*factor
-    @context.position.y = Math.floor @_scroll.offset.y*factor
+    @context.x = Math.floor @_scroll.offset.x*factor
+    @context.y = Math.floor @_scroll.offset.y*factor
     # Destroy the texture and return true if the scroll is complete.
     complete = @_scroll.cur_frame >= @_scroll.max_frame
     if complete
