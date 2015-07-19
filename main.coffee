@@ -50,6 +50,11 @@ class Graphics extends base.Graphics
                        then [new PIXI.InvertFilter] else null
     super
 
+  prepare_scroll: (frames, offset) ->
+    @sprites[@stage.player?._pixi_data.id]?.visible = false
+    super frames, offset
+    @sprites[@stage.player?._pixi_data.id]?.visible = true
+
   _draw_shadow: (sprite, drawn) ->
     if not sprite.shadow?
       return
@@ -131,9 +136,19 @@ class Map extends base.Map
     super 'default'
     @frame = 0
 
+  get_map_data: (square) ->
+    if not @_in_bounds square
+      return {blocked: true, out_of_bounds: true}
+    feature = @_features[square.x][square.y]
+    if feature?
+      data = TILESET[feature]
+      return if data? then data else TILESET.default
+    data = TILESET[@_tiles[square.x][square.y]]
+    return if data? then data else TILESET.free
+
   get_random_free_square: ->
     result = new Point -1, -1
-    while not @is_free result
+    while (@get_map_data result).blocked
       result.x = _.random (@size.x - 1)
       result.y = _.random (@size.y - 1)
     result
@@ -152,14 +167,8 @@ class Map extends base.Map
       result += 'flat'
     result
 
-  is_free: (square) ->
-    not (@_get_data square).blocked
-
-  is_water: (square) ->
-    (@_get_data square).water
-
   on_attack: (square) ->
-    data = @_get_data square
+    data = @get_map_data square
     if data.cuttable
       @_features[square.x][square.y] = undefined
       for i in [0...(data.particles?.num or 0)]
@@ -168,16 +177,6 @@ class Map extends base.Map
 
   update: ->
     @frame = (@frame + 1) % PERIOD
-
-  _get_data: (square) ->
-    if not @_in_bounds square
-      return {blocked: true}
-    feature = @_features[square.x][square.y]
-    if feature?
-      data = TILESET[feature]
-      return if data? then data else TILESET.default
-    data = TILESET[@_tiles[square.x][square.y]]
-    return if data? then data else TILESET.free
 
 
 class PixiData
@@ -340,9 +339,10 @@ class Sprite
     move
 
   _check_square: (square) ->
+    map_data = @stage.map.get_map_data square
     can_move_on_water = ((do @is_player) or @state instanceof KnockbackState)
-    (@stage.map.is_free square) or \
-    (can_move_on_water and @stage.map.is_water square)
+    (not map_data.blocked) or (can_move_on_water and map_data.water) or \
+    ((do @is_player) and map_data.out_of_bounds)
 
   _check_static_conditions: ->
     # Check if the sprite can be hurt by contact, and if so, check if they do.
@@ -350,11 +350,11 @@ class Sprite
       @set_state new KnockbackState
     # Check if the sprite can drown, and if so, check if they are on water.
     if @state.collides or @state instanceof KnockbackState
-      if @stage.map.is_water @square
+      if (@stage.map.get_map_data @square).water
         @set_state new DrowningState
       else if @overlap.y > 0
         one_square_down = new Point @square.x, @square.y + 1
-        if @stage.map.is_water one_square_down
+        if (@stage.map.get_map_data one_square_down).water
           @set_state new DrowningState
 
   _gmod: (value) ->
@@ -658,6 +658,8 @@ class WalkingState
 
 
 class Stage
+  SCROLL_FRAMES = 40
+
   constructor: ->
     # Construct the dialog so we know how many enemies we need.
     dialog = new (if (do Math.random) < 0.5 then TransliterationMatchingGame \
@@ -689,6 +691,22 @@ class Stage
     window.requestAnimationFrame @loop.bind @
     do @_graphics.stats.end
 
+  maybe_scroll: ->
+    if not (@player? and (@map.get_map_data @player.square).out_of_bounds)
+      return
+    # Compute the screen offset and shift the player to the new screen.
+    # TODO(skishore): This logic should be handled in Sprite.
+    offset = new Point (@_sign @player.square.x, @map.size.x), \
+                       (@_sign @player.square.y, @map.size.y)
+    @player.position.x -= GRID*offset.x*@map.size.x
+    @player.position.y -= GRID*offset.y*@map.size.y
+    do @player._set_square_and_overlap
+    # Load the new map and scroll to the new screen.
+    @_graphics.prepare_scroll SCROLL_FRAMES, offset
+    @map = new Map @
+    @sprites = [@player]
+    @set_state new ScrollState @_graphics
+
   set_state: (state) ->
     @state = state
     @state.stage = @
@@ -707,6 +725,9 @@ class Stage
   _construct_player: ->
     new Sprite @, 'player', WalkingState, (do @map.get_starting_square)
 
+  _sign: (value, max) ->
+    if value < 0 then -1 else if value >= max then 1 else 0
+
 
 class GameplayState
   update: ->
@@ -717,7 +738,8 @@ class GameplayState
       # by updating the other sprites. Doing so could cause strange race
       # conditions (eg. the player scrolls the screen but is then killed).
       if @stage.state != @
-        break
+        return
+    do @stage.maybe_scroll
 
 
 class InvertState
@@ -731,6 +753,14 @@ class InvertState
       @stage.player.set_state new KnockbackState
       return @stage.set_state new GameplayState
     @stage._pixi_invert = true
+
+
+class ScrollState
+  constructor: (@graphics) ->
+
+  update: ->
+    if do @graphics.scroll
+      @stage.set_state new GameplayState
 
 
 base.modes.main = Stage
