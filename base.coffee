@@ -14,8 +14,10 @@ class Renderer
 
   constructor: (element, callback) ->
     PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
-    @context = new PIXI.Stage 0x00000000
+    @context = new PIXI.DisplayObjectContainer
     @_renderer = PIXI.autoDetectRenderer 0, 0, {transparent: true}
+    @_stage = new PIXI.Stage 0x00000000
+    @_stage.addChild @context
     element.prepend @_renderer.view
     do @_initialize_stats
     # Load assets and run the callback when done.
@@ -25,7 +27,10 @@ class Renderer
     do loader.load
 
   draw: ->
-    @_renderer.render @context
+    @_renderer.render @_stage
+
+  generate_texture: ->
+    @context.generateTexture 1, PIXI.scaleModes.NEAREST, @_renderer
 
   resize: (size) ->
     @_renderer.resize size.x, size.y
@@ -68,6 +73,36 @@ class base.Graphics
         @_draw_tile @tiles[index], @stage.map.get_tile_image square
         @_draw_tile @features[index], @stage.map.get_feature_image square
     do @renderer.draw
+
+  prepare_scroll: (frames, diff) ->
+    if @_scroll?
+      return
+    size = @stage.map.size.scale @scale*base.grid_in_pixels
+    offset = new Point diff.x*size.x, diff.y*size.y
+    sprite = new PIXI.Sprite do @renderer.generate_texture
+    sprite.position.x = -offset.x
+    sprite.position.y = -offset.y
+    @context.addChild sprite
+    @_scroll = {
+      cur_frame: 0
+      max_frame: frames
+      offset: offset
+      sprite: sprite
+    }
+
+  scroll: ->
+    assert @_scroll?
+    @_scroll.cur_frame += 1
+    factor = (@_scroll.max_frame - @_scroll.cur_frame)/@_scroll.max_frame
+    @context.position.x = Math.floor @_scroll.offset.x*factor
+    @context.position.y = Math.floor @_scroll.offset.y*factor
+    # Destroy the texture and return true if the scroll is complete.
+    complete = @_scroll.cur_frame >= @_scroll.max_frame
+    if complete
+      @context.removeChild @_scroll.sprite
+      @_scroll.sprite.texture.destroy true
+      delete @_scroll
+    complete
 
   _add_container: ->
     container = new PIXI.DisplayObjectContainer
