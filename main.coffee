@@ -134,7 +134,11 @@ class Map extends base.Map
 
   constructor: (@stage) ->
     super 'default'
-    @frame = 0
+    @_frame = 0
+    @starting_square = new Point (Math.floor @size.x/2), 0
+    if @stage.player? and @_in_bounds @stage.player.square
+      @starting_square = @stage.player.square
+    @starting_direction = @_get_edge_direction @starting_square
 
   get_map_data: (square) ->
     if not @_in_bounds square
@@ -153,15 +157,12 @@ class Map extends base.Map
       result.y = _.random (@size.y - 1)
     result
 
-  get_starting_square: ->
-    new Point (Math.floor @size.x/2), 0
-
   get_tile_image: (square) ->
     result = super square
     animation = TILESET[result]?.animation
     if animation?
       period = animation.frames*animation.period
-      index = Math.floor (@frame % period)/animation.period
+      index = Math.floor (@_frame % period)/animation.period
       return "#{result}-#{index}"
     if result[result.length - 1] == '-' and @_features[square.x][square.y]?
       result += 'flat'
@@ -176,7 +177,16 @@ class Map extends base.Map
         @stage.sprites.push new Sprite @stage, image, ParticleState, square
 
   update: ->
-    @frame = (@frame + 1) % PERIOD
+    @_frame = (@_frame + 1) % PERIOD
+
+  _get_edge_direction: (square) ->
+    if square.x == 0
+      return Direction.RIGHT
+    else if square.x == @size.x - 1
+      return Direction.LEFT
+    else if square.y == @size.y - 1
+      return Direction.UP
+    Direction.DOWN
 
 
 class PixiData
@@ -244,6 +254,8 @@ class Sprite
     @direction = Direction.DOWN
     @position = square.scale GRID
     do @_set_square_and_overlap
+    if do @is_player
+      @direction = @stage.map.starting_direction
 
   set_state: (state) ->
     @state?.on_exit?()
@@ -509,7 +521,7 @@ class DrowningState
   on_exit: ->
     @sprite.image = @_image
     @sprite.invulnerability_frames = EXTRA_INVULNERABILITY_FRAMES
-    @sprite.reposition do @sprite.stage.map.get_starting_square
+    @sprite.reposition @sprite.stage.map.starting_square
 
   update: ->
     @_cur_frame += 1
@@ -724,7 +736,7 @@ class Stage
     new Sprite @, 'enemy', PausedState, (do @map.get_random_free_square)
 
   _construct_player: ->
-    new Sprite @, 'player', WalkingState, (do @map.get_starting_square)
+    new Sprite @, 'player', WalkingState, @map.starting_square
 
   _sign: (value, max) ->
     if value < 0 then -1 else if value >= max then 1 else 0
