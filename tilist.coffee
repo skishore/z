@@ -56,11 +56,11 @@ class Graphics extends base.Graphics
 class Map extends base.Map
   EDGES = [['u', 0, -1], ['d', 0, 1], ['r', 1, 0], ['l', -1, 0]]
 
-  constructor: (name, @tileset) ->
+  constructor: (@tileset, @uid) ->
     @size = new Point base.map_size[0], base.map_size[1]
     @_tiles = @_construct_2d_array @tileset.default_tile.index
     @_features = @_construct_2d_array []
-    @load name, {raw: true}
+    @load uid, {raw: true}
 
   get_feature_image: (square) ->
     assert @_in_bounds square
@@ -151,7 +151,8 @@ class Stage
 
   constructor: ->
     @input = new base.Input {keyboard: true, mouse: true}
-    @map = new Map 'default', new Tileset
+    @tileset = new Tileset
+    @map = new Map @tileset, base.starting_map_uid
     @_graphics = new Graphics @, $('.surface')
     @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
     assert @_num_hotkeys > 0
@@ -187,6 +188,7 @@ class Stage
       if key of SCROLL_KEYS
         offset = new Point SCROLL_KEYS[key][0], SCROLL_KEYS[key][1]
         @_graphics.prepare_scroll SCROLL_SPEED, offset
+        @map = new Map @tileset, @map.get_uid offset
         @_scrolling = true
     @_scrolling
 
@@ -217,7 +219,7 @@ class Stage
     else
       changed = @map.set_tile square, tile
     if changed
-      @map.save 'default'
+      do @map.save
 
 
 class Tileset

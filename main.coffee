@@ -132,8 +132,8 @@ class Map extends base.Map
     free: {}
   }
 
-  constructor: (@stage) ->
-    super 'default'
+  constructor: (@stage, uid) ->
+    super uid
     @_frame = 0
     @starting_square = new Point (Math.floor @size.x/2), 0
     if @stage.player? and @_in_bounds @stage.player.square
@@ -681,7 +681,7 @@ class Stage
     DialogManager.set_page dialog
     # Initialize the normal game state.
     @input = new base.Input {keyboard: true}
-    @map = new Map @
+    @map = new Map @, base.starting_map_uid
     @player = do @_construct_player
     @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
     @set_state new GameplayState
@@ -716,7 +716,7 @@ class Stage
     do @player._set_square_and_overlap
     # Load the new map and scroll to the new screen.
     @_graphics.prepare_scroll SCROLL_SPEED, offset
-    @map = new Map @
+    @map = new Map @, @map.get_uid offset
     @sprites = [@player]
     @set_state new ScrollState @_graphics
 

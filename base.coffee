@@ -4,6 +4,7 @@ base.collection = new Meteor.Collection 'maps'
 base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}
+base.starting_map_uid = {zone: 'garden', position: {x: 0, y: 0}}
 
 if Meteor.isServer
   Meteor.publish 'maps', -> do base.collection.find
@@ -189,14 +190,14 @@ class base.Input
 
 
 class base.Map
-  constructor: (name, options) ->
+  constructor: (uid, options) ->
     # Map currently supports the following options:
     # - raw: If true, the map data will be loaded from its raw values.
     options = options or {}
     @size = new Point base.map_size[0], base.map_size[1]
     @_tiles = @_tiles or do @_construct_2d_array
     @_features = @_features or do @_construct_2d_array
-    @load name, options.raw
+    @load uid, options.raw
 
   get_feature_image: (square) ->
     @_features[square.x][square.y]
@@ -204,10 +205,16 @@ class base.Map
   get_tile_image: (square) ->
     @_tiles[square.x][square.y]
 
-  load: (name, raw) ->
+  get_uid: (offset) ->
+    pos = @uid.position
+    {zone: @uid.zone, position: {x: pos.x + offset.x, y: pos.y + offset.y}}
+
+  load: (uid, raw) ->
+    name = @_uid_to_name uid
     document = base.collection.findOne {name: name}
     if not document?
-      document = @_build_default_document name
+      document = @_build_default_document uid
+    @uid = document.uid
     if raw and document.raw?
       @_tiles = document.raw.tiles
       @_features = document.raw.features
@@ -218,23 +225,23 @@ class base.Map
         @_set_tile_image square, document.tiles[x][y]
         @_set_feature_image square, document.features[x][y]
 
-  save: (name) ->
-    check name, String
-    document = @_build_default_document name
+  save: ->
+    document = @_build_default_document @uid
     for x in [0...@size.x]
       for y in [0...@size.y]
         square = new Point x, y
         document.tiles[x][y] = @get_tile_image square
         document.features[x][y] = @get_feature_image square
     document.raw = {tiles: @_tiles, features: @_features}
-    id = (base.collection.findOne {name: name})?._id
+    id = (base.collection.findOne {name: document.name})?._id
     if id?
       base.collection.update {_id: id}, {$set: document}
     else
       base.collection.insert document
 
-  _build_default_document: (name) ->
-    name: name
+  _build_default_document: (uid) ->
+    uid: uid
+    name: @_uid_to_name uid
     tiles: @_construct_2d_array 'grass-green-'
     features: @_construct_2d_array undefined
 
@@ -251,3 +258,6 @@ class base.Map
   _set_tile_image: (square, image) ->
     assert @_in_bounds square
     @_tiles[square.x][square.y] = image
+
+  _uid_to_name: (uid) ->
+    "#{uid.zone}.#{uid.position.x}.#{uid.position.y}"
