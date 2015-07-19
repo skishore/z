@@ -74,9 +74,9 @@ class base.Graphics
         @_draw_tile @features[index], @stage.map.get_feature_image square
     do @renderer.draw
 
-  prepare_scroll: (frames, diff) ->
-    if @_scroll?
-      return
+  prepare_scroll: (speed, diff) ->
+    assert not @_scroll?
+    assert not do diff.zero
     size = @stage.map.size.scale @scale*base.grid_in_pixels
     offset = new Point diff.x*size.x, diff.y*size.y
     # When we call generateTexture, the texture may be slightly larger than
@@ -89,7 +89,7 @@ class base.Graphics
     @context.addChildAt sprite, 0
     @_scroll = {
       cur_frame: -1
-      max_frame: frames
+      max_frame: Math.ceil (do offset.length)/speed
       offset: offset
       sprite: sprite
     }

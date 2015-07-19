@@ -50,9 +50,9 @@ class Graphics extends base.Graphics
                        then [new PIXI.InvertFilter] else null
     super
 
-  prepare_scroll: (frames, offset) ->
+  prepare_scroll: (speed, offset) ->
     @sprites[@stage.player?._pixi_data.id]?.visible = false
-    super frames, offset
+    super speed, offset
     @sprites[@stage.player?._pixi_data.id]?.visible = true
 
   _draw_shadow: (sprite, drawn) ->
@@ -659,7 +659,7 @@ class WalkingState
 
 
 class Stage
-  SCROLL_FRAMES = 40
+  SCROLL_SPEED = 16
 
   constructor: ->
     # Construct the dialog so we know how many enemies we need.
@@ -703,7 +703,7 @@ class Stage
     @player.position.y -= GRID*offset.y*@map.size.y
     do @player._set_square_and_overlap
     # Load the new map and scroll to the new screen.
-    @_graphics.prepare_scroll SCROLL_FRAMES, offset
+    @_graphics.prepare_scroll SCROLL_SPEED, offset
     @map = new Map @
     @sprites = [@player]
     @set_state new ScrollState @_graphics
