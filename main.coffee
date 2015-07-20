@@ -171,12 +171,13 @@ class Map extends base.Map
     result
 
   on_attack: (square) ->
-    data = @get_map_data square
-    if data.cuttable
+    map_data = @get_map_data square
+    if map_data.cuttable
       @_features[square.x][square.y] = undefined
-      for i in [0...(data.particles?.num or 0)]
-        image = _.sample data.particles.images
-        @stage.sprites.push new Sprite @stage, image, ParticleState, square
+      for i in [0...(map_data.particles?.num or 0)]
+        image = _.sample map_data.particles.images
+        data = {image: image, _default_state: ParticleState}
+        @stage.sprites.push new Sprite @stage, data, square
 
   update: ->
     @_frame = (@_frame + 1) % PERIOD
@@ -214,10 +215,10 @@ class PixiData
 class Sprite
   sprite_index = -1
 
-  constructor: (@stage, @image, @_default_state, start) ->
+  constructor: (@stage, data, start) ->
     sprite_index += 1
-    @health = 4
     @id = sprite_index
+    _.fast_extend @, data
     @invulnerability_frames = 0
     @reposition start
     do @set_state
@@ -675,6 +676,10 @@ class WalkingState
 
 
 class Stage
+  MONSTERS = {
+    player: {image: 'player', health: 4, _default_state: WalkingState}
+    enemy: {image: 'enemy', health: 2, _default_state: PausedState}
+  }
   SCROLL_SPEED = 16
 
   constructor: ->
@@ -727,10 +732,10 @@ class Stage
     @_sprites_to_destruct.length = 0
 
   _construct_enemy: ->
-    new Sprite @, 'enemy', PausedState, (do @map.get_random_free_square)
+    new Sprite @, MONSTERS.enemy, (do @map.get_random_free_square)
 
   _construct_player: ->
-    new Sprite @, 'player', WalkingState, @map.starting_square
+    new Sprite @, MONSTERS.player, @map.starting_square
 
   _sign: (value, max) ->
     if value < 0 then -1 else if value >= max then 1 else 0
