@@ -20,6 +20,7 @@ class Direction
 
   @OPPOSITE = {up: 'down', right: 'left', down: 'up', left: 'right'}
   @UNIT_VECTOR = {up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0]}
+  @OPTIONS = _.keys @UNIT_VECTOR
 
   @get_move_direction: (move, last_direction) ->
     options = []
@@ -35,6 +36,7 @@ class Direction
 class Graphics extends base.Graphics
   constructor: (@stage, @element) ->
     super @stage, @element
+    @_empty_texture = PIXI.Texture.emptyTexture
     @sprite_container = @_add_container @layers.game
     @sprites = {}
 
@@ -64,7 +66,7 @@ class Graphics extends base.Graphics
     pixi.x = @_to_pixels sprite.position.x + (shadow.x_offset or 0)
     pixi.y = @_to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
-    pixi.setTexture PIXI.Texture.fromFrame shadow.image
+    pixi.setTexture PIXI.TextureCache[shadow.image] or @_empty_texture
     drawn[shadow_id] = true
 
   _draw_sprite: (sprite, drawn) ->
@@ -74,7 +76,7 @@ class Graphics extends base.Graphics
     pixi.x = @_to_pixels sprite.position.x
     pixi.y = @_to_pixels sprite.position.y + sprite.y_offset
     pixi.z = -sprite.position.y + GRID*sprite.y_offset
-    pixi.setTexture PIXI.Texture.fromFrame sprite.frame
+    pixi.setTexture PIXI.TextureCache[sprite.frame] or @_empty_texture
     if sprite.invulnerability_frames == 0
       pixi.filters = null
     else
@@ -217,9 +219,10 @@ class Sprite
     @health = 4
     @id = sprite_index
     @invulnerability_frames = 0
-    @_pixi_data = new PixiData _sprite: @
     @reposition start
     do @set_state
+    @_pixi_data = new PixiData _sprite: @
+    @_pixi_data.update {}
 
   collides: (sprite, tolerance) ->
     if not sprite.state.collides
@@ -241,7 +244,7 @@ class Sprite
     MOVEMENT_KEYS[_.sample options]
 
   is_player: ->
-    @ == @stage.player
+    @_default_state == WalkingState
 
   move: (vector) ->
     vector = @_check_squares vector
@@ -251,11 +254,12 @@ class Sprite
     vector
 
   reposition: (square) ->
-    @direction = Direction.DOWN
     @position = square.scale GRID
     do @_set_square_and_overlap
     if do @is_player
       @direction = @stage.map.starting_direction
+    else
+      @direction = _.sample Direction.OPTIONS
 
   set_state: (state) ->
     @state?.on_exit?()
@@ -505,7 +509,7 @@ class DeathState
     @_cur_frame += 1
     index = Math.floor (@_cur_frame - 1)/DEATH_FRAMES
     if index > 1
-      return @sprite.stage.destruct @sprite
+      @sprite.stage.destruct @sprite
     new PixiData frame: "red#{index}"
 
 
@@ -674,23 +678,13 @@ class Stage
   SCROLL_SPEED = 16
 
   constructor: ->
-    # Construct the dialog so we know how many enemies we need.
-    dialog = new (if (do Math.random) < 0.5 then TransliterationMatchingGame \
-                  else EnglishToHindiMultipleChoiceGame)
-    num = do dialog.get_num_enemies
-    DialogManager.set_page dialog
-    # Initialize the normal game state.
     @input = new base.Input {keyboard: true}
     @map = new Map @, base.starting_map_uid
     @player = do @_construct_player
-    @sprites = [@player].concat (do @_construct_enemy for i in [0...num])
+    @sprites = [@player].concat (do @_construct_enemy for i in [0..._.random 8])
     @set_state new GameplayState
     @_graphics = new Graphics @, $('.surface')
     @_sprites_to_destruct = []
-    # Update the dialog with the enemy ids.
-    for sprite in @sprites
-      if sprite != @player
-        DialogManager._current?.add_enemy sprite.id
 
   destruct: (sprite) ->
     @_sprites_to_destruct.push sprite
@@ -717,7 +711,7 @@ class Stage
     # Load the new map and scroll to the new screen.
     @_graphics.prepare_scroll SCROLL_SPEED, offset
     @map = new Map @, @map.get_uid offset
-    @sprites = [@player]
+    @sprites = [@player].concat (do @_construct_enemy for i in [0..._.random 8])
     @set_state new ScrollState @_graphics
 
   set_state: (state) ->
