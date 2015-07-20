@@ -50,7 +50,18 @@
     "water-0": { "frame": {"x":32,"y":96,"w":16,"h":16} },
     "water-1": { "frame": {"x":48,"y":96,"w":16,"h":16} },
     "water-2": { "frame": {"x":64,"y":96,"w":16,"h":16} },
-    "water-3": { "frame": {"x":80,"y":96,"w":16,"h":16} }
+    "water-3": { "frame": {"x":80,"y":96,"w":16,"h":16} },
+    "castle-dome-l": { "frame": {"x":0,"y":128,"w":16,"h":16} },
+    "castle-dome-r": { "frame": {"x":16,"y":128,"w":16,"h":16} },
+    "castle-side-l": { "frame": {"x":0,"y":144,"w":16,"h":16} },
+    "castle-side-r": { "frame": {"x":16,"y":144,"w":16,"h":16} },
+    "castle-bricks": { "frame": {"x":32,"y":128,"w":16,"h":16} },
+    "castle-cells": { "frame": {"x":32,"y":144,"w":16,"h":16} },
+    "castle-mixed": { "frame": {"x":48,"y":128,"w":16,"h":16} },
+    "castle-door": { "frame": {"x":48,"y":144,"w":16,"h":16} },
+    "castle-roof-l": { "frame": {"x":64,"y":128,"w":16,"h":16} },
+    "castle-roof-m": { "frame": {"x":80,"y":128,"w":16,"h":16} },
+    "castle-roof-r": { "frame": {"x":96,"y":128,"w":16,"h":16} }
   },
   "meta": { "image" : "tileset.png" }
 }

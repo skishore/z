@@ -2,14 +2,14 @@ class Graphics extends base.Graphics
   BORDER_IN_PIXELS = 2
 
   constructor: (@stage, @element, callback) ->
-    num_tiles = @stage.map.tileset.tiles.length
+    num_tiles = @stage.tileset.tiles.length
     size = do @stage.map.size.clone
     size.y += (Math.ceil num_tiles/size.x) + 1
     super @stage, @element, {assets: ['tileset'], size: size, transparent: true}
     @tileset_container = @_add_container @layers.ui
 
   _on_assets_loaded: ->
-    for choice, i in @stage.map.tileset.tiles
+    for choice, i in @stage.tileset.tiles
       @_make_tile (@get_tileset_square i), choice.image, @tileset_container
     super
 
@@ -40,7 +40,7 @@ class Graphics extends base.Graphics
           square: square
         }
       index = (square.y - size.y - 1)*size.x + square.x
-      if 0 <= index < @stage.map.tileset.tiles.length
+      if 0 <= index < @stage.tileset.tiles.length
         return {
           type: 'tileset'
           outline: outline
@@ -61,6 +61,12 @@ class Map extends base.Map
     @_tiles = @_construct_2d_array @tileset.default_tile.index
     @_features = @_construct_2d_array []
     @load uid, {raw: true}
+
+  clear_features: (square) ->
+    if @_features[square.x][square.y].length > 0
+      @_features[square.x][square.y].length = 0
+      return true
+    false
 
   get_feature_image: (square) ->
     assert @_in_bounds square
@@ -154,12 +160,8 @@ class Stage
     @tileset = new Tileset
     @map = new Map @tileset, base.starting_map_uid
     @_graphics = new Graphics @, $('.surface')
-    @_num_hotkeys = Math.min @map.tileset.tiles.length, HOTKEYS.length
-    assert @_num_hotkeys > 0
     @_hotkeys = {}
-    for i in [0...@_num_hotkeys]
-      @_hotkeys[i] = i
-    do @_redraw_hotkeys
+    @_set_hotkeys 0
 
   loop: ->
     do @_graphics.stats.begin
@@ -171,14 +173,21 @@ class Stage
   update: ->
     if do @_maybe_scroll
       return
+    keys = do @input.get_keys_pressed
+    if 'a' of keys
+      @_set_hotkeys @_hotkeys[0] + HOTKEYS.length
+      @input.block_key 'a'
     target = @_graphics.get_target do @input.get_mouse_position
     if target.type != 'tile'
       return Session.set 'tilist.cursor', null
     Session.set 'tilist.cursor', target.outline
-    for key of do @input.get_keys_pressed
+    for key of keys
       index = HOTKEYS.indexOf key
       if index >= 0 and @_hotkeys[index]?
-        @_set_tile target.square, @map.tileset.tiles[@_hotkeys[index]]
+        @_set_tile target.square, @tileset.tiles[@_hotkeys[index]]
+      else if key == 's'
+        if @map.clear_features target.square
+          do @map.save
 
   _maybe_scroll: ->
     if @_scrolling and not do @_graphics.scroll
@@ -192,29 +201,27 @@ class Stage
         @_scrolling = true
     @_scrolling
 
-  _redraw_hotkeys: ->
+  _set_hotkeys: (index) ->
+    if index > @tileset.tiles.length
+      index = 0
     hotkeys = []
-    for i in [0...@_num_hotkeys]
-      if not @_hotkeys[i]?
-        continue
-      square = @_graphics.get_tileset_square @_hotkeys[i]
-      hotkeys.push @_graphics.get_outline square
-      hotkeys[hotkeys.length - 1].text = do HOTKEYS[i].toUpperCase
+    for key, i in HOTKEYS
+      if i + index < @tileset.tiles.length
+        @_hotkeys[i] = i + index
+        square = @_graphics.get_tileset_square @_hotkeys[i]
+        hotkeys.push @_graphics.get_outline square
+        hotkeys[hotkeys.length - 1].text = do key.toUpperCase
+      else
+        delete @_hotkeys[i]
     Session.set 'tilist.hotkeys', hotkeys
-
-  _set_hotkey: (hotkey, value) ->
-    if value < @map.tileset.tiles.length
-      @_hotkeys[hotkey] = value
-    else
-      delete @_hotkeys[hotkey]
 
   _set_tile: (square, tile) ->
     changed = false
     if tile.tree_offset?
       [x, y] = tile.tree_offset
       top_left = square.subtract new Point x, y
-      for [suffix, x, y] in @map.tileset.tree_data
-        tree = @map.tileset.tiles_by_image["tree-#{suffix}"]
+      for [suffix, x, y] in @tileset.tree_data
+        tree = @tileset.tiles_by_image["tree-#{suffix}"]
         changed = (@map.set_tile (top_left.add new Point x, y), tree) or changed
     else
       changed = @map.set_tile square, tile
@@ -249,6 +256,17 @@ class Tileset
       {image: 'tree-ur', tree_offset: [1, 0]}
       {image: 'tree-dl', tree_offset: [0, 1], constraint: is_yellow}
       {image: 'tree-dr', tree_offset: [1, 1], constraint: is_yellow}
+      {image: 'castle-dome-l'}
+      {image: 'castle-dome-r'}
+      {image: 'castle-side-l'}
+      {image: 'castle-side-r'}
+      {image: 'castle-bricks'}
+      {image: 'castle-cells'}
+      {image: 'castle-mixed'}
+      {image: 'castle-door'}
+      {image: 'castle-roof-l'}
+      {image: 'castle-roof-m'}
+      {image: 'castle-roof-r'}
     ]
     @tree_data = [['ul', 0, 0], ['ur', 1, 0], ['dl', 0, 1], ['dr', 1, 1]]
     for feature in features
