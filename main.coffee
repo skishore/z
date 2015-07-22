@@ -2,14 +2,14 @@ TWIPS_PER_PIXEL = 1024
 GRID = base.grid_in_pixels*TWIPS_PER_PIXEL
 MOVEMENT_KEYS = {w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]}
 
-# Base speeds used to compute other speed.
-PLAYER_SPEED = 0.08*GRID
-ENEMY_SPEED = 0.04*GRID
-WALKING_ANIMATION_FRAMES = 6
+# Tolerance is the distance a sprite can move into a blocked square.
+HALF_GRID = Math.ceil 0.5*GRID
+TOLERANCE = Math.ceil 0.2*GRID
 
-# Constants for the knockback state, used in multiple places.
-EXTRA_INVULNERABILITY_FRAMES = 15
+BASE_SPEED = 0.08*GRID
+WALKING_ANIMATION_FRAMES = 6
 INVULNERABILITY_ANIMATION_FRAMES = 6
+EXTRA_INVULNERABILITY_FRAMES = 15
 
 
 class Direction
@@ -300,19 +300,16 @@ class Sprite
     if do move.zero
       return move
 
-    half_grid = Math.ceil 0.5*GRID
-    tolerance = Math.ceil 0.2*GRID
-
     # Sprites may not move faster than our collision detection can handle.
     # If this restriction becomes a problem, we can get around it by breaking
     # the move up into several steps.
     speed = Math.floor do move.length
-    assert speed < half_grid
+    assert speed < HALF_GRID
     offset = new Point 0, 0
     collided = false
 
     # Check if we cross a horizontal grid boundary going up or down.
-    if move.y < 0 and (@_gmod @position.y + tolerance) < -move.y
+    if move.y < 0 and (@_gmod @position.y + TOLERANCE) < -move.y
       offset.y = -1
     else if move.y > 0 and (@_gmod -@position.y) < move.y
       offset.y = 1
@@ -321,22 +318,22 @@ class Sprite
       offset.x = if @overlap.x > 0 then 1 else -1
       if not @_check_square new Point @square.x, @square.y + offset.y
         collided = true
-      else if (Math.abs @overlap.x) > tolerance and \
+      else if (Math.abs @overlap.x) > TOLERANCE and \
            not @_check_square @square.add offset
         collided = true
-        if (Math.abs @overlap.x) <= half_grid and offset.x*move.x <= 0
-          shove = Math.min speed, (Math.abs @overlap.x) - tolerance
+        if (Math.abs @overlap.x) <= HALF_GRID and offset.x*move.x <= 0
+          shove = Math.min speed, (Math.abs @overlap.x) - TOLERANCE
           move.x = -offset.x*shove
       if collided
         if offset.y < 0
-          move.y = -@_gmod @position.y + tolerance
+          move.y = -@_gmod @position.y + TOLERANCE
         else
           move.y = @_gmod -@position.y
     # Run similar checks for crossing a vertical boundary going right or left.
     offset.x = 0
-    if move.x < 0 and (@_gmod @position.x + tolerance) < -move.x
+    if move.x < 0 and (@_gmod @position.x + TOLERANCE) < -move.x
       offset.x = -1
-    else if move.x > 0 and (@_gmod tolerance - @position.x) < move.x
+    else if move.x > 0 and (@_gmod TOLERANCE - @position.x) < move.x
       offset.x = 1
     if offset.x != 0
       # If we've crossed a horizontal boundary (which is true iff offset.y != 0
@@ -346,21 +343,21 @@ class Sprite
       offset.y = if @overlap.y > 0 then 1 else -1
       if not @_check_square new Point @square.x + offset.x, @square.y
         collided = true
-      else if (@overlap.y > 0 or -@overlap.y > tolerance) and
+      else if (@overlap.y > 0 or -@overlap.y > TOLERANCE) and
               not @_check_square @square.add offset
         collided = true
-        if (Math.abs @overlap.y) <= half_grid and offset.y*move.y <= 0
+        if (Math.abs @overlap.y) <= HALF_GRID and offset.y*move.y <= 0
           # Check that we have space to shove away in the y direction.
           # We skip this check when shoving in the x direction because the
           # full x check is after the y check.
-          shove = Math.min speed, Math.max @overlap.y, -@overlap.y - tolerance
+          shove = Math.min speed, Math.max @overlap.y, -@overlap.y - TOLERANCE
           square = new Point @square.x, @square.y + offset.y
           move.y = if @_check_square square then -offset.y*shove else 0
       if collided
         if offset.x < 0
-          move.x = -@_gmod @position.x + tolerance
+          move.x = -@_gmod @position.x + TOLERANCE
         else
-          move.x = @_gmod tolerance - @position.x
+          move.x = @_gmod TOLERANCE - @position.x
     move
 
   _check_square: (square) ->
@@ -391,12 +388,11 @@ class Sprite
     # We need to update _pixi_data, because a sprite can be moved outside of
     # a call to @state.update (for example, when the player scrolls the screen).
     @_pixi_data?.position = @position
-    # overlap is a point (x, y) such x in [-half_grid, half_grid) and such that
+    # overlap is a point (x, y) such x in [-HALF_GRID, HALF_GRID) and such that
     # position.x == overlap.x mod GRID, and similarly for y.
-    half_grid = Math.ceil 0.5*GRID
     @overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
-    @overlap.x -= if @overlap.x < half_grid then 0 else GRID
-    @overlap.y -= if @overlap.y < half_grid then 0 else GRID
+    @overlap.x -= if @overlap.x < HALF_GRID then 0 else GRID
+    @overlap.y -= if @overlap.y < HALF_GRID then 0 else GRID
     # By subtracting overlap from position we round it to a grid square.
     @square = @position.subtract @overlap
     assert (@square.x % GRID == 0) and (@square.y % GRID == 0)
@@ -416,7 +412,7 @@ _get_move = (keys, speed) ->
 _move_sprite = (attempt) ->
   move = @sprite.move attempt
   if not do move.zero and @_period?
-    period = Math.floor @_period*PLAYER_SPEED/(do move.length)
+    period = Math.floor @_period*BASE_SPEED/(do move.length)
     period = Math.max period, 1
     if @_anim_num % (2*period) >= period
       animate = true
@@ -551,7 +547,7 @@ class DrowningState
 class JumpingState
   JUMP_HEIGHT = 1.0*GRID
   JUMP_LENGTH = 3.2*GRID
-  JUMP_SPEED = 1.2*PLAYER_SPEED
+  JUMP_SPEED = 1.2*BASE_SPEED
 
   constructor: ->
     @_cur_frame = 0
@@ -576,7 +572,7 @@ class JumpingState
 
 class KnockbackState
   KNOCKBACK_LENGTH = 1.5*GRID
-  KNOCKBACK_SPEED = 3*PLAYER_SPEED
+  KNOCKBACK_SPEED = 3*BASE_SPEED
 
   constructor: ->
     @_cur_frame = 0
@@ -601,7 +597,7 @@ class KnockbackState
 
 class ParticleState
   DISTANCE = 0.5*GRID
-  MIN_SPEED = 0.25*PLAYER_SPEED
+  MIN_SPEED = 0.25*BASE_SPEED
   SIZE = [8, 6]
 
   constructor: ->
@@ -634,10 +630,12 @@ class ParticleState
 
 
 class PausedState
-  constructor: (random) ->
-    base_steps = Math.floor GRID/ENEMY_SPEED
-    @_steps = if random then (_.random -base_steps, base_steps) else base_steps
+  constructor: (@random) ->
     @collides = true
+
+  on_enter: ->
+    base_steps = Math.floor GRID/(@sprite.speed*BASE_SPEED)
+    @_steps = if @random then (_.random -base_steps, base_steps) else base_steps
 
   update: ->
     @_steps -= 1
@@ -653,9 +651,10 @@ class RandomWalkState
     @collides = true
 
   on_enter: ->
-    base_steps = Math.floor GRID/ENEMY_SPEED
+    speed = @sprite.speed*BASE_SPEED
+    base_steps = Math.floor GRID/speed
     [x, y] = do @sprite.get_free_direction
-    @_move = (new Point x, y).scale_to ENEMY_SPEED
+    @_move = (new Point x, y).scale_to speed
     @_steps = _.random 1, 4*base_steps
 
   update: ->
@@ -677,7 +676,7 @@ class WalkingState
       return @sprite.switch_state new JumpingState
     else if @_consume_input keys, 'k'
       return @sprite.switch_state new AttackingState
-    _move_sprite.call @, _get_move keys, PLAYER_SPEED
+    _move_sprite.call @, _get_move keys, @sprite.speed*BASE_SPEED
 
   _consume_input: (keys, key) ->
     if keys[key]?
@@ -687,8 +686,8 @@ class WalkingState
 
 class Stage
   MONSTERS = {
-    player: {image: 'player', health: 4, _default_state: WalkingState}
-    enemy: {image: 'enemy', health: 2, _default_state: PausedState}
+    player: {image: 'player', health: 4, speed: 1, _default_state: WalkingState}
+    enemy: {image: 'enemy', health: 2, speed: 0.5, _default_state: PausedState}
   }
   SCROLL_SPEED = 16
 
