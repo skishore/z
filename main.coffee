@@ -698,12 +698,12 @@ class Stage
     @player = @spawn 'player', @map.starting_square
     @set_state new GameplayState
     @_graphics = new Graphics @, $('.surface')
-    @_sprites_to_destruct = []
+    @_ids_to_remove = {}
 
   destruct: (sprite) ->
-    @_sprites_to_destruct.push sprite
+    @_ids_to_remove[sprite.id] = true
     DialogManager._current?.on_attack sprite.id
-    # TODO(skishore): Advance to the next dialog here.
+    # TODO(skishore): Maybe advance to the next dialog here.
 
   loop: ->
     do @_graphics.stats.begin
@@ -736,11 +736,9 @@ class Stage
 
   update: ->
     do @state.update
-    for sprite in @_sprites_to_destruct
-      @sprites = _.without @sprites, sprite
-      if sprite == @player
-        delete @player
-    @_sprites_to_destruct.length = 0
+    @sprites = @sprites.filter (sprite) => not @_ids_to_remove[sprite.id]
+    delete @player if @_ids_to_remove[@player?.id]
+    @_ids_to_remove = {}
 
   _sign: (value, max) ->
     if value < 0 then -1 else if value >= max then 1 else 0
