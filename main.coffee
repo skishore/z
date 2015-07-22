@@ -141,6 +141,8 @@ class Map extends base.Map
     if @stage.player? and @_in_bounds @stage.player.square
       @starting_square = @stage.player.square
     @starting_direction = @_get_edge_direction @starting_square
+    do @_clear_sprites
+    do @_maybe_spawn_enemies
 
   get_map_data: (square) ->
     if not @_in_bounds square
@@ -151,13 +153,6 @@ class Map extends base.Map
       return if data? then data else TILESET.default
     data = TILESET[@_tiles[square.x][square.y]]
     return if data? then data else TILESET.free
-
-  get_random_free_square: ->
-    result = new Point -1, -1
-    while (@get_map_data result).blocked
-      result.x = _.random (@size.x - 1)
-      result.y = _.random (@size.y - 1)
-    result
 
   get_tile_image: (square) ->
     result = super square
@@ -182,6 +177,9 @@ class Map extends base.Map
   update: ->
     @_frame = (@_frame + 1) % PERIOD
 
+  _clear_sprites: ->
+    @stage.sprites = if @stage.player? then [@stage.player] else []
+
   _get_edge_direction: (square) ->
     if square.x == 0
       return Direction.RIGHT
@@ -190,6 +188,17 @@ class Map extends base.Map
     else if square.y == @size.y - 1
       return Direction.UP
     Direction.DOWN
+
+  _get_free_square: ->
+    result = new Point -1, -1
+    while (@get_map_data result).blocked
+      result.x = _.random (@size.x - 1)
+      result.y = _.random (@size.y - 1)
+    result
+
+  _maybe_spawn_enemies: ->
+    for i in [0..._.random 8]
+      @stage.spawn 'enemy', do @_get_free_square
 
 
 class PixiData
@@ -247,16 +256,15 @@ class Sprite
   is_player: ->
     @_default_state == WalkingState
 
-  move: (vector) ->
-    vector = @_check_squares vector
+  move: (vector, skip_checks) ->
+    if not skip_checks
+      vector = @_check_squares vector
     if not do vector.zero
-      @position = @position.add vector
-      do @_set_square_and_overlap
+      @_set_position @position.add vector
     vector
 
   reposition: (square) ->
-    @position = square.scale GRID
-    do @_set_square_and_overlap
+    @_set_position square.scale GRID
     if do @is_player
       @direction = @stage.map.starting_direction
     else
@@ -379,15 +387,17 @@ class Sprite
     result = value % GRID
     if result >= 0 then result else result + GRID
 
-  _set_square_and_overlap: ->
-    # We first compute an overlap, which is a point (x, y) where each coordinate
-    # lies in the interval [-half_grid, half_grid). The overlap is the
-    # "remainder" of our position with respect to the grid.
+  _set_position: (@position) ->
+    # We need to update _pixi_data, because a sprite can be moved outside of
+    # a call to @state.update (for example, when the player scrolls the screen).
+    @_pixi_data?.position = @position
+    # overlap is a point (x, y) such x in [-half_grid, half_grid) and such that
+    # position.x == overlap.x mod GRID, and similarly for y.
     half_grid = Math.ceil 0.5*GRID
     @overlap = new Point (@_gmod @position.x), (@_gmod @position.y)
     @overlap.x -= if @overlap.x < half_grid then 0 else GRID
     @overlap.y -= if @overlap.y < half_grid then 0 else GRID
-    # By subtracting the overlap from our position we round it to a grid square.
+    # By subtracting overlap from position we round it to a grid square.
     @square = @position.subtract @overlap
     assert (@square.x % GRID == 0) and (@square.y % GRID == 0)
     @square.x /= GRID
@@ -685,8 +695,7 @@ class Stage
   constructor: ->
     @input = new base.Input {keyboard: true}
     @map = new Map @, base.starting_map_uid
-    @player = do @_construct_player
-    @sprites = [@player].concat (do @_construct_enemy for i in [0..._.random 8])
+    @player = @spawn 'player', @map.starting_square
     @set_state new GameplayState
     @_graphics = new Graphics @, $('.surface')
     @_sprites_to_destruct = []
@@ -707,21 +716,23 @@ class Stage
     if not (@player? and (@map.get_map_data @player.square).out_of_bounds)
       return
     # Compute the screen offset and shift the player to the new screen.
-    # TODO(skishore): This logic should be handled in Sprite.
     offset = new Point (@_sign @player.square.x, @map.size.x), \
                        (@_sign @player.square.y, @map.size.y)
-    @player.position.x -= GRID*offset.x*@map.size.x
-    @player.position.y -= GRID*offset.y*@map.size.y
-    do @player._set_square_and_overlap
+    move = (new Point offset.x*@map.size.x, offset.y*@map.size.y).scale -GRID
+    @player.move move, true # skip_checks
     # Load the new map and scroll to the new screen.
     @_graphics.prepare_scroll SCROLL_SPEED, offset
     @map = new Map @, @map.get_uid offset
-    @sprites = [@player].concat (do @_construct_enemy for i in [0..._.random 8])
     @set_state new ScrollState @_graphics
 
   set_state: (state) ->
     @state = state
     @state.stage = @
+
+  spawn: (breed, square) ->
+    sprite = new Sprite @, MONSTERS[breed], square
+    @sprites.push sprite
+    sprite
 
   update: ->
     do @state.update
@@ -730,12 +741,6 @@ class Stage
       if sprite == @player
         delete @player
     @_sprites_to_destruct.length = 0
-
-  _construct_enemy: ->
-    new Sprite @, MONSTERS.enemy, (do @map.get_random_free_square)
-
-  _construct_player: ->
-    new Sprite @, MONSTERS.player, @map.starting_square
 
   _sign: (value, max) ->
     if value < 0 then -1 else if value >= max then 1 else 0
