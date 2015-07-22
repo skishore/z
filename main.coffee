@@ -7,7 +7,7 @@ HALF_GRID = Math.ceil 0.5*GRID
 TOLERANCE = Math.ceil 0.2*GRID
 
 BASE_SPEED = 0.08*GRID
-WALKING_ANIMATION_FRAMES = 6
+WALKING_ANIMATION_FRAMES = 12
 INVULNERABILITY_ANIMATION_FRAMES = 6
 EXTRA_INVULNERABILITY_FRAMES = 15
 
@@ -171,7 +171,7 @@ class Map extends base.Map
       @_features[square.x][square.y] = undefined
       for i in [0...(map_data.particles?.num or 0)]
         image = _.sample map_data.particles.images
-        data = {image: image, _default_state: ParticleState}
+        data = {image: image, fixed: {default_state: ParticleState}}
         @stage.sprites.push new Sprite @stage, data, square
 
   update: ->
@@ -198,7 +198,7 @@ class Map extends base.Map
 
   _maybe_spawn_enemies: ->
     for i in [0..._.random 8]
-      @stage.spawn 'enemy', do @_get_free_square
+      @stage.spawn (_.sample ['moblin', 'zol']), do @_get_free_square
 
 
 class PixiData
@@ -211,7 +211,8 @@ class PixiData
 
   update: (data) ->
     frame = data.frame or 'standing'
-    @frame = "#{@_sprite.image}-#{frame}-#{@_sprite.direction}"
+    direction = if @_sprite.fixed.unoriented then '' else @_sprite.direction
+    @frame = "#{@_sprite.image}-#{frame}-#{direction}"
     @id = @_sprite.id
     @invulnerability_frames = @_sprite.invulnerability_frames
     @position = @_sprite.position
@@ -254,7 +255,7 @@ class Sprite
     MOVEMENT_KEYS[_.sample options]
 
   is_player: ->
-    @_default_state == WalkingState
+    @fixed.default_state == WalkingState
 
   move: (vector, skip_checks) ->
     if not skip_checks
@@ -272,7 +273,7 @@ class Sprite
 
   set_state: (state) ->
     @state?.on_exit?()
-    @state = state or new @_default_state
+    @state = state or new @fixed.default_state
     @state.sprite = @
     @state.on_enter?()
 
@@ -412,13 +413,14 @@ _get_move = (keys, speed) ->
 _move_sprite = (attempt) ->
   move = @sprite.move attempt
   if not do move.zero and @_period?
-    period = Math.floor @_period*BASE_SPEED/(do move.length)
+    animation = @sprite.fixed.animation or ['standing', 'walking']
+    period = Math.round @_period*BASE_SPEED/((do move.length)*animation.length)
     period = Math.max period, 1
-    if @_anim_num % (2*period) >= period
-      animate = true
-    @_anim_num = (@_anim_num + 1) % (2*period)
+    index = Math.floor (@_anim_num % (animation.length*period))/period
+    frame = animation[index]
+    @_anim_num += 1
   @sprite.direction = Direction.get_move_direction attempt, @sprite.direction
-  new PixiData frame: if animate then 'walking' else 'standing'
+  new PixiData frame: frame
 
 
 class AttackingState
@@ -583,13 +585,14 @@ class KnockbackState
     @sprite.invulnerability_frames = @_max_frame
     if do @sprite.is_player
       @sprite.invulnerability_frames += EXTRA_INVULNERABILITY_FRAMES
+    @_speed = KNOCKBACK_SPEED/(@sprite.fixed.weight or 1)
 
   update: ->
     @_cur_frame += 1
     if @_cur_frame >= @_max_frame
       return @sprite.switch_state if @sprite.health <= 0 then new DeathState
     [x, y] = Direction.UNIT_VECTOR[@sprite.direction]
-    result = _move_sprite.call @, (new Point x, y).scale_to -KNOCKBACK_SPEED
+    result = _move_sprite.call @, (new Point x, y).scale_to -@_speed
     # Calling _move_sprite will flip the sprite direction, so we flip it back.
     @sprite.direction = Direction.OPPOSITE[@sprite.direction]
     result
@@ -634,7 +637,7 @@ class PausedState
     @collides = true
 
   on_enter: ->
-    base_steps = Math.floor GRID/(@sprite.speed*BASE_SPEED)
+    base_steps = Math.floor GRID/(@sprite.fixed.speed*BASE_SPEED)
     @_steps = if @random then (_.random -base_steps, base_steps) else base_steps
 
   update: ->
@@ -651,7 +654,7 @@ class RandomWalkState
     @collides = true
 
   on_enter: ->
-    speed = @sprite.speed*BASE_SPEED
+    speed = @sprite.fixed.speed*BASE_SPEED
     base_steps = Math.floor GRID/speed
     [x, y] = do @sprite.get_free_direction
     @_move = (new Point x, y).scale_to speed
@@ -676,7 +679,7 @@ class WalkingState
       return @sprite.switch_state new JumpingState
     else if @_consume_input keys, 'k'
       return @sprite.switch_state new AttackingState
-    _move_sprite.call @, _get_move keys, @sprite.speed*BASE_SPEED
+    _move_sprite.call @, _get_move keys, @sprite.fixed.speed*BASE_SPEED
 
   _consume_input: (keys, key) ->
     if keys[key]?
@@ -686,8 +689,28 @@ class WalkingState
 
 class Stage
   MONSTERS = {
-    player: {image: 'player', health: 4, speed: 1, _default_state: WalkingState}
-    enemy: {image: 'enemy', health: 2, speed: 0.5, _default_state: PausedState}
+    player: {
+      image: 'player'
+      health: 4
+      fixed: {default_state: WalkingState, speed: 1}
+    }
+    moblin: {
+      image: 'moblin'
+      health: 2
+      fixed: {default_state: PausedState, speed: 0.5}
+    }
+    zol: {
+      image: 'zol'
+      health: 2
+      fixed: {
+        animation: ['standing', 'midheight', 'walking',
+                    'walking', 'midheight', 'standing']
+        default_state: PausedState
+        speed: 0.25
+        unoriented: true
+        weight: 2
+      }
+    }
   }
   SCROLL_SPEED = 16
 
