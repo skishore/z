@@ -59,9 +59,13 @@
     "castle-cells": { "frame": {"x":32,"y":144,"w":16,"h":16} },
     "castle-mixed": { "frame": {"x":48,"y":128,"w":16,"h":16} },
     "castle-door": { "frame": {"x":48,"y":144,"w":16,"h":16} },
-    "castle-roof-l": { "frame": {"x":64,"y":128,"w":16,"h":16} },
-    "castle-roof-m": { "frame": {"x":80,"y":128,"w":16,"h":16} },
-    "castle-roof-r": { "frame": {"x":96,"y":128,"w":16,"h":16} }
+    "castle-roof-l": { "frame": {"x":64,"y":144,"w":16,"h":16} },
+    "castle-roof-m": { "frame": {"x":80,"y":144,"w":16,"h":16} },
+    "castle-roof-r": { "frame": {"x":96,"y":144,"w":16,"h":16} },
+    "door-up": { "frame": {"x":96,"y":128,"w":16,"h":16} },
+    "door-down": { "frame": {"x":96,"y":96,"w":16,"h":16} },
+    "door-right": { "frame": {"x":80,"y":112,"w":16,"h":16} },
+    "door-left": { "frame": {"x":112,"y":112,"w":16,"h":16} }
   },
   "meta": { "image" : "tileset.png" }
 }

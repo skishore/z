@@ -141,6 +141,7 @@ class Map extends base.Map
       @starting_square = @stage.player.square
     @starting_direction = @_get_edge_direction @starting_square
     do @_clear_sprites
+    do @_maybe_lock_doors
     do @_maybe_spawn_enemies
 
   get_map_data: (square) ->
@@ -175,6 +176,15 @@ class Map extends base.Map
 
   update: ->
     @_frame = (@_frame + 1) % PERIOD
+    do @_maybe_unlock_doors
+
+  _apply_to_edges: (callback) ->
+    for x in [0...@size.x]
+      callback new Point x, 0
+      callback new Point x, @size.y - 1
+    for y in [0...@size.y]
+      callback new Point 0, y
+      callback new Point @size.x - 1, y
 
   _clear_sprites: ->
     @stage.sprites = if @stage.player? then [@stage.player] else []
@@ -195,9 +205,36 @@ class Map extends base.Map
       result.y = _.random (@size.y - 1)
     result
 
+  _maybe_lock_doors: ->
+    # TODO(skishore): We should read map data to check if the room should
+    # be locked, and then check if there are enemies to lock it.
+    @_apply_to_edges (square) =>
+      if (@get_map_data square).blocked
+        return
+      direction = @_get_edge_direction square
+      @_features[square.x][square.y] = "door-#{direction}"
+      if square.equals @starting_square
+        [x, y] = Direction.UNIT_VECTOR[direction]
+        @starting_square = @starting_square.add new Point x, y
+    @_locked = true
+
   _maybe_spawn_enemies: ->
     for i in [0..._.random 8]
       @stage.spawn (_.sample ['moblin', 'zol']), do @_get_free_square
+
+  _maybe_unlock_doors: ->
+    if not @_locked or do @_should_lock_doors
+      return
+    @_apply_to_edges (square) =>
+      if @_features[square.x][square.y].startsWith 'door-'
+        delete @_features[square.x][square.y]
+    delete @_locked
+
+  _should_lock_doors: ->
+    # TODO(skishore): Even if there are non-player sprites on the screen,
+    # it may be okay to unlock the doors - for example, leaves are sprites
+    # but they should not prevent a player from leaving.
+     _.any @stage.sprites, (sprite) -> not do sprite.is_player
 
 
 class PixiData
