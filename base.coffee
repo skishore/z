@@ -15,26 +15,26 @@ class Renderer
   singleton = null
 
   constructor: (element, callback) ->
-    PIXI.scaleModes.DEFAULT = PIXI.scaleModes.NEAREST
+    PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST
     @_renderer = PIXI.autoDetectRenderer 0, 0, {transparent: true}
-    @_stage = new PIXI.Stage 0x00000000
+    @_container = new PIXI.Container
     @layers = {}
     for layer in LAYERS
-      @layers[layer] = new PIXI.DisplayObjectContainer
-      @_stage.addChild @layers[layer]
+      @layers[layer] = new PIXI.Container
+      @_container.addChild @layers[layer]
     element.prepend @_renderer.view
     do @_initialize_stats
     # Load assets and run the callback when done.
-    assets = ['effects', 'enemies', 'player', 'tileset']
-    loader = new PIXI.AssetLoader ("#{asset}.json" for asset in assets)
-    loader.onComplete = callback
-    do loader.load
+    for asset in ['effects', 'enemies', 'player', 'tileset']
+      PIXI.loader.add asset, "#{asset}.json"
+    PIXI.loader.once 'complete', callback
+    do PIXI.loader.load
 
   draw: ->
-    @_renderer.render @_stage
+    @_renderer.render @_container
 
   generate_texture: ->
-    @layers.game.generateTexture 1, PIXI.scaleModes.NEAREST, @_renderer
+    @layers.game.generateTexture @_renderer, 1, PIXI.SCALE_MODES.NEAREST
 
   resize: (size) ->
     @_renderer.resize size.x, size.y
@@ -114,17 +114,14 @@ class base.Graphics
     complete
 
   _add_container: (layer) ->
-    container = new PIXI.DisplayObjectContainer
+    container = new PIXI.Container
     container.scale = new PIXI.Point @scale, @scale
     layer.addChild container
     container
 
   _draw_tile: (tile, image) ->
     if tile._tilist_image != image
-      if image?
-        tile.setTexture PIXI.Texture.fromFrame image
-      else
-        tile.setTexture PIXI.Texture.emptyTexture
+      tile.texture = PIXI.utils.TextureCache[image] or PIXI.Texture.EMPTY
       tile._tilist_image = image
 
   _make_tile: (square, image, container) ->

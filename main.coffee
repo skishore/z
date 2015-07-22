@@ -36,7 +36,6 @@ class Direction
 class Graphics extends base.Graphics
   constructor: (@stage, @element) ->
     super @stage, @element
-    @_empty_texture = PIXI.Texture.emptyTexture
     @sprite_container = @_add_container @layers.game
     @sprites = {}
 
@@ -49,7 +48,7 @@ class Graphics extends base.Graphics
       @_remove_sprite id
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @layers.game.filters = if @stage._pixi_invert \
-                           then [new PIXI.InvertFilter] else null
+                           then [new PIXI.filters.InvertFilter] else null
     super
 
   prepare_scroll: (speed, offset) ->
@@ -66,7 +65,7 @@ class Graphics extends base.Graphics
     pixi.x = @_to_pixels sprite.position.x + (shadow.x_offset or 0)
     pixi.y = @_to_pixels sprite.position.y + (shadow.y_offset or 0)
     pixi.z = -sprite.position.y + (shadow.z_offset or 0)
-    pixi.setTexture PIXI.TextureCache[shadow.image] or @_empty_texture
+    pixi.texture = PIXI.utils.TextureCache[shadow.image] or PIXI.Texture.EMPTY
     drawn[shadow_id] = true
 
   _draw_sprite: (sprite, drawn) ->
@@ -76,13 +75,13 @@ class Graphics extends base.Graphics
     pixi.x = @_to_pixels sprite.position.x
     pixi.y = @_to_pixels sprite.position.y + sprite.y_offset
     pixi.z = -sprite.position.y + GRID*sprite.y_offset
-    pixi.setTexture PIXI.TextureCache[sprite.frame] or @_empty_texture
+    pixi.texture = PIXI.utils.TextureCache[sprite.frame] or PIXI.Texture.EMPTY
     if sprite.invulnerability_frames == 0
       pixi.filters = null
     else
       period = INVULNERABILITY_ANIMATION_FRAMES
       pixi.filters = if sprite.invulnerability_frames % (2*period) < period \
-                     then [new PIXI.InvertFilter] else null
+                     then [new PIXI.filters.InvertFilter] else null
     drawn[sprite.id] = true
     @_draw_shadow sprite, drawn
     @_draw_text sprite
