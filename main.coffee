@@ -212,7 +212,7 @@ class Map extends base.Map
       if (@get_map_data square).blocked
         return
       direction = @_get_edge_direction square
-      @_features[square.x][square.y] = "door-#{direction}"
+      @_features[square.x][square.y] = "door-#{direction}-0"
       if square.equals @starting_square
         [x, y] = Direction.UNIT_VECTOR[direction]
         @starting_square = @starting_square.add new Point x, y

@@ -25,7 +25,7 @@ class Renderer
     element.prepend @_renderer.view
     do @_initialize_stats
     # Load assets and run the callback when done.
-    for asset in ['effects', 'enemies', 'player', 'tileset']
+    for asset in ['doors', 'effects', 'enemies', 'player', 'tileset']
       PIXI.loader.add asset, "#{asset}.json"
     PIXI.loader.once 'complete', callback
     do PIXI.loader.load
