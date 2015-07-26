@@ -143,11 +143,7 @@ class Map extends base.Map
     if @stage.player? and @_in_bounds @stage.player.square
       @starting_square = @stage.player.square
     @starting_direction = @_get_edge_direction @starting_square
-    # TODO(skishore): The list of enemies should be read from map data.
-    enemies = (_.sample ['moblin', 'zol'] for i in [0..._.random 8])
-    do @_clear_sprites
-    @_maybe_lock_doors enemies
-    @_maybe_spawn_enemies enemies
+    do @_on_enter
 
   get_map_data: (square) ->
     if not @_in_bounds square
@@ -242,7 +238,8 @@ class Map extends base.Map
 
   _maybe_spawn_enemies: (enemies) ->
     for enemy in enemies
-      @stage.spawn enemy, do @_get_free_square
+      sprite = @stage.spawn enemy, do @_get_free_square
+      (do DialogManager.get_page)?.add_enemy sprite.id
 
   _maybe_unlock_doors: ->
     if not @_locked or do @_should_lock_doors
@@ -252,6 +249,17 @@ class Map extends base.Map
         direction = @_get_edge_direction square
         @_add_transition square, "door-#{direction}", 0, DOOR_ANIMATION_FRAMES
     delete @_locked
+
+  _on_enter: ->
+    # TODO(skishore): The dialog and enemies should be read from map data.
+    type = if (do Math.random < 0.4) then TransliterationMatchingGame \
+           else EnglishToHindiMultipleChoiceGame
+    DialogManager.set_page new type
+    num_enemies = do (do DialogManager.get_page).get_num_enemies
+    enemies = (_.sample ['moblin', 'zol'] for i in [0...num_enemies])
+    do @_clear_sprites
+    @_maybe_lock_doors enemies
+    @_maybe_spawn_enemies enemies
 
   _should_lock_doors: ->
     # TODO(skishore): Even if there are non-player sprites on the screen,
@@ -290,7 +298,7 @@ class PixiData
     @shadow = data.shadow
     @y_offset = data.y_offset or 0
     # TODO(skishore): Once we have better dialog management, drop this field.
-    @label = DialogManager._current?.get_label @_sprite.id
+    @label = (do DialogManager.get_page)?.get_label @_sprite.id
 
 
 class Sprite
@@ -536,10 +544,10 @@ class AttackingState
     y_offset: TWIPS_PER_PIXEL*data[2]
 
   _maybe_hit_enemies: (sword_frame) ->
+    dialog = do DialogManager.get_page
     enemies_hit = @_get_enemies_hit sword_frame
     for enemy in enemies_hit
-      if DialogManager._current? and \
-         not DialogManager._current.can_attack enemy.id
+      if dialog? and not dialog.can_attack enemy.id
         return @sprite.stage.set_state new InvertState
     for enemy in enemies_hit
       enemy.direction = Direction.OPPOSITE[@sprite.direction]
@@ -795,7 +803,7 @@ class Stage
 
   destruct: (sprite) ->
     @_ids_to_remove[sprite.id] = true
-    DialogManager._current?.on_attack sprite.id
+    (do DialogManager.get_page)?.on_attack sprite.id
     # TODO(skishore): Maybe advance to the next dialog here.
 
   loop: ->
