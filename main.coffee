@@ -121,6 +121,7 @@ class Graphics extends base.Graphics
 
 class Map extends base.Map
   DOOR_ANIMATION_FRAMES = base.door_animation_frames
+  MINIMUM_SAFE_SPACE = 4
   PERIOD = 720
   TILESET = {
     bush: {blocked: true, cuttable: true, particles: {num: 4, images: ['leaf']}}
@@ -217,7 +218,8 @@ class Map extends base.Map
 
   _get_free_square: ->
     result = new Point -1, -1
-    while (@get_map_data result).blocked
+    while (@get_map_data result).blocked or \
+          (do (result.subtract @starting_square).length) <= MINIMUM_SAFE_SPACE
       result.x = _.random (@size.x - 1)
       result.y = _.random (@size.y - 1)
     result
@@ -229,12 +231,10 @@ class Map extends base.Map
       if (@get_map_data square).blocked
         return
       direction = @_get_edge_direction square
-      needs_transition = false
       if square.equals @starting_square
         [x, y] = Direction.UNIT_VECTOR[direction]
         @starting_square = @starting_square.add new Point x, y
-        needs_transition = @stage.player?
-      if needs_transition
+      if direction == @starting_direction and @stage.player?
         @_add_transition square, "door-#{direction}", DOOR_ANIMATION_FRAMES, 0
       else
         @_features[square.x][square.y] = "door-#{direction}-0"
