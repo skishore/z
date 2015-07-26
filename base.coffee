@@ -1,6 +1,7 @@
 @base = @base or {}
 
 base.collection = new Meteor.Collection 'maps'
+base.door_animation_frames = 4
 base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}

@@ -120,6 +120,7 @@ class Graphics extends base.Graphics
 
 
 class Map extends base.Map
+  DOOR_ANIMATION_FRAMES = base.door_animation_frames
   PERIOD = 720
   TILESET = {
     bush: {blocked: true, cuttable: true, particles: {num: 4, images: ['leaf']}}
@@ -136,13 +137,16 @@ class Map extends base.Map
   constructor: (@stage, uid) ->
     super uid
     @_frame = 0
+    @_transitions = []
     @starting_square = new Point (Math.floor @size.x/2), 0
     if @stage.player? and @_in_bounds @stage.player.square
       @starting_square = @stage.player.square
     @starting_direction = @_get_edge_direction @starting_square
+    # TODO(skishore): The list of enemies should be read from map data.
+    enemies = (_.sample ['moblin', 'zol'] for i in [0..._.random 8])
     do @_clear_sprites
-    do @_maybe_lock_doors
-    do @_maybe_spawn_enemies
+    @_maybe_lock_doors enemies
+    @_maybe_spawn_enemies enemies
 
   get_map_data: (square) ->
     if not @_in_bounds square
@@ -177,6 +181,19 @@ class Map extends base.Map
   update: ->
     @_frame = (@_frame + 1) % PERIOD
     do @_maybe_unlock_doors
+    do @_update_transitions
+
+  _add_transition: (square, prefix, start, target) ->
+    assert (Number.isInteger start) and (Number.isInteger target)
+    transition = {square: square, prefix: prefix, index: start, target: target}
+    for other in @_transitions
+      if other.square.equals transition.square
+        # If the current transition uses the same tween frames as the new one,
+        # smoothly interpolate between the two. Otherwise, replace it.
+        if other.prefix == transition.prefix
+          transition.index = other.index
+        return _.fast_extend other, transition
+    @_transitions.push transition
 
   _apply_to_edges: (callback) ->
     for x in [0...@size.x]
@@ -205,36 +222,54 @@ class Map extends base.Map
       result.y = _.random (@size.y - 1)
     result
 
-  _maybe_lock_doors: ->
-    # TODO(skishore): We should read map data to check if the room should
-    # be locked, and then check if there are enemies to lock it.
+  _maybe_lock_doors: (enemies) ->
+    if enemies.length == 0
+      return
     @_apply_to_edges (square) =>
       if (@get_map_data square).blocked
         return
       direction = @_get_edge_direction square
-      @_features[square.x][square.y] = "door-#{direction}-0"
+      needs_transition = false
       if square.equals @starting_square
         [x, y] = Direction.UNIT_VECTOR[direction]
         @starting_square = @starting_square.add new Point x, y
+        needs_transition = @stage.player?
+      if needs_transition
+        @_add_transition square, "door-#{direction}", DOOR_ANIMATION_FRAMES, 0
+      else
+        @_features[square.x][square.y] = "door-#{direction}-0"
     @_locked = true
 
-  _maybe_spawn_enemies: ->
-    for i in [0..._.random 8]
-      @stage.spawn (_.sample ['moblin', 'zol']), do @_get_free_square
+  _maybe_spawn_enemies: (enemies) ->
+    for enemy in enemies
+      @stage.spawn enemy, do @_get_free_square
 
   _maybe_unlock_doors: ->
     if not @_locked or do @_should_lock_doors
       return
     @_apply_to_edges (square) =>
       if @_features[square.x][square.y].startsWith 'door-'
-        delete @_features[square.x][square.y]
+        direction = @_get_edge_direction square
+        @_add_transition square, "door-#{direction}", 0, DOOR_ANIMATION_FRAMES
     delete @_locked
 
   _should_lock_doors: ->
     # TODO(skishore): Even if there are non-player sprites on the screen,
     # it may be okay to unlock the doors - for example, leaves are sprites
     # but they should not prevent a player from leaving.
-     _.any @stage.sprites, (sprite) -> not do sprite.is_player
+    _.any @stage.sprites, (sprite) -> not do sprite.is_player
+
+  _update_transitions: ->
+    @_transitions = @_transitions.filter (transition) ->
+      transition.index != transition.target
+    for transition in @_transitions
+      step = if transition.target > transition.index then 1 else -1
+      transition.index += step
+      if transition.index == transition.target and transition.target > 0
+        delete @_features[transition.square.x][transition.square.y]
+      else
+        feature = "#{transition.prefix}-#{transition.index}"
+        @_features[transition.square.x][transition.square.y] = feature
 
 
 class PixiData
@@ -804,6 +839,8 @@ class Stage
 
 class GameplayState
   update: ->
+    # It's important that we update the map before the sprites so that we will
+    # lock any closing doors before sprites can move.
     do @stage.map.update
     for sprite in @stage.sprites
       do sprite.update
