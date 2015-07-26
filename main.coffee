@@ -329,6 +329,7 @@ class Sprite
     @fixed.default_state == WalkingState
 
   move: (vector, skip_checks) ->
+    vector = do vector.round
     if not skip_checks
       vector = @_check_squares vector
     if not do vector.zero
@@ -368,7 +369,6 @@ class Sprite
     false
 
   _check_squares: (move) ->
-    move = new Point (Math.round move.x), (Math.round move.y)
     if do move.zero
       return move
 
@@ -816,7 +816,7 @@ class Stage
     # Load the new map and scroll to the new screen.
     @_graphics.prepare_scroll SCROLL_SPEED, offset
     @map = new Map @, @map.get_uid offset
-    @set_state new ScrollState @_graphics
+    @set_state new ScrollState @, @_graphics
 
   set_state: (state) ->
     @state = state
@@ -866,11 +866,23 @@ class InvertState
 
 
 class ScrollState
-  constructor: (@graphics) ->
+  constructor: (@stage, @graphics) ->
+    diff = @stage.map.starting_square.subtract @stage.player.square
+    assert (Math.abs diff.x) + (Math.abs diff.y) <= 1
+    @_move = diff.scale BASE_SPEED
 
   update: ->
-    if do @graphics.scroll
+    done_scrolling = do @graphics.scroll
+    done_translating = do @_maybe_translate_player
+    if done_scrolling and done_translating
       @stage.set_state new GameplayState
+
+  _maybe_translate_player: ->
+    if (@stage.player.square.equals @stage.map.starting_square) and \
+       (@stage.player.overlap.dot @_move) >= 0
+      return true
+    @stage.player.move @_move, true # skip_checks
+    false
 
 
 base.modes.main = Stage

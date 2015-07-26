@@ -7,6 +7,9 @@ class @Point
   clone: ->
     new Point @x, @y
 
+  dot: (other) ->
+    @x*other.x + @y*other.y
+
   equals: (other) ->
     @x == other.x and @y == other.y
 

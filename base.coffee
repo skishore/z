@@ -101,7 +101,8 @@ class base.Graphics
     assert not do @scroll
 
   scroll: ->
-    assert @_scroll?
+    if not @_scroll?
+      return true
     @_scroll.cur_frame += 1
     factor = (@_scroll.max_frame - @_scroll.cur_frame)/@_scroll.max_frame
     @layers.game.x = Math.floor @_scroll.offset.x*factor
