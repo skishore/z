@@ -44,6 +44,20 @@ class semantics.Devanagari
   for vowel, sign of @SIGNS
     @REVERSE_SIGNS[sign] = vowel
 
+  @concatenate: (characters) ->
+    last_was_consonant = false
+    result = ''
+    for character in characters
+      is_consonant = character not of @SIGNS
+      if last_was_consonant
+        if is_consonant
+          result += @VIRAMA
+        else
+          character = @SIGNS[character]
+      last_was_consonant = is_consonant
+      result += character
+    result
+
   @get_segment: ->
     while true
       consonant = _.sample @CONSONANTS

@@ -11,34 +11,38 @@ class @DialogPage
   @height = 'the height of the dialog, eg. 2.2em'
   @trap_input = 'true if this dialog traps user input'
 
-  accepts_input: (char) ->
-    # Returns true if the dialog accepts the given input.
-    assert false, "#{@constructor.name}.accepts_input is not implemented!"
-
   active: ->
     # Returns true if the dialog is still active.
-    assert false, "#{@constructor.name}.active is not implemented!"
+    true
 
-  get_label: (sid) ->
-    # Used if this dialog causes the game to show enemy labels.
-    return undefined
+  on_input: (char) ->
+    # Takes a single-character input and return true if the dialog changed.
+    false
 
   get_data: ->
     # Returns the data needed to instantiate this dialog's Handlebars template.
     assert false, "#{@constructor.name}.get_data is not implemented!"
 
+  # TODO(skishore): The following methods should be in a combat-dialog-specific
+  # base class. We should also provide implementations of these methods for
+  # two kinds of combat dialogs: subset selection  and ordered-subset selection.
+
+  can_attack: (sid) ->
+    # Returns true if the player can attack the given enemy.
+    assert false, "#{@constructor.name}.can_attack is not implemented!"
+
+  get_label: (sid) ->
+    # Returns the label for the given enemy.
+    #assert false, "#{@constructor.name}.get_label is not implemented!"
+    return undefined
+
+  get_num_enemies: ->
+    # Returns the number of enemies needed to play this semantic game.
+    assert false, "#{@constructor.name}.get_num_enemies is not implemented!"
+
   on_attack: (sid) ->
-    # For combat dialogs only. Returns an AttackResult. 
+    # Handler method for when an enemy is killed. Returns a DialogAttackResult.
     assert false, "#{@constructor.name}.on_attack is not implemented!"
 
-  on_input: (char) ->
-    # Takes a single-character input and return true if the dialog changed.
-    assert false, "#{@constructor.name}.on_input is not implemented!"
-
-  signal: (callback) ->
-    if callback == 'OnPageCompletion' and \
-       DialogManager._current instanceof HindiToEnglishShortAnswerGame
-      DialogManager.set_page new HindiToEnglishShortAnswerGame
-
   _on_input: (char) ->
-    (do @active) and (@accepts_input char) and (@on_input char)
+    (do @active) and (@on_input char)

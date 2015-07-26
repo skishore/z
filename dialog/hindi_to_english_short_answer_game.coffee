@@ -13,9 +13,6 @@ class @HindiToEnglishShortAnswerGame extends DialogPage
     @mistake = undefined
     @i = 0
 
-  accepts_input: (char) ->
-    /^[a-z ]$/i.test char
-
   active: ->
     @i < @hindi.length
 
@@ -31,21 +28,19 @@ class @HindiToEnglishShortAnswerGame extends DialogPage
     data
 
   on_input: (char) ->
+    if not /^[a-z ]$/i.test char
+      return false
     if char != @english[@i][@entries[@i].length]
       if @guides[@i]
         return false
       @entries[@i] = ''
       @guides[@i] = true
       @mistake = @i
-      # Signal that the player made a mistake in the dialog.
-      @signal 'OnTaskError'
       return true
     @entries[@i] += char
     @mistake = undefined
     if @entries[@i] == @english[@i]
       @i += 1
-      # Signal that the player completed the task or the whole page.
-      @signal (if do @active then 'OnTaskCompletion' else 'OnPageCompletion')
     true
 
   _encode: (data) ->

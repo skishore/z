@@ -14,7 +14,7 @@ class @TransliterationMatchingGame extends DialogPage
     @answers = []
     for row in data
       characters = (_.sample RT[entry] for entry in row[1])
-      @questions.push @_concatenate_hindi_characters characters
+      @questions.push semantics.Devanagari.concatenate characters
       @answers.push row[0]
     @flipped = (do Math.random) < 0.5
     if @flipped
@@ -23,12 +23,31 @@ class @TransliterationMatchingGame extends DialogPage
     @enemies_attacked = []
     @sid_to_answer = {}
 
+  get_data: ->
+    data = {class: "matching-game #{if @flipped then 'flipped'}", segments: []}
+    for question, i in @questions
+      data.segments.push
+        segment: question
+        entry: {text: if i < @enemies_attacked.length then @answers[i]}
+        class: if i < @enemies_attacked.length then 'correct'
+        width: "#{Math.floor 100/@answers.length}%"
+    data
+
+  # Combat-dialog-specific handlers follow. TODO(skishore): These handlers
+  # should be moved to a generic combat-handling base class.
+
   add_enemy: (sid) ->
     index = (_.keys @sid_to_answer).length
     @sid_to_answer[sid] = @answers[index]
 
   can_attack: (sid) ->
     @sid_to_answer[sid] == @answers[@enemies_attacked.length]
+
+  get_label: (sid) ->
+    if sid not of @sid_to_answer
+      return undefined
+    class: if @flipped then 'hindi' else 'english'
+    text: @sid_to_answer[sid]
 
   get_num_enemies: ->
     return @answers.length
@@ -41,37 +60,6 @@ class @TransliterationMatchingGame extends DialogPage
     if @enemies_attacked.length == @answers.length
       return DialogAttackResult.COMBAT_WON
     return DialogAttackResult.RIGHT_ENEMY
-
-  get_data: ->
-    data = {class: "matching-game #{if @flipped then 'flipped'}", segments: []}
-    for question, i in @questions
-      data.segments.push
-        segment: question
-        entry: {text: if i < @enemies_attacked.length then @answers[i]}
-        class: if i < @enemies_attacked.length then 'correct'
-        width: "#{Math.floor 100/@answers.length}%"
-    data
-
-  get_label: (sid) ->
-    if sid not of @sid_to_answer
-      return undefined
-    class: if @flipped then 'hindi' else 'english'
-    text: @sid_to_answer[sid]
-
-  _concatenate_hindi_characters: (characters) ->
-    # TODO(skishore): Move this logic out into a semantics utility method.
-    last_was_consonant = false
-    result = ''
-    for character in characters
-      is_consonant = character not of semantics.Devanagari.SIGNS
-      if last_was_consonant
-        if is_consonant
-          result += semantics.Devanagari.VIRAMA
-        else
-          character = semantics.Devanagari.SIGNS[character]
-      last_was_consonant = is_consonant
-      result += character
-    result
 
   _distinct: (values) ->
     (_.union values).length == values.length

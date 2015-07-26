@@ -176,7 +176,10 @@ class base.Input
     key
 
   _onkeydown: (e) ->
-    @_pressed[@_get_key e] = true
+    key = @_get_key e
+    # TODO(skishore): Move dialog logic into a stage state in main.coffee.
+    if not DialogManager.on_input key
+      @_pressed[key] = true
 
   _onkeyup: (e) ->
     key = @_get_key e

@@ -3,8 +3,8 @@ class @DialogManager
     if @_next? then @_next else @_current
 
   @on_input: (char) ->
-    # TODO: Input should be passed to @_next if it is set. We probably want to
-    # refactor the state to track current and last, not current and next.
+    if @_next?
+      return true
     if @_current?.constructor.trap_input
       @_redraw 'current' if @_current._on_input char
       return true

@@ -20,6 +20,14 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
     @enemies_attacked = []
     @sid_to_answer = {}
 
+  get_data: ->
+    characters = (@sid_to_answer[sid] for sid in @enemies_attacked)
+    question: @english
+    answer: semantics.Devanagari.concatenate characters
+
+  # Combat-dialog-specific handlers follow. TODO(skishore): These handlers
+  # should be moved to a generic combat-handling base class.
+
   add_enemy: (sid) ->
     index = (_.keys @sid_to_answer).length
     @sid_to_answer[sid] = @answers[index]
@@ -27,6 +35,12 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
   can_attack: (sid) ->
     transliteration = semantics.TRANSLITERATIONS[@sid_to_answer[sid]]
     transliteration == @hindi[@enemies_attacked.length]
+
+  get_label: (sid) ->
+    if sid not of @sid_to_answer
+      return undefined
+    class: 'hindi character'
+    text: @sid_to_answer[sid]
 
   get_num_enemies: ->
     return @answers.length
@@ -39,32 +53,6 @@ class @EnglishToHindiMultipleChoiceGame extends DialogPage
     if @enemies_attacked.length == @hindi.length
       return DialogAttackResult.COMBAT_WON
     return DialogAttackResult.RIGHT_ENEMY
-
-  get_data: ->
-    characters = (@sid_to_answer[sid] for sid in @enemies_attacked)
-    question: @english
-    answer: @_concatenate_hindi_characters characters
-
-  get_label: (sid) ->
-    if sid not of @sid_to_answer
-      return undefined
-    class: 'hindi character'
-    text: @sid_to_answer[sid]
-
-  _concatenate_hindi_characters: (characters) ->
-    # TODO(skishore): Move this logic out into a semantics utility method.
-    last_was_consonant = false
-    result = ''
-    for character in characters
-      is_consonant = character not of semantics.Devanagari.SIGNS
-      if last_was_consonant
-        if is_consonant
-          result += semantics.Devanagari.VIRAMA
-        else
-          character = semantics.Devanagari.SIGNS[character]
-      last_was_consonant = is_consonant
-      result += character
-    result
 
   _distinct: (values) ->
     (_.union values).length == values.length
