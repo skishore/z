@@ -34,18 +34,20 @@ class Direction
 
 
 class Graphics extends base.Graphics
-  constructor: (@stage, @element) ->
-    super @stage, @element
+  constructor: (@stage) ->
+    super @stage
     @sprite_container = @_add_container @layers.game
     @sprites = {}
 
   draw: ->
     drawn = {}
+    texts = []
     for sprite in @stage.sprites
-      @_draw_sprite sprite._pixi_data, drawn
+      @_draw_sprite sprite._pixi_data, drawn, texts
     ids_to_remove = (id for id of @sprites when not drawn[id])
     for id in ids_to_remove
       @_remove_sprite id
+    Session.set 'pixi_text.elements', texts
     @sprite_container.children.sort (a, b) -> Math.sign b.z - a.z
     @layers.game.filters = if @stage._pixi_invert \
                            then [new PIXI.filters.InvertFilter] else null
@@ -68,7 +70,7 @@ class Graphics extends base.Graphics
     pixi.texture = PIXI.utils.TextureCache[shadow.image] or PIXI.Texture.EMPTY
     drawn[shadow_id] = true
 
-  _draw_sprite: (sprite, drawn) ->
+  _draw_sprite: (sprite, drawn, texts) ->
     if not sprite.id?
       return
     pixi = @_get_sprite sprite.id
@@ -84,15 +86,16 @@ class Graphics extends base.Graphics
                      then [new PIXI.filters.InvertFilter] else null
     drawn[sprite.id] = true
     @_draw_shadow sprite, drawn
-    @_draw_text sprite
+    @_draw_text sprite, texts
 
-  _draw_text: (sprite) ->
+  _draw_text: (sprite, texts) ->
     if not sprite.label?
       return
-    element = @_get_text sprite.id, sprite.label
-    element?.css 'transform', "translateX(-50%) translate(#{
+    text = _.fast_extend sprite.label
+    text.transform = "translateX(-50%) translate(#{
       @scale*@_to_pixels sprite.position.x + GRID/2}px, #{
       @scale*((@_to_pixels sprite.position.y + GRID) + 1)}px)"
+    texts.push text
 
   _get_sprite: (id) ->
     if not @sprites[id]?
@@ -101,18 +104,8 @@ class Graphics extends base.Graphics
       @sprites[id] = pixi
     @sprites[id]
 
-  _get_text: (id, label) ->
-    # TODO(skishore): Use Meteor to display sprite labels instead of this hack.
-    selector = "#pixi-text-#{id}.pixi-text"
-    if $(selector).length == 0
-      element = $("<div id='pixi-text-#{id}'>").addClass 'pixi-text'
-      (element.text label.text).addClass label.class
-      $('.surface').append element
-    $(selector)
-
   _remove_sprite: (id) ->
     @sprite_container.removeChild @sprites[id]
-    do $("#pixi-text-#{id}.pixi-text").remove
     delete @sprites[id]
 
   _to_pixels: (twips) ->
@@ -798,7 +791,7 @@ class Stage
     @map = new Map @, base.starting_map_uid
     @player = @spawn 'player', @map.starting_square
     @set_state new GameplayState
-    @_graphics = new Graphics @, $('.surface')
+    @_graphics = new Graphics @
     @_ids_to_remove = {}
 
   destruct: (sprite) ->
@@ -894,3 +887,8 @@ class ScrollState
 
 
 base.modes.main = Stage
+
+
+if Meteor.isClient
+  Template.pixi_text.helpers elements: -> Session.get 'pixi_text.elements'
+  Meteor.startup -> Session.set 'pixi_text.elements', undefined

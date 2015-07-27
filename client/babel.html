@@ -3,8 +3,11 @@
 </head>
 <body>
   {{> menu}}
-  <div class="surface-container">
-    <div class="surface">
+  <div class="body-wrapper">
+    <div class="game-wrapper">
+      <div class="surface">
+        {{> pixi_text}}
+      </div>
       {{> dialog}}
       {{> tilist}}
     </div>
@@ -17,6 +20,14 @@
       <div class="button {{class}}">{{text}}</div>
     {{/each}}
   </div>
+</template>
+
+<template name="pixi_text">
+  {{#each elements}}
+    <div class="pixi-text {{class}}" style="transform: {{transform}}">
+      {{text}}
+    </div>
+  {{/each}}
 </template>
 
 <template name="tilist">

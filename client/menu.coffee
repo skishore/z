@@ -7,10 +7,10 @@ reset = ->
   # TODO(skishore): This reset function is a hack that manually destructs
   # all sorts of internal state of the stage. Each stage implementation
   # should provide a cleanup method instead.
-  do $('.surface .pixi-text').remove
   do DialogManager.reset
-  Session.set 'tilist.cursor', null
-  Session.set 'tilist.hotkeys', null
+  Session.set 'pixi_text.elements', undefined
+  Session.set 'tilist.cursor', undefined
+  Session.set 'tilist.hotkeys', undefined
   base.stage?.loop = ->
   base.stage?._graphics.draw = ->
   for type, layer of base.stage?._graphics.layers

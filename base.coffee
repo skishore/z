@@ -15,15 +15,16 @@ class Renderer
   LAYERS = ['game', 'ui']
   singleton = null
 
-  constructor: (element, callback) ->
+  constructor: (callback) ->
     PIXI.SCALE_MODES.DEFAULT = PIXI.SCALE_MODES.NEAREST
     @_renderer = PIXI.autoDetectRenderer 0, 0, {transparent: true}
     @_container = new PIXI.Container
+    @element = $('.game-wrapper .surface')
     @layers = {}
     for layer in LAYERS
       @layers[layer] = new PIXI.Container
       @_container.addChild @layers[layer]
-    element.prepend @_renderer.view
+    @element.prepend @_renderer.view
     do @_initialize_stats
     # Load assets and run the callback when done.
     for asset in ['doors', 'effects', 'enemies', 'player', 'tileset']
@@ -40,11 +41,11 @@ class Renderer
   resize: (size) ->
     @_renderer.resize size.x, size.y
 
-  @get_singleton: (element, callback) ->
+  @get_singleton: (callback) ->
     if singleton?
       Meteor.setTimeout callback
     else
-      singleton = new Renderer element, callback
+      singleton = new Renderer callback
     singleton
 
   _initialize_stats: ->
@@ -54,14 +55,15 @@ class Renderer
 
 
 class base.Graphics
-  constructor: (@stage, @element, options) ->
+  constructor: (@stage, options) ->
     # Graphics currently supports the following options:
     # - size: Point that controls the size of the surface, in grid cells
     options = options or {}
     @scale = options.scale or 2
-    size = (options.size or @stage.map.size).scale @scale*base.grid_in_pixels
-    @renderer = Renderer.get_singleton @element, @_on_assets_loaded.bind @
-    @renderer.resize size
+    @size = (options.size or @stage.map.size).scale @scale*base.grid_in_pixels
+    @renderer = Renderer.get_singleton @_on_assets_loaded.bind @
+    @renderer.resize @size
+    @element = @renderer.element
     @layers = @renderer.layers
     @stats = @renderer.stats
     # Containers for the various layers of the game. Earlier layers are lower.
@@ -142,6 +144,8 @@ class base.Graphics
         feature = @stage.map.get_feature_image square
         @tiles.push @_make_tile square, tile, @tile_container
         @features.push @_make_tile square, feature, @feature_container
+    # For some reason, canvas elements take up extra height by default.
+    @element.height @size.y
     do @stage.loop.bind @stage
 
 

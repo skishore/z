@@ -1,11 +1,11 @@
 class Graphics extends base.Graphics
   BORDER_IN_PIXELS = 2
 
-  constructor: (@stage, @element, callback) ->
+  constructor: (@stage, callback) ->
     num_tiles = @stage.tileset.tiles.length
     size = do @stage.map.size.clone
     size.y += (Math.ceil num_tiles/size.x) + 1
-    super @stage, @element, {assets: ['tileset'], size: size, transparent: true}
+    super @stage, {assets: ['tileset'], size: size, transparent: true}
     @tileset_container = @_add_container @layers.ui
 
   _on_assets_loaded: ->
@@ -159,7 +159,7 @@ class Stage
     @input = new base.Input {keyboard: true, mouse: true}
     @tileset = new Tileset
     @map = new Map @tileset, base.starting_map_uid
-    @_graphics = new Graphics @, $('.surface')
+    @_graphics = new Graphics @
     @_hotkeys = {}
     @_set_hotkeys 0
 
