@@ -95,24 +95,41 @@ class Map
             neighbors.push neighbor
     path
 
+  _extrude: (tiles) ->
+    result = ((0 for y in [0...@size.y]) for x in [0...@size.x])
+    for x in [0...@size.x]
+      for y in [0...@size.y]
+        dx = Math.floor x/@room_size.x
+        dy = Math.floor y/@room_size.y
+        result[x][y] = tiles[x - dx][y - dy]
+    result
+
   _generate_level: ->
+    # Decrease the size of the map by 1 so that room edges will overlap.
+    @size.x -= @num_rooms.x - 1
+    @size.y -= @num_rooms.y - 1
+    # Compute the set of tiles on the shrunken map.
     noise.seed do (new Date).getTime
     @tiles = ((0 for y in [0...@size.y]) for x in [0...@size.x])
     values = (((@_value x, y) for y in [0...@size.y]) for x in [0...@size.x])
     river = @_draw_river values
     for x in [0...@size.x]
       for y in [0...@size.y]
-        @tiles[x][y] = @_threshold @_clamp values[x][y], 0, 1
+        @tiles[x][y] = @_threshold values[x][y]
     for square in river
       @tiles[square.x][square.y] = 0
       if square.x > 0
         @tiles[square.x - 1][square.y] = 0
       if square.y > 0
         @tiles[square.x][square.y - 1] = 0
+    # Return the map to the normal size, repeating tiles at room edges.
+    @size.x += @num_rooms.x - 1
+    @size.y += @num_rooms.y - 1
+    @tiles = @_extrude @tiles
 
   _threshold: (value) ->
     n = COLORS.length
-    Math.min (Math.floor n*value), n - 1
+    @_clamp (Math.floor n*value), 0, n - 1
 
   _to_point: (pair) ->
     new Point pair[0], pair[1]
