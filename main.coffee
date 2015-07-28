@@ -209,8 +209,8 @@ class Map extends base.Map
     result = new Point -1, -1
     while (@get_map_data result).blocked or \
           (do (result.subtract @starting_square).length) <= MINIMUM_SAFE_SPACE
-      result.x = _.random (@size.x - 1)
-      result.y = _.random (@size.y - 1)
+      result.x = _.random 1, (@size.x - 2)
+      result.y = _.random 1, (@size.y - 2)
     result
 
   _maybe_lock_doors: (enemies) ->
