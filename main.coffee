@@ -238,7 +238,8 @@ class Map extends base.Map
     if not @_locked or do @_should_lock_doors
       return
     @_apply_to_edges (square) =>
-      if @_features[square.x][square.y].startsWith 'door-'
+      feature = @_features[square.x][square.y]
+      if feature? and feature.startsWith 'door-'
         direction = @_get_edge_direction square
         @_add_transition square, "door-#{direction}", 0, DOOR_ANIMATION_FRAMES
     delete @_locked
