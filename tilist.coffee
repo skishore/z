@@ -135,7 +135,7 @@ class Map extends base.Map
       return
     features = @_features[square.x][square.y].concat feature.index
     image = (do (@tileset.tiles[i].image for i in features).sort).join ' '
-    if image not of PIXI.TextureCache
+    if image not of PIXI.utils.TextureCache
       @_features[square.x][square.y].length = 0
     @_features[square.x][square.y].push feature.index
 
