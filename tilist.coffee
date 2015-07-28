@@ -312,4 +312,6 @@ if Meteor.isClient
         result.push cursor
       result
   }
+  base.gen.map = Map
+  base.gen.tileset = Tileset
   base.modes.tilist = Stage

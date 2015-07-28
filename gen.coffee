@@ -56,6 +56,10 @@ class Map
   _clamp: (value, min, max) ->
     Math.min (Math.max value, min), max
 
+  _cone: (square, values) ->
+    diff = (square.subtract new Point @size.x/2, @size.y)
+    values[square.x][square.y] + 2*(do diff.length)/@size.y
+
   _draw_river: (values) ->
     # The river starts at the lowest point in the top quarter of the map.
     start = new Point 0, 0
@@ -76,7 +80,7 @@ class Map
       assert neighbors.length > 0
       best_node = neighbors[0]
       for node in neighbors
-        if values[node.x][node.y] < values[best_node.x][best_node.y]
+        if (@_cone node, values) < (@_cone best_node, values)
           best_node = node
       neighbors = _.without neighbors, best_node
       path.push best_node
@@ -101,6 +105,10 @@ class Map
         @tiles[x][y] = @_threshold @_clamp values[x][y], 0, 1
     for square in river
       @tiles[square.x][square.y] = 0
+      if square.x > 0
+        @tiles[square.x - 1][square.y] = 0
+      if square.y > 0
+        @tiles[square.x][square.y - 1] = 0
 
   _threshold: (value) ->
     n = COLORS.length
