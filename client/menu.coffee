@@ -42,5 +42,5 @@ Template.menu.helpers {
 Meteor.startup ->
   if Meteor.isClient
     subscription = Meteor.subscribe 'maps'
-    Session.set 'menu.mode', 'main'
+    Session.set 'menu.mode', base.starting_mode
     Deps.autorun reset

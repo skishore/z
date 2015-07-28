@@ -6,6 +6,7 @@ base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}
 base.starting_map_uid = {zone: 'garden', position: {x: 0, y: 0}}
+base.starting_mode = 'gen'
 
 if Meteor.isServer
   Meteor.publish 'maps', -> do base.collection.find
@@ -57,6 +58,7 @@ class Renderer
 class base.Graphics
   constructor: (@stage, options) ->
     # Graphics currently supports the following options:
+    # - scale: Scale factor for any bitmaps drawn on the surface.
     # - size: Point that controls the size of the surface, in grid cells
     options = options or {}
     @scale = options.scale or 2

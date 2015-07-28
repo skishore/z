@@ -886,9 +886,6 @@ class ScrollState
     false
 
 
-base.modes.main = Stage
-
-
 if Meteor.isClient
   Template.pixi_text.helpers elements: -> Session.get 'pixi_text.elements'
-  Meteor.startup -> Session.set 'pixi_text.elements', undefined
+  base.modes.main = Stage

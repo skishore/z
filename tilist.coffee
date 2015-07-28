@@ -5,7 +5,7 @@ class Graphics extends base.Graphics
     num_tiles = @stage.tileset.tiles.length
     size = do @stage.map.size.clone
     size.y += (Math.ceil num_tiles/size.x) + 1
-    super @stage, {assets: ['tileset'], size: size, transparent: true}
+    super @stage, {size: size}
     @tileset_container = @_add_container @layers.ui
 
   _on_assets_loaded: ->
