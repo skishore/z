@@ -178,6 +178,21 @@ class Map
         map.set_tile (new Point x + 1, y), tree_ur
         map.set_tile (new Point x, y + 1), tree_dl
         map.set_tile (new Point x + 1, y + 1), tree_dr
+    # Block off impassible exits with rocks.
+    for x in [8, 9]
+      for y in [0, @room_size.y - 1]
+        at_x_edge = room.x*@room_size.x + x in [0, @size.x - 1]
+        at_y_edge = room.y*@room_size.y + y in [0, @size.y - 1]
+        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
+        if tile == 0 or at_x_edge or at_y_edge
+          map.set_tile (new Point x, y), tbi['rock']
+    for x in [0, @room_size.x - 1]
+      for y in [5]
+        at_x_edge = room.x*@room_size.x + x in [0, @size.x - 1]
+        at_y_edge = room.y*@room_size.y + y in [0, @size.y - 1]
+        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
+        if tile == 0 or at_x_edge or at_y_edge
+          map.set_tile (new Point x, y), tbi['rock']
 
 
 class Stage
