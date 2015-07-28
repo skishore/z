@@ -41,7 +41,7 @@ class Map
   GRADIENT = 1.2
   NUM_ROOMS = [7, 7]
   ROOM_SIZE = [18, 11]
-  WAVELENGTH = 0.5
+  WAVELENGTH = 0.4
 
   constructor: ->
     @num_rooms = @_to_point NUM_ROOMS
@@ -52,6 +52,15 @@ class Map
 
   get_pixel: (x, y) ->
     COLORS[@tiles[x][y]]
+
+  save: ->
+    tileset = new base.gen.tileset
+    for x in [0...@num_rooms.x]
+      for y in [0...@num_rooms.y]
+        uid = {zone: 'perlin', position: {x: x, y: y}}
+        map = new base.gen.map tileset, uid
+        @_write_map map, new Point x, y
+        do map.save
 
   _clamp: (value, min, max) ->
     Math.min (Math.max value, min), max
@@ -109,7 +118,8 @@ class Map
     @size.x -= @num_rooms.x - 1
     @size.y -= @num_rooms.y - 1
     # Compute the set of tiles on the shrunken map.
-    noise.seed do (new Date).getTime
+    @seed = do (new Date).getTime
+    noise.seed @seed
     @tiles = ((0 for y in [0...@size.y]) for x in [0...@size.x])
     values = (((@_value x, y) for y in [0...@size.y]) for x in [0...@size.x])
     river = @_draw_river values
@@ -118,10 +128,6 @@ class Map
         @tiles[x][y] = @_threshold values[x][y]
     for square in river
       @tiles[square.x][square.y] = 0
-      if square.x > 0
-        @tiles[square.x - 1][square.y] = 0
-      if square.y > 0
-        @tiles[square.x][square.y - 1] = 0
     # Return the map to the normal size, repeating tiles at room edges.
     @size.x += @num_rooms.x - 1
     @size.y += @num_rooms.y - 1
@@ -137,6 +143,41 @@ class Map
   _value: (x, y) ->
     perlin = noise.perlin2 x/@wavelength, y/@wavelength
     ((perlin + GRADIENT*(0.5 - y/@size.y)) + 1)/2
+
+  _write_map: (map, room) ->
+    TILES = ['grass-yellow-', 'grass-green-', 'grass-yellow-', 'grass-green-']
+    tbi = map.tileset.tiles_by_image
+    for x in [0...@room_size.x]
+      for y in [0...@room_size.y]
+        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
+        if tile != 0
+          map.set_tile (new Point x, y), tbi[TILES[tile - 1]]
+    for x in [0...@room_size.x]
+      for y in [0...@room_size.y]
+        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
+        if tile == 0
+          map.set_tile (new Point x, y), tbi['water']
+    # Build the trees around the map edges.
+    # TODO(skishore): This method is a terrible hack that hardcodes room size.
+    tree_ul = tbi['tree-ul']
+    tree_ur = tbi['tree-ur']
+    tree_dl = tbi['tree-dl']
+    tree_dr = tbi['tree-dr']
+    y = @room_size.y - 1
+    for x in [2...8].concat [10...16]
+      map.set_tile (new Point x, 0), if x % 2 == 0 then tree_dl else tree_dr
+      map.set_tile (new Point x, y), if x % 2 == 0 then tree_ul else tree_ur
+    x = @room_size.x - 1
+    for y in [1...5].concat [6...10]
+      down = (y - (y > 5)) % 2 == 0
+      map.set_tile (new Point 0, y), if down then tree_dr else tree_ur
+      map.set_tile (new Point x, y), if down then tree_dl else tree_ul
+    for x in [0, @room_size.x - 2]
+      for y in [0, @room_size.y - 2]
+        map.set_tile (new Point x, y), tree_ul
+        map.set_tile (new Point x + 1, y), tree_ur
+        map.set_tile (new Point x, y + 1), tree_dl
+        map.set_tile (new Point x + 1, y + 1), tree_dr
 
 
 class Stage

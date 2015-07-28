@@ -6,8 +6,8 @@ base.gen = {}
 base.grid_in_pixels = 16
 base.map_size = [18, 11]
 base.modes = {}
-base.starting_map_uid = {zone: 'garden', position: {x: 0, y: 0}}
-base.starting_mode = 'gen'
+base.starting_map_uid = {zone: 'perlin', position: {x: 3, y: 3}}
+base.starting_mode = 'main'
 
 if Meteor.isServer
   Meteor.publish 'maps', -> do base.collection.find

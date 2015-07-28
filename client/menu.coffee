@@ -33,6 +33,8 @@ Template.menu.helpers {
     mode = Session.get 'menu.mode'
     if mode != 'main'
       result.push {class: 'main', text: 'Main'}
+    if mode != 'gen'
+      result.push {class: 'gen', text: 'Perlin'}
     if mode != 'tilist'
       result.push {class: 'tilist', text: 'Tilist'}
     result
