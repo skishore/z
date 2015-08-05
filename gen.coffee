@@ -150,13 +150,14 @@ class Map
     for x in [0...@room_size.x]
       for y in [0...@room_size.y]
         tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
-        if tile != 0
-          map.set_tile (new Point x, y), tbi[TILES[tile - 1]]
-    for x in [0...@room_size.x]
-      for y in [0...@room_size.y]
-        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
-        if tile == 0
-          map.set_tile (new Point x, y), tbi['water']
+        color = if tile % 2 == 0 then 'green' else 'yellow'
+        window.test_map = map
+        map.set_tile (new Point x, y), tbi["grass-#{color}-"]
+    river_map = new gen.RiverMap \
+        @room_size, (new Point 0, (_.random 2, @room_size.y - 3)), \
+        (new Point (_.random 2, @room_size.x - 3), @room_size.y - 1)
+    for point in do river_map.river.keys
+      map.set_tile point, tbi['water']
     # Build the trees around the map edges.
     # TODO(skishore): This method is a terrible hack that hardcodes room size.
     tree_ul = tbi['tree-ul']
@@ -216,6 +217,7 @@ class Stage
     if not @_map_drawn
       @_graphics.draw_map @map
       @_map_drawn = true
+      do @map.save
 
 
 if Meteor.isClient

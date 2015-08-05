@@ -94,8 +94,8 @@ class gen.RiverMap
     rect = new gen.Rect (new Point @size.x - 2, @size.y - 2), (new Point 1, 1)
     level.place_rectangular_room rect, separation, rects
 
-    river = _get_river @size, @start, @end
-    for point in do river.keys
+    @river = _get_river @size, @start, @end
+    for point in do @river.keys
       level.tiles[point.x][point.y] = gen.Tile.DEFAULT
 
     do level.add_walls
