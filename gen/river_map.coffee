@@ -10,6 +10,29 @@ _adjacent = (point1, point2) ->
   diff = point1.subtract point2
   (Math.abs diff.x) <= 1 and (Math.abs diff.y) <= 1
 
+_affects_local_connectivity = (point, set) ->
+  KING_MOVES = _.map [[1, 0], [1, 1], [0, 1], [-1, 1],
+                     [-1, 0], [-1, -1], [0, -1], [1, -1]], \
+                     (pair) -> new Point pair[0], pair[1]
+  min_unblocked_index = -1
+  max_unblocked_index = -1
+  gaps = 0
+  for step, i in KING_MOVES
+    neighbor = point.add step
+    if not set.contains neighbor
+      continue
+    if min_unblocked_index < 0
+      min_unblocked_index = i
+      max_unblocked_index = i
+      continue
+    if i > max_unblocked_index + (if max_unblocked_index % 2 == 0 then 2 else 1)
+      gaps += 1
+    max_unblocked_index = i
+  if (min_unblocked_index >= 0 and
+      not (min_unblocked_index == 0 and max_unblocked_index >= 6))
+    gaps += 1
+  return gaps > 1
+
 _get_offset = (size, point) ->
   result = new Point 0, 0
   if point.x == 0
@@ -28,6 +51,7 @@ _get_river = (size, start, end) ->
   result = _get_river_inner size, (start.add dstart), (end.add dend)
   result.insert (start.add dstart)
   result.insert (end.add dend)
+  _sparsify result, (start.add dstart), (end.add dend)
   if (dstart.dot dend) == 0
     _widen_river size, result, dstart
     _widen_river size, result, dend
@@ -38,6 +62,7 @@ _get_river = (size, start, end) ->
     else if (Math.abs dstart.y) + (Math.abs dend.y) > 0
       direction.x = if (start.add end).x > size.x - 1 then -1 else 1
     _widen_river size, result, direction
+  _sparsify result, (start.add dstart), (end.add dend)
   result
 
 _get_river_inner = (size, start, end) ->
@@ -68,12 +93,17 @@ _sample_midpoint = (size, start, end) ->
     if (do Math.random) < acceptance_probability
       return point
 
+_sparsify = (river, start, end) ->
+  for point in do river.keys
+    if (not point.equals start) and (not point.equals end) and \
+       (not _affects_local_connectivity point, river)
+      river.delete point
+
 _widen_river = (size, river, diff) ->
   for point in do river.keys
     found_neighbor = false
-    for i in [1...Math.max size.x, size.y]
-      if (river.contains point.add diff.scale i) or \
-         (river.contains point.add diff.scale -i)
+    for i in [1..3]
+      if river.contains point.add diff.scale i
         found_neighbor = true
         break
     if not found_neighbor
