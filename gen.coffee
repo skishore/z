@@ -39,7 +39,7 @@ class Graphics extends base.Graphics
 class Map
   COLORS = [0x0000ff, 0xccff00, 0x66ff66, 0x888800, 0x444400]
   GRADIENT = 1.2
-  NUM_ROOMS = [7, 7]
+  NUM_ROOMS = [3, 3]
   ROOM_SIZE = [18, 11]
   WAVELENGTH = 0.4
 
@@ -55,9 +55,11 @@ class Map
 
   save: ->
     tileset = new base.gen.tileset
+    dx = Math.floor @num_rooms.x/2
+    dy = Math.floor @num_rooms.y/2
     for x in [0...@num_rooms.x]
       for y in [0...@num_rooms.y]
-        uid = {zone: 'perlin', position: {x: x, y: y}}
+        uid = {zone: 'perlin', position: {x: x - dx, y: y - dy}}
         map = new base.gen.map tileset, uid
         @_write_map map, new Point x, y
         do map.save
@@ -153,9 +155,15 @@ class Map
         color = if tile % 2 == 0 then 'green' else 'yellow'
         window.test_map = map
         map.set_tile (new Point x, y), tbi["grass-#{color}-"]
+    options = {
+      centrality: (2*do Math.random) + 1
+      randomness: (2*do Math.random) + 1
+      windiness: (2*do Math.random) + 1
+      length: (do Math.random) - 0.5
+    }
     river_map = new gen.RiverMap \
         @room_size, (new Point 0, (_.random 2, @room_size.y - 3)), \
-        (new Point (_.random 2, @room_size.x - 3), @room_size.y - 1)
+        (new Point (_.random 2, @room_size.x - 3), @room_size.y - 1), options
     for point in do river_map.river.keys
       map.set_tile point, tbi['water']
     # Build the trees around the map edges.

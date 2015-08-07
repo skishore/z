@@ -1,117 +1,72 @@
 @gen = @gen or {}
 
 
-_2d_dropoff = (point, size) ->
-  assert (size.x > 0 and size.y > 0)
-  sample = new Point point.x/size.x, point.y/size.y
-  (1 - Math.abs sample.x)*(1 - Math.abs sample.y)
+edge_penalty = (point, size) ->
+  assert (size.x > 1 and size.y > 1)
+  sample = new Point (2*point.x/(size.x - 1) - 1), (2*point.y/(size.y - 1) - 1)
+  Math.max (Math.abs sample.x), (Math.abs sample.y)
 
-_adjacent = (point1, point2) ->
-  diff = point1.subtract point2
-  (Math.abs diff.x) <= 1 and (Math.abs diff.y) <= 1
+in_bounds = (point, size) ->
+  0 <= point.x < size.x and 0 <= point.y < size.y
 
-_affects_local_connectivity = (point, set) ->
-  KING_MOVES = _.map [[1, 0], [1, 1], [0, 1], [-1, 1],
-                     [-1, 0], [-1, -1], [0, -1], [1, -1]], \
-                     (pair) -> new Point pair[0], pair[1]
-  min_unblocked_index = -1
-  max_unblocked_index = -1
-  gaps = 0
-  for step, i in KING_MOVES
-    neighbor = point.add step
-    if not set.contains neighbor
-      continue
-    if min_unblocked_index < 0
-      min_unblocked_index = i
-      max_unblocked_index = i
-      continue
-    if i > max_unblocked_index + (if max_unblocked_index % 2 == 0 then 2 else 1)
-      gaps += 1
-    max_unblocked_index = i
-  if (min_unblocked_index >= 0 and
-      not (min_unblocked_index == 0 and max_unblocked_index >= 6))
-    gaps += 1
-  return gaps > 1
+point = (pair) -> new Point pair[0], pair[1]
 
-_get_offset = (size, point) ->
-  result = new Point 0, 0
-  if point.x == 0
-    result.x = 1
-  else if point.x == size.x - 1
-    result.x = -1
-  if point.y == 0
-    result.y = 1
-  else if point.y == size.y - 1
-    result.y = -1
+ROOK_MOVES = _.map [[1, 0], [-1, 0], [0, 1], [0, -1]], point
+
+_get_river = (size, start, end, options) ->
+  options = options or {}
+  centrality = (if options.centrality? then options.centrality else 0)
+  randomness = (if options.randomness? then options.randomness else 0)
+  windiness = (if options.windiness? then options.windiness else 0)
+  length = (if options.length? then options.length else 0)
+  correction = centrality/3 + randomness/2
+
+  visited = new PointSet
+  parents = new PointMap
+  parents.set start, start
+  distances = new PointMap
+  distances.set start, 0
+
+  while not visited.contains end
+    best_distance = Infinity
+    best_key = undefined
+    for key in _.keys distances
+      if distances[key] < best_distance
+        best_distance = distances[key]
+        best_key = key
+    if not best_key?
+      break
+    delete distances[best_key]
+    best_node = distances.extract best_key
+    visited.insert best_node
+    previous_step = best_node.subtract parents.get best_node
+    for step in ROOK_MOVES
+      child = best_node.add step
+      if (not in_bounds child, size) or visited.contains child
+        continue
+      distance = best_distance \
+                 + (centrality*edge_penalty child, size) \
+                 + (randomness*do Math.random) \
+                 + (windiness*previous_step.dot step) \
+                 - length - correction
+      distances.set child, distance
+      parents.set child, best_node
+
+  assert visited.contains end
+  node = end
+  path = [node]
+  while not node.equals start
+    node = parents.get node
+    path.push node
+
+  result = new PointSet
+  for node in path
+    result.insert node
   result
-
-_get_river = (size, start, end) ->
-  dstart = _get_offset size, start
-  dend = _get_offset size, end
-  result = _get_river_inner size, (start.add dstart), (end.add dend)
-  result.insert (start.add dstart)
-  result.insert (end.add dend)
-  _sparsify result, (start.add dstart), (end.add dend)
-  if (dstart.dot dend) == 0
-    _widen_river size, result, dstart
-    _widen_river size, result, dend
-  else
-    direction = new Point 0, 0
-    if (Math.abs dstart.x) + (Math.abs dend.x) > 0
-      direction.y = if (start.add end).y > size.y - 1 then -1 else 1
-    else if (Math.abs dstart.y) + (Math.abs dend.y) > 0
-      direction.x = if (start.add end).x > size.x - 1 then -1 else 1
-    _widen_river size, result, direction
-  _sparsify result, (start.add dstart), (end.add dend)
-  result
-
-_get_river_inner = (size, start, end) ->
-  if _adjacent start, end
-    return new PointSet
-  midpoint = _sample_midpoint size, start, end
-  side1 = _get_river_inner size, start, midpoint
-  side2 = _get_river_inner size, midpoint, end
-  for point in do side2.keys
-    side1.insert point
-  side1.insert midpoint
-  side1
-
-_sample_midpoint = (size, start, end) ->
-  center = radius = (size.subtract new Point 1, 1).scale 0.5
-  rect_center = (start.add end).scale 0.5
-  rect_radius = (start.subtract end).scale 0.5
-  rect_radius.x = (Math.abs rect_radius.x) + 2
-  rect_radius.y = (Math.abs rect_radius.y) + 2
-  length = do (start.subtract end).length
-  while true
-    point = new Point (_.random 2, size.x - 3), (_.random 2, size.y - 3)
-    continue if (do (point.subtract start).length) >= length
-    continue if (do (point.subtract end).length) >= length
-    centrality = _2d_dropoff (point.subtract center), radius
-    inlineness = _2d_dropoff (point.subtract rect_center), rect_radius
-    acceptance_probability = centrality*centrality*inlineness
-    if (do Math.random) < acceptance_probability
-      return point
-
-_sparsify = (river, start, end) ->
-  for point in do river.keys
-    if (not point.equals start) and (not point.equals end) and \
-       (not _affects_local_connectivity point, river)
-      river.delete point
-
-_widen_river = (size, river, diff) ->
-  for point in do river.keys
-    found_neighbor = false
-    for i in [1..3]
-      if river.contains point.add diff.scale i
-        found_neighbor = true
-        break
-    if not found_neighbor
-      river.insert point.add diff
 
 
 class gen.RiverMap
-  constructor: (@size, @start, @end, verbose) ->
+  constructor: (@size, @start, @end, @options, verbose) ->
     while not @_try_build_map verbose
       true
  
@@ -121,10 +76,10 @@ class gen.RiverMap
     rects = []
 
     separation = 3
-    rect = new gen.Rect (new Point @size.x - 2, @size.y - 2), (new Point 1, 1)
+    rect = new gen.Rect @size, (new Point 0, 0)
     level.place_rectangular_room rect, separation, rects
 
-    @river = _get_river @size, @start, @end
+    @river = _get_river @size, @start, @end, @options
     for point in do @river.keys
       level.tiles[point.x][point.y] = gen.Tile.DEFAULT
 
