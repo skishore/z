@@ -159,7 +159,7 @@ class Map
       centrality: (2*do Math.random) + 1
       randomness: (2*do Math.random) + 1
       windiness: (2*do Math.random) + 1
-      length: (do Math.random) - 0.5
+      length: (do Math.random) - 1
     }
     river_map = new gen.RiverMap \
         @room_size, (new Point 0, (_.random 2, @room_size.y - 3)), \

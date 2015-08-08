@@ -13,6 +13,21 @@ point = (pair) -> new Point pair[0], pair[1]
 
 ROOK_MOVES = _.map [[1, 0], [-1, 0], [0, 1], [0, -1]], point
 
+KING_MOVES = _.map [[1, 0], [1, 1], [0, 1], [-1, 1],
+                    [-1, 0], [-1, -1], [0, -1], [1, -1]], point
+
+surrounded_squares = (squares) ->
+  result = []
+  for square in do squares.keys
+    surrounded = true
+    for step in KING_MOVES
+      if not squares.contains square.add step
+        surrounded = false
+        break
+    if surrounded
+      result.push square
+  result
+
 _get_river = (size, start, end, options) ->
   options = options or {}
   centrality = (if options.centrality? then options.centrality else 0)
@@ -62,6 +77,8 @@ _get_river = (size, start, end, options) ->
   result = new PointSet
   for node in path
     result.insert node
+  for node in surrounded_squares result
+    result.delete node
   result
 
 
@@ -81,9 +98,8 @@ class gen.RiverMap
 
     @river = _get_river @size, @start, @end, @options
     for point in do @river.keys
-      level.tiles[point.x][point.y] = gen.Tile.DEFAULT
+      level.tiles[point.x][point.y] = gen.Tile.WALL
 
-    do level.add_walls
     if verbose
       console.log "Final map:#{do level.to_debug_string}"
     true
