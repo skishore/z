@@ -90,16 +90,21 @@ class gen.RiverMap
   # Returns true if the map was successfully built.
   _try_build_map: (verbose) ->
     level = new gen.Level @size
-    rects = []
 
-    separation = 3
-    rect = new gen.Rect @size, (new Point 0, 0)
-    level.place_rectangular_room rect, separation, rects
+    for x in [0...@size.x]
+      level.tiles[x][0] = level.tiles[x][@size.y - 1] = gen.Tile.WALL
+    for y in [0...@size.y]
+      level.tiles[0][y] = level.tiles[@size.x - 1][y] = gen.Tile.WALL
 
     @river = _get_river @size, @start, @end, @options
     for point in do @river.keys
-      level.tiles[point.x][point.y] = gen.Tile.WALL
+      level.tiles[point.x][point.y] = gen.Tile.HAZARD
+
+    level.erode 0.4
+    for i in [0...3]
+      do level.erode
 
     if verbose
       console.log "Final map:#{do level.to_debug_string}"
+    @tiles = level.tiles
     true

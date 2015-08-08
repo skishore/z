@@ -147,14 +147,8 @@ class Map
     ((perlin + GRADIENT*(0.5 - y/@size.y)) + 1)/2
 
   _write_map: (map, room) ->
-    TILES = ['grass-yellow-', 'grass-green-', 'grass-yellow-', 'grass-green-']
+    TILES = [['grass-yellow-'], ['bush', 'flower'], ['water'], ['grass-yellow-']]
     tbi = map.tileset.tiles_by_image
-    for x in [0...@room_size.x]
-      for y in [0...@room_size.y]
-        tile = @tiles[room.x*@room_size.x + x][room.y*@room_size.y + y]
-        color = if tile % 2 == 0 then 'green' else 'yellow'
-        window.test_map = map
-        map.set_tile (new Point x, y), tbi["grass-#{color}-"]
     options = {
       centrality: (2*do Math.random) + 1
       randomness: (2*do Math.random) + 1
@@ -164,8 +158,10 @@ class Map
     river_map = new gen.RiverMap \
         @room_size, (new Point 0, (_.random 2, @room_size.y - 3)), \
         (new Point (_.random 2, @room_size.x - 3), @room_size.y - 1), options
-    for point in do river_map.river.keys
-      map.set_tile point, tbi['water']
+    for x in [0...@room_size.x]
+      for y in [0...@room_size.y]
+        tile = _.sample TILES[river_map.tiles[x][y]]
+        map.set_tile (new Point x, y), tbi[tile]
     # Build the trees around the map edges.
     # TODO(skishore): This method is a terrible hack that hardcodes room size.
     tree_ul = tbi['tree-ul']
