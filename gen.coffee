@@ -149,7 +149,6 @@ class Map
   _write_map: (map, room) ->
     TILES = [undefined, ['bush', 'flower'], ['water'], ['grass-yellow-']]
     tbi = map.tileset.tiles_by_image
-    wavelength = 4
     options = {
       river: {
         centrality: (2*do Math.random) + 1
@@ -160,7 +159,7 @@ class Map
       erode: {
         initial_seed: {
           threshold: -0.1
-          wavelength: wavelength
+          wavelength: 4
         }
         max_neighbors: 10
         min_neighbors: 4.5
@@ -173,6 +172,7 @@ class Map
     for x in [0...@room_size.x]
       for y in [0...@room_size.y]
         map.set_tile (new Point x, y), tbi['grass-green-']
+    wavelength = 4
     noise.seed do (new Date).getTime
     for x in [0...@room_size.x]
       for y in [0...@room_size.y]
@@ -182,6 +182,11 @@ class Map
         bit = (noise.perlin2 x/wavelength, y/wavelength) > 0
         tile = tiles[(x + y + (if bit then 1 else 0)) % tiles.length]
         map.set_tile (new Point x, y), tbi[tile]
+    for x in [0...@room_size.x]
+      for y in [0...@room_size.y]
+        square = new Point x, y
+        if (map.get_tile_image square) == 'grass-green-udrl'
+          map.set_tile square, tbi['grass-yellow-']
     # Build the trees around the map edges.
     # TODO(skishore): This method is a terrible hack that hardcodes room size.
     tree_ul = tbi['tree-ul']
