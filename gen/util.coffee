@@ -35,9 +35,9 @@ class gen.Level
         if @protected[x][y] or not _can_erode_square new_tiles, new Point x, y
           continue
         if options.initial_seed?
-          f = options.initial_seed.frequency or 1
-          t = options.initial_seed.threshold or 0
-          blocked = (noise.perlin2 f*x/(@size.x - 1), f*y/(@size.y - 1)) > t
+          threshold = options.initial_seed.threshold or 0
+          wavelength = options.initial_seed.wavelength or 1
+          blocked = (noise.perlin2 x/wavelength, y/wavelength) > threshold
         else
           neighbors_blocked = 0
           neighbors_unknown = 0
