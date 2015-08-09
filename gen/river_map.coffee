@@ -96,13 +96,24 @@ class gen.RiverMap
     for y in [0...@size.y]
       level.tiles[0][y] = level.tiles[@size.x - 1][y] = gen.Tile.WALL
 
-    @river = _get_river @size, @start, @end, @options
-    for point in do @river.keys
-      level.tiles[point.x][point.y] = gen.Tile.HAZARD
+    if @options.river?
+      river = _get_river @size, @start, @end, @options.river
+      for point in do river.keys
+        level.tiles[point.x][point.y] = gen.Tile.HAZARD
 
-    level.erode 0.4
-    for i in [0...3]
-      do level.erode
+    if @options.erode?
+      for i in [-3, -1, 1, 3]
+        level.protected[Math.floor (@size.x + i)/2][1] = true
+        level.protected[Math.floor (@size.x + i)/2][@size.y - 2] = true
+        level.protected[1][Math.floor (@size.y + i)/2] = true
+        level.protected[@size.x - 2][Math.floor (@size.y + i)/2] = true
+      if @options.erode.initial_seed?
+        level.erode {initial_seed: @options.erode.initial_seed}
+      for i in [0...@options.erode.num_iterations]
+        options = _.clone @options.erode
+        delete options.initial_seed
+        delete options.num_iterations
+        level.erode options
 
     if verbose
       console.log "Final map:#{do level.to_debug_string}"

@@ -207,8 +207,10 @@ class Map extends base.Map
 
   _get_free_square: ->
     result = new Point -1, -1
+    attempts = 1000
     while (@get_map_data result).blocked or \
           (do (result.subtract @starting_square).length) <= MINIMUM_SAFE_SPACE
+      assert attempts-- > 0
       result.x = _.random 1, (@size.x - 2)
       result.y = _.random 1, (@size.y - 2)
     result

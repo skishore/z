@@ -17,28 +17,37 @@ gen.Tile = {FREE: 0, BLOCKED: 1, HAZARD: 2, WALL: 3}
 class gen.Level
   constructor: (@size) ->
     @tiles = gen.construct_2d_array @size, gen.Tile.FREE
+    @protected = gen.construct_2d_array @size, false
 
   # Runs an erosion step on the level. Each tile has a chance of being converted
   # to the types of the tiles around it.
-  #
-  # If block_probability is set, then even if a tile does not have enough
-  # blocked tiles around it to erode naturally, it may erode.
-  erode: (block_probability) ->
+  erode: (options) ->
+    min_neighbors = if options.min_neighbors? then options.min_neighbors else 4
+    max_neighbors = if options.max_neighbors? then options.max_neighbors else 10
+    if options.initial_seed?
+      seed = options.initial_seed.seed
+      noise.seed if seed? then seed else do (new Date).getTime
+
     new_tiles = _.map @tiles, _.clone
     steps = gen.KING_MOVES.concat new Point 0, 0
     for x in [1...@size.x - 1]
       for y in [1...@size.y - 1]
-        if not _can_erode_square new_tiles, new Point x, y
+        if @protected[x][y] or not _can_erode_square new_tiles, new Point x, y
           continue
-        neighbors_blocked = 0
-        neighbors_unknown = 0
-        for step in steps
-          if @tiles[x + step.x][y + step.y] == gen.Tile.BLOCKED
-            neighbors_blocked += 1
-          else if @tiles[x + step.x][y + step.y] != gen.Tile.FREE
-            neighbors_unknown += 1
-        blocked = 3*neighbors_blocked + neighbors_unknown > 8 or \
-                  block_probability? and (do Math.random) < block_probability
+        if options.initial_seed?
+          f = options.initial_seed.frequency or 1
+          t = options.initial_seed.threshold or 0
+          blocked = (noise.perlin2 f*x/(@size.x - 1), f*y/(@size.y - 1)) > t
+        else
+          neighbors_blocked = 0
+          neighbors_unknown = 0
+          for step in steps
+            if @tiles[x + step.x][y + step.y] == gen.Tile.BLOCKED
+              neighbors_blocked += 1
+            else if @tiles[x + step.x][y + step.y] != gen.Tile.FREE
+              neighbors_unknown += 1
+          discriminant = neighbors_blocked + neighbors_unknown/2
+          blocked = min_neighbors < discriminant < max_neighbors
         new_tiles[x][y] = if blocked then gen.Tile.BLOCKED else gen.Tile.FREE
     @tiles = new_tiles
 
