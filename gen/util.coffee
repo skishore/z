@@ -70,6 +70,8 @@ class gen.Level
 _can_erode_square = (tiles, square) ->
   if tiles[square.x][square.y] not in [gen.Tile.FREE, gen.Tile.BLOCKED]
     return false
+  return true
+
   has_free_orthogonal_neighbor = false
   min_unblocked_index = -1
   max_unblocked_index = -1

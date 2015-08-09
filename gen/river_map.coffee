@@ -107,6 +107,19 @@ class gen.RiverMap
         level.protected[Math.floor (@size.x + i)/2][@size.y - 2] = true
         level.protected[1][Math.floor (@size.y + i)/2] = true
         level.protected[@size.x - 2][Math.floor (@size.y + i)/2] = true
+      doors = [
+        (new Point (Math.floor @size.x/2), 0)
+        (new Point 0, (Math.floor @size.y/2))
+        (new Point (Math.floor @size.x/2), @size.y - 1)
+        (new Point @size.x - 1, (Math.floor @size.y/2))
+      ]
+      for i in [0...doors.length]
+        [start, end] = [doors[i], doors[(i + 1) % doors.length]]
+        options = {centrality: 1, randomness: 1, windiness: 1}
+        river = _get_river @size, start, end, options
+        for point in do river.keys
+          level.protected[point.x][point.y] = true
+
       if @options.erode.initial_seed?
         level.erode {initial_seed: @options.erode.initial_seed}
       for i in [0...@options.erode.num_iterations]

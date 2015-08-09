@@ -158,11 +158,9 @@ class Map
       }
       erode: {
         initial_seed: {
-          threshold: -0.1
+          threshold: -0.2
           wavelength: 4
         }
-        max_neighbors: 10
-        min_neighbors: 4.5
         num_iterations: 1
       }
     }
