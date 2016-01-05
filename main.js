@@ -15,12 +15,22 @@ const util = {
   add(point1, point2) {
     return [point1[0] + point2[0], point1[1] + point2[1]];
   },
+  distance(point1, point2) {
+    const diff = util.subtract(point1, point2);
+    return Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1]);
+  },
+  equal(point1, point2) {
+    return point1[0] === point2[0] && point1[1] === point2[1];
+  },
   inBounds(point, size) {
     return 0 <= point[0] && point[0] < size[0] &&
            0 <= point[1] && point[1] < size[1];
   },
   key(point) {
     return point.join(',');
+  },
+  subtract(point1, point2) {
+    return [point1[0] - point2[0], point1[1] - point2[1]];
   },
 }
 
@@ -42,6 +52,40 @@ class ActionResult {
     this.alternate = null;
     this.turns = 1;
   }
+  static alternate(alternate) {
+    const result = new ActionResult;
+    result.alternate = alternate;
+    return result;
+  }
+  static failed() {
+    return new ActionResult;
+  }
+  static success() {
+    const result = new ActionResult;
+    result.success = true;
+    return result;
+  }
+}
+
+class HoverAroundPositionAction extends Action {
+  constructor(target) {
+    super();
+    this.target = target;
+  }
+  execute() {
+    const diff = util.subtract(this.target, this.entity.position);
+    if (Math.max(Math.abs(diff.x), Math.abs(diff.y)) < 4) {
+      const step = [_.random(-1, 1), _.random(-1, 1)];
+      return ActionResult.alternate(new MovementAction(step));
+    }
+    const samples = [];
+    _.range(-1, 2).map((x) => _.range(-1, 2).map((y) => {
+      _.range(1).map(() => samples.push([x, y]));
+      _.range(x*Math.sign(diff[0]) + 1).map(() => samples.push([x, y]));
+      _.range(y*Math.sign(diff[1]) + 1).map(() => samples.push([x, y]));
+    }));
+    return ActionResult.alternate(new MovementAction(_.sample(samples)));
+  }
 }
 
 class IdleAction extends Action {
@@ -49,9 +93,7 @@ class IdleAction extends Action {
     super();
   }
   execute() {
-    const result = new ActionResult;
-    result.success = true;
-    return result;
+    return ActionResult.success();
   }
 }
 
@@ -61,29 +103,49 @@ class MovementAction extends Action {
     this.step = step;
   }
   execute() {
-    const result = new ActionResult;
     if (this.step[0] === 0 && this.step[1] === 0) {
-      result.alternate = new IdleAction;
-      return result;
+      return ActionResult.alternate(new IdleAction);
     }
     const position = util.add(this.step, this.entity.position);
     if (!util.inBounds(position, this.stage.size)) {
       if (this.entity instanceof Player) {
         this.game.log("You can't run from a trainer battle!");
       }
-      return result;
+      return ActionResult.failed();
     }
     const other = this.stage.getEntityAt(position);
     if (other) {
       if (this.entity instanceof Player) {
-        this.game.log(`You bump into ${other.getDescription()}.`);
+        this.game.log(`You bump into ${other.description()}.`);
       }
-      result.success = true;
-      return result;
+      return ActionResult.success();
     }
     this.stage.move(this.entity, position);
-    result.success = true;
-    return result;
+    return ActionResult.success();
+  }
+}
+
+class MoveToPositionAction extends Action {
+  constructor(target) {
+    super();
+    this.target = target;
+  }
+  execute() {
+    let distance = util.distance(this.target, this.entity.position);
+    let move = [0, 0];
+    _.range(-1, 2).map((x) => _.range(-1, 2).map((y) => {
+      const position = util.add(this.entity.position, [x, y]);
+      if (this.stage.getEntityAt(position) &&
+          !util.equal(position, this.target)) {
+        return;
+      }
+      const proposal = util.distance(this.target, position);
+      if (proposal < distance) {
+        distance = proposal;
+        move = [x, y];
+      }
+    }));
+    return ActionResult.alternate(new MovementAction(move));
   }
 }
 
@@ -95,7 +157,7 @@ class Entity {
     this.speed = 0.1;
     this.timer = new Timer;
   }
-  getDescription() {
+  description() {
     return 'an unknown entity';
   }
   getNextAction() {
@@ -104,25 +166,43 @@ class Entity {
 }
 
 class Pokemon extends Entity {
-  constructor(allegiance, breed) {
+  constructor(trainer, breed) {
     super();
-    this.allegiance = allegiance || this;
     this.breed = breed;
-    this.glyph = breed[0];
+    this.speed = 0.2;
+    this.glyph = breed[0].toLowerCase();
+    this._allyWith(trainer);
   }
-  getDescription() {
-    return `${this.allegiance instanceof Player ? 'your ' : ''}${this.breed}`;
+  description() {
+    let allegiance = '';
+    if (this.trainer && !(this.trainer instanceof Player)) {
+      allegiance = `${this.trainer.description()}'s `;
+    }
+    return `${allegiance}${this.breed}`;
+  }
+  getNextAction() {
+    if (this.trainer) {
+      return new HoverAroundPositionAction(this.trainer.position);
+    }
+    return super.getNextAction();
+  }
+  _allyWith(trainer) {
+    if (!trainer) {
+      return;
+    }
+    this.trainer = trainer;
+    this.trainer.pokemon.push(this);
   }
 }
 
 class Trainer extends Entity {
   constructor() {
     super();
-    this.allegiance = this;
     this.glyph = '@';
+    this.pokemon = [];
   }
-  getDescription() {
-    return 'the opposing trainer';
+  description() {
+    return 'your rival';
   }
 }
 
@@ -130,7 +210,7 @@ class Player extends Trainer {
   constructor() {
     super();
   }
-  getDescription() {
+  description() {
     return 'yourself';
   }
   getNextAction() {
@@ -193,6 +273,7 @@ class Game {
           this._action = result.alternate;
           continue;
         }
+        assert(result instanceof ActionResult, result);
         advanced = true;
         if (result.done) {
           delete this._action;
@@ -245,12 +326,12 @@ class Stage {
     const target = new Trainer;
     this.spawn(player, [4, 7]);
     this.spawn(target, [35, 7]);
-    this.spawn(new Pokemon(player, 'bulbasaur'), [6, 5]);
-    this.spawn(new Pokemon(player, 'charmander'), [6, 7]);
-    this.spawn(new Pokemon(player, 'squirtle'), [6, 9]);
-    this.spawn(new Pokemon(target, 'poliwag'), [33, 5]);
-    this.spawn(new Pokemon(target, 'electabuzz'), [33, 7]);
-    this.spawn(new Pokemon(target, 'diglett'), [33, 9]);
+    this.spawn(new Pokemon(player, 'Bulbasaur'), [6, 5]);
+    this.spawn(new Pokemon(player, 'Charmander'), [6, 7]);
+    this.spawn(new Pokemon(player, 'Squirtle'), [6, 9]);
+    this.spawn(new Pokemon(target, 'Poliwag'), [33, 5]);
+    this.spawn(new Pokemon(target, 'Electabuzz'), [33, 7]);
+    this.spawn(new Pokemon(target, 'Diglett'), [33, 9]);
     this.player = player;
   }
   advanceEntity() {
