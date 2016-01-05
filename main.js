@@ -16,8 +16,7 @@ const util = {
     return [point1[0] + point2[0], point1[1] + point2[1]];
   },
   distance(point1, point2) {
-    const diff = util.subtract(point1, point2);
-    return Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1]);
+    return util.length(util.subtract(point1, point2));
   },
   equal(point1, point2) {
     return point1[0] === point2[0] && point1[1] === point2[1];
@@ -28,6 +27,9 @@ const util = {
   },
   key(point) {
     return point.join(',');
+  },
+  length(point) {
+    return Math.sqrt(point[0]*point[0] + point[1]*point[1]);
   },
   subtract(point1, point2) {
     return [point1[0] - point2[0], point1[1] - point2[1]];
@@ -60,10 +62,59 @@ class ActionResult {
   static failed() {
     return new ActionResult;
   }
+  static incomplete() {
+    const result = new ActionResult;
+    result.done = false;
+    return result;
+  }
   static success() {
     const result = new ActionResult;
     result.success = true;
     return result;
+  }
+}
+
+class FireAction extends Action {
+  constructor(target) {
+    super();
+    this.target = target;
+    this.index = 0;
+  }
+  bind(entity) {
+    super.bind(entity);
+    this.last = this.last || this.entity.position;
+    this.diff = util.subtract(this.target, this.entity.position);
+    this.length = util.length(this.diff);
+  }
+  execute(effects) {
+    let result = null;
+    for (let i of _.range(3)) {
+      result = this._executeOnce(effects);
+      if (result.success) {
+        break;
+      }
+    }
+    return result;
+  }
+  _executeOnce(effects) {
+    let point = this.last;
+    while (util.equal(point, this.last)) {
+      this.index += 1;
+      const factor = this.index/this.length;
+      const step = this.diff.map((x) => Math.round(factor*x));
+      point = util.add(this.entity.position, step);
+    }
+    if (!util.inBounds(point, this.stage.size)) {
+      return ActionResult.success();
+    }
+    effects.push(new FireEffect(point));
+    const entity = this.stage.getEntityAt(point);
+    if (entity) {
+      this.game.log(
+          `${this.entity.description()} attacks ${entity.description()}.`);
+      return ActionResult.success();
+    }
+    return ActionResult.incomplete();
   }
 }
 
@@ -182,6 +233,13 @@ class Pokemon extends Entity {
   }
   getNextAction() {
     if (this.trainer) {
+      if (Math.random() < 0.1) {
+        const targets = this.stage.entities.filter(
+            (x) => x instanceof Pokemon && x.trainer !== this.trainer);
+        if (targets.length > 0) {
+          return new FireAction(_.sample(targets).position);
+        }
+      }
       return new HoverAroundPositionAction(this.trainer.position);
     }
     return super.getNextAction();
@@ -229,7 +287,7 @@ class Game {
 
     const handler = this.handleInput.bind(this);
     this.graphics = new Graphics(this.stage, handler);
-    this.graphics.render(this.stage, this._log);
+    this.graphics.render(this.stage, this._log, []);
   }
   handleInput(ch) {
     const moves = {
@@ -251,6 +309,7 @@ class Game {
     }
   }
   log(message) {
+    message = message[0].toUpperCase() + message.slice(1);
     if (this._log.length > 0 &&
         this._log[this._log.length - 1].message === message) {
       this._log[this._log.length - 1].count += 1;
@@ -262,19 +321,19 @@ class Game {
     }
   }
   tick() {
-    let advanced = false;
+    const update = {advanced: false, effects: []};
     while (true) {
       // Consume existing actions, if any are available.
       if (this._action) {
         const entity = this._action.entity;
-        const result = this._action.execute();
+        const result = this._action.execute(update.effects);
+        assert(result instanceof ActionResult, result);
         if (result.alternate) {
           result.alternate.bind(entity);
           this._action = result.alternate;
           continue;
         }
-        assert(result instanceof ActionResult, result);
-        advanced = true;
+        update.advanced = true;
         if (result.done) {
           delete this._action;
           if (result.success || !(entity instanceof Player)) {
@@ -282,8 +341,11 @@ class Game {
             this.stage.advanceEntity();
           }
           if (entity instanceof Player) {
-            return advanced;
+            return update;
           }
+        }
+        if (update.effects.length > 0) {
+          return update;
         }
       }
       // Construct new actions, if any are required.
@@ -292,7 +354,7 @@ class Game {
         if (entity.timer.ready() || entity.timer.wait(-entity.speed)) {
           if (entity instanceof Player) {
             if (!this._next_player_action) {
-              return advanced;
+              return update;
             }
             this._action = this._next_player_action;
             delete this._next_player_action;
@@ -307,8 +369,9 @@ class Game {
     }
   }
   update() {
-    if (this.tick()) {
-      this.graphics.render(this.stage, this._log);
+    const update = this.tick();
+    if (update.advanced || this.graphics.hasEffects()) {
+      this.graphics.render(this.stage, this._log, update.effects);
     }
     setTimeout(this.update.bind(this), 16);
   }
@@ -374,6 +437,34 @@ class Timer {
 
 // Graphics code follows.
 
+class Effect {
+  constructor() {}
+  update(buffer) {
+    return true;
+  }
+  _update(buffer) {
+    const completed = this._completed;
+    this._completed = this._completed || !this.update(buffer);
+    return !completed;
+  }
+}
+
+class FireEffect extends Effect {
+  constructor(point) {
+    super();
+    this.point = point;
+    this.index = 0;
+    this.cycle = '**++';
+    this.offset = _.random(this.cycle.length - 1);
+  }
+  update(buffer) {
+    this.index += 1;
+    const index = (this.index + this.offset) % this.cycle.length;
+    buffer[this.point[1]][this.point[0]] = this.cycle[index];
+    return this.index < 4;
+  }
+}
+
 class Graphics {
   constructor(stage, handler) {
     const blessed = require('blessed');
@@ -399,21 +490,26 @@ class Graphics {
     this.screen.key(['C-c', 'escape'], function(ch, key) {
       return process.exit(0);
     });
+
+    this._buffer = _.range(stage.size[1]).map(
+        () => _.range(stage.size[0]).map(() => '.'))
+    this._effects = [];
   }
-  render(stage, log) {
-    const content = [];
+  hasEffects() {
+    return this._effects.length > 0;
+  }
+  render(stage, log, effects) {
     for (let y = 0; y < stage.size[1]; y++) {
       for (let x = 0; x < stage.size[0]; x++) {
-        const entity = stage.getEntityAt([x, y]);
-        if (entity) {
-          content.push(entity.glyph);
-        } else {
-          content.push('.');
-        }
+        this._buffer[y][x] = '.';
       }
-      content.push('\n');
     }
-    this.stage.setContent(content.join(''));
+    for (let entity of stage.entities) {
+      this._buffer[entity.position[1]][entity.position[0]] = entity.glyph;
+    }
+    this._effects = this._effects.concat(effects);
+    this._effects = this._effects.filter((x) => x._update(this._buffer));
+    this.stage.setContent(this._buffer.map((x) => x.join('')).join('\n'));
     this.log.setContent(log.map((entry) => {
       return `${entry.message}${entry.count > 1 ? ` (x${entry.count})` : ''}`;
     }).join('\n'));
