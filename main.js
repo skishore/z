@@ -24,13 +24,14 @@ const util = {
   },
 }
 
-// Core game logic follows.
+// The various Actions follow.
 
 class Action {
   constructor() {}
   bind(entity) {
     this.entity = entity;
     this.stage = entity.stage;
+    this.game = entity.stage.game;
   }
 }
 
@@ -61,10 +62,23 @@ class MovementAction extends Action {
   }
   execute() {
     const result = new ActionResult;
+    if (this.step[0] === 0 && this.step[1] === 0) {
+      result.alternate = new IdleAction;
+      return result;
+    }
     const position = util.add(this.step, this.entity.position);
     if (!util.inBounds(position, this.stage.size)) {
+      if (this.entity instanceof Player) {
+        this.game.log("You can't run from a trainer battle!");
+      }
       return result;
-    } else if (this.stage.getEntityAt(position)) {
+    }
+    const other = this.stage.getEntityAt(position);
+    if (other) {
+      if (this.entity instanceof Player) {
+        this.game.log(`You bump into ${other.getDescription()}.`);
+      }
+      result.success = true;
       return result;
     }
     this.stage.move(this.entity, position);
@@ -73,26 +87,69 @@ class MovementAction extends Action {
   }
 }
 
+// The various Entities follow.
+
 class Entity {
   constructor() {
     // this.position and this.stage are set on spawning.
     this.speed = 0.1;
     this.timer = new Timer;
   }
+  getDescription() {
+    return 'an unknown entity';
+  }
   getNextAction() {
     return new MovementAction([_.random(-1, 1), _.random(-1, 1)]);
   }
 }
 
+class Pokemon extends Entity {
+  constructor(allegiance, breed) {
+    super();
+    this.allegiance = allegiance || this;
+    this.breed = breed;
+    this.glyph = breed[0];
+  }
+  getDescription() {
+    return `${this.allegiance instanceof Player ? 'your ' : ''}${this.breed}`;
+  }
+}
+
+class Trainer extends Entity {
+  constructor() {
+    super();
+    this.allegiance = this;
+    this.glyph = '@';
+  }
+  getDescription() {
+    return 'the opposing trainer';
+  }
+}
+
+class Player extends Trainer {
+  constructor() {
+    super();
+  }
+  getDescription() {
+    return 'yourself';
+  }
+  getNextAction() {
+    assert(false, 'Player.getNextAction was called!');
+  }
+}
+
+// Core game logic follows.
+
 class Game {
   constructor() {
-    this.stage = new Stage;
+    this.stage = new Stage(this);
+    this._log = [];
     this._action = null;
     this._next_player_action = null;
 
     const handler = this.handleInput.bind(this);
     this.graphics = new Graphics(this.stage, handler);
-    this.graphics.render(this.stage);
+    this.graphics.render(this.stage, this._log);
   }
   handleInput(ch) {
     const moves = {
@@ -104,9 +161,24 @@ class Game {
       u: [1, -1],
       b: [-1, 1],
       n: [1, 1],
+      '.': [0, 0],
     }
-    if (moves[ch] && !this._action && !this._next_player_action) {
+    if (this._action || this._next_player_action) {
+      return false;
+    }
+    if (moves[ch]) {
       this._next_player_action = new MovementAction(moves[ch]);
+    }
+  }
+  log(message) {
+    if (this._log.length > 0 &&
+        this._log[this._log.length - 1].message === message) {
+      this._log[this._log.length - 1].count += 1;
+    } else {
+      this._log.push({message: message, count: 1});
+      if (this._log.length > 6) {
+        this._log.shift();
+      }
     }
   }
   tick() {
@@ -116,19 +188,19 @@ class Game {
       if (this._action) {
         const entity = this._action.entity;
         const result = this._action.execute();
-        if (result.alternative) {
-          result.alternative.bind(entity);
-          this._action = result.alternative;
+        if (result.alternate) {
+          result.alternate.bind(entity);
+          this._action = result.alternate;
           continue;
         }
         advanced = true;
         if (result.done) {
           delete this._action;
-          if (result.success || entity !== this.stage.player) {
+          if (result.success || !(entity instanceof Player)) {
             entity.timer.wait(result.turns);
             this.stage.advanceEntity();
           }
-          if (entity === this.stage.player) {
+          if (entity instanceof Player) {
             return advanced;
           }
         }
@@ -137,7 +209,7 @@ class Game {
       if (!this._action) {
         const entity = this.stage.getCurrentEntity();
         if (entity.timer.ready() || entity.timer.wait(-entity.speed)) {
-          if (entity === this.stage.player) {
+          if (entity instanceof Player) {
             if (!this._next_player_action) {
               return advanced;
             }
@@ -155,22 +227,31 @@ class Game {
   }
   update() {
     if (this.tick()) {
-      this.graphics.render(this.stage);
+      this.graphics.render(this.stage, this._log);
     }
     setTimeout(this.update.bind(this), 16);
   }
 }
 
 class Stage {
-  constructor() {
+  constructor(game) {
+    this.game = game;
     this.size = [40, 15];
     this.entities = [];
     this._current_entity = 0;
     this._position_entity_map = {};
 
-    this.spawn(new Entity, [4, 7]);
-    this.spawn(new Entity, [35, 7]);
-    this.player = this.entities[0];
+    const player = new Player;
+    const target = new Trainer;
+    this.spawn(player, [4, 7]);
+    this.spawn(target, [35, 7]);
+    this.spawn(new Pokemon(player, 'bulbasaur'), [6, 5]);
+    this.spawn(new Pokemon(player, 'charmander'), [6, 7]);
+    this.spawn(new Pokemon(player, 'squirtle'), [6, 9]);
+    this.spawn(new Pokemon(target, 'poliwag'), [33, 5]);
+    this.spawn(new Pokemon(target, 'electabuzz'), [33, 7]);
+    this.spawn(new Pokemon(target, 'diglett'), [33, 9]);
+    this.player = player;
   }
   advanceEntity() {
     this._current_entity = (this._current_entity + 1) % this.entities.length;
@@ -216,37 +297,45 @@ class Graphics {
   constructor(stage, handler) {
     const blessed = require('blessed');
     this.screen = blessed.screen({smartCSR: true});
-    this.main = blessed.box({
+    this.stage = blessed.box({
       width: stage.size[0],
       height: stage.size[1],
       tags: true,
     });
+    this.log = blessed.box({
+      top: stage.size[1] + 1,
+      tags: true,
+    });
 
     this.screen.title = 'rogue';
-    this.screen.append(this.main);
+    this.screen.append(this.stage);
+    this.screen.append(this.log);
 
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-    this.screen.key(alphabet.split(''), function(ch, key) {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    this.screen.key(alphabet.concat(['.']), function(ch, key) {
       handler(ch);
     });
     this.screen.key(['C-c', 'escape'], function(ch, key) {
       return process.exit(0);
     });
   }
-  render(stage) {
+  render(stage, log) {
     const content = [];
     for (let y = 0; y < stage.size[1]; y++) {
       for (let x = 0; x < stage.size[0]; x++) {
         const entity = stage.getEntityAt([x, y]);
         if (entity) {
-          content.push('@');
+          content.push(entity.glyph);
         } else {
           content.push('.');
         }
       }
       content.push('\n');
     }
-    this.main.setContent(content.join(''));
+    this.stage.setContent(content.join(''));
+    this.log.setContent(log.map((entry) => {
+      return `${entry.message}${entry.count > 1 ? ` (x${entry.count})` : ''}`;
+    }).join('\n'));
     this.screen.render();
   }
 }
