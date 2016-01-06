@@ -97,7 +97,7 @@ class FireAction extends Action {
   }
   execute(effects) {
     let result = null;
-    for (let i of _.range(4)) {
+    for (let i of _.range(2)) {
       result = this._executeOnce(effects);
       if (result.success) {
         break;
@@ -212,11 +212,27 @@ class Pokemon extends Actor {
     if (!this.trainer) {
       return new MoveRandomlyBehavior;
     }
-    const distribution = gaussian(0, 8);
+
+    let distance = 8;
+    let target = this.trainer;
+
+    if (this.breed === 'Diglett' || this.breed === 'Squirtle') {
+      const targets = this.stage.actors.filter(
+          (x) => x instanceof Pokemon && x.trainer !== this.trainer);
+      if (targets.length > 0) {
+        distance = 12;
+        target = targets[0];
+        if (util.distance(this.position, target.position) < distance) {
+          return new ExecuteOnceBehavior(new FireAction(target.position));
+        }
+      }
+    }
+
+    const distribution = gaussian(0, distance);
     for (let i of _.range(8)) {
       const offset = _.range(2).map(
           () => Math.round(distribution.ppf(Math.random())));
-      const position = util.add(this.trainer.position, offset);
+      const position = util.add(target.position, offset);
       if (this.stage.isSquareFree(position)) {
         return new MoveToPositionBehavior(this, position, 2);
       }
@@ -278,6 +294,16 @@ class BlockOnInputBehavior extends Behavior {
   }
   setNextAction(action) {
     this._action = this._action || action;
+  }
+}
+
+class ExecuteOnceBehavior extends BlockOnInputBehavior {
+  constructor(action) {
+    super();
+    this._action = action;
+  }
+  satisfied() {
+    return !this._action;
   }
 }
 
@@ -367,10 +393,11 @@ class Game {
     } else if (behavior.ready() || this._action) {
       return false;
     }
+    const lower = ch === '>' ? '.' : ch.toLowerCase();
     if (moves[ch]) {
       behavior.setNextAction(new MovementAction(moves[ch]));
-    } else if (moves[ch.toLowerCase()]) {
-      this.stage.player.behavior = new RunBehavior(moves[ch.toLowerCase()]);
+    } else if (moves[lower]) {
+      this.stage.player.behavior = new RunBehavior(moves[lower]);
     }
   }
   log(message) {
@@ -566,7 +593,7 @@ class Graphics {
 
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
     const keys = alphabet.concat(alphabet.map((x) => `S-${x}`))
-                         .concat(['.']);
+                         .concat(['.', '>']);
     this.screen.key(keys, function(ch, key) {
       handler(ch);
     });
