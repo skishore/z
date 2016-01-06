@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require('lodash');
+const gaussian = require('gaussian');
 
 const assert = (condition, message) => {
   if (!condition) {
@@ -40,16 +41,16 @@ const util = {
 
 class Action {
   constructor() {}
-  bind(entity) {
-    this.entity = entity;
-    this.stage = entity.stage;
-    this._game = entity.stage.game;
+  bind(actor) {
+    this.actor = actor;
+    this.stage = actor.stage;
+    this._game = actor.stage.game;
   }
   log(message) {
     this._game.log(message);
   }
   logForPlayer(message) {
-    if (this.entity instanceof Player) {
+    if (this.actor instanceof Player) {
       this._game.log(message);
     }
   }
@@ -88,10 +89,10 @@ class FireAction extends Action {
     this.target = target;
     this.index = 0;
   }
-  bind(entity) {
-    super.bind(entity);
-    this.last = this.last || this.entity.position;
-    this.diff = util.subtract(this.target, this.entity.position);
+  bind(actor) {
+    super.bind(actor);
+    this.last = this.last || this.actor.position;
+    this.diff = util.subtract(this.target, this.actor.position);
     this.length = util.length(this.diff);
   }
   execute(effects) {
@@ -110,39 +111,18 @@ class FireAction extends Action {
       this.index += 1;
       const factor = this.index/this.length;
       const step = this.diff.map((x) => Math.round(factor*x));
-      point = util.add(this.entity.position, step);
+      point = util.add(this.actor.position, step);
     }
     if (!util.inBounds(point, this.stage.size)) {
       return ActionResult.success();
     }
     effects.push(new FireEffect(point));
-    const other = this.stage.getEntityAt(point);
+    const other = this.stage.getActorAt(point);
     if (other) {
-      this.log(`${this.entity.description()} attacks ${other.description()}.`);
+      this.log(`${this.actor.description()} attacks ${other.description()}.`);
       return ActionResult.success();
     }
     return ActionResult.incomplete();
-  }
-}
-
-class HoverAroundPositionAction extends Action {
-  constructor(target) {
-    super();
-    this.target = target;
-  }
-  execute() {
-    const diff = util.subtract(this.target, this.entity.position);
-    if (Math.max(Math.abs(diff.x), Math.abs(diff.y)) < 4) {
-      const step = [_.random(-1, 1), _.random(-1, 1)];
-      return ActionResult.alternate(new MovementAction(step));
-    }
-    const samples = [];
-    _.range(-1, 2).map((x) => _.range(-1, 2).map((y) => {
-      _.range(1).map(() => samples.push([x, y]));
-      _.range(x*Math.sign(diff[0]) + 1).map(() => samples.push([x, y]));
-      _.range(y*Math.sign(diff[1]) + 1).map(() => samples.push([x, y]));
-    }));
-    return ActionResult.alternate(new MovementAction(_.sample(samples)));
   }
 }
 
@@ -164,67 +144,49 @@ class MovementAction extends Action {
     if (this.step[0] === 0 && this.step[1] === 0) {
       return ActionResult.alternate(new IdleAction);
     }
-    const position = util.add(this.step, this.entity.position);
+    const position = util.add(this.step, this.actor.position);
     if (!util.inBounds(position, this.stage.size)) {
       this.logForPlayer("You can't run from a trainer battle!");
       return ActionResult.failed();
     }
-    const other = this.stage.getEntityAt(position);
+    const other = this.stage.getActorAt(position);
     if (other) {
-      if (other instanceof Pokemon && other.trainer === this.entity) {
-        this.stage.swap(this.entity, position);
+      if (other instanceof Pokemon && other.trainer === this.actor) {
+        this.stage.swap(this.actor, position);
         this.logForPlayer(`You switch places with ${other.description()}.`);
       } else {
         this.logForPlayer(`You bump into ${other.description()}.`);
       }
       return ActionResult.success();
     }
-    this.stage.move(this.entity, position);
+    this.stage.move(this.actor, position);
     return ActionResult.success();
   }
 }
 
-class MoveToPositionAction extends Action {
-  constructor(target) {
-    super();
-    this.target = target;
-  }
-  execute() {
-    let distance = util.distance(this.target, this.entity.position);
-    let move = [0, 0];
-    _.range(-1, 2).map((x) => _.range(-1, 2).map((y) => {
-      const position = util.add(this.entity.position, [x, y]);
-      if (this.stage.getEntityAt(position) &&
-          !util.equal(position, this.target)) {
-        return;
-      }
-      const proposal = util.distance(this.target, position);
-      if (proposal < distance) {
-        distance = proposal;
-        move = [x, y];
-      }
-    }));
-    return ActionResult.alternate(new MovementAction(move));
-  }
-}
+// The various Actors follow.
 
-// The various Entities follow.
-
-class Entity {
+class Actor {
   constructor() {
     // this.position and this.stage are set on spawning.
     this.speed = 0.1;
     this.timer = new Timer;
   }
   description() {
-    return 'an unknown entity';
+    return 'an unknown actor';
   }
-  getNextAction() {
-    return new MovementAction([_.random(-1, 1), _.random(-1, 1)]);
+  nextAction() {
+    while (!this.behavior || this.behavior.satisfied()) {
+      this.behavior = this._defaultBehavior();
+    }
+    return this.behavior.nextAction();
+  }
+  _defaultBehavior() {
+    return new MoveRandomlyBehavior;
   }
 }
 
-class Pokemon extends Entity {
+class Pokemon extends Actor {
   constructor(trainer, breed) {
     super();
     this.breed = breed;
@@ -239,19 +201,6 @@ class Pokemon extends Entity {
     }
     return `${allegiance}${this.breed}`;
   }
-  getNextAction() {
-    if (this.trainer) {
-      if (Math.random() < 0.0) {
-        const targets = this.stage.entities.filter(
-            (x) => x instanceof Pokemon && x.trainer !== this.trainer);
-        if (targets.length > 0) {
-          return new FireAction(_.sample(targets).position);
-        }
-      }
-      return new HoverAroundPositionAction(this.trainer.position);
-    }
-    return super.getNextAction();
-  }
   _allyWith(trainer) {
     if (!trainer) {
       return;
@@ -259,9 +208,24 @@ class Pokemon extends Entity {
     this.trainer = trainer;
     this.trainer.pokemon.push(this);
   }
+  _defaultBehavior() {
+    if (!this.trainer) {
+      return new MoveRandomlyBehavior;
+    }
+    const distribution = gaussian(0, 8);
+    for (let i of _.range(8)) {
+      const offset = _.range(2).map(
+          () => Math.round(distribution.ppf(Math.random())));
+      const position = util.add(this.trainer.position, offset);
+      if (this.stage.isSquareFree(position)) {
+        return new MoveToPositionBehavior(this, position, 2);
+      }
+    }
+    return new MoveToPositionBehavior(this, this.position, 2);
+  }
 }
 
-class Trainer extends Entity {
+class Trainer extends Actor {
   constructor() {
     super();
     this.glyph = '@';
@@ -279,8 +243,97 @@ class Player extends Trainer {
   description() {
     return 'you';
   }
-  getNextAction() {
-    assert(false, 'Player.getNextAction was called!');
+  disturb() {
+    this.behavior = this._defaultBehavior();
+  }
+  _defaultBehavior() {
+    return new BlockOnInputBehavior();
+  }
+}
+
+// The various Behaviors follow.
+
+class Behavior {
+  constructor() {}
+  nextAction() {
+    assert(false, 'nextAction was not implemented!');
+  }
+  satisfied() {
+    return false;
+  }
+}
+
+class BlockOnInputBehavior extends Behavior {
+  constructor() {
+    super();
+    this._action = null;
+  }
+  nextAction() {
+    const action = this._action;
+    delete this._action;
+    return action;
+  }
+  ready() {
+    return !!this._action;
+  }
+  setNextAction(action) {
+    this._action = this._action || action;
+  }
+}
+
+class MoveRandomlyBehavior extends Behavior {
+  constructor() {
+    super();
+  }
+  nextAction() {
+    return new MovementAction([_.random(-1, 1), _.random(-1, 1)]);
+  }
+}
+
+class MoveToPositionBehavior extends Behavior {
+  constructor(actor, position, limit) {
+    super();
+    this._actor = actor;
+    this._position = position;
+    this._index = 0;
+    this._limit = limit || 24;
+  }
+  nextAction() {
+    this._index += 1;
+    let distance = util.distance(this._position, this._actor.position);
+    let move = [0, 0];
+    _.range(-1, 2).map((x) => _.range(-1, 2).map((y) => {
+      const position = util.add(this._actor.position, [x, y]);
+      if (this._actor.stage.getActorAt(position) &&
+          !util.equal(position, this._position)) {
+        return;
+      }
+      const proposal = util.distance(this._position, position);
+      if (proposal < distance) {
+        distance = proposal;
+        move = [x, y];
+      }
+    }));
+    return new MovementAction(move);
+  }
+  satisfied() {
+    return this._index >= this._limit ||
+           util.equal(this._actor.position, this._position);
+  }
+}
+
+class RunBehavior extends Behavior {
+  constructor(step) {
+    super();
+    this._step = step;
+    this._index = 0;
+  }
+  nextAction() {
+    this._index += 1;
+    return new MovementAction(this._step);
+  }
+  satisfied() {
+    return this._index >= 4;
   }
 }
 
@@ -291,7 +344,6 @@ class Game {
     this.stage = new Stage(this);
     this._log = [];
     this._action = null;
-    this._next_player_action = null;
 
     const handler = this.handleInput.bind(this);
     this.graphics = new Graphics(this.stage, handler);
@@ -309,11 +361,16 @@ class Game {
       n: [1, 1],
       '.': [0, 0],
     }
-    if (this._action || this._next_player_action) {
+    const behavior = this.stage.player.behavior;
+    if (!(behavior instanceof BlockOnInputBehavior)) {
+      return false;
+    } else if (behavior.ready() || this._action) {
       return false;
     }
     if (moves[ch]) {
-      this._next_player_action = new MovementAction(moves[ch]);
+      behavior.setNextAction(new MovementAction(moves[ch]));
+    } else if (moves[ch.toLowerCase()]) {
+      this.stage.player.behavior = new RunBehavior(moves[ch.toLowerCase()]);
     }
   }
   log(message) {
@@ -327,28 +384,29 @@ class Game {
         this._log.shift();
       }
     }
+    this.stage.player.disturb();
   }
   tick() {
     const update = {advanced: false, effects: []};
     while (true) {
       // Consume existing actions, if any are available.
       if (this._action) {
-        const entity = this._action.entity;
+        const actor = this._action.actor;
         const result = this._action.execute(update.effects);
         assert(result instanceof ActionResult, result);
         if (result.alternate) {
-          result.alternate.bind(entity);
+          result.alternate.bind(actor);
           this._action = result.alternate;
           continue;
         }
         update.advanced = true;
         if (result.done) {
           delete this._action;
-          if (result.success || !(entity instanceof Player)) {
-            entity.timer.wait(result.turns);
-            this.stage.advanceEntity();
+          if (result.success || !(actor instanceof Player)) {
+            actor.timer.wait(result.turns);
+            this.stage.advanceActor();
           }
-          if (entity instanceof Player) {
+          if (actor instanceof Player) {
             return update;
           }
         }
@@ -358,20 +416,16 @@ class Game {
       }
       // Construct new actions, if any are required.
       if (!this._action) {
-        const entity = this.stage.getCurrentEntity();
-        if (entity.timer.ready() || entity.timer.wait(-entity.speed)) {
-          if (entity instanceof Player) {
-            if (!this._next_player_action) {
-              return update;
-            }
-            this._action = this._next_player_action;
-            delete this._next_player_action;
-          } else {
-            this._action = entity.getNextAction();
+        const actor = this.stage.getCurrentActor();
+        if (actor.timer.ready() || actor.timer.wait(-actor.speed)) {
+          this._action = actor.nextAction();
+          if (!this._action) {
+            assert(actor instanceof Player);
+            return update;
           }
-          this._action.bind(entity);
+          this._action.bind(actor);
         } else {
-          this.stage.advanceEntity();
+          this.stage.advanceActor();
         }
       }
     }
@@ -389,9 +443,9 @@ class Stage {
   constructor(game) {
     this.game = game;
     this.size = [40, 15];
-    this.entities = [];
-    this._current_entity = 0;
-    this._position_entity_map = {};
+    this.actors = [];
+    this._current_actor = 0;
+    this._position_actor_map = {};
 
     const player = new Player;
     const target = new Trainer;
@@ -410,34 +464,36 @@ class Stage {
     this.spawn(new Pokemon(target, 'Diglett'), [right - 2, midpoint + 2]);
     this.player = player;
   }
-  advanceEntity() {
-    this._current_entity = (this._current_entity + 1) % this.entities.length;
+  advanceActor() {
+    this._current_actor = (this._current_actor + 1) % this.actors.length;
   }
-  getCurrentEntity() {
-    return this.entities[this._current_entity];
+  getCurrentActor() {
+    return this.actors[this._current_actor];
   }
-  getEntityAt(position) {
-    return this._position_entity_map[util.key(position)];
+  getActorAt(position) {
+    return this._position_actor_map[util.key(position)];
   }
-  move(entity, position) {
-    assert(util.inBounds(position, this.size));
-    assert(!this.getEntityAt(position));
-    delete this._position_entity_map[util.key(entity.position)];
-    this._position_entity_map[util.key(position)] = entity;
-    entity.position = position;
+  isSquareFree(position) {
+    return util.inBounds(position, this.size) && !this.getActorAt(position);
   }
-  swap(entity, position) {
-    const other = this.getEntityAt(position);
-    delete this._position_entity_map[util.key(other.position)];
-    other.position = entity.position;
-    this.move(entity, position);
+  move(actor, position) {
+    assert(this.isSquareFree(position));
+    delete this._position_actor_map[util.key(actor.position)];
+    this._position_actor_map[util.key(position)] = actor;
+    actor.position = position;
+  }
+  swap(actor, position) {
+    const other = this.getActorAt(position);
+    delete this._position_actor_map[util.key(other.position)];
+    other.position = actor.position;
+    this.move(actor, position);
     this.move(other, other.position);
   }
-  spawn(entity, position) {
-    entity.stage = this;
-    entity.position = position;
-    this.entities.push(entity);
-    this.move(entity, position);
+  spawn(actor, position) {
+    actor.stage = this;
+    actor.position = position;
+    this.actors.push(actor);
+    this.move(actor, position);
   }
 }
 
@@ -509,7 +565,9 @@ class Graphics {
     this.screen.append(this.log);
 
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-    this.screen.key(alphabet.concat(['.']), function(ch, key) {
+    const keys = alphabet.concat(alphabet.map((x) => `S-${x}`))
+                         .concat(['.']);
+    this.screen.key(keys, function(ch, key) {
       handler(ch);
     });
     this.screen.key(['C-c', 'escape'], function(ch, key) {
@@ -530,17 +588,17 @@ class Graphics {
         this._buffer[y][x] = '.';
       }
     }
-    for (let entity of stage.entities) {
-      this._buffer[entity.position[1]][entity.position[0]] = entity.glyph;
+    for (let actor of stage.actors) {
+      this._buffer[actor.position[1]][actor.position[0]] = actor.glyph;
     }
     this._effects = this._effects.concat(effects);
     this._effects = this._effects.filter((x) => x._update(this._buffer));
     this.stage.setContent(this._buffer.map((x) => x.join('')).join('\n'));
     // Render the status.
     const status = [];
-    for (let entity of stage.entities) {
-      if (entity instanceof Pokemon && entity.trainer instanceof Player) {
-        ['\n', entity.description(), '\n'].map((x) => status.push(x));
+    for (let actor of stage.actors) {
+      if (actor instanceof Pokemon && actor.trainer instanceof Player) {
+        ['\n', actor.description(), '\n'].map((x) => status.push(x));
       }
     }
     this.status.setContent(status.join(''));
