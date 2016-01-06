@@ -43,7 +43,15 @@ class Action {
   bind(entity) {
     this.entity = entity;
     this.stage = entity.stage;
-    this.game = entity.stage.game;
+    this._game = entity.stage.game;
+  }
+  log(message) {
+    this._game.log(message);
+  }
+  logForPlayer(message) {
+    if (this.entity instanceof Player) {
+      this._game.log(message);
+    }
   }
 }
 
@@ -88,7 +96,7 @@ class FireAction extends Action {
   }
   execute(effects) {
     let result = null;
-    for (let i of _.range(3)) {
+    for (let i of _.range(4)) {
       result = this._executeOnce(effects);
       if (result.success) {
         break;
@@ -108,10 +116,9 @@ class FireAction extends Action {
       return ActionResult.success();
     }
     effects.push(new FireEffect(point));
-    const entity = this.stage.getEntityAt(point);
-    if (entity) {
-      this.game.log(
-          `${this.entity.description()} attacks ${entity.description()}.`);
+    const other = this.stage.getEntityAt(point);
+    if (other) {
+      this.log(`${this.entity.description()} attacks ${other.description()}.`);
       return ActionResult.success();
     }
     return ActionResult.incomplete();
@@ -159,15 +166,16 @@ class MovementAction extends Action {
     }
     const position = util.add(this.step, this.entity.position);
     if (!util.inBounds(position, this.stage.size)) {
-      if (this.entity instanceof Player) {
-        this.game.log("You can't run from a trainer battle!");
-      }
+      this.logForPlayer("You can't run from a trainer battle!");
       return ActionResult.failed();
     }
     const other = this.stage.getEntityAt(position);
     if (other) {
-      if (this.entity instanceof Player) {
-        this.game.log(`You bump into ${other.description()}.`);
+      if (other instanceof Pokemon && other.trainer === this.entity) {
+        this.stage.swap(this.entity, position);
+        this.logForPlayer(`You switch places with ${other.description()}.`);
+      } else {
+        this.logForPlayer(`You bump into ${other.description()}.`);
       }
       return ActionResult.success();
     }
@@ -233,7 +241,7 @@ class Pokemon extends Entity {
   }
   getNextAction() {
     if (this.trainer) {
-      if (Math.random() < 0.1) {
+      if (Math.random() < 0.0) {
         const targets = this.stage.entities.filter(
             (x) => x instanceof Pokemon && x.trainer !== this.trainer);
         if (targets.length > 0) {
@@ -269,7 +277,7 @@ class Player extends Trainer {
     super();
   }
   description() {
-    return 'yourself';
+    return 'you';
   }
   getNextAction() {
     assert(false, 'Player.getNextAction was called!');
@@ -387,14 +395,19 @@ class Stage {
 
     const player = new Player;
     const target = new Trainer;
-    this.spawn(player, [4, 7]);
-    this.spawn(target, [35, 7]);
-    this.spawn(new Pokemon(player, 'Bulbasaur'), [6, 5]);
-    this.spawn(new Pokemon(player, 'Charmander'), [6, 7]);
-    this.spawn(new Pokemon(player, 'Squirtle'), [6, 9]);
-    this.spawn(new Pokemon(target, 'Poliwag'), [33, 5]);
-    this.spawn(new Pokemon(target, 'Electabuzz'), [33, 7]);
-    this.spawn(new Pokemon(target, 'Diglett'), [33, 9]);
+
+    const left = 4;
+    const right = this.size[0] - left - 1;
+    const midpoint = Math.floor(this.size[1]/2);
+
+    this.spawn(player, [left, midpoint]);
+    this.spawn(target, [right, midpoint, 7]);
+    this.spawn(new Pokemon(player, 'Bulbasaur'), [left + 2, midpoint - 2]);
+    this.spawn(new Pokemon(player, 'Charmander'), [left + 2, midpoint]);
+    this.spawn(new Pokemon(player, 'Squirtle'), [left + 2, midpoint + 2]);
+    this.spawn(new Pokemon(target, 'Poliwag'), [right - 2, midpoint - 2]);
+    this.spawn(new Pokemon(target, 'Electabuzz'), [right - 2, midpoint]);
+    this.spawn(new Pokemon(target, 'Diglett'), [right - 2, midpoint + 2]);
     this.player = player;
   }
   advanceEntity() {
@@ -412,6 +425,13 @@ class Stage {
     delete this._position_entity_map[util.key(entity.position)];
     this._position_entity_map[util.key(position)] = entity;
     entity.position = position;
+  }
+  swap(entity, position) {
+    const other = this.getEntityAt(position);
+    delete this._position_entity_map[util.key(other.position)];
+    other.position = entity.position;
+    this.move(entity, position);
+    this.move(other, other.position);
   }
   spawn(entity, position) {
     entity.stage = this;
@@ -474,6 +494,10 @@ class Graphics {
       height: stage.size[1],
       tags: true,
     });
+    this.status = blessed.box({
+      left: stage.size[0] + 1,
+      tags: true,
+    });
     this.log = blessed.box({
       top: stage.size[1] + 1,
       tags: true,
@@ -481,6 +505,7 @@ class Graphics {
 
     this.screen.title = 'rogue';
     this.screen.append(this.stage);
+    this.screen.append(this.status);
     this.screen.append(this.log);
 
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -499,6 +524,7 @@ class Graphics {
     return this._effects.length > 0;
   }
   render(stage, log, effects) {
+    // Render the stage.
     for (let y = 0; y < stage.size[1]; y++) {
       for (let x = 0; x < stage.size[0]; x++) {
         this._buffer[y][x] = '.';
@@ -510,8 +536,18 @@ class Graphics {
     this._effects = this._effects.concat(effects);
     this._effects = this._effects.filter((x) => x._update(this._buffer));
     this.stage.setContent(this._buffer.map((x) => x.join('')).join('\n'));
+    // Render the status.
+    const status = [];
+    for (let entity of stage.entities) {
+      if (entity instanceof Pokemon && entity.trainer instanceof Player) {
+        ['\n', entity.description(), '\n'].map((x) => status.push(x));
+      }
+    }
+    this.status.setContent(status.join(''));
+    // Render the log.
     this.log.setContent(log.map((entry) => {
-      return `${entry.message}${entry.count > 1 ? ` (x${entry.count})` : ''}`;
+      const follow_up = entry.count > 1 ? ` (x${entry.count})` : '';
+      return `${entry.message}${follow_up}`;
     }).join('\n'));
     this.screen.render();
   }
