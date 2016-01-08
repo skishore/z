@@ -36,8 +36,8 @@ import {IVec, Vec} from './vec';
 // of points.
 export class Rect {
   // Gets the empty rectangle.
-  static get EMPTY() { return this._EMPTY; }
-  static _EMPTY = new Rect(0, 0, 0, 0);
+  static get empty() { return this._empty; }
+  static _empty = new Rect(0, 0, 0, 0);
 
   private _pos: Vec;
   private _size: Vec;

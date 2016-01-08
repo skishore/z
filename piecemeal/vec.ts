@@ -8,8 +8,8 @@ export interface IVec {
 // A class representing a 2-dimensional vector. Provides arithmetic operations
 // and a base classe for [Direction].
 export class Vec implements IVec {
-  static get ZERO() { return this._ZERO; }
-  private static _ZERO = new Vec(0, 0);
+  static get zero() { return this._zero; }
+  private static _zero = new Vec(0, 0);
 
   get x() { return this._x; }
   get y() { return this._y; }

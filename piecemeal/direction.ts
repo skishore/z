@@ -1,123 +1,116 @@
-library piecemeal.src.direction;
+import {Vec} from './vec';
 
-import 'vec.dart';
+class Direction extends Vec {
+  static none = new Direction(0, 0);
+  static n    = new Direction(0, -1);
+  static ne   = new Direction(1, -1);
+  static e    = new Direction(1, 0);
+  static se   = new Direction(1, 1);
+  static s    = new Direction(0, 1);
+  static sw   = new Direction(-1, 1);
+  static w    = new Direction(-1, 0);
+  static nw   = new Direction(-1, -1);
 
-class Direction extends VecBase implements Vec {
-  static const none = const Direction(0, 0);
-  static const n    = const Direction(0, -1);
-  static const ne   = const Direction(1, -1);
-  static const e    = const Direction(1, 0);
-  static const se   = const Direction(1, 1);
-  static const s    = const Direction(0, 1);
-  static const sw   = const Direction(-1, 1);
-  static const w    = const Direction(-1, 0);
-  static const nw   = const Direction(-1, -1);
-
-  /// The eight cardinal and intercardinal directions.
-  static const all = const [n, ne, e, se, s, sw, w, nw];
+  /// The eight cardinal and diagonal directions.
+  static all = [Direction.n, Direction.ne, Direction.e, Direction.se,
+                Direction.s, Direction.sw, Direction.w, Direction.nw];
 
   /// The four cardinal directions: north, south, east, and west.
-  static const cardinal = const [n, e, s, w];
+  static cardinal = [Direction.n, Direction.e, Direction.s, Direction.w];
 
   /// The four directions between the cardinal ones: northwest, northeast,
   /// southwest and southeast.
-  static const intercardinal = const [ne, se, sw, nw];
+  static diagonal = [Direction.ne, Direction.se, Direction.sw, Direction.nw];
 
-  const Direction(int x, int y) : super(x, y);
+  constructor(x: number, y: number) { super(x, y); }
 
-  Direction get rotateLeft45 {
+  get rotateLeft45() {
     switch (this) {
-      case none: return none;
-      case n: return nw;
-      case ne: return n;
-      case e: return ne;
-      case se: return e;
-      case s: return se;
-      case sw: return s;
-      case w: return sw;
-      case nw: return w;
+      case Direction.none: return Direction.none;
+      case Direction.n: return Direction.nw;
+      case Direction.ne: return Direction.n;
+      case Direction.e: return Direction.ne;
+      case Direction.se: return Direction.e;
+      case Direction.s: return Direction.se;
+      case Direction.sw: return Direction.s;
+      case Direction.w: return Direction.sw;
+      case Direction.nw: return Direction.w;
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 
-  Direction get rotateRight45 {
+  get rotateRight45() {
     switch (this) {
-      case none: return none;
-      case n: return ne;
-      case ne: return e;
-      case e: return se;
-      case se: return s;
-      case s: return sw;
-      case sw: return w;
-      case w: return nw;
-      case nw: return n;
+      case Direction.none: return Direction.none;
+      case Direction.n: return Direction.ne;
+      case Direction.ne: return Direction.e;
+      case Direction.e: return Direction.se;
+      case Direction.se: return Direction.s;
+      case Direction.s: return Direction.sw;
+      case Direction.sw: return Direction.w;
+      case Direction.w: return Direction.nw;
+      case Direction.nw: return Direction.n;
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 
-  Direction get rotateLeft90 {
+  get rotateLeft90() {
     switch (this) {
-      case none: return none;
-      case n: return w;
-      case ne: return nw;
-      case e: return n;
-      case se: return ne;
-      case s: return e;
-      case sw: return se;
-      case w: return s;
-      case nw: return sw;
+      case Direction.none: return Direction.none;
+      case Direction.n: return Direction.w;
+      case Direction.ne: return Direction.nw;
+      case Direction.e: return Direction.n;
+      case Direction.se: return Direction.ne;
+      case Direction.s: return Direction.e;
+      case Direction.sw: return Direction.se;
+      case Direction.w: return Direction.s;
+      case Direction.nw: return Direction.sw;
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 
-  Direction get rotateRight90 {
+  get rotateRight90() {
     switch (this) {
-      case none: return none;
-      case n: return e;
-      case ne: return se;
-      case e: return s;
-      case se: return sw;
-      case s: return w;
-      case sw: return nw;
-      case w: return n;
-      case nw: return ne;
+      case Direction.none: return Direction.none;
+      case Direction.n: return Direction.e;
+      case Direction.ne: return Direction.se;
+      case Direction.e: return Direction.s;
+      case Direction.se: return Direction.sw;
+      case Direction.s: return Direction.w;
+      case Direction.sw: return Direction.nw;
+      case Direction.w: return Direction.n;
+      case Direction.nw: return Direction.ne;
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 
-  Direction get rotate180 {
+  get rotate180() {
     switch (this) {
-      case none: return none;
-      case n: return s;
-      case ne: return sw;
-      case e: return w;
-      case se: return nw;
-      case s: return n;
-      case sw: return ne;
-      case w: return e;
-      case nw: return se;
+      case Direction.none: return Direction.none;
+      case Direction.n: return Direction.s;
+      case Direction.ne: return Direction.sw;
+      case Direction.e: return Direction.w;
+      case Direction.se: return Direction.nw;
+      case Direction.s: return Direction.n;
+      case Direction.sw: return Direction.ne;
+      case Direction.w: return Direction.e;
+      case Direction.nw: return Direction.se;
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 
-  String toString() {
+  toString() {
     switch (this) {
-      case none: return "none";
-      case n: return "n";
-      case ne: return "ne";
-      case e: return "e";
-      case se: return "se";
-      case s: return "s";
-      case sw: return "sw";
-      case w: return "w";
-      case nw: return "nw";
+      case Direction.none: return 'Direction.none';
+      case Direction.n: return 'Direction.n';
+      case Direction.ne: return 'Direction.ne';
+      case Direction.e: return 'Direction.e';
+      case Direction.se: return 'Direction.se';
+      case Direction.s: return 'Direction.s';
+      case Direction.sw: return 'Direction.sw';
+      case Direction.w: return 'Direction.w';
+      case Direction.nw: return 'Direction.nw';
     }
-
-    throw "unreachable";
+    throw 'unreachable';
   }
 }

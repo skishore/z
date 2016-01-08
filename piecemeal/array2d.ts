@@ -1,92 +1,60 @@
-library piecemeal.src.array2d;
+import {Rect} from './rect';
+import {IVec, Vec} from './vec';
 
-import 'dart:collection';
+type _NullaryGenerator<T> = () => T;
 
-import 'rect.dart';
-import 'vec.dart';
+// TODO(skishore): Support other generator types. It's tricky because
+// Typescript does not have good support for instanceof with functions.
+//type _VecGenerator<T> = (pos: IVec) => T;
+//type _CoordGenerator<T> = (x: number, y: number) => T;
 
-typedef T _NullaryGenerator<T>();
-typedef T _VecGenerator<T>(Vec pos);
-typedef T _CoordGenerator<T>(int x, int y);
+// A two-dimensional fixed-size array of elements of type [T].
+//
+// This class doesn't follow matrix notation which tends to put the column
+// index before the row. Instead, it mirrors graphics and games where x --
+// the horizontal component -- comes before y.
+//
+// Internally, the elements are stored in a single contiguous list in row-major
+// order.
+class Array2D<T> {
+  private _size: Vec;
+  private _elements: Array<T>;
 
-/// A two-dimensional fixed-size array of elements of type [T].
-///
-/// This class doesn't follow matrix notation which tends to put the column
-/// index before the row. Instead, it mirrors graphics and games where x --
-/// the horizontal component -- comes before y.
-///
-/// Internally, the elements are stored in a single contiguous list in row-major
-/// order.
-class Array2D<T> extends IterableBase<T> {
-  /// The number of elements in a row of the array.
-  final int width;
-
-  /// The number of elements in a column of the array.
-  final int height;
-
-  final List<T> _elements;
-
-  /// Creates a new array with [width], [height] elements initialized to [value]
-  /// (or `null` if [value] is omitted).
-  Array2D(width, height, [T value])
-      : width = width,
-        height = height,
-        _elements = new List<T>.filled(width * height, value);
-
-  /// Creates a new array with [width], [height] elements initialized to the
-  /// result of calling [generator] on each element.
-  ///
-  /// The generator function can either take no parameters, one [Vec]
-  /// parameter, or two [int] parameters (`x` and `y`) and returns a value of
-  /// type [T].
-  Array2D.generated(width, height, Function generator)
-      : width = width,
-        height = height,
-        _elements = new List<T>.filled(width * height, null) {
-    generate(generator);
+  // Creates a new array of the given [size] with its elements set to [value].
+  constructor(size: IVec, value?: T) {
+    this._size = new Vec(size.x, size.y);
+    this._elements = new Array<T>(size.x * size.y).fill(value);
   }
 
-  /// Gets the element at [pos].
-  T operator[](Vec pos) => _elements[pos.y * width + pos.x];
-
-  /// Sets the element at [pos].
-  void operator[]=(Vec pos, T value) {
-    _elements[pos.y * width + pos.x] = value;
+  // Creates a new array of the given [size] with its elements initialized by
+  // calling the [generator] function.
+  static generated<U>(size: Vec, generator: _NullaryGenerator<U>) {
+    const result = new Array2D<U>(size);
+    result.generate(generator);
+    return result;
   }
 
-  /// A [Rect] whose bounds cover the full range of valid element indexes.
-  Rect get bounds => new Rect(0, 0, width, height);
-
-  /// The size of the array.
-  Vec  get size => new Vec(width, height);
-
-  /// Gets the element in the array at [x], [y].
-  T get(int x, int y) => _elements[y * width + x];
-
-  /// Sets the element in the array at [x], [y] to [value].
-  void set(int x, int y, T value) {
-    _elements[y * width + x] = value;
+  // Gets the element at [pos].
+  get(pos: IVec) {
+    if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
+    return this._elements[pos.y * this._size.x + pos.x];
   }
 
-  /// Evaluates [generator] on each position in the array and sets the element
-  /// at that position to the result.
-  ///
-  /// The generator function can either take no parameters, one [Vec]
-  /// parameter, or two [int] parameters (`x` and `y`) and returns a value of
-  /// type [T].
-  void generate(Function generator) {
-    // Wrap the generator in a function with a known signature.
-    if (generator is _NullaryGenerator<T>) {
-      for (var pos in bounds) this[pos] = generator();
-    } else if (generator is _VecGenerator<T>) {
-      for (var pos in bounds) this[pos] = generator(pos);
-    } else if (generator is _CoordGenerator<T>) {
-      for (var pos in bounds) this[pos] = generator(pos.x, pos.y);
-    } else {
-      throw new ArgumentError(
-          "Generator must take zero arguments, one Vec, or two ints.");
-    }
+  // Sets the element at [pos].
+  set(pos: IVec, value: T) {
+    if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
+    this._elements[pos.y * this._size.x + pos.x] = value;
   }
 
-  Iterator<T> get iterator => _elements.iterator;
+  // A [Rect] whose bounds cover the full range of valid element indexes.
+  get bounds() { return new Rect(0, 0, this._size.x, this._size.y); }
+
+  // The size of the array.
+  get size() { return this._size; }
+
+  // Evaluates [generator] on each position in the array and sets the element
+  // at that position to the result.
+  generate(generator: _NullaryGenerator<T>) {
+    for (let pos of this.bounds) { this.set(pos, generator()); }
+  }
 }
