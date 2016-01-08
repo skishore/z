@@ -1,6 +1,6 @@
 import {Vec} from './vec';
 
-class Direction extends Vec {
+export class Direction extends Vec {
   static none = new Direction(0, 0);
   static n    = new Direction(0, -1);
   static ne   = new Direction(1, -1);

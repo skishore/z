@@ -73,6 +73,10 @@ export class Vec implements IVec {
     return new Vec(this._x - other.x, this._y - other.y);
   }
 
+  equals(other: IVec) {
+    return this._x === other.x && this._y === other.y;
+  }
+
   // Returns `true` if the magnitude of this vector is greater than [other].
   gt(other: IVec|Number) {
     if (other instanceof Number) {
@@ -145,5 +149,7 @@ export class Vec implements IVec {
   /// coordinate translated by [y].
   offsetY(y: number) { return new Vec(this._x, this._y + y); }
 
-  toString() { return `Vec(${this._x}, ${this._y}`; }
+  get hash() { return `${this._x},${this._y}`; }
+
+  toString() { return `Vec(${this._x}, ${this._y})`; }
 }

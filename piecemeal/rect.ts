@@ -145,9 +145,9 @@ export class Rect {
       horizontal = other.left - this.right;
     }
 
-    if ((vertical == -1) && (horizontal == -1)) return -1;
-    if (vertical == -1) return horizontal;
-    if (horizontal == -1) return vertical;
+    if ((vertical === -1) && (horizontal === -1)) return -1;
+    if (vertical === -1) return horizontal;
+    if (horizontal === -1) return vertical;
     return horizontal + vertical;
   }
 
@@ -163,14 +163,14 @@ export class Rect {
         yield new Vec(this.right, y);
       }
     } else {
-      for (let x of this) yield x;
+      for (const x of this) yield x;
     }
   }
 
   *[Symbol.iterator]() {
     let x = this.left;
     let y = this.top;
-    if (this.width == 0) return;
+    if (this.width === 0) return;
     while (y < this.bottom) {
       yield new Vec(x, y);
       x += 1;
@@ -180,4 +180,7 @@ export class Rect {
       }
     }
   }
+
+  toString() { return `Rect(${this.left}, ${this.top}, ` +
+                           `${this.width}, ${this.height})`; }
 }

@@ -4,7 +4,7 @@ const random_seed = require('random-seed');
 import {Rect} from './rect';
 import {IVec, Vec} from './vec';
 
-/// The Random Number God: deliverer of good and ill fortune alike.
+// The Random Number God: deliverer of good and ill fortune alike.
 export class Rng {
   private _random: any;
 
@@ -37,7 +37,7 @@ export class Rng {
   }
 
   // Returns `true` if a random int chosen between 1 and chance was 1.
-  oneIn(chance: number) { return this.range(chance) == 0; }
+  oneIn(chance: number) { return this.range(chance) === 0; }
 
   // Gets a random item from the given list.
   item<T>(items: Array<T>) { return items[this.range(items.length)]; }

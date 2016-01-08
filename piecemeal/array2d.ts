@@ -16,7 +16,7 @@ type _NullaryGenerator<T> = () => T;
 //
 // Internally, the elements are stored in a single contiguous list in row-major
 // order.
-class Array2D<T> {
+export class Array2D<T> {
   private _size: Vec;
   private _elements: Array<T>;
 
@@ -55,6 +55,6 @@ class Array2D<T> {
   // Evaluates [generator] on each position in the array and sets the element
   // at that position to the result.
   generate(generator: _NullaryGenerator<T>) {
-    for (let pos of this.bounds) { this.set(pos, generator()); }
+    for (const pos of this.bounds) { this.set(pos, generator()); }
   }
 }
