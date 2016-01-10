@@ -77,11 +77,6 @@ export class Rect {
     return new Rect(x, y, size, 1);
   }
 
-  inflate(distance: number) {
-    return new Rect(this.left - distance, this.top - distance,
-                    this.width + (distance * 2), this.height + (distance * 2));
-  }
-
   // Creates a new rectangle that is the intersection of [a] and [b].
   //
   //     .----------.
@@ -149,6 +144,11 @@ export class Rect {
     if (vertical === -1) return horizontal;
     if (horizontal === -1) return vertical;
     return horizontal + vertical;
+  }
+
+  inflate(distance: number) {
+    return new Rect(this.left - distance, this.top - distance,
+                    this.width + (distance * 2), this.height + (distance * 2));
   }
 
   /// Iterates over the points along the edge of the Rect.

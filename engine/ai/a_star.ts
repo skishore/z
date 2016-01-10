@@ -4,7 +4,6 @@ import {IVec, Vec} from '../../piecemeal/vec';
 import {kAStarDoorCost, kAStarFloorCost,
         kAStarOccupiedCost, kAStarStraightCost} from '../option'
 //import {Stage} from '../stage';
-
 type Stage = any;
 
 class PathResult {
@@ -25,34 +24,31 @@ export class AStar {
   // possible.
   static findDirection(stage: Stage, start: IVec, end: IVec,
                        maxLength: number, canOpenDoors: boolean) {
-    let path = AStar._findPath(stage, start, end, maxLength, canOpenDoors);
-    if (path == null) return Direction.none;
-    while (path.parent != null && path.parent.parent != null) {
-      path = path.parent;
-    }
-    return path.direction;
+    return this.findPath(stage, start, end, maxLength, canOpenDoors).direction;
   }
 
   static findPath(stage: Stage, start: IVec, end: IVec,
                   maxLength: number, canOpenDoors: boolean) {
     let path = AStar._findPath(stage, start, end, maxLength, canOpenDoors);
-    if (path == null) return new PathResult(Direction.none, 0);
-    let length = 1;
-    while (path.parent != null && path.parent.parent != null) {
-      path = path.parent;
-      length++;
+    if (path instanceof PathNode) {
+      let length = 1;
+      while (path.parent instanceof PathNode &&
+             (<PathNode>path.parent).parent instanceof PathNode) {
+        [path, length] = [<PathNode>path.parent, length + 1]
+      }
+      return new PathResult(path.direction, length);
     }
-    return new PathResult(path.direction, length);
+    return new PathResult(Direction.none, 0);
   }
 
   // Internal helper used to implement pathing. Returns a PathNode or null.
   static _findPath(stage: Stage, istart: IVec, iend: IVec,
-                   maxLength: number, canOpenDoors: boolean) {
+                   maxLength: number, canOpenDoors: boolean): PathNode|void {
     // TODO(skishore): Use a heap data structure here.
     const start: Vec = new Vec(istart.x, istart.y);
     const end: Vec = new Vec(iend.x, iend.y);
     const startPath = new PathNode(null /* parent */, Direction.none,
-                                   start, 0, this.heuristic(start, end));
+                                   start, 0, this._heuristic(start, end));
     const open = [startPath];
     const closed = {};
 
@@ -110,7 +106,7 @@ export class AStar {
 
         // If we have a new path, add it.
         if (!inOpen) {
-          const guess = cost + this.heuristic(neighbor, end);
+          const guess = cost + this._heuristic(neighbor, end);
           const path = new PathNode(current, dir, neighbor, cost, guess);
 
           // Insert it in sorted order (such that the best node is at the *end*
@@ -136,7 +132,7 @@ export class AStar {
   }
 
   // The estimated cost from [pos] to [end].
-  static heuristic(pos: Vec, end: Vec) {
+  static _heuristic(pos: Vec, end: Vec) {
     // A simple heuristic would just be the kingLength. The problem is that
     // diagonal moves are as "fast" as straight ones, which means many
     // zig-zagging paths are as good as one that looks "straight" to the player.
@@ -168,7 +164,7 @@ class PathNode {
   /// along this path. In other words, this is [cost] plus the heuristic.
   get guess() { return this._guess; };
 
-  constructor(private _parent: PathNode, private _direction: Direction,
+  constructor(private _parent: PathNode|void, private _direction: Direction,
               private _pos: Vec, private _cost: number,
               private _guess: number) {}
 }

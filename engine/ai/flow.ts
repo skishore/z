@@ -1,29 +1,26 @@
-library hauberk.engine.ai.flow;
+import {Direction} from '../../piecmeal/direction';
+import {IVec, Vec} from '../../piecmeal/vec';
 
-import 'dart:collection';
-import 'dart:math' as math;
+//import {Stage} from '../stage.dart';
+type Stage = any;
 
-import 'package:piecemeal/piecemeal.dart';
-
-import '../stage.dart';
-
-/// A lazy, generic pathfinder.
-///
-/// It can be used to find the distance from a starting point to a goal, or
-/// find the directions to reach the nearest goals meeting some predicate.
-///
-/// Internally, it lazily runs a breadth-first search. It only processes outward
-/// as far as needed to answer the query. In practice, this means it often does
-/// less than 10% of the iterations of a full eager search.
+// A lazy, generic pathfinder.
+//
+// It can be used to find the distance from a starting point to a goal, or
+// find the directions to reach the nearest goals meeting some predicate.
+//
+// Internally, it lazily runs a breadth-first search. It only processes outward
+// as far as needed to answer the query. In practice, this means it often does
+// less than 10% of the iterations of a full eager search.
 class Flow {
-  static const _unknown = -2;
-  static const _unreachable = -1;
+  const _unknown = -2;
+  const _unreachable = -1;
 
-  final Stage _stage;
-  final Vec _start;
-  final int _maxDistance;
-  final bool _canOpenDoors;
-  final bool _ignoreActors;
+  private _stage: Stage;
+  private _start: Vec;
+  private _maxDistance: number;
+  private _canOpenDoors: boolean;
+  private _ignoreActors: boolean;
 
   Array2D<int> _distances;
 
