@@ -1,10 +1,12 @@
 import {Direction} from '../../piecemeal/direction';
+import {Nil, nil} from '../../piecemeal/nil';
 import {IVec, Vec} from '../../piecemeal/vec';
 
 import {kAStarDoorCost, kAStarFloorCost,
-        kAStarOccupiedCost, kAStarStraightCost} from '../option'
-//import {Stage} from '../stage';
+        kAStarOccupiedCost, kAStarStraightCost, } from '../option';
+// import {Stage, Tile} from '../stage';
 type Stage = any;
+class Tile {};
 
 class PathResult {
   // The [Direction] to move on the first step of the path.
@@ -34,20 +36,20 @@ export class AStar {
       let length = 1;
       while (path.parent instanceof PathNode &&
              (<PathNode>path.parent).parent instanceof PathNode) {
-        [path, length] = [<PathNode>path.parent, length + 1]
+        [path, length] = [<PathNode>path.parent, length + 1];
       }
       return new PathResult(path.direction, length);
     }
     return new PathResult(Direction.none, 0);
   }
 
-  // Internal helper used to implement pathing. Returns a PathNode or null.
+  // Internal helper used to implement pathing. Returns a PathNode or void.
   static _findPath(stage: Stage, istart: IVec, iend: IVec,
-                   maxLength: number, canOpenDoors: boolean): PathNode|void {
+                   maxLength: number, canOpenDoors: boolean): PathNode|Nil {
     // TODO(skishore): Use a heap data structure here.
     const start: Vec = new Vec(istart.x, istart.y);
     const end: Vec = new Vec(iend.x, iend.y);
-    const startPath = new PathNode(null /* parent */, Direction.none,
+    const startPath = new PathNode(nil /* parent */, Direction.none,
                                    start, 0, this._heuristic(start, end));
     const open = [startPath];
     const closed = {};
@@ -71,7 +73,7 @@ export class AStar {
 
         // Given how far the current tile is, how far is the neighbor?
         let stepCost = kAStarFloorCost;
-        if (stage.get(neighbor).type.opensTo != null) {
+        if (stage.get(neighbor).type.opensTo instanceof Tile) {
           if (canOpenDoors) {
             // One to open the door and one to enter the tile.
             stepCost = kAStarFloorCost * 2;
@@ -81,7 +83,7 @@ export class AStar {
             // opened by someone else.
             stepCost = kAStarDoorCost;
           }
-        } else if (stage.actorAt(neighbor) != null) {
+        } else if (stage.actorAt(neighbor) instanceof Tile) {
           stepCost = kAStarOccupiedCost;
         }
 
@@ -112,7 +114,7 @@ export class AStar {
           // Insert it in sorted order (such that the best node is at the *end*
           // of the list for easy removal).
           let inserted = false;
-          for (var i = open.length - 1; i >= 0; i--) {
+          for (let i = open.length - 1; i >= 0; i--) {
             if (open[i].guess > guess) {
               open.splice(i + 1, 0, path);
               inserted = true;
@@ -125,10 +127,9 @@ export class AStar {
         }
       }
     }
-
     // The path is blocked. (If there was a path but it was too long, then we
     // would exit out in the first check in the A* loop.)
-    return null;
+    return nil;
   }
 
   // The estimated cost from [pos] to [end].
@@ -164,7 +165,7 @@ class PathNode {
   /// along this path. In other words, this is [cost] plus the heuristic.
   get guess() { return this._guess; };
 
-  constructor(private _parent: PathNode|void, private _direction: Direction,
+  constructor(private _parent: PathNode|Nil, private _direction: Direction,
               private _pos: Vec, private _cost: number,
               private _guess: number) {}
 }

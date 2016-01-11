@@ -13,7 +13,7 @@ export class Direction extends Vec {
 
   /// The eight cardinal and diagonal directions.
   static all = [Direction.n, Direction.ne, Direction.e, Direction.se,
-                Direction.s, Direction.sw, Direction.w, Direction.nw];
+                Direction.s, Direction.sw, Direction.w, Direction.nw, ];
 
   /// The four cardinal directions: north, south, east, and west.
   static cardinal = [Direction.n, Direction.e, Direction.s, Direction.w];
@@ -35,8 +35,8 @@ export class Direction extends Vec {
       case Direction.sw: return Direction.s;
       case Direction.w: return Direction.sw;
       case Direction.nw: return Direction.w;
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 
   get rotateRight45() {
@@ -50,8 +50,8 @@ export class Direction extends Vec {
       case Direction.sw: return Direction.w;
       case Direction.w: return Direction.nw;
       case Direction.nw: return Direction.n;
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 
   get rotateLeft90() {
@@ -65,8 +65,8 @@ export class Direction extends Vec {
       case Direction.sw: return Direction.se;
       case Direction.w: return Direction.s;
       case Direction.nw: return Direction.sw;
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 
   get rotateRight90() {
@@ -80,8 +80,8 @@ export class Direction extends Vec {
       case Direction.sw: return Direction.nw;
       case Direction.w: return Direction.n;
       case Direction.nw: return Direction.ne;
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 
   get rotate180() {
@@ -95,8 +95,8 @@ export class Direction extends Vec {
       case Direction.sw: return Direction.ne;
       case Direction.w: return Direction.e;
       case Direction.nw: return Direction.se;
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 
   toString() {
@@ -110,7 +110,7 @@ export class Direction extends Vec {
       case Direction.sw: return 'Direction.sw';
       case Direction.w: return 'Direction.w';
       case Direction.nw: return 'Direction.nw';
+      default: throw 'unreacable';
     }
-    throw 'unreachable';
   }
 }

@@ -18,8 +18,10 @@ export class Vec implements IVec {
   private _y: number;
 
   constructor(x: number, y: number) {
-    this._x = x|0;
-    this._y = y|0;
+    /* tslint:disable:no-bitwise */
+    this._x = x | 0;
+    this._y = y | 0;
+    /* tslint:enable */
   }
 
   // Gets the area of a [Rect] whose corners are (0, 0) and this Vec.

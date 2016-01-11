@@ -5,8 +5,8 @@ type _NullaryGenerator<T> = () => T;
 
 // TODO(skishore): Support other generator types. It's tricky because
 // Typescript does not have good support for instanceof with functions.
-//type _VecGenerator<T> = (pos: IVec) => T;
-//type _CoordGenerator<T> = (x: number, y: number) => T;
+// type _VecGenerator<T> = (pos: IVec) => T;
+// type _CoordGenerator<T> = (x: number, y: number) => T;
 
 // A two-dimensional fixed-size array of elements of type [T].
 //

@@ -1,8 +1,10 @@
+/* tslint:disable */
 declare function require(name: string);
 const random_seed = require('random-seed');
+/* tslint:enable */
 
 import {Rect} from './rect';
-import {IVec, Vec} from './vec';
+import {Vec} from './vec';
 
 // The Random Number God: deliverer of good and ill fortune alike.
 export class Rng {
@@ -17,7 +19,7 @@ export class Rng {
   // other words, `range(3)` returns a `0`, `1`, or `2`, and `range(2, 5)`
   // returns `2`, `3`, or `4`.
   range(minOrMax: number, max?: number) {
-    if (max == null) {
+    if (max === undefined) {
       max = minOrMax;
       minOrMax = 0;
     }
@@ -29,7 +31,7 @@ export class Rng {
   // other words, `inclusive(2)` returns a `0`, `1`, or `2`, and
   // `inclusive(2, 4)` returns `2`, `3`, or `4`.
   inclusive(minOrMax: number, max?: number) {
-    if (max == null) {
+    if (max === undefined) {
       max = minOrMax;
       minOrMax = 0;
     }
