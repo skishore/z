@@ -28,7 +28,7 @@ export class Array2D<T> {
 
   // Creates a new array of the given [size] with its elements initialized by
   // calling the [generator] function.
-  static generated<U>(size: Vec, generator: _NullaryGenerator<U>) {
+  static generated<U>(size: IVec, generator: _NullaryGenerator<U>) {
     const result = new Array2D<U>(size, undefined);
     result.generate(generator);
     return result;

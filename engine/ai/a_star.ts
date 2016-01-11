@@ -4,9 +4,7 @@ import {IVec, Vec} from '../../piecemeal/vec';
 
 import {kAStarDoorCost, kAStarFloorCost,
         kAStarOccupiedCost, kAStarStraightCost, } from '../option';
-// import {Stage, Tile} from '../stage';
-type Stage = any;
-class Tile {};
+import {Stage} from '../stage';
 
 class PathResult {
   // The [Direction] to move on the first step of the path.
@@ -68,12 +66,12 @@ export class AStar {
         const neighbor = current.pos.add(dir);
 
         // Skip impassable tiles and tiles that we already have a path to.
-        if (!stage.get(neighbor).isTraversable) continue;
+        if (!stage.getTile(neighbor).traversable) continue;
         if (closed[neighbor.hash]) continue;
 
         // Given how far the current tile is, how far is the neighbor?
         let stepCost = kAStarFloorCost;
-        if (stage.get(neighbor).type.opensTo instanceof Tile) {
+        if (stage.getTile(neighbor).type.opens) {
           if (canOpenDoors) {
             // One to open the door and one to enter the tile.
             stepCost = kAStarFloorCost * 2;
@@ -83,7 +81,7 @@ export class AStar {
             // opened by someone else.
             stepCost = kAStarDoorCost;
           }
-        } else if (stage.actorAt(neighbor) instanceof Tile) {
+        } else if (stage.actorAt(neighbor) instanceof Actor) {
           stepCost = kAStarOccupiedCost;
         }
 

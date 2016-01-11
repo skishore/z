@@ -5,9 +5,7 @@ import {Rect} from '../../piecemeal/rect';
 import {rng} from '../../piecemeal/rng';
 import {IVec, Vec} from '../../piecemeal/vec';
 
-// import {Stage, Tile} from '../stage.dart';
-type Stage = any;
-class Tile {};
+ import {Stage} from '../stage';
 
 const _unknown = -2;
 const _unreachable = -1;
@@ -20,7 +18,7 @@ const _unreachable = -1;
 // Internally, it lazily runs a breadth-first search. It only processes outward
 // as far as needed to answer the query. In practice, this means it often does
 // less than 10% of the iterations of a full eager search.
-class Flow {
+export class Flow {
   private _stage: Stage;
   private _start: Vec;
   private _canOpenDoors: boolean;
@@ -57,8 +55,8 @@ class Flow {
 
     // We inset the stage by one tile because we assume the edges are blocked.
     this._offset = new Vec(1, 1);
-    let width = this._stage.width - 2;
-    let height = this._stage.height - 2;
+    let width = this._stage.size.x - 2;
+    let height = this._stage.size.y - 2;
 
     if (maxDistance !== undefined) {
       const left = Math.max(1, this._start.x - maxDistance);
@@ -127,7 +125,7 @@ class Flow {
   // Returns an empty list if no matching positions were found.
   directionsToNearestWhere(predicate: (pos: IVec) => boolean) {
     const goals = this._findAllNearestWhere(predicate);
-    if (goals instanceof Nil) return [];
+    if (goals.length === 0) return [];
     return this._directionsTo(goals);
   }
 
@@ -213,9 +211,9 @@ class Flow {
 
       // Determine whether it is possible to enter the given cell.
       const pos = here.add(this._offset);
-      const tile = this._stage.tileAt(pos);
+      const tile = this._stage.getTile(pos);
       const canEnter =
-          (tile.isPassable || (tile.isTraversable && this._canOpenDoors)) &&
+          (tile.passable || (tile.traversable && this._canOpenDoors)) &&
           (this._ignoreActors || (this._stage.actorAt(pos) instanceof Nil));
 
       if (!canEnter) {
