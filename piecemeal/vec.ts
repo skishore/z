@@ -14,15 +14,7 @@ export class Vec implements IVec {
   get x() { return this._x; }
   get y() { return this._y; }
 
-  private _x: number;
-  private _y: number;
-
-  constructor(x: number, y: number) {
-    /* tslint:disable:no-bitwise */
-    this._x = x | 0;
-    this._y = y | 0;
-    /* tslint:enable */
-  }
+  constructor(private _x: number, private _y: number) {}
 
   static coerce(pos: IVec) {
     return pos instanceof Vec ? pos : new Vec(pos.x, pos.y);
@@ -53,10 +45,18 @@ export class Vec implements IVec {
   get length() { return Math.sqrt(this.lengthSquared); }
 
   // Scales this Vec by [other].
-  scale(other: number) { return new Vec(this._x * other, this._y * other); }
+  scale(other: number) {
+    /* tslint:disable:no-bitwise */
+    return new Vec((this._x * other) | 0, (this._y * other) | 0);
+    /* tslint:enable */
+  }
 
   // Divides this Vec by [other].
-  divide(other: number) { return new Vec(this._x / other, this._y / other); }
+  divide(other: number) {
+    /* tslint:disable:no-bitwise */
+    return new Vec((this._x / other) | 0, (this._y / other) | 0);
+    /* tslint:enable */
+  }
 
   // Adds [other] to this Vec.
   //
