@@ -1,5 +1,5 @@
 /* tslint:disable */
-declare function require(name: string);
+declare function require(name: string): any;
 const random_seed = require('random-seed');
 /* tslint:enable */
 

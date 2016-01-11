@@ -24,6 +24,10 @@ export class Vec implements IVec {
     /* tslint:enable */
   }
 
+  static coerce(pos: IVec) {
+    return pos instanceof Vec ? pos : new Vec(pos.x, pos.y);
+  }
+
   // Gets the area of a [Rect] whose corners are (0, 0) and this Vec.
   //
   // Returns a negative area if one of the Vec's coordinates are negative.
@@ -86,7 +90,7 @@ export class Vec implements IVec {
     } else if (other instanceof Vec) {
       return this.lengthSquared > other.lengthSquared;
     } else {
-      return this.lengthSquared > new Vec(other.x, other.y).lengthSquared;
+      return this.lengthSquared > Vec.coerce(other).lengthSquared;
     }
   }
 
@@ -98,7 +102,7 @@ export class Vec implements IVec {
     } else if (other instanceof Vec) {
       return this.lengthSquared >= other.lengthSquared;
     } else {
-      return this.lengthSquared >= new Vec(other.x, other.y).lengthSquared;
+      return this.lengthSquared >= Vec.coerce(other).lengthSquared;
     }
   }
 
@@ -109,7 +113,7 @@ export class Vec implements IVec {
     } else if (other instanceof Vec) {
       return this.lengthSquared < other.lengthSquared;
     } else {
-      return this.lengthSquared < new Vec(other.x, other.y).lengthSquared;
+      return this.lengthSquared < Vec.coerce(other).lengthSquared;
     }
   }
 
@@ -121,7 +125,7 @@ export class Vec implements IVec {
     } else if (other instanceof Vec) {
       return this.lengthSquared <= other.lengthSquared;
     } else {
-      return this.lengthSquared <= new Vec(other.x, other.y).lengthSquared;
+      return this.lengthSquared <= Vec.coerce(other).lengthSquared;
     }
   }
 

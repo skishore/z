@@ -65,6 +65,10 @@ export class Rect {
     this._size = new Vec(Math.abs(width), Math.abs(height));
   }
 
+  static posAndSize(pos: IVec, size: IVec) {
+    return new Rect(pos.x, pos.y, size.x, size.y);
+  }
+
   // Creates a new rectangle a single column in width, as tall as [size],
   // with its top left corner at [pos].
   static column(x: number, y: number, size: number) {

@@ -21,15 +21,15 @@ export class Array2D<T> {
   private _elements: Array<T>;
 
   // Creates a new array of the given [size] with its elements set to [value].
-  constructor(size: IVec, value?: T) {
-    this._size = new Vec(size.x, size.y);
+  constructor(size: IVec, value: T) {
+    this._size = Vec.coerce(size);
     this._elements = new Array<T>(size.x * size.y).fill(value);
   }
 
   // Creates a new array of the given [size] with its elements initialized by
   // calling the [generator] function.
   static generated<U>(size: Vec, generator: _NullaryGenerator<U>) {
-    const result = new Array2D<U>(size);
+    const result = new Array2D<U>(size, undefined);
     result.generate(generator);
     return result;
   }
