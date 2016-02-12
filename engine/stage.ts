@@ -2,7 +2,7 @@ import {Array2D} from '../piecemeal/array2d';
 import {Direction} from '../piecemeal/direction';
 import {Nil, nil} from '../piecemeal/nil';
 import {rng} from '../piecemeal/rng';
-import {IVec, Vec} from '../piecemeal/vec';
+import {Vec} from '../piecemeal/vec';
 
 import {Flow} from './ai/flow';
 
@@ -37,15 +37,15 @@ export class Stage {
   get actors() { return this._actors; }
   get currentActor() {return this._actors[this._currentActorIndex]; }
 
-  Stage(size: IVec, game: Game) {
+  Stage(size: Vec, game: Game) {
     this.game = game;
     this.tiles = Array2D.generated(size, () => new Tile());
     this._fov = FovConstructor(); // new Fov(game);
   }
 
-  getTile(pos: IVec) { return this.tiles.get(pos); }
+  getTile(pos: Vec) { return this.tiles.get(pos); }
 
-  setTile(pos: IVec, tile: Tile) {
+  setTile(pos: Vec, tile: Tile) {
     this.tiles.set(pos, tile);
     this.dirtyVisibility();
   }
@@ -108,7 +108,7 @@ export class Stage {
 
   /// Gets the number of tiles to walk from [pos] to the [Hero]'s current
   /// position taking into account which tiles are traversable.
-  getHeroDistanceTo(pos: IVec) {
+  getHeroDistanceTo(pos: Vec) {
     this._refreshDistances();
     return this._heroPaths.getDistance(pos);
   }
@@ -133,14 +133,14 @@ export class Stage {
     return best;
   }
 
-  spawnMonster(breed: Breed, pos: IVec) {
+  spawnMonster(breed: Breed, pos: Vec) {
     const monsters = new Array<Actor>();
     /* tslint:disable:no-bitwise */
     const count = rng.triangle(
         breed.numberInGroup, (breed.numberInGroup / 2) | 0);
     /* tslint:enable */
 
-    const addMonster = (target: IVec) => {
+    const addMonster = (target: Vec) => {
       const monster = <Actor>breed.spawn(game, target);
       this.addActor(monster);
       monsters.push(monster);

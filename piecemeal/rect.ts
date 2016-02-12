@@ -1,4 +1,4 @@
-import {IVec, Vec} from './vec';
+import {Vec} from './vec';
 
 // A two-dimensional immutable rectangle with integer coordinates.
 //
@@ -65,7 +65,7 @@ export class Rect {
     this._size = new Vec(Math.abs(width), Math.abs(height));
   }
 
-  static posAndSize(pos: IVec, size: IVec) {
+  static posAndSize(pos: Vec, size: Vec) {
     return new Rect(pos.x, pos.y, size.x, size.y);
   }
 
@@ -104,13 +104,13 @@ export class Rect {
 
   // Returns a new [Vec] that is as near to [point] as possible while still
   // being in bounds.
-  clamp(point: IVec) {
+  clamp(point: Vec) {
     const x = Math.max(this.left, Math.min(point.x, this.right));
     const y = Math.max(this.top, Math.min(point.x, this.bottom));
     return new Vec(x, y);
   }
 
-  contains(point: IVec) {
+  contains(point: Vec) {
     if (point.x < this.left) return false;
     if (point.x >= this.right) return false;
     if (point.y < this.top) return false;

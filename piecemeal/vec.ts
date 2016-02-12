@@ -1,23 +1,18 @@
-// An interface provided for convenience so that clients can pass an [Object]
-// [x] and [y] properties to any [Vec] method.
-export interface IVec {
-  x: number;
-  y: number;
-}
-
 // A class representing a 2-dimensional vector. Provides arithmetic operations
 // and a base classe for [Direction].
-export class Vec implements IVec {
+export class Vec {
   static get zero() { return this._zero; }
   private static _zero = new Vec(0, 0);
 
   get x() { return this._x; }
   get y() { return this._y; }
 
-  constructor(private _x: number, private _y: number) {}
+  private _x: number;
+  private _y: number;
 
-  static coerce(pos: IVec) {
-    return pos instanceof Vec ? pos : new Vec(pos.x, pos.y);
+  constructor(_x: number, _y: number) {
+    this._x = Math.round(_x);
+    this._y = Math.round(_y);
   }
 
   // Gets the area of a [Rect] whose corners are (0, 0) and this Vec.
@@ -64,7 +59,7 @@ export class Vec implements IVec {
   //  *  If [other] is an [int], adds that value to both coordinates.
   //
   // Any other type is an error.
-  add(other: IVec) {
+  add(other: Vec) {
     return new Vec(this._x + other.x, this._y + other.y);
   }
 
@@ -75,63 +70,63 @@ export class Vec implements IVec {
   //  *  If [other] is an [int], subtracts that value from both coordinates.
   //
   // Any other type is an error.
-  subtract(other: IVec) {
+  subtract(other: Vec) {
     return new Vec(this._x - other.x, this._y - other.y);
   }
 
-  equals(other: IVec) {
+  equals(other: Vec) {
     return this._x === other.x && this._y === other.y;
   }
 
   // Returns `true` if the magnitude of this vector is greater than [other].
-  gt(other: IVec|Number) {
+  gt(other: Vec|Number) {
     if (other instanceof Number) {
       return this.lengthSquared > other;
     } else if (other instanceof Vec) {
       return this.lengthSquared > other.lengthSquared;
     } else {
-      return this.lengthSquared > Vec.coerce(other).lengthSquared;
+      return this.lengthSquared > other.lengthSquared;
     }
   }
 
   // Returns `true` if the magnitude of this vector is greater than or equal
   // to [other].
-  ge(other: IVec|Number) {
+  ge(other: Vec|Number) {
     if (other instanceof Number) {
       return this.lengthSquared >= other;
     } else if (other instanceof Vec) {
       return this.lengthSquared >= other.lengthSquared;
     } else {
-      return this.lengthSquared >= Vec.coerce(other).lengthSquared;
+      return this.lengthSquared >= other.lengthSquared;
     }
   }
 
   // Returns `true` if the magnitude of this vector is less than [other].
-  lt(other: IVec|Number) {
+  lt(other: Vec|Number) {
     if (other instanceof Number) {
       return this.lengthSquared < other;
     } else if (other instanceof Vec) {
       return this.lengthSquared < other.lengthSquared;
     } else {
-      return this.lengthSquared < Vec.coerce(other).lengthSquared;
+      return this.lengthSquared < other.lengthSquared;
     }
   }
 
   // Returns `true` if the magnitude of this vector is less than or equal to
   // [other].
-  le(other: IVec|Number) {
+  le(other: Vec|Number) {
     if (other instanceof Number) {
       return this.lengthSquared <= other;
     } else if (other instanceof Vec) {
       return this.lengthSquared <= other.lengthSquared;
     } else {
-      return this.lengthSquared <= Vec.coerce(other).lengthSquared;
+      return this.lengthSquared <= other.lengthSquared;
     }
   }
 
   // Returns true if the pos is contained in a half-inclusive rectangle between
   // this [Vec] and (0, 0)
-  contains(pos: IVec) {
+  contains(pos: Vec) {
     if (pos.x < Math.min(0, this._x)) return false;
     if (pos.x >= Math.max(0, this._x)) return false;
     if (pos.y < Math.min(0, this._y)) return false;
@@ -139,20 +134,20 @@ export class Vec implements IVec {
     return true;
   }
 
-  /// Returns a new [Vec] with the absolute value of the coordinates of this
-  /// one.
+  // Returns a new [Vec] with the absolute value of the coordinates of this
+  // one.
   abs() { return new Vec(Math.abs(this._x), Math.abs(this._y)); }
 
-  /// Returns a new [Vec] whose coordinates are this one's translated by [x] and
-  /// [y].
+  // Returns a new [Vec] whose coordinates are this one's translated by [x] and
+  // [y].
   offset(x: number, y: number) { return new Vec(this._x + x, this._y + y); }
 
-  /// Returns a new [Vec] whose coordinates are this one's but with the X
-  /// coordinate translated by [x].
+  // Returns a new [Vec] whose coordinates are this one's but with the X
+  // coordinate translated by [x].
   offsetX(x: number) { return new Vec(this._x + x, this._y); }
 
-  /// Returns a new [Vec] whose coordinates are this one's but with the Y
-  /// coordinate translated by [y].
+  // Returns a new [Vec] whose coordinates are this one's but with the Y
+  // coordinate translated by [y].
   offsetY(y: number) { return new Vec(this._x, this._y + y); }
 
   get hash() { return `${this._x},${this._y}`; }

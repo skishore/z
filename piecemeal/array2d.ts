@@ -1,11 +1,11 @@
 import {Rect} from './rect';
-import {IVec, Vec} from './vec';
+import {Vec} from './vec';
 
 type _NullaryGenerator<T> = () => T;
 
 // TODO(skishore): Support other generator types. It's tricky because
 // Typescript does not have good support for instanceof with functions.
-// type _VecGenerator<T> = (pos: IVec) => T;
+// type _VecGenerator<T> = (pos: Vec) => T;
 // type _CoordGenerator<T> = (x: number, y: number) => T;
 
 // A two-dimensional fixed-size array of elements of type [T].
@@ -21,27 +21,27 @@ export class Array2D<T> {
   private _elements: Array<T>;
 
   // Creates a new array of the given [size] with its elements set to [value].
-  constructor(size: IVec, value: T) {
-    this._size = Vec.coerce(size);
+  constructor(size: Vec, value: T) {
+    this._size = size;
     this._elements = new Array<T>(size.x * size.y).fill(value);
   }
 
   // Creates a new array of the given [size] with its elements initialized by
   // calling the [generator] function.
-  static generated<U>(size: IVec, generator: _NullaryGenerator<U>) {
+  static generated<U>(size: Vec, generator: _NullaryGenerator<U>) {
     const result = new Array2D<U>(size, undefined);
     result.generate(generator);
     return result;
   }
 
   // Gets the element at [pos].
-  get(pos: IVec) {
+  get(pos: Vec) {
     if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
     return this._elements[pos.y * this._size.x + pos.x];
   }
 
   // Sets the element at [pos].
-  set(pos: IVec, value: T) {
+  set(pos: Vec, value: T) {
     if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
     this._elements[pos.y * this._size.x + pos.x] = value;
   }

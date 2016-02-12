@@ -3,7 +3,7 @@ import {Direction} from '../../piecemeal/direction';
 import {Nil, nil} from '../../piecemeal/nil';
 import {Rect} from '../../piecemeal/rect';
 import {rng} from '../../piecemeal/rng';
-import {IVec, Vec} from '../../piecemeal/vec';
+import {Vec} from '../../piecemeal/vec';
 
  import {Stage} from '../stage';
 
@@ -46,7 +46,7 @@ export class Flow {
   get start() { return this._start; }
 
   constructor(
-      stage: Stage, start: IVec, {maxDistance, canOpenDoors, ignoreActors}:
+      stage: Stage, start: Vec, {maxDistance, canOpenDoors, ignoreActors}:
       {maxDistance?: number, canOpenDoors?: boolean, ignoreActors?: boolean}) {
     this._stage = stage;
     this._start = new Vec(start.x, start.y);
@@ -70,7 +70,7 @@ export class Flow {
       height = bottom - top;
     }
 
-    this._distances = new Array2D<number>({x: width, y: height}, _unknown);
+    this._distances = new Array2D<number>(new Vec(width, height), _unknown);
     this._open.push(this._start.subtract(this._offset));
     this._distances.set(this._open[0], 0);
   }
@@ -79,7 +79,7 @@ export class Flow {
   //
   // If there are multiple equidistant matching positions, this method chooses
   // one randomly. If there are none, it returns the starting position.
-  nearestWhere(predicate: (pos: IVec) => boolean) {
+  nearestWhere(predicate: (pos: Vec) => boolean) {
     const results = this._findAllNearestWhere(predicate);
     if (results.length === 0) return this._start;
     return rng.item(results).add(this._offset);
@@ -87,8 +87,8 @@ export class Flow {
 
   // Returns the distance from [_start] to [pos], or [nil] if there is no path
   // between the two locations.
-  getDistance(pos: IVec): number|Nil {
-    const vec = Vec.coerce(pos).subtract(this._offset);
+  getDistance(pos: Vec): number|Nil {
+    const vec = pos.subtract(this._offset);
     if (!this._distances.bounds.contains(vec)) return nil;
     // Lazily search until we reach the tile in question or are blocked.
     while (this._open.length > 0 &&
@@ -102,8 +102,8 @@ export class Flow {
 
   // Returns a random direction from [start] that gets closer to [pos], or
   // [Direction.none] if no such direction exists.
-  directionTo(pos: IVec) {
-    const vec = Vec.coerce(pos).subtract(this._offset);
+  directionTo(pos: Vec) {
+    const vec = pos.subtract(this._offset);
     const directions = this._directionsTo([vec]);
     if (directions.length === 0) return Direction.none;
     return rng.item(directions);
@@ -113,7 +113,7 @@ export class Flow {
   // nearest positions matching [predicate].
   //
   // Returns [Direction.none] if no matching positions were found.
-  directionToNearestWhere(predicate: (pos: IVec) => boolean) {
+  directionToNearestWhere(predicate: (pos: Vec) => boolean) {
     const directions = this.directionsToNearestWhere(predicate);
     if (directions.length === 0) return Direction.none;
     return rng.item(directions);
@@ -123,7 +123,7 @@ export class Flow {
   // positions matching [predicate].
   //
   // Returns an empty list if no matching positions were found.
-  directionsToNearestWhere(predicate: (pos: IVec) => boolean) {
+  directionsToNearestWhere(predicate: (pos: Vec) => boolean) {
     const goals = this._findAllNearestWhere(predicate);
     if (goals.length === 0) return [];
     return this._directionsTo(goals);
@@ -168,7 +168,7 @@ export class Flow {
   // positions meeting the criteria. Returns an empty list if no valid
   // positions are found. Returned positions are local to [_distances], not
   // the [Stage].
-  _findAllNearestWhere(predicate: (pos: IVec) => boolean) {
+  _findAllNearestWhere(predicate: (pos: Vec) => boolean) {
     const goals = new Array<Vec>();
     let nearestDistance = Infinity;
     for (let i = 0; ; i++) {
@@ -232,7 +232,7 @@ export class Flow {
     const tokens = new Array<string>();
     for (let y = 0; y < this._distances.size.y; y++) {
       for (let x = 0; x < this._distances.size.x; x++) {
-        const distance = this._distances.get({x: x, y: y});
+        const distance = this._distances.get(new Vec(x, y));
         if (distance === _unknown) {
           tokens.push('?');
         } else if (distance === _unreachable) {
