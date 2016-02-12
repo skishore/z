@@ -1,2 +1,4 @@
 *.js
 *.swp
+.ensime_cache
+target

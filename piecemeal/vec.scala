@@ -19,21 +19,6 @@ case class Vec(x: Int, y: Int) {
   // Arithmetic operations between two Vecs or between a Vec and an number.
   def +(other: Vec) = Vec(x + other.x, y + other.y)
   def -(other: Vec) = Vec(x - other.x, y - other.y)
-  def *(scale: Double) = Vec((x * scale).toInt, (y * scale).toInt);
-  def /(scale: Double) = Vec((x / scale).toInt, (y / scale).toInt);
-}
-
-case class Rect(pos: Vec, size: Vec) {
-  def left = min(pos.x, pos.x + size.x)
-  def top = min(pos.y, pos.y + size.y)
-  def right = max(pos.x, pos.x + size.x)
-  def bottom = max(pos.y, pos.y + size.y)
-
-  def area = abs(size.area)
-  def center = Vec(pos.x + size.x / 2, pos.y + size.y / 2)
-}
-
-object Rect {
-  def column(x: Int, y: Int, height: Int) = Rect(Vec(x, y), Vec(1, height))
-  def row(x: Int, y: Int, width: Int) = Rect(Vec(x, y), Vec(width, 1))
+  def *(scale: Double) = Vec((x * scale).toInt, (y * scale).toInt)
+  def /(scale: Double) = Vec((x / scale).toInt, (y / scale).toInt)
 }
