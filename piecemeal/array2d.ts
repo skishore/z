@@ -36,13 +36,17 @@ export class Array2D<T> {
 
   // Gets the element at [pos].
   get(pos: Vec) {
-    if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
+    if (!this.bounds.contains(pos)) {
+      throw new Error(`${pos} is not in ${this.bounds}.`);
+    }
     return this._elements[pos.y * this._size.x + pos.x];
   }
 
   // Sets the element at [pos].
   set(pos: Vec, value: T) {
-    if (!this.bounds.contains(pos)) throw `${pos} is not in ${this.bounds}.`;
+    if (!this.bounds.contains(pos)) {
+      throw new Error(`${pos} is not in ${this.bounds}.`);
+    }
     this._elements[pos.y * this._size.x + pos.x] = value;
   }
 

@@ -20,6 +20,9 @@ export class Vec {
   // Returns a negative area if one of the Vec's coordinates are negative.
   get area() { return this._x * this._y; }
 
+  // Returns a hash for this vector that is suitable as an Object key.
+  get hash() { return `${this._x},${this._y}`; }
+
   // Gets the rook length of the Vec, which is the number of squares a rook on
   // a chessboard would need to move from (0, 0) to reach the endpoint of the
   // Vec. Also known as Manhattan or taxicab distance.
@@ -39,43 +42,32 @@ export class Vec {
   // than this.
   get length() { return Math.sqrt(this.lengthSquared); }
 
-  // Scales this Vec by [other].
+  add(other: Vec) { return new Vec(this._x + other.x, this._y + other.y); }
+
+  subtract(other: Vec) { return new Vec(this._x - other.x, this._y - other.y); }
+
+  // Returns true if other is in the half-open rect from (0, 0) to this [Vec].
+  contains(other: Vec) {
+    return (0 <= other.x && other.x < this._x &&
+            0 <= other.y && other.y < this._y);
+  }
+
+  distance(other: Vec) { return this.subtract(other).length; }
+
+  equals(other: Vec) { return this._x === other.x && this._y === other.y; }
+
+  // Scales this Vec by the scalar [other].
   scale(other: number) {
     /* tslint:disable:no-bitwise */
     return new Vec((this._x * other) | 0, (this._y * other) | 0);
     /* tslint:enable */
   }
 
-  // Divides this Vec by [other].
+  // Divides this Vec by the scalar [other].
   divide(other: number) {
     /* tslint:disable:no-bitwise */
     return new Vec((this._x / other) | 0, (this._y / other) | 0);
     /* tslint:enable */
-  }
-
-  // Adds [other] to this Vec.
-  //
-  //  *  If [other] is a [Vec] or [Direction], adds each pair of coordinates.
-  //  *  If [other] is an [int], adds that value to both coordinates.
-  //
-  // Any other type is an error.
-  add(other: Vec) {
-    return new Vec(this._x + other.x, this._y + other.y);
-  }
-
-  // Substracts [other] from this Vec.
-  //
-  //  *  If [other] is a [Vec] or [Direction], subtracts each pair of
-  //     coordinates.
-  //  *  If [other] is an [int], subtracts that value from both coordinates.
-  //
-  // Any other type is an error.
-  subtract(other: Vec) {
-    return new Vec(this._x - other.x, this._y - other.y);
-  }
-
-  equals(other: Vec) {
-    return this._x === other.x && this._y === other.y;
   }
 
   // Returns `true` if the magnitude of this vector is greater than [other].
@@ -83,8 +75,6 @@ export class Vec {
     if (other instanceof Number) {
       return this.lengthSquared > other;
     } else if (other instanceof Vec) {
-      return this.lengthSquared > other.lengthSquared;
-    } else {
       return this.lengthSquared > other.lengthSquared;
     }
   }
@@ -96,8 +86,6 @@ export class Vec {
       return this.lengthSquared >= other;
     } else if (other instanceof Vec) {
       return this.lengthSquared >= other.lengthSquared;
-    } else {
-      return this.lengthSquared >= other.lengthSquared;
     }
   }
 
@@ -106,8 +94,6 @@ export class Vec {
     if (other instanceof Number) {
       return this.lengthSquared < other;
     } else if (other instanceof Vec) {
-      return this.lengthSquared < other.lengthSquared;
-    } else {
       return this.lengthSquared < other.lengthSquared;
     }
   }
@@ -119,38 +105,20 @@ export class Vec {
       return this.lengthSquared <= other;
     } else if (other instanceof Vec) {
       return this.lengthSquared <= other.lengthSquared;
-    } else {
-      return this.lengthSquared <= other.lengthSquared;
     }
   }
 
-  // Returns true if the pos is contained in a half-inclusive rectangle between
-  // this [Vec] and (0, 0)
-  contains(pos: Vec) {
-    if (pos.x < Math.min(0, this._x)) return false;
-    if (pos.x >= Math.max(0, this._x)) return false;
-    if (pos.y < Math.min(0, this._y)) return false;
-    if (pos.y >= Math.max(0, this._y)) return false;
-    return true;
-  }
-
-  // Returns a new [Vec] with the absolute value of the coordinates of this
-  // one.
+  // Returns a new [Vec] with the absolute value of the coordinates of this one.
   abs() { return new Vec(Math.abs(this._x), Math.abs(this._y)); }
 
-  // Returns a new [Vec] whose coordinates are this one's translated by [x] and
-  // [y].
+  // Returns a new [Vec] translated from this one by [x] and [y].
   offset(x: number, y: number) { return new Vec(this._x + x, this._y + y); }
 
-  // Returns a new [Vec] whose coordinates are this one's but with the X
-  // coordinate translated by [x].
+  // Returns a new [Vec] translated from this one by [x].
   offsetX(x: number) { return new Vec(this._x + x, this._y); }
 
-  // Returns a new [Vec] whose coordinates are this one's but with the Y
-  // coordinate translated by [y].
+  // Returns a new [Vec] translated from this one by [y].
   offsetY(y: number) { return new Vec(this._x, this._y + y); }
-
-  get hash() { return `${this._x},${this._y}`; }
 
   toString() { return `Vec(${this._x}, ${this._y})`; }
 }
