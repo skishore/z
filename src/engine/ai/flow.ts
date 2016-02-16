@@ -5,7 +5,7 @@ import {Rect} from '../../piecemeal/rect';
 import {rng} from '../../piecemeal/rng';
 import {Vec} from '../../piecemeal/vec';
 
- import {Stage} from '../stage';
+ import {IActor, Stage} from '../stage';
 
 const _unknown = -2;
 const _unreachable = -1;
@@ -19,7 +19,7 @@ const _unreachable = -1;
 // as far as needed to answer the query. In practice, this means it often does
 // less than 10% of the iterations of a full eager search.
 export class Flow {
-  private _stage: Stage;
+  private _stage: Stage<IActor>;
   private _start: Vec;
   private _canOpenDoors: boolean;
   private _ignoreActors: boolean;
@@ -46,25 +46,25 @@ export class Flow {
   get start() { return this._start; }
 
   constructor(
-      stage: Stage, start: Vec, {maxDistance, canOpenDoors, ignoreActors}:
+      stage: Stage<IActor>, start: Vec,
+      {maxDistance, canOpenDoors, ignoreActors}:
       {maxDistance?: number, canOpenDoors?: boolean, ignoreActors?: boolean}) {
     this._stage = stage;
     this._start = new Vec(start.x, start.y);
     this._canOpenDoors = canOpenDoors || false;
     this._ignoreActors = ignoreActors || false;
 
-    // We inset the stage by one tile because we assume the edges are blocked.
-    this._offset = new Vec(1, 1);
-    let width = this._stage.size.x - 2;
-    let height = this._stage.size.y - 2;
+    this._offset = Vec.zero;
+    let width = this._stage.size.x;
+    let height = this._stage.size.y;
 
     if (maxDistance !== undefined) {
-      const left = Math.max(1, this._start.x - maxDistance);
-      const top = Math.max(1, this._start.y - maxDistance);
+      const left = Math.max(0, this._start.x - maxDistance);
+      const top = Math.max(0, this._start.y - maxDistance);
       const right = Math.min(
-        this._stage.size.x - 1, this._start.x + maxDistance + 1);
+          this._stage.size.x, this._start.x + maxDistance + 1);
       const bottom = Math.min(
-        this._stage.size.y - 1, this._start.y + maxDistance + 1);
+          this._stage.size.y, this._start.y + maxDistance + 1);
       this._offset = new Vec(left, top);
       width = right - left;
       height = bottom - top;
@@ -183,7 +183,9 @@ export class Flow {
       if (!predicate(pos.add(this._offset))) continue;
       // Since pos was from _found, it should be reachable.
       const distance = this._distances.get(pos);
-      if (distance >= 0) throw `${pos} was in _found but was unreachable.`;
+      if (distance < 0) {
+        throw new Error(`${pos} was in _found but was unreachable.`);
+      }
 
       if (goals.length === 0 || distance === nearestDistance) {
         // Consider all goals at the nearest distance.

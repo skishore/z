@@ -1,8 +1,10 @@
-import {IActor, Stage, TileType} from './engine/stage';
 import {Direction} from './piecemeal/direction';
 import {Nil, nil} from './piecemeal/nil';
 import {rng} from './piecemeal/rng';
 import {Vec} from './piecemeal/vec';
+
+import {Flow} from './engine/ai/flow';
+import {IActor, Stage, TileType} from './engine/stage';
 
 /* tslint:disable */
 declare const process: any;
@@ -214,7 +216,7 @@ class Pokemon extends Actor {
 
   get glyph() { return this.breed[0].toLowerCase(); }
 
-  get speed() { return 0.2; }
+  get speed() { return 0.02; }
 
   _allyWith(trainer: Trainer|Nil) {
     this.trainer = trainer;
@@ -236,9 +238,18 @@ class Pokemon extends Actor {
       if (targets.length > 0) {
         distance = 12;
         target = targets[0];
-        if (this.position.distance(target.position) < distance) {
-          return new ExecuteOnceBehavior(new FireAction(target.position));
-        }
+      }
+    }
+
+    if (target !== this.trainer) {
+      // TODO(skishore): We should check whether the move is charged.
+      if (this._isValidRangedPosition(
+              this.position, target.position, distance)) {
+        return new ExecuteOnceBehavior(new FireAction(target.position));
+      }
+      const direction = this._findRangedPath(target.position, distance);
+      if (direction instanceof Direction) {
+        return new ExecuteOnceBehavior(new MovementAction(direction));
       }
     }
 
@@ -255,6 +266,58 @@ class Pokemon extends Actor {
     }
     return new MoveToPositionBehavior(this, this.position, 2);
   }
+
+  // Tries to find a path a desirable position for using a ranged [Move].
+  //
+  // Returns the [Direction] to take along the path. Returns [Direction.NONE]
+  // if the monster's current position is a good ranged spot. Returns `null`
+  // if no good ranged position could be found.
+  private _findRangedPath(target: Vec, range: number): Direction|Nil {
+    let best: Direction;
+    let bestDistance = 0;
+
+    if (this._isValidRangedPosition(this.position, target, range)) {
+      best = Direction.none;
+      bestDistance = this.position.distance(target);
+    }
+
+    for (const dir of Direction.all) {
+      const pos = this.position.add(dir);
+      if (!this.stage.isSquareFree(pos)) continue;
+      if (!this._isValidRangedPosition(pos, target, range)) continue;
+      const distance = pos.distance(target);
+      if (distance > bestDistance) {
+        best = dir;
+        bestDistance = distance;
+      }
+    }
+
+    if (best) return best;
+
+    // We'll need to actually pathfind to reach a good vantage point.
+    const flow = new Flow(this.stage, this.position, {maxDistance: range});
+    const result = flow.directionToNearestWhere(
+        (pos: Vec) => this._isValidRangedPosition(pos, target, range));
+    return result.equals(Direction.none) ? nil : result;
+  }
+
+  private _isValidRangedPosition(
+      pos: Vec, target: Vec, range: number): boolean {
+    if (pos.distance(target) >= range) return false;
+    const actor = this.stage.actorAt(pos);
+    if (actor instanceof Actor && actor !== this) return false;
+
+    // TODO(skishore): De-deduplicate this line-of-sight computation with the
+    // one in FireAction.
+    const diff = target.subtract(pos);
+    for (let i = 0; i <= diff.length; i++) {
+      const step = pos.add(diff.scale(i / diff.length));
+      if (step.equals(pos)) continue;
+      if (step.equals(target)) return true;
+      if (this.stage.actorAt(step) instanceof Actor) return false;
+    }
+    return true;
+  };
 }
 
 class Trainer extends Actor {

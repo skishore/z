@@ -11,7 +11,7 @@ export class Stage<Actor extends IActor> {
   private _actors = new Array<Actor>();
   private _actorAtTile: {[key: string]: Actor} = {};
   private _currentActorIndex = 0;
-  private _defaultTileType: TileType;
+  private _edgeTile: Tile;
 
   get size() { return this.tiles.size; }
   get bounds() { return this.tiles.bounds; }
@@ -21,7 +21,8 @@ export class Stage<Actor extends IActor> {
 
   constructor(size: Vec, defaultTileType: TileType) {
     this.tiles = Array2D.generated(size, () => new Tile(defaultTileType));
-    this._defaultTileType = defaultTileType;
+    this._edgeTile = new Tile(new TileType('boundary', false /* passable */,
+                                           false /* traversable */, '?'));
   }
 
   isSquareFree(pos: Vec) {
@@ -29,8 +30,7 @@ export class Stage<Actor extends IActor> {
   }
 
   getTile(pos: Vec) {
-    return this.size.contains(pos) ? this.tiles.get(pos) :
-           new Tile(this._defaultTileType);
+    return this.size.contains(pos) ? this.tiles.get(pos) : this._edgeTile;
   }
 
   setTile(pos: Vec, tile: Tile) { this.tiles.set(pos, tile); }

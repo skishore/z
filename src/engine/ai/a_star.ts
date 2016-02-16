@@ -4,7 +4,7 @@ import {Vec} from '../../piecemeal/vec';
 
 import {kAStarDoorCost, kAStarFloorCost,
         kAStarOccupiedCost, kAStarStraightCost, } from '../option';
-import {Stage} from '../stage';
+import {IActor, Stage} from '../stage';
 
 class PathResult {
   // The [Direction] to move on the first step of the path.
@@ -22,12 +22,12 @@ export class AStar {
   // steps from [start]. Returns the [Direction] of the first step from [start]
   // along that path (or [Direction.none] if it determines there is no path
   // possible.
-  static findDirection(stage: Stage, start: Vec, end: Vec,
+  static findDirection(stage: Stage<IActor>, start: Vec, end: Vec,
                        maxLength: number, canOpenDoors: boolean) {
     return this.findPath(stage, start, end, maxLength, canOpenDoors).direction;
   }
 
-  static findPath(stage: Stage, start: Vec, end: Vec,
+  static findPath(stage: Stage<IActor>, start: Vec, end: Vec,
                   maxLength: number, canOpenDoors: boolean) {
     let path = AStar._findPath(stage, start, end, maxLength, canOpenDoors);
     if (path instanceof PathNode) {
@@ -42,7 +42,7 @@ export class AStar {
   }
 
   // Internal helper used to implement pathing. Returns a PathNode or void.
-  static _findPath(stage: Stage, istart: Vec, iend: Vec,
+  static _findPath(stage: Stage<IActor>, istart: Vec, iend: Vec,
                    maxLength: number, canOpenDoors: boolean): PathNode|Nil {
     // TODO(skishore): Use a heap data structure here.
     const start: Vec = new Vec(istart.x, istart.y);
@@ -81,7 +81,7 @@ export class AStar {
             // opened by someone else.
             stepCost = kAStarDoorCost;
           }
-        } else if (stage.actorAt(neighbor) instanceof Actor) {
+        } else if (!(stage.actorAt(neighbor) instanceof Nil)) {
           stepCost = kAStarOccupiedCost;
         }
 
