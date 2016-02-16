@@ -5,11 +5,10 @@ import {rng} from './piecemeal/rng';
 import {Vec} from './piecemeal/vec';
 
 /* tslint:disable */
+declare const process: any;
 declare function require(name: string): any;
 const _ = require('lodash');
 const gaussian = require('gaussian');
-
-declare const process: any;
 /* tslint:enable */
 
 const assert = (condition: boolean, message?: any) => {
@@ -96,7 +95,9 @@ class FireAction extends Action {
         return result;
       }
     }
+    /* tslint:disable:no-unused-variable */
     for (let i of _.range(2)) {
+    /* tslint:enable */
       result = this._executeOnce(effects);
       if (result.success) {
         break;
@@ -242,7 +243,9 @@ class Pokemon extends Actor {
     }
 
     const distribution = gaussian(0, distance);
+    /* tslint:disable:no-unused-variable */
     for (let i of _.range(8)) {
+    /* tslint:enable */
       const offset = new Vec(Math.round(distribution.ppf(Math.random())),
                              Math.round(distribution.ppf(Math.random())));
       const position = target.position.add(offset);
@@ -560,7 +563,7 @@ class Graphics {
   private _effects = new Array<Effect>();
 
   constructor(stage: Stage<Actor>, handler: any) {
-    /* tslint:disable */
+    /* tslint:disable:no-require-imports */
     const blessed = require('blessed');
     /* tslint:enable */
     this._screen = blessed.screen({smartCSR: true});
