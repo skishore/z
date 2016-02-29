@@ -1,23 +1,22 @@
 {
     "compilerOptions": {
-        "target": "es5",
+        "target": "es6",
         "module": "commonjs",
         "moduleResolution": "node",
-        "isolatedModules": false,
-        "jsx": "react",
+        "declaration": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "declaration": false,
+        "isolatedModules": false,
+        "jsx": "react",
         "noImplicitAny": true,
-        "removeComments": true,
+        "noImplicitReturns": true,
         "noLib": false,
         "preserveConstEnums": true,
+        "removeComments": true,
         "suppressImplicitAnyIndexErrors": true
     },
     "filesGlob": [
-        "**/*.ts",
-        "**/*.tsx",
-        "!node_modules/**"
+        "**/*.ts"
     ],
     "compileOnSave": true,
     "buildOnSave": false,

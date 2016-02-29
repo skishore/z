@@ -79,21 +79,17 @@ class ActionResult {
 }
 
 class FireAction extends Action {
-  source: Vec;
-  last: Vec;
-  target: Vec;
-  index = 0;
+  private _source: Vec;
+  private _last: Vec;
+  private _index = 0;
 
-  constructor(target: Vec) {
-    super();
-    this.target = target;
-  }
+  constructor(private _target: Vec) { super(); }
 
   execute(effects: Array<Effect>) {
     let result = ActionResult.failed();
-    if (!this.source) {
-      this.source = this.last = this.actor.position;
-      if (this.source.equals(this.target)) {
+    if (!this._source) {
+      this._source = this._last = this.actor.position;
+      if (this._source.equals(this._target)) {
         return result;
       }
     }
@@ -109,11 +105,11 @@ class FireAction extends Action {
   }
 
   _executeOnce(effects: Array<Effect>) {
-    let position = this.last;
-    const diff = this.target.subtract(this.source);
-    while (position.equals(this.last)) {
-      this.index += 1;
-      position = this.source.add(diff.scale(this.index / diff.length));
+    let position = this._last;
+    const diff = this._target.subtract(this._source);
+    while (position.equals(this._last)) {
+      this._index += 1;
+      position = this._source.add(diff.scale(this._index / diff.length));
     }
     if (!this.stage.size.contains(position)) {
       return ActionResult.success();
@@ -153,6 +149,7 @@ class MovementAction extends Action {
         this.logForPlayer(`You switch places with ${other.description}.`);
       } else {
         this.logForPlayer(`You bump into ${other.description}.`);
+        return ActionResult.failed();
       }
       return ActionResult.success();
     }
@@ -186,7 +183,7 @@ class Actor implements IActor {
     while (!this.behavior || this.behavior.satisfied) {
       this.behavior = this._defaultBehavior();
     }
-    return this.behavior.ready ? this.behavior.nextAction() : nil;
+    return this.behavior.nextAction();
   }
 
   _defaultBehavior(): Behavior {
@@ -207,8 +204,8 @@ class Pokemon extends Actor {
 
   get description() {
     let allegiance = '';
-    if (this.trainer instanceof Trainer && !(this.trainer instanceof Player)) {
-      const trainer = <Trainer>this.trainer;
+    const trainer = this.trainer;
+    if (trainer instanceof Trainer && !(trainer instanceof Player)) {
       allegiance = `${trainer.description}'s `;
     }
     return `${allegiance}${this.breed}`;
@@ -234,7 +231,7 @@ class Pokemon extends Actor {
 
     if (this.breed === 'Diglett' || this.breed === 'Squirtle') {
       const targets = this.stage.actors.filter(
-          (x: Actor) => x instanceof Pokemon && x.trainer !== this.trainer);
+          (x) => x instanceof Pokemon && x.trainer !== this.trainer);
       if (targets.length > 0) {
         distance = 12;
         target = targets[0];
@@ -339,11 +336,9 @@ class Player extends Trainer {
 // The various Behaviors follow.
 
 class Behavior {
-  get ready() { return true; }
-
   get satisfied() { return false; }
 
-  nextAction() {
+  nextAction(): Action|Nil {
     assert(false, 'nextAction was not implemented!');
     return new Action;
   }
@@ -352,10 +347,8 @@ class Behavior {
 class BlockOnInputBehavior extends Behavior {
   action: Action|Nil = nil;
 
-  get ready() { return this.action instanceof Action; }
-
   nextAction() {
-    const action = <Action>this.action;
+    const action = this.action;
     this.action = nil;
     return action;
   }
@@ -367,7 +360,7 @@ class ExecuteOnceBehavior extends BlockOnInputBehavior {
     this.action = action;
   }
 
-  get satisfied() { return !this.ready; }
+  get satisfied() { return this.action instanceof Nil; }
 }
 
 class MoveRandomlyBehavior extends Behavior {
@@ -398,7 +391,7 @@ class MoveToPositionBehavior extends Behavior {
     this._index += 1;
     let distance = this._actor.position.distance(this._target);
     let step = Direction.none;
-    Direction.all.map((direction: Direction) => {
+    Direction.all.map((direction) => {
       const position = this._actor.position.add(direction);
       if (this._actor.stage.actorAt(position) instanceof Nil) {
         const proposal = this._target.distance(position);
@@ -468,17 +461,17 @@ class Game {
       '.': Direction.none,
     };
     const behavior = this.player.behavior;
-    if (!(behavior instanceof BlockOnInputBehavior)) {
-      return false;
-    } else if (behavior.ready || this._action instanceof Action) {
-      return false;
+    if (this._action instanceof Nil &&
+        behavior instanceof BlockOnInputBehavior &&
+        behavior.action instanceof Nil) {
+      const lower = ch === '>' ? '.' : ch.toLowerCase();
+      if (moves[ch]) {
+        behavior.action = new MovementAction(moves[ch]);
+      } else if (moves[lower]) {
+        this.player.behavior = new RunBehavior(moves[lower]);
+      }
     }
-    const lower = ch === '>' ? '.' : ch.toLowerCase();
-    if (moves[ch]) {
-      (<BlockOnInputBehavior>behavior).action = new MovementAction(moves[ch]);
-    } else if (moves[lower]) {
-      this.player.behavior = new RunBehavior(moves[lower]);
-    }
+    return false;
   }
 
   log(message: string) {
@@ -499,8 +492,8 @@ class Game {
     const update: IGameResult = {advanced: false, effects: []};
     while (true) {
       // Consume existing actions, if any are available.
-      if (this._action instanceof Action) {
-        const action = <Action>this._action;
+      const action = this._action;
+      if (action instanceof Action) {
         const actor = action.actor;
         const result = action.execute(update.effects);
         if (result.alternate instanceof Action) {
@@ -528,12 +521,14 @@ class Game {
       if (this._action instanceof Nil) {
         const actor = this.stage.currentActor;
         if (actor.timer.ready || actor.timer.wait(-actor.speed)) {
-          this._action = actor.nextAction();
-          if (this._action instanceof Nil) {
+          const action = actor.nextAction();
+          if (action instanceof Action) {
+            action.bind(this, actor);
+            this._action = action;
+          } else {
             assert(actor instanceof Player);
             return update;
           }
-          (<Action>this._action).bind(this, actor);
         } else {
           this.stage.advanceActor();
         }
@@ -650,44 +645,42 @@ class Graphics {
     this._screen.append(this._log);
 
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-    const keys = alphabet.concat(alphabet.map((x: string) => `S-${x}`))
+    const keys = alphabet.concat(alphabet.map((x) => `S-${x}`))
                          .concat(['.', '>']);
     this._screen.key(keys, handler);
     this._screen.key(['C-c', 'escape'], () => {
       return process.exit(0);
     });
 
-    this._buffer = _.range(stage.size.y).map((y: number) =>
+    this._buffer = _.range(stage.size.y).map(() =>
         _.range(stage.size.x).map(() => '.'));
   }
 
   get animated() { return this._effects.length > 0; }
 
   render(stage: Stage<Actor>, log: Array<ILogEntry>, effects: Array<Effect>) {
-    // Render the stage.
+    // Render the stage, with its tiles, actors, and
     for (let y = 0; y < stage.size.y; y++) {
       for (let x = 0; x < stage.size.x; x++) {
-        this._buffer[y][x] = '.';
+        this._buffer[y][x] = stage.getTile(new Vec(x, y)).type.appearance;
       }
     }
     for (let actor of stage.actors) {
       this._buffer[actor.position.y][actor.position.x] = actor.glyph;
     }
     this._effects = this._effects.concat(effects);
-    this._effects = this._effects.filter(
-        (x: Effect) => x._update(this._buffer));
-    this._stage.setContent(this._buffer.map(
-        (x: Array<string>) => x.join('')).join('\n'));
+    this._effects = this._effects.filter((x) => x._update(this._buffer));
+    this._stage.setContent(this._buffer.map((x) => x.join('')).join('\n'));
     // Render the status.
     const status = new Array<string>();
     for (let actor of stage.actors) {
       if (actor instanceof Pokemon && actor.trainer instanceof Player) {
-        ['\n', actor.description, '\n'].map((x: string) => status.push(x));
+        ['\n', actor.description, '\n'].map((x) => status.push(x));
       }
     }
     this._status.setContent(status.join(''));
     // Render the log.
-    this._log.setContent(log.map((entry: ILogEntry) => {
+    this._log.setContent(log.map((entry) => {
       const suffix = entry.count > 1 ? ` (x${entry.count})` : '';
       return `${entry.message}${suffix}`;
     }).join('\n'));
