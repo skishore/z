@@ -3,6 +3,7 @@ import {Nil, nil} from './piecemeal/nil';
 import {rng} from './piecemeal/rng';
 import {Vec} from './piecemeal/vec';
 
+import {AStar} from './engine/ai/a_star';
 import {Flow} from './engine/ai/flow';
 import {IActor, Stage, TileType} from './engine/stage';
 
@@ -277,7 +278,6 @@ class Pokemon extends Actor {
       best = Direction.none;
       bestDistance = this.position.distance(target);
     }
-
     for (const dir of Direction.all) {
       const pos = this.position.add(dir);
       if (!this.stage.isSquareFree(pos)) continue;
@@ -288,13 +288,16 @@ class Pokemon extends Actor {
         bestDistance = distance;
       }
     }
-
     if (best) return best;
 
     // We'll need to actually pathfind to reach a good vantage point.
     const flow = new Flow(this.stage, this.position, {maxDistance: range});
-    const result = flow.directionToNearestWhere(
-        (pos: Vec) => this._isValidRangedPosition(pos, target, range));
+    let result = flow.directionToNearestWhere(
+        (pos) => this._isValidRangedPosition(pos, target, range));
+    if (result.equals(Direction.none)) {
+      result = AStar.findDirection(this.stage, this.position, target,
+                                   false /* canOpenDoors */);
+    }
     return result.equals(Direction.none) ? nil : result;
   }
 

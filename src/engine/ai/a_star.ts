@@ -23,18 +23,20 @@ export class AStar {
   // along that path (or [Direction.none] if it determines there is no path
   // possible.
   static findDirection(stage: Stage<IActor>, start: Vec, end: Vec,
-                       maxLength: number, canOpenDoors: boolean) {
-    return this.findPath(stage, start, end, maxLength, canOpenDoors).direction;
+                       canOpenDoors: boolean, maxLength?: number) {
+    return this.findPath(stage, start, end, canOpenDoors, maxLength).direction;
   }
 
   static findPath(stage: Stage<IActor>, start: Vec, end: Vec,
-                  maxLength: number, canOpenDoors: boolean) {
-    let path = AStar._findPath(stage, start, end, maxLength, canOpenDoors);
+                  canOpenDoors: boolean, maxLength?: number) {
+    let path = AStar._findPath(stage, start, end, canOpenDoors, maxLength);
     if (path instanceof PathNode) {
+      let current = path;
       let length = 1;
-      while (path.parent instanceof PathNode &&
-             (<PathNode>path.parent).parent instanceof PathNode) {
-        [path, length] = [<PathNode>path.parent, length + 1];
+      while (current.parent instanceof PathNode &&
+             (<PathNode>current.parent).parent instanceof PathNode) {
+        current = <PathNode>current.parent;
+        length += 1;
       }
       return new PathResult(path.direction, length);
     }
@@ -42,11 +44,10 @@ export class AStar {
   }
 
   // Internal helper used to implement pathing. Returns a PathNode or void.
-  static _findPath(stage: Stage<IActor>, istart: Vec, iend: Vec,
-                   maxLength: number, canOpenDoors: boolean): PathNode|Nil {
+  static _findPath(stage: Stage<IActor>, start: Vec, end: Vec,
+                   canOpenDoors: boolean, maxLength?: number): PathNode|Nil {
     // TODO(skishore): Use a heap data structure here.
-    const start: Vec = new Vec(istart.x, istart.y);
-    const end: Vec = new Vec(iend.x, iend.y);
+    const maxCost = maxLength === undefined ? 0 : kAStarFloorCost * maxLength;
     const startPath = new PathNode(nil /* parent */, Direction.none,
                                    start, 0, this._heuristic(start, end));
     const open = [startPath];
@@ -55,8 +56,7 @@ export class AStar {
     while (open.length > 0) {
       // Pull out the best potential candidate.
       const current = open.pop();
-      if (current.pos.equals(end) ||
-          current.cost > kAStarFloorCost * maxLength) {
+      if (current.pos.equals(end) || (maxCost > 0 && current.cost > maxCost)) {
         // Found the path or reached the end of the search radius.
         return current;
       }

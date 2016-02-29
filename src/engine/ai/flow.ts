@@ -47,8 +47,8 @@ export class Flow {
 
   constructor(
       stage: Stage<IActor>, start: Vec,
-      {maxDistance, canOpenDoors, ignoreActors}:
-      {maxDistance?: number, canOpenDoors?: boolean, ignoreActors?: boolean}) {
+      {canOpenDoors, ignoreActors, maxDistance}:
+      {canOpenDoors?: boolean, ignoreActors?: boolean, maxDistance?: number}) {
     this._stage = stage;
     this._start = new Vec(start.x, start.y);
     this._canOpenDoors = canOpenDoors || false;
@@ -142,6 +142,11 @@ export class Flow {
       if (walked[pos.hash]) return;
       walked[pos.hash] = true;
 
+      // Lazily search until we reach the tile in question or are blocked.
+      while (this._open.length > 0 && this._distances.get(pos) === _unknown) {
+        this._processNext();
+      }
+
       for (const dir of Direction.all) {
         const here = pos.add(dir);
         if (!this._distances.bounds.contains(here)) continue;
@@ -158,7 +163,7 @@ export class Flow {
     };
 
     // Trace all paths from the goals back to the target.
-    goals.forEach(walkBack);
+    goals.filter((pos) => this._distances.bounds.contains(pos)).map(walkBack);
     return directions;
   }
 
