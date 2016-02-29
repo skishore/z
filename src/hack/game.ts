@@ -9,7 +9,6 @@ import {Actor, Player, Pokemon, Trainer} from './actor';
 import {BlockOnInputBehavior, RunBehavior} from './behavior';
 import {Graphics} from './graphics';
 import {Effect} from './effect';
-import {assert} from './util';
 
 interface IGameResult {
   advanced: boolean;
@@ -97,7 +96,7 @@ export class Game {
         if (result.done) {
           this._action = nil;
           if (result.success || !(actor instanceof Player)) {
-            actor.timer.wait(result.turns);
+            actor.wait(result.turns);
             this.stage.advanceActor();
           }
           if (actor instanceof Player) {
@@ -111,13 +110,12 @@ export class Game {
       // Construct new actions, if any are required.
       if (this._action instanceof Nil) {
         const actor = this.stage.currentActor;
-        if (actor.timer.ready || actor.timer.wait(-actor.speed)) {
+        if (actor.ready()) {
           const action = actor.nextAction();
           if (action instanceof Action) {
             action.bind(this, actor);
             this._action = action;
-          } else {
-            assert(actor instanceof Player);
+          } else if (actor instanceof Player) {
             return update;
           }
         } else {

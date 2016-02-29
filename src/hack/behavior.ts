@@ -82,7 +82,7 @@ export class RunBehavior extends Behavior {
 
   constructor(private _step: Direction) { super(); }
 
-  get satisfied() { return this._index >= 4; }
+  get satisfied() { return this._index >= 8; }
 
   nextAction() {
     this._index += 1;

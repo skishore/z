@@ -23,12 +23,11 @@ export class Actor implements IActor {
   behavior: Behavior;
   position: Vec;
   stage: Stage<Actor>;
-  timer: Timer;
+  private _timer = new Timer;
 
   constructor(position: Vec, stage: Stage<Actor>) {
     this.position = position;
     this.stage = stage;
-    this.timer = new Timer;
     stage.addActor(this);
   }
 
@@ -45,6 +44,15 @@ export class Actor implements IActor {
     return this.behavior.nextAction();
   }
 
+  ready() {
+    if (!this._timer.ready) this._timer.wait(-this.speed);
+    return this._timer.ready;
+  }
+
+  wait(turns: number) {
+    this._timer.wait(turns);
+  }
+
   _defaultBehavior(): Behavior {
     return new MoveRandomlyBehavior;
   }
@@ -53,6 +61,7 @@ export class Actor implements IActor {
 export class Pokemon extends Actor {
   breed: string;
   trainer: Trainer|Nil;
+  private _cooldown = new Timer;
 
   constructor(position: Vec, stage: Stage<Actor>,
               breed: string, trainer: Trainer|Nil) {
@@ -72,7 +81,13 @@ export class Pokemon extends Actor {
 
   get glyph() { return this.breed[0].toLowerCase(); }
 
-  get speed() { return 0.02; }
+  get speed() { return 0.2; }
+
+  ready() {
+    // TODO(skishore): Move the cooldown into a Move object.
+    if (!this._cooldown.ready) this._cooldown.wait(-this.speed / 10);
+    return super.ready();
+  }
 
   _allyWith(trainer: Trainer|Nil) {
     this.trainer = trainer;
@@ -98,9 +113,9 @@ export class Pokemon extends Actor {
     }
 
     if (target !== this.trainer) {
-      // TODO(skishore): We should check whether the move is charged.
-      if (this._isValidRangedPosition(
+      if (this._cooldown.ready && this._isValidRangedPosition(
               this.position, target.position, distance)) {
+        this._cooldown.wait(1 /* turns */);
         return new ExecuteOnceBehavior(new FireAction(target.position));
       }
       const direction = this._findRangedPath(target.position, distance);
@@ -204,6 +219,5 @@ class Timer {
 
   wait(turns: number) {
     this._timeLeft += Math.ceil(turns * this._timeout);
-    return this.ready;
   }
 }
