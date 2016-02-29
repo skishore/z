@@ -2,6 +2,7 @@ import {Direction} from '../piecemeal/direction';
 import {Nil, nil} from '../piecemeal/nil';
 import {Vec} from '../piecemeal/vec';
 
+import {LineOfSight} from '../engine/line_of_sight';
 import {Stage} from '../engine/stage';
 
 import {Actor, Player, Pokemon} from './actor';
@@ -66,19 +67,19 @@ export class ActionResult {
 }
 
 export class FireAction extends Action {
-  private _source: Vec;
-  private _last: Vec;
-  private _index = 0;
+  private _line: LineOfSight;
+  private _iterator: IterableIterator<Vec>;
 
   constructor(private _target: Vec) { super(); }
 
   execute(effects: Array<Effect>) {
     let result = ActionResult.failed();
-    if (!this._source) {
-      this._source = this._last = this.actor.position;
-      if (this._source.equals(this._target)) {
+    if (!this._line) {
+      if (this.actor.position.equals(this._target)) {
         return result;
       }
+      this._line = new LineOfSight(this.actor.position, this._target);
+      this._iterator = this._line[Symbol.iterator]();
     }
     /* tslint:disable:no-unused-variable */
     for (let i of _.range(2)) {
@@ -92,12 +93,7 @@ export class FireAction extends Action {
   }
 
   _executeOnce(effects: Array<Effect>) {
-    let position = this._last;
-    const diff = this._target.subtract(this._source);
-    while (position.equals(this._last)) {
-      this._index += 1;
-      position = this._source.add(diff.scale(this._index / diff.length));
-    }
+    const position = this._iterator.next().value;
     if (!this.stage.size.contains(position)) {
       return ActionResult.success();
     }

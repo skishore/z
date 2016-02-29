@@ -5,6 +5,7 @@ import {Vec} from '../piecemeal/vec';
 
 import {AStar} from '../engine/ai/a_star';
 import {Flow} from '../engine/ai/flow';
+import {LineOfSight} from '../engine/line_of_sight';
 import {IActor, Stage} from '../engine/stage';
 
 import {Action, FireAction, MovementAction} from './action';
@@ -180,11 +181,7 @@ export class Pokemon extends Actor {
     const actor = this.stage.actorAt(pos);
     if (actor instanceof Actor && actor !== this) return false;
 
-    // TODO(skishore): De-deduplicate this line-of-sight computation with the
-    // one in FireAction.
-    const diff = target.subtract(pos);
-    for (let i = 0; i <= diff.length; i++) {
-      const step = pos.add(diff.scale(i / diff.length));
+    for (const step of new LineOfSight(pos, target)) {
       if (step.equals(pos)) continue;
       if (step.equals(target)) return true;
       if (this.stage.actorAt(step) instanceof Actor) return false;
