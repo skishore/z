@@ -1,0 +1,146 @@
+import {Direction} from '../piecemeal/direction';
+import {Nil, nil} from '../piecemeal/nil';
+import {Vec} from '../piecemeal/vec';
+
+import {Stage} from '../engine/stage';
+
+import {Actor, Player, Pokemon} from './actor';
+import {Effect, FireEffect} from './effect';
+import {Game} from './game';
+import {assert, _} from './util';
+
+export class Action {
+  actor: Actor;
+  stage: Stage<Actor>;
+  private _game: Game;
+
+  bind(game: Game, actor: Actor) {
+    this.actor = actor;
+    this.stage = actor.stage;
+    this._game = game;
+  }
+
+  execute(effects: Array<Effect>): ActionResult {
+    assert(false, 'Action.execute was not implemented!');
+    return ActionResult.failed();
+  }
+
+  log(message: string) {
+    this._game.log(message);
+  }
+
+  logForPlayer(message: string) {
+    if (this.actor instanceof Player) {
+      this._game.log(message);
+    }
+  }
+}
+
+export class ActionResult {
+  done = true;
+  success = false;
+  alternate: Action|Nil = nil;
+  turns = 1;
+
+  static alternate(alternate: Action) {
+    const result = new ActionResult;
+    result.alternate = alternate;
+    return result;
+  }
+
+  static failed() {
+    return new ActionResult;
+  }
+
+  static incomplete() {
+    const result = new ActionResult;
+    result.done = false;
+    return result;
+  }
+
+  static success() {
+    const result = new ActionResult;
+    result.success = true;
+    return result;
+  }
+}
+
+export class FireAction extends Action {
+  private _source: Vec;
+  private _last: Vec;
+  private _index = 0;
+
+  constructor(private _target: Vec) { super(); }
+
+  execute(effects: Array<Effect>) {
+    let result = ActionResult.failed();
+    if (!this._source) {
+      this._source = this._last = this.actor.position;
+      if (this._source.equals(this._target)) {
+        return result;
+      }
+    }
+    /* tslint:disable:no-unused-variable */
+    for (let i of _.range(2)) {
+    /* tslint:enable */
+      result = this._executeOnce(effects);
+      if (result.success) {
+        break;
+      }
+    }
+    return result;
+  }
+
+  _executeOnce(effects: Array<Effect>) {
+    let position = this._last;
+    const diff = this._target.subtract(this._source);
+    while (position.equals(this._last)) {
+      this._index += 1;
+      position = this._source.add(diff.scale(this._index / diff.length));
+    }
+    if (!this.stage.size.contains(position)) {
+      return ActionResult.success();
+    }
+    effects.push(new FireEffect(position));
+    const other = this.stage.actorAt(position);
+    if (other instanceof Actor) {
+      this.log(`${this.actor.description} attacks ${other.description}.`);
+      return ActionResult.success();
+    }
+    return ActionResult.incomplete();
+  }
+}
+
+export class IdleAction extends Action {
+  execute() {
+    return ActionResult.success();
+  }
+}
+
+export class MovementAction extends Action {
+  constructor(private _step: Direction) { super(); }
+
+  execute() {
+    if (this._step.equals(Direction.none)) {
+      return ActionResult.alternate(new IdleAction);
+    }
+    const position = this.actor.position.add(this._step);
+    if (!this.stage.size.contains(position)) {
+      this.logForPlayer("You can't run from a trainer battle!");
+      return ActionResult.failed();
+    }
+    const other = this.stage.actorAt(position);
+    if (other instanceof Actor) {
+      if (other instanceof Pokemon && other.trainer === this.actor) {
+        this.stage.swapActors(this.actor.position, position);
+        this.logForPlayer(`You switch places with ${other.description}.`);
+      } else {
+        this.logForPlayer(`You bump into ${other.description}.`);
+        return ActionResult.failed();
+      }
+      return ActionResult.success();
+    }
+    this.stage.moveActor(this.actor.position, position);
+    return ActionResult.success();
+  }
+}
