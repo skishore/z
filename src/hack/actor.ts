@@ -119,7 +119,8 @@ export class Pokemon extends Actor {
         this._cooldown.wait(1 /* turns */);
         return new ExecuteOnceBehavior(new FireAction(target.position));
       }
-      const direction = this._findRangedPath(target.position, distance);
+      const delta = this._cooldown.ready ? 0 : rng.inclusive(-4, 4);
+      const direction = this._findRangedPath(target.position, distance + delta);
       if (direction instanceof Direction) {
         return new ExecuteOnceBehavior(new MovementAction(direction));
       }
@@ -145,24 +146,26 @@ export class Pokemon extends Actor {
   // if the monster's current position is a good ranged spot. Returns `null`
   // if no good ranged position could be found.
   private _findRangedPath(target: Vec, range: number): Direction|Nil {
-    let best: Direction;
+    let best = new Array<Direction>();
     let bestDistance = 0;
 
     if (this._isValidRangedPosition(this.position, target, range)) {
-      best = Direction.none;
-      bestDistance = this.position.distance(target);
+      best.push(Direction.none);
+      bestDistance = this.position.subtract(target).kingLength;
     }
     for (const dir of Direction.all) {
       const pos = this.position.add(dir);
       if (!this.stage.isSquareFree(pos)) continue;
       if (!this._isValidRangedPosition(pos, target, range)) continue;
-      const distance = pos.distance(target);
+      const distance = pos.subtract(target).kingLength;
       if (distance > bestDistance) {
-        best = dir;
+        best = [dir];
         bestDistance = distance;
+      } else if (distance === bestDistance) {
+        best.push(dir);
       }
     }
-    if (best) return best;
+    if (best.length > 0) return rng.item(best);
 
     // We'll need to actually pathfind to reach a good vantage point.
     const flow = new Flow(this.stage, this.position, {maxDistance: range});
