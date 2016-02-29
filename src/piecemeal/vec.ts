@@ -70,44 +70,6 @@ export class Vec {
     /* tslint:enable */
   }
 
-  // Returns `true` if the magnitude of this vector is greater than [other].
-  gt(other: Vec|Number) {
-    if (other instanceof Number) {
-      return this.lengthSquared > other;
-    } else if (other instanceof Vec) {
-      return this.lengthSquared > other.lengthSquared;
-    }
-  }
-
-  // Returns `true` if the magnitude of this vector is greater than or equal
-  // to [other].
-  ge(other: Vec|Number) {
-    if (other instanceof Number) {
-      return this.lengthSquared >= other;
-    } else if (other instanceof Vec) {
-      return this.lengthSquared >= other.lengthSquared;
-    }
-  }
-
-  // Returns `true` if the magnitude of this vector is less than [other].
-  lt(other: Vec|Number) {
-    if (other instanceof Number) {
-      return this.lengthSquared < other;
-    } else if (other instanceof Vec) {
-      return this.lengthSquared < other.lengthSquared;
-    }
-  }
-
-  // Returns `true` if the magnitude of this vector is less than or equal to
-  // [other].
-  le(other: Vec|Number) {
-    if (other instanceof Number) {
-      return this.lengthSquared <= other;
-    } else if (other instanceof Vec) {
-      return this.lengthSquared <= other.lengthSquared;
-    }
-  }
-
   // Returns a new [Vec] with the absolute value of the coordinates of this one.
   abs() { return new Vec(Math.abs(this._x), Math.abs(this._y)); }
 
