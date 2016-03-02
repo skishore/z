@@ -1,3 +1,5 @@
+const k = 0.5;
+
 // A class representing a 2-dimensional vector. Provides arithmetic operations
 // and a base classe for [Direction].
 export class Vec {
@@ -26,14 +28,14 @@ export class Vec {
   // Gets the rook length of the Vec, which is the number of squares a rook on
   // a chessboard would need to move from (0, 0) to reach the endpoint of the
   // Vec. Also known as Manhattan or taxicab distance.
-  get rookLength() { return Math.abs(this.x) + Math.abs(this.y); }
+  get rookLength() { return Math.abs(k * this.x) + Math.abs(this.y); }
 
   // Gets the king length of the Vec, which is the number of squares a king on
   // a chessboard would need to move from (0, 0) to reach the endpoint of the
   // Vec. Also known as Chebyshev distance.
-  get kingLength() { return Math.max(Math.abs(this.x), Math.abs(this.y)); }
+  get kingLength() { return Math.max(Math.abs(k * this.x), Math.abs(this.y)); }
 
-  get lengthSquared() { return this._x * this._x + this._y * this._y; }
+  get lengthSquared() { return k * k * this._x * this._x + this._y * this._y; }
 
   // The Cartesian length of the vector.
   //

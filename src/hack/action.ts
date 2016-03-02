@@ -129,6 +129,8 @@ export class MovementAction extends Action {
       return ActionResult.success();
     }
     this.stage.moveActor(this.actor.position, position);
-    return ActionResult.success();
+    const result  = ActionResult.success();
+    result.turns = this._step.length;
+    return result;
   }
 }
