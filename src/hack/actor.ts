@@ -196,23 +196,19 @@ export class Pokemon extends Actor {
 
   private _distanceToArena(pos: Vec) {
     const trainers = this.stage.actors.filter((x) => x instanceof Trainer);
-    if (trainers.length !== 2) return [0, 0];
-    const foci = [0.02, 0.98].map((x) =>
-        new Vec(x * trainers[0].position.x + (1 - x) * trainers[1].position.x,
-                x * trainers[0].position.y + (1 - x) * trainers[1].position.y));
+    if (trainers.length !== 2) return 0;
     const bound = trainers[0].position.distance(trainers[1].position);
-    return [pos.distance(foci[0]) + pos.distance(foci[1]), bound];
+    const sum = trainers[0].position.add(trainers[1].position);
+    return pos.scale(2).distance(sum) / bound;
   }
 
   private _inArena(pos: Vec) {
-    const result = this._distanceToArena(pos);
-    return result[0] <= result[1];
+    return this._distanceToArena(pos) < 0.5;
   }
 
   private _towardsArena(pos: Vec) {
     if (this._inArena(this.position)) return this._inArena(pos);
-    return this._distanceToArena(pos)[0] <
-           this._distanceToArena(this.position)[0];
+    return this._distanceToArena(pos) < this._distanceToArena(this.position);
   }
 }
 
