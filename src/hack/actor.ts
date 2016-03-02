@@ -82,7 +82,7 @@ export class Pokemon extends Actor {
 
   get glyph() { return this.breed[0].toLowerCase(); }
 
-  get speed() { return 0.2; }
+  get speed() { return this.breed === 'Squirtle' ? 0.3 : 0.2; }
 
   ready() {
     // TODO(skishore): Move the cooldown into a Move object.
@@ -104,12 +104,13 @@ export class Pokemon extends Actor {
     let distance = 8;
     let target = <Actor>this.trainer;
 
-    if (this.breed === 'Diglett' || this.breed === 'Squirtle') {
+    const good = (x: Pokemon) => ['Diglett', 'Squirtle'].indexOf(x.breed) >= 0;
+    if (good(this)) {
       const targets = this.stage.actors.filter(
-          (x) => x instanceof Pokemon && x.trainer !== this.trainer);
+          (x) => x instanceof Pokemon && x.trainer !== this.trainer && good(x));
       if (targets.length > 0) {
-        distance = 12;
-        target = targets[0];
+        distance = this.breed === 'Squirtle' ? 12 : 2;
+        target = rng.item(targets);
       }
     }
 
@@ -157,6 +158,7 @@ export class Pokemon extends Actor {
       const pos = this.position.add(dir);
       if (!this.stage.isSquareFree(pos)) continue;
       if (!this._isValidRangedPosition(pos, target, range)) continue;
+      if (!this._towardsArena(pos)) continue;
       const distance = pos.subtract(target).kingLength;
       if (distance > bestDistance) {
         best = [dir];
@@ -191,6 +193,27 @@ export class Pokemon extends Actor {
     }
     return true;
   };
+
+  private _distanceToArena(pos: Vec) {
+    const trainers = this.stage.actors.filter((x) => x instanceof Trainer);
+    if (trainers.length !== 2) return [0, 0];
+    const foci = [0.02, 0.98].map((x) =>
+        new Vec(x * trainers[0].position.x + (1 - x) * trainers[1].position.x,
+                x * trainers[0].position.y + (1 - x) * trainers[1].position.y));
+    const bound = trainers[0].position.distance(trainers[1].position);
+    return [pos.distance(foci[0]) + pos.distance(foci[1]), bound];
+  }
+
+  private _inArena(pos: Vec) {
+    const result = this._distanceToArena(pos);
+    return result[0] <= result[1];
+  }
+
+  private _towardsArena(pos: Vec) {
+    if (this._inArena(this.position)) return this._inArena(pos);
+    return this._distanceToArena(pos)[0] <
+           this._distanceToArena(this.position)[0];
+  }
 }
 
 export class Trainer extends Actor {
@@ -199,6 +222,9 @@ export class Trainer extends Actor {
   get description() { return 'your rival'; }
 
   get glyph() { return '@'; }
+
+  _defaultBehavior() {
+      return new ExecuteOnceBehavior(new MovementAction(Direction.none)); }
 }
 
 export class Player extends Trainer {
