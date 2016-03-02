@@ -8,7 +8,7 @@ import {Stage} from '../engine/stage';
 import {Actor, Player, Pokemon} from './actor';
 import {Effect, FireEffect} from './effect';
 import {Game} from './game';
-import {assert, _} from './util';
+import {_} from './util';
 
 export class Action {
   actor: Actor;
@@ -22,8 +22,7 @@ export class Action {
   }
 
   execute(effects: Array<Effect>): ActionResult {
-    assert(false, 'Action.execute was not implemented!');
-    return ActionResult.failed();
+    throw new Error('Action.execute was not implemented!');
   }
 
   log(message: string) {
@@ -73,22 +72,16 @@ export class FireAction extends Action {
   constructor(private _target: Vec) { super(); }
 
   execute(effects: Array<Effect>) {
-    let result = ActionResult.failed();
     if (!this._line) {
       if (this.actor.position.equals(this._target)) {
-        return result;
+        return ActionResult.failed();
       }
       this._line = new LineOfSight(this.actor.position, this._target);
       this._iterator = this._line[Symbol.iterator]();
     }
-    /* tslint:disable:no-unused-variable */
-    for (let i of _.range(2)) {
-    /* tslint:enable */
-      result = this._executeOnce(effects);
-      if (result.success) {
-        break;
-      }
-    }
+    let result = ActionResult.incomplete();
+    _.range(2).forEach(() => {
+        if (!result.done) result = this._executeOnce(effects); });
     return result;
   }
 
@@ -132,7 +125,6 @@ export class MovementAction extends Action {
         this.logForPlayer(`You switch places with ${other.description}.`);
       } else {
         this.logForPlayer(`You bump into ${other.description}.`);
-        return ActionResult.failed();
       }
       return ActionResult.success();
     }
