@@ -3,7 +3,7 @@
     "allowJs": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "lib": ["dom", "es2017"],
+    "lib": ["es2017"],
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "target",
@@ -13,5 +13,7 @@
     "suppressImplicitAnyIndexErrors": false,
     "target": "es2017"
   },
-  "compileOnSave": true
+  "compileOnSave": true,
+  "include": ["src"],
+  "exclude": ["extern"]
 }
