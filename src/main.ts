@@ -101,11 +101,11 @@ const updateState = (io: IO) => {
 };
 
 const renderState = (io: IO) => {
-  const last = io.timing[io.timing.length - 1];
+  const last = io.timing[io.timing.length - 1]!;
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
 
   last.end = Date.now();
-  const total = Math.max(last.end - io.timing[0].start, 1);
+  const total = Math.max(last.end - io.timing[0]!.start, 1);
   const cpu = 100 * (last.end - last.start + base) / total;
   const fps = 1000 * io.timing.length / total;
 
@@ -121,7 +121,7 @@ const tick = (io: IO) => () => {
   }
   io.screen.render();
   const shift = Math.floor(1000 * io.timing.length / Constants.FRAME_RATE);
-  const delay = Math.max(io.timing[0].start + shift - Date.now(), 1);
+  const delay = Math.max(io.timing[0]!.start + shift - Date.now(), 1);
   setTimeout(tick(io), delay);
 };
 
