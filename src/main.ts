@@ -1,9 +1,19 @@
-const assert = (x: boolean) => { if (!x) { throw new Error(); } };
-
-//////////////////////////////////////////////////////////////////////////////
-
 type int = number;
 interface point {x: int, y: int};
+
+const assert = (x: boolean): void => {
+  if (!x) throw new Error();
+};
+
+const range = (n: int): int[] => {
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    result.push(i);
+  }
+  return result;
+};
+
+//////////////////////////////////////////////////////////////////////////////
 
 const TranThong = (a: point, b: point): point[] => {
   const {x: xa, y: ya} = a;
@@ -53,6 +63,69 @@ const Constants = {
   ROWS: 23,
 };
 
+interface State {
+  map: boolean[][],
+  source: point,
+  target: point | null,
+};
+
+type Input = string;
+
+const add = (a: point, b: point): point => {
+  return {x: a.x + b.x, y: a.y + b.y};
+};
+
+const bounded = (p: point, map: boolean[][]): boolean => {
+  const {x, y} = p;
+  return 0 <= x && x < map.length && 0 <= y && y < map[0]!.length;
+};
+
+const unblocked = (p: point, map: boolean[][]): boolean => {
+  const col = map[p.x];
+  return col !== undefined && col[p.y] === false;
+};
+
+const processInput = (state: State, input: Input) => {
+  if (input == 'f') {
+    state.target = state.target ? null : state.source;
+    return;
+  }
+
+  const deltas: {[key: string]: point} = {
+    'y': {x: -1, y: -1},
+    'u': {x: 1, y: -1},
+    'h': {x: -1, y: 0},
+    'j': {x: 0, y: 1},
+    'k': {x: 0, y: -1},
+    'l': {x: 1, y: 0},
+    'b': {x: -1, y: 1},
+    'n': {x: 1, y: 1},
+  };
+  const delta = deltas[input];
+  if (!delta) return;
+  if (state.target) {
+    const target = add(state.target, delta);
+    if (bounded(target, state.map)) state.target = target;
+  } else {
+    const source = add(state.source, delta);
+    if (unblocked(source, state.map)) state.source = source;
+  }
+};
+
+const initializeState = (): State => {
+  const {COLS, ROWS} = Constants;
+  const map = range(COLS).map(_ => range(ROWS).map(_ => false));
+  const source = {x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2)};
+  return {map, source, target: null};
+};
+
+const updateState = (state: State, inputs: Input[]) => {
+  inputs.forEach(x => processInput(state, x));
+  inputs.length = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 declare const console: any;
 declare const process: any;
 declare const require: any;
@@ -69,38 +142,64 @@ interface Timing {
 };
 
 interface IO {
-  fps: Element;
-  map: Element;
-  screen: Element;
-  timing: Timing[];
+  fps: Element,
+  map: Element,
+  inputs: Input[],
+  screen: Element,
+  state: State,
+  timing: Timing[],
 };
 
-const renderFrameRate = (cpu: number, fps: number) => {
+const renderMap = (state: State): string => {
+  const [width, height] = [state.map.length, state.map[0]!.length];
+  const text = range(height).map(_ => range(width).map(_ => '.'));
+
+  const {source, target} = state;
+  text[source.y]![source.x] = '{red-fg}@{/red-fg}';
+  if (target) {
+    text[target.y]![target.x] = '{red-fg}*{/red-fg}';
+    const line = TranThong(source, target)
+    const last = line.length - 1;
+    line.forEach((p, i) => {
+      if (i === 0 || i === last) return;
+      text[p.y]![p.x] = '{red-fg}+{/red-fg}';
+    });
+  }
+  return text.map(line => line.join('')).join('\n');
+};
+
+const renderFrameRate = (cpu: number, fps: number): string => {
   return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
 };
 
-const initializeIO = (): IO => {
+const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const screen = blessed.screen({smartCSR: true});
 
-  const {COLS: width, ROWS: height} = Constants;
-  const [border, left, top] = ['line', 'center', 'center'];
-  const map = blessed.box({border, height, left, top, width});
+  const [width, height] = [state.map.length, state.map[0]!.length];
+  const [left, top, tags] = ['center', 'center', true];
+  const map = blessed.box({height, left, top, tags, width});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [fps, map].map(x => screen.append(x));
 
+  const inputs: Input[] = [];
   screen.key(['C-c', 'escape'], () => process.exit(0));
-  return {fps, map, screen, timing: []};
+  'hjklyubnf'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
+  return {fps, map, inputs, screen, state, timing: []};
 };
 
-const updateState = (io: IO) => {
+const update = (io: IO) => {
   const start = Date.now();
   io.timing.push({start, end: start});
   if (io.timing.length > Constants.FRAME_RATE) io.timing.shift();
   assert(io.timing.length <= Constants.FRAME_RATE);
+
+  updateState(io.state, io.inputs);
 };
 
-const renderState = (io: IO) => {
+const render = (io: IO) => {
+  io.map.setContent(renderMap(io.state));
+
   const last = io.timing[io.timing.length - 1]!;
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
 
@@ -114,8 +213,8 @@ const renderState = (io: IO) => {
 
 const tick = (io: IO) => () => {
   try {
-    updateState(io);
-    renderState(io);
+    update(io);
+    render(io);
   } catch (error) {
     console.error(error);
   }
@@ -126,7 +225,8 @@ const tick = (io: IO) => () => {
 };
 
 const main = () => {
-  const io = initializeIO();
+  const state = initializeState();
+  const io = initializeIO(state);
   tick(io)();
 };
 
