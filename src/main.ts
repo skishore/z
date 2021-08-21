@@ -58,6 +58,7 @@ const TranThong = (a: point, b: point): point[] => {
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
+  BLOCKED: 0.1,
   FRAME_RATE: 60,
   COLS: 79,
   ROWS: 23,
@@ -73,6 +74,23 @@ type Input = string;
 
 const add = (a: point, b: point): point => {
   return {x: a.x + b.x, y: a.y + b.y};
+};
+
+const addBlocks = (state: State): State => {
+  const [width, height] = [state.map.length, state.map[0]!.length];
+  const count = Math.floor(width * height * Constants.BLOCKED);
+  state.map[state.source.x]![state.source.y] = true;
+
+  for (let i = 0; i < count;) {
+    const x = Math.floor(Math.random() * width);
+    const y = Math.floor(Math.random() * height);
+    if (state.map[x]![y]) continue;
+    state.map[x]![y] = true;
+    i++;
+  }
+
+  state.map[state.source.x]![state.source.y] = false;
+  return state;
 };
 
 const bounded = (p: point, map: boolean[][]): boolean => {
@@ -116,7 +134,7 @@ const initializeState = (): State => {
   const {COLS, ROWS} = Constants;
   const map = range(COLS).map(_ => range(ROWS).map(_ => false));
   const source = {x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2)};
-  return {map, source, target: null};
+  return addBlocks({map, source, target: null});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
@@ -152,17 +170,18 @@ interface IO {
 
 const renderMap = (state: State): string => {
   const [width, height] = [state.map.length, state.map[0]!.length];
-  const text = range(height).map(_ => range(width).map(_ => '.'));
+  const text: string[][] = range(height).map(y => range(width).map(
+    x => state.map[x]![y] ? '{4-fg}#{/4-fg}' : '.'));
 
   const {source, target} = state;
-  text[source.y]![source.x] = '{red-fg}@{/red-fg}';
+  text[source.y]![source.x] = '{1-fg}@{/1-fg}';
   if (target) {
-    text[target.y]![target.x] = '{red-fg}*{/red-fg}';
+    text[target.y]![target.x] = '{1-fg}*{/1-fg}';
     const line = TranThong(source, target)
     const last = line.length - 1;
     line.forEach((p, i) => {
       if (i === 0 || i === last) return;
-      text[p.y]![p.x] = '{red-fg}+{/red-fg}';
+      text[p.y]![p.x] = '{1-fg}+{/1-fg}';
     });
   }
   return text.map(line => line.join('')).join('\n');
