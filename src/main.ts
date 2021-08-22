@@ -77,12 +77,12 @@ class PrecomputedVisibilityTrie {
   }
 
   fieldOfVision(blocked: (p: point) => boolean) {
-    this.recursiveFieldOfVision(this.#root, blocked);
-  }
-
-  private recursiveFieldOfVision(node: Node, blocked: (p: point) => boolean) {
-    if (blocked(node)) return;
-    node.children.forEach(x => this.recursiveFieldOfVision(x, blocked));
+    const nodes = [this.#root];
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]!;
+      if (blocked(node)) continue;
+      node.children.forEach(x => nodes.push(x));
+    }
   }
 
   private trieUpdate(node: Node, line: point[], i: int) {
@@ -148,8 +148,7 @@ const bounded = (p: point, map: boolean[][]): boolean => {
 };
 
 const unblocked = (p: point, map: boolean[][]): boolean => {
-  const col = map[p.x];
-  return col !== undefined && col[p.y] === false;
+  return bounded(p, map) && !map[p.x]![p.y];
 };
 
 const processInput = (state: State, input: Input) => {
@@ -220,29 +219,35 @@ interface IO {
 
 const renderMap = (state: State): string => {
   const [width, height] = [state.map.length, state.map[0]!.length];
-  const text: string[][] = range(height).map(_ => range(width).map(_ => ' '));
+  const text: string[] = Array((width + 1) * height).fill(' ');
+  const show = (p: point, glyph: string) => {
+    text[p.x + (width + 1) * p.y] = glyph;
+  };
+  for (let i = 0; i < height; i++) {
+    show({x: width, y: i}, '\n');
+  }
 
   const {fov, map, source, target} = state;
   const blocked = (p: point) => {
     const q = add(p, source);
     if (!bounded(q, map)) return true;
     const result = map[q.x]![q.y]!;
-    text[q.y]![q.x] = result ? '{2-fg}#{/2-fg}' : '.';
+    show(q, result ? '{2-fg}#{/2-fg}' : '.');
     return result;
   };
   fov.fieldOfVision(blocked);
-  text[source.y]![source.x] = '{1-fg}@{/1-fg}';
+  show(source, '{1-fg}@{/1-fg}');
 
   if (target) {
-    text[target.y]![target.x] = '{1-fg}*{/1-fg}';
+    show(target, '{1-fg}*{/1-fg}');
     const line = TranThong(source, target)
     const last = line.length - 1;
     line.forEach((p, i) => {
       if (i === 0 || i === last) return;
-      text[p.y]![p.x] = '{1-fg}+{/1-fg}';
+      show(p, '{1-fg}+{/1-fg}');
     });
   }
-  return text.map(line => line.join('')).join('\n');
+  return text.join('');
 };
 
 const renderFrameRate = (cpu: number, fps: number): string => {
