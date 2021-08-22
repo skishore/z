@@ -146,6 +146,7 @@ function Element(options) {
   }
 
   this.parseTags = options.parseTags || options.tags;
+  this.wrapContent = (options.wrap === false);
 
   this.setContent(options.content || '', true);
 
@@ -640,7 +641,7 @@ main:
     }
 
     // If the string is apparently too long, wrap it.
-    while (line.length > width) {
+    while (this.wrapContent && line.length > width) {
       // Measure the real width of the string.
       for (i = 0, total = 0; i < line.length; i++) {
         while (line[i] === '\x1b') {

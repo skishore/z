@@ -254,8 +254,8 @@ const initializeIO = (state: State): IO => {
   const screen = blessed.screen({smartCSR: true});
 
   const [width, height] = [state.map.length, state.map[0]!.length];
-  const [left, top, tags] = ['center', 'center', true];
-  const map = blessed.box({height, left, top, tags, width});
+  const [left, top, tags, wrap] = ['center', 'center', true, false];
+  const map = blessed.box({height, left, top, tags, width, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [fps, map].map(x => screen.append(x));
 
