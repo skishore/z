@@ -55,6 +55,54 @@ const TranThong = (a: point, b: point): point[] => {
   return result;
 };
 
+interface Node {
+  x: int,
+  y: int,
+  children: Node[],
+};
+
+class PrecomputedVisibilityTrie {
+  #root: Node;
+
+  constructor(radius: int) {
+    this.#root = {x: 0, y: 0, children: []};
+    for (let i = 0; i <= radius; i++) {
+      for (let j = 0; j < 8; j++) {
+        const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
+        const [xb, yb] = [xa * ((j & 2) ? 1 : -1), ya * ((j & 4) ? 1 : -1)];
+        const line = TranThong({x: 0, y: 0}, {x: xb, y: yb});
+        this.trieUpdate(this.#root, line, 0);
+      }
+    }
+  }
+
+  fieldOfVision(blocked: (p: point) => boolean) {
+    this.recursiveFieldOfVision(this.#root, blocked);
+  }
+
+  private recursiveFieldOfVision(node: Node, blocked: (p: point) => boolean) {
+    if (blocked(node)) return;
+    node.children.forEach(x => this.recursiveFieldOfVision(x, blocked));
+  }
+
+  private trieUpdate(node: Node, line: point[], i: int) {
+    const [prev, next] = [line[i]!, line[i + 1]];
+    assert(node.x === prev.x);
+    assert(node.y === prev.y);
+    if (!next) return;
+
+    const child = (() => {
+      for (const child of node.children) {
+        if (child.x === next.x && child.y == next.y) return child;
+      }
+      const result = {...next, children: []};
+      node.children.push(result);
+      return result;
+    })();
+    this.trieUpdate(child, line, i + 1);
+  }
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
@@ -65,6 +113,7 @@ const Constants = {
 };
 
 interface State {
+  fov: PrecomputedVisibilityTrie,
   map: boolean[][],
   source: point,
   target: point | null,
@@ -132,9 +181,10 @@ const processInput = (state: State, input: Input) => {
 
 const initializeState = (): State => {
   const {COLS, ROWS} = Constants;
+  const fov = new PrecomputedVisibilityTrie(Math.max(COLS, ROWS));
   const map = range(COLS).map(_ => range(ROWS).map(_ => false));
   const source = {x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2)};
-  return addBlocks({map, source, target: null});
+  return addBlocks({fov, map, source, target: null});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
@@ -170,11 +220,19 @@ interface IO {
 
 const renderMap = (state: State): string => {
   const [width, height] = [state.map.length, state.map[0]!.length];
-  const text: string[][] = range(height).map(y => range(width).map(
-    x => state.map[x]![y] ? '{4-fg}#{/4-fg}' : '.'));
+  const text: string[][] = range(height).map(_ => range(width).map(_ => ' '));
 
-  const {source, target} = state;
+  const {fov, map, source, target} = state;
+  const blocked = (p: point) => {
+    const q = add(p, source);
+    if (!bounded(q, map)) return true;
+    const result = map[q.x]![q.y]!;
+    text[q.y]![q.x] = result ? '{2-fg}#{/2-fg}' : '.';
+    return result;
+  };
+  fov.fieldOfVision(blocked);
   text[source.y]![source.x] = '{1-fg}@{/1-fg}';
+
   if (target) {
     text[target.y]![target.x] = '{1-fg}*{/1-fg}';
     const line = TranThong(source, target)
