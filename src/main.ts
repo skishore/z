@@ -301,9 +301,10 @@ const tick = (io: IO) => () => {
     console.error(error);
   }
   io.screen.render();
-  const shift = Math.floor(1000 * io.timing.length / Constants.FRAME_RATE);
+  const fps = Constants.FRAME_RATE;
+  const shift = Math.floor(1000 * io.timing.length / fps);
   const delay = Math.max(io.timing[0]!.start + shift - Date.now(), 1);
-  setTimeout(tick(io), delay);
+  setTimeout(tick(io), Math.min(delay, Math.floor(1000 / fps)));
 };
 
 const main = () => {
