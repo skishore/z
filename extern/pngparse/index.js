@@ -1,7 +1,7 @@
 var fs     = require("fs"),
     stream = require("stream"),
     zlib   = require("zlib"),
-    HEADER = new Buffer("89504e470d0a1a0a", "hex")
+    HEADER = Buffer.from("89504e470d0a1a0a", "hex")
 
 function ImageData(width, height, channels, data, trailer) {
   this.width    = width;
@@ -69,7 +69,7 @@ exports.parseStream = function(stream, callback) {
   var inflate           = zlib.createInflate(),
       state             = 0,
       off               = 0,
-      buf               = new Buffer(13),
+      buf               = Buffer.alloc(13),
       waiting           = 2,
       b                 = -1,
       p                 = 0,
@@ -184,7 +184,7 @@ exports.parseStream = function(stream, callback) {
                     return error(new Error("Invalid PLTE size."))
 
                   pngPaletteEntries = chunkLength / 3
-                  pngPalette        = new Buffer(chunkLength)
+                  pngPalette        = Buffer.alloc(chunkLength)
                   state             = 3
                 }
                 break
@@ -199,7 +199,7 @@ exports.parseStream = function(stream, callback) {
                 idChannels       ++;
 
                 pngAlphaEntries = chunkLength;
-                pngAlpha        = new Buffer(chunkLength);
+                pngAlpha        = Buffer.alloc(chunkLength);
                 state           = 4;
                 break
 
@@ -210,7 +210,7 @@ exports.parseStream = function(stream, callback) {
                  * well wait until we're actually going to start filling the
                  * buffer in case of errors...) */
                 if(!pngPixels)
-                  pngPixels = new Buffer(pngWidth * pngHeight * idChannels);
+                  pngPixels = Buffer.alloc(pngWidth * pngHeight * idChannels);
 
                 state = 5
                 break
@@ -297,9 +297,9 @@ exports.parseStream = function(stream, callback) {
             pngBytesPerScanline = Math.ceil(
               pngWidth * pngBitDepth * pngSamplesPerPixel / 8
             )
-            pngSamples          = new Buffer(pngSamplesPerPixel)
-            currentScanline     = new Buffer(pngBytesPerScanline)
-            priorScanline       = new Buffer(pngBytesPerScanline)
+            pngSamples          = Buffer.alloc(pngSamplesPerPixel)
+            currentScanline     = Buffer.alloc(pngBytesPerScanline)
+            priorScanline       = Buffer.alloc(pngBytesPerScanline)
             currentScanline.fill(0)
           }
           break
@@ -375,7 +375,7 @@ exports.parseStream = function(stream, callback) {
           }
 
           else {
-            pngTrailer = new Buffer(0)
+            pngTrailer = Buffer.alloc(0)
             i         += 4 - off
             state      = 9
             off        = 0
@@ -414,7 +414,7 @@ exports.parseStream = function(stream, callback) {
         case 9: /* trailing data */
           /* FIXME: It is inefficient to create a trailer buffer of length zero
            * and keep reallocating it every time we want to add more data. */
-          tmp = new Buffer(off + len - i)
+          tmp = Buffer.alloc(off + len - i)
           pngTrailer.copy(tmp)
           data.copy(tmp, off, i, len)
           pngTrailer = tmp
