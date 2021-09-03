@@ -1,5 +1,7 @@
 import {assert, int, point, range} from './lib';
 
+//////////////////////////////////////////////////////////////////////////////
+
 interface FontConfig {
   name: string,
   width: int,
@@ -7,13 +9,6 @@ interface FontConfig {
   rows: int,
   cols: int,
   map: {[codepoint: number]: point},
-};
-
-interface ImageData {
-  width: int,
-  height: int,
-  channels: int,
-  data: Uint8Array,
 };
 
 const aquarius = (): FontConfig => {
@@ -41,6 +36,15 @@ const aquarius = (): FontConfig => {
     }
   });
   return {name: 'Aquarius', width: 8, height: 8, rows: 16, cols: 16, map};
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+interface ImageData {
+  width: int,
+  height: int,
+  channels: int,
+  data: Uint8Array,
 };
 
 const glyph = (data: ImageData, config: FontConfig, codepoint: int): string => {
