@@ -1,8 +1,8 @@
 type int = number;
 interface point {x: int, y: int};
 
-const assert = (x: boolean): void => {
-  if (!x) throw new Error();
+const assert = (x: boolean, fn?: () => string): void => {
+  if (!x) throw new Error(fn && fn());
 };
 
 const range = (n: int): int[] => {
