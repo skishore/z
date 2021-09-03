@@ -1,12 +1,156 @@
-import {assert, point, range} from './lib';
+import {assert, flatten, int, point, range, LOS} from './lib';
+
+//////////////////////////////////////////////////////////////////////////////
+
+type Glyph = string;
+
+interface Particle {point: point, glyph: Glyph};
+interface Frame extends Array<Particle> {};
+interface Effect extends Array<Frame> {};
+
+const ConstantEffect = (particle: Particle, n: int): Effect => {
+  return Array(n).fill([particle]);
+};
+
+const PauseEffect = (n: int): Effect => {
+  return Array(n).fill([]);
+};
+
+const OverlayEffect = (effect: Effect, particle: Particle): Effect => {
+  return ParallelEffect([effect, ConstantEffect(particle, effect.length)]);
+};
+
+const UnderlayEffect = (effect: Effect, particle: Particle): Effect => {
+  return ParallelEffect([ConstantEffect(particle, effect.length), effect]);
+};
+
+const ExtendEffect = (effect: Effect, n: int): Effect => {
+  const result: Effect = [];
+  effect.forEach(frame => range(n).forEach(_ => result.push(frame)));
+  return result;
+};
+
+const ParallelEffect = (effects: Effect[]): Effect => {
+  const result: Effect = [];
+  effects.forEach(effect => effect.forEach((frame, i) => {
+    if (i >= result.length) result.push([]);
+    frame.forEach(x => result[i]!.push(x));
+  }));
+  return result;
+};
+
+const SerialEffect = (effects: Effect[]): Effect => {
+  return flatten(effects);
+};
+
+const ExplosionEffect = (point: point): Effect => {
+  const {x, y} = point;
+  const base = [
+    [{point: {x, y}, glyph: '{1-fg}*{/1-fg}'}],
+    [
+      {point: {x, y}, glyph: '{1-fg}+{/1-fg}'},
+      {point: {x: x - 1, y}, glyph: '{1-fg}-{/1-fg}'},
+      {point: {x: x + 1, y}, glyph: '{1-fg}-{/1-fg}'},
+      {point: {x, y: y - 1}, glyph: '{1-fg}|{/1-fg}'},
+      {point: {x, y: y + 1}, glyph: '{1-fg}|{/1-fg}'},
+    ],
+    [
+      {point: {x: x - 1, y}, glyph: '{1-fg}|{/1-fg}'},
+      {point: {x: x + 1, y}, glyph: '{1-fg}|{/1-fg}'},
+      {point: {x, y: y - 1}, glyph: '{1-fg}-{/1-fg}'},
+      {point: {x, y: y + 1}, glyph: '{1-fg}-{/1-fg}'},
+      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
+    ],
+  ];
+  return ExtendEffect(base, 4);
+};
+
+const ImplosionEffect = (point: point): Effect => {
+  const {x, y} = point;
+  const base = [
+    [
+      {point: {x, y}, glyph: '{1-fg}*{/1-fg}'},
+      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
+    ],
+    [
+      {point: {x, y}, glyph: '{1-fg}#{/1-fg}'},
+      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
+    ],
+    [{point: {x, y}, glyph: '{1-fg}*{/1-fg}'}],
+    [{point: {x, y}, glyph: '{1-fg}#{/1-fg}'}],
+  ];
+  return ExtendEffect(base, 3);
+};
+
+const RayEffect = (source: point, target: point, speed: int): Effect => {
+  const result: Effect = [];
+  const line = LOS(source, target);
+  if (line.length <= 2) return result;
+
+  const ch = (() => {
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    if (Math.abs(dx) > 2 * Math.abs(dy)) return '-';
+    if (Math.abs(dy) > 2 * Math.abs(dx)) return '|';
+    return ((dx > 0) === (dy > 0)) ? '\\' : '/';
+  })();
+
+  const glyph = `{1-fg}${ch}{/1-fg}`;
+  const mod = (line.length - 2 + speed) % speed;
+  for (let i = mod ? mod : mod + speed; i < line.length - 1; i += speed) {
+    result.push(range(i).map(j => ({point: line[j + 1]!, glyph})));
+  }
+  return result;
+};
+
+const SummonEffect = (source: point, target: point, glyph: Glyph): Effect => {
+  const base: Effect = [];
+  const line = LOS(source, target);
+  for (let i = 1; i < line.length - 1; i++) {
+    base.push([{point: line[i]!, glyph: '{1-fg}*{/1-fg}'}]);
+  }
+  const masked = UnderlayEffect(base, {point: target, glyph});
+  return SerialEffect([masked, ExplosionEffect(target)]);
+};
+
+const WithdrawEffect = (source: point, target: point, glyph: Glyph): Effect => {
+  const base = RayEffect(source, target, 4);
+  const hide = {point: target, glyph};
+  const impl = UnderlayEffect(ImplosionEffect(target), hide);
+  const full = base[base.length - 1];
+  if (!full) return impl;
+
+  return SerialEffect([
+    base,
+    ParallelEffect([ExtendEffect([full], impl.length), impl]),
+    UnderlayEffect(base.slice().reverse(), hide),
+  ]);
+};
+
+const SwitchEffect = (source: point, target: point, glyph: Glyph): Effect => {
+  return SerialEffect([
+    WithdrawEffect(source, target, glyph),
+    ConstantEffect({point: target, glyph}, 4),
+    SummonEffect(source, target, glyph),
+  ]);
+};
+
+assert(!!{OverlayEffect, ParallelEffect, PauseEffect});
 
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
   FRAME_RATE: 60,
 };
-
-type Glyph = string;
 
 type Map = Tile[][];
 
@@ -54,6 +198,7 @@ interface State {
   map: Map,
   source: point,
   target: point,
+  effect: Effect,
 };
 
 type Input = string;
@@ -76,6 +221,10 @@ const unblocked = (p: point, map: Map): boolean => {
 };
 
 const processInput = (state: State, input: Input) => {
+  if (input === 'f') {
+    const glyph = state.map[state.target.x]![state.target.y]!.glyph;
+    state.effect = SwitchEffect(state.source, state.target, glyph);
+  }
   const deltas: {[key: string]: point} = {
     'y': {x: -1, y: -1},
     'u': {x: 1, y: -1},
@@ -113,10 +262,14 @@ const initializeState = (): State => {
     }
     return kTiles['.']!;
   }));
-  return {map, source, target};
+  return {map, source, target, effect: []};
 };
 
 const updateState = (state: State, inputs: Input[]) => {
+  if (state.effect.length) {
+    state.effect.shift();
+    return;
+  }
   inputs.forEach(x => processInput(state, x));
   inputs.length = 0;
 };
@@ -150,8 +303,8 @@ interface IO {
 const renderMap = (state: State): string => {
   const [width, height] = [state.map.length, state.map[0]!.length];
   const text: string[] = Array((width + 1) * height).fill(' ');
-  const show = (p: point, glyph: string) => {
-    text[p.x + (width + 1) * p.y] = glyph;
+  const show = (point: point, glyph: Glyph) => {
+    text[point.x + (width + 1) * point.y] = glyph;
   };
   for (let i = 0; i < height; i++) {
     show({x: width, y: i}, '\n');
@@ -162,6 +315,11 @@ const renderMap = (state: State): string => {
     (tile, y) => { show({x, y}, tile.glyph); }));
   show(source, '@');
   show(target, '{1-fg}C{/1-fg}');
+
+  if (state.effect.length) {
+    state.effect[0]!.forEach(({point, glyph}) => show(point, glyph));
+  }
+
   return text.join('');
 };
 

@@ -5,6 +5,12 @@ const assert = (x: boolean, fn?: () => string): void => {
   if (!x) throw new Error(fn && fn());
 };
 
+const flatten = <T>(xss: T[][]): T[] => {
+  const result: T[] = [];
+  xss.forEach(xs => xs.forEach(x => result.push(x)));
+  return result;
+};
+
 const range = (n: int): int[] => {
   const result = [];
   for (let i = 0; i < n; i++) {
@@ -109,4 +115,4 @@ class FOV {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, int, point, range, FOV, LOS};
+export {assert, flatten, int, point, range, FOV, LOS};
