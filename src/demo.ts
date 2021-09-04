@@ -1,8 +1,6 @@
-import {assert, flatten, int, point, range, LOS} from './lib';
+import {assert, flatten, int, point, range, LOS, Glyph} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
-
-type Glyph = string;
 
 interface Particle {point: point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
@@ -46,23 +44,23 @@ const SerialEffect = (effects: Effect[]): Effect => {
 const ExplosionEffect = (point: point): Effect => {
   const {x, y} = point;
   const base = [
-    [{point: {x, y}, glyph: '{1-fg}*{/1-fg}'}],
+    [{point: {x, y}, glyph: Glyph('*', 'red')}],
     [
-      {point: {x, y}, glyph: '{1-fg}+{/1-fg}'},
-      {point: {x: x - 1, y}, glyph: '{1-fg}-{/1-fg}'},
-      {point: {x: x + 1, y}, glyph: '{1-fg}-{/1-fg}'},
-      {point: {x, y: y - 1}, glyph: '{1-fg}|{/1-fg}'},
-      {point: {x, y: y + 1}, glyph: '{1-fg}|{/1-fg}'},
+      {point: {x, y}, glyph: Glyph('+', 'red')},
+      {point: {x: x - 1, y}, glyph: Glyph('-', 'red')},
+      {point: {x: x + 1, y}, glyph: Glyph('-', 'red')},
+      {point: {x, y: y - 1}, glyph: Glyph('|', 'red')},
+      {point: {x, y: y + 1}, glyph: Glyph('|', 'red')},
     ],
     [
-      {point: {x: x - 1, y}, glyph: '{1-fg}|{/1-fg}'},
-      {point: {x: x + 1, y}, glyph: '{1-fg}|{/1-fg}'},
-      {point: {x, y: y - 1}, glyph: '{1-fg}-{/1-fg}'},
-      {point: {x, y: y + 1}, glyph: '{1-fg}-{/1-fg}'},
-      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
-      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
-      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
-      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
+      {point: {x: x - 1, y}, glyph: Glyph('|', 'red')},
+      {point: {x: x + 1, y}, glyph: Glyph('|', 'red')},
+      {point: {x, y: y - 1}, glyph: Glyph('-', 'red')},
+      {point: {x, y: y + 1}, glyph: Glyph('-', 'red')},
+      {point: {x: x - 1, y: y - 1}, glyph: Glyph('/', 'red')},
+      {point: {x: x + 1, y: y + 1}, glyph: Glyph('/', 'red')},
+      {point: {x: x - 1, y: y + 1}, glyph: Glyph('\\', 'red')},
+      {point: {x: x + 1, y: y - 1}, glyph: Glyph('\\', 'red')},
     ],
   ];
   return ExtendEffect(base, 4);
@@ -72,21 +70,21 @@ const ImplosionEffect = (point: point): Effect => {
   const {x, y} = point;
   const base = [
     [
-      {point: {x, y}, glyph: '{1-fg}*{/1-fg}'},
-      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
-      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
-      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
-      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x, y}, glyph: Glyph('*', 'red')},
+      {point: {x: x - 1, y: y - 1}, glyph: Glyph('\\', 'red')},
+      {point: {x: x + 1, y: y + 1}, glyph: Glyph('\\', 'red')},
+      {point: {x: x - 1, y: y + 1}, glyph: Glyph('/', 'red')},
+      {point: {x: x + 1, y: y - 1}, glyph: Glyph('/', 'red')},
     ],
     [
-      {point: {x, y}, glyph: '{1-fg}#{/1-fg}'},
-      {point: {x: x - 1, y: y - 1}, glyph: '{1-fg}\\{/1-fg}'},
-      {point: {x: x + 1, y: y + 1}, glyph: '{1-fg}\\{/1-fg}'},
-      {point: {x: x - 1, y: y + 1}, glyph: '{1-fg}/{/1-fg}'},
-      {point: {x: x + 1, y: y - 1}, glyph: '{1-fg}/{/1-fg}'},
+      {point: {x, y}, glyph: Glyph('#', 'red')},
+      {point: {x: x - 1, y: y - 1}, glyph: Glyph('\\', 'red')},
+      {point: {x: x + 1, y: y + 1}, glyph: Glyph('\\', 'red')},
+      {point: {x: x - 1, y: y + 1}, glyph: Glyph('/', 'red')},
+      {point: {x: x + 1, y: y - 1}, glyph: Glyph('/', 'red')},
     ],
-    [{point: {x, y}, glyph: '{1-fg}*{/1-fg}'}],
-    [{point: {x, y}, glyph: '{1-fg}#{/1-fg}'}],
+    [{point: {x, y}, glyph: Glyph('*', 'red')}],
+    [{point: {x, y}, glyph: Glyph('#', 'red')}],
   ];
   return ExtendEffect(base, 3);
 };
@@ -104,10 +102,10 @@ const RayEffect = (source: point, target: point, speed: int): Effect => {
     return ((dx > 0) === (dy > 0)) ? '\\' : '/';
   })();
 
-  const glyph = `{1-fg}${ch}{/1-fg}`;
+  const beam = Glyph(ch, 'red');
   const mod = (line.length - 2 + speed) % speed;
   for (let i = mod ? mod : mod + speed; i < line.length - 1; i += speed) {
-    result.push(range(i).map(j => ({point: line[j + 1]!, glyph})));
+    result.push(range(i).map(j => ({point: line[j + 1]!, glyph: beam})));
   }
   return result;
 };
@@ -115,8 +113,9 @@ const RayEffect = (source: point, target: point, speed: int): Effect => {
 const SummonEffect = (source: point, target: point, glyph: Glyph): Effect => {
   const base: Effect = [];
   const line = LOS(source, target);
+  const ball = Glyph('*', 'red');
   for (let i = 1; i < line.length - 1; i++) {
-    base.push([{point: line[i]!, glyph: '{1-fg}*{/1-fg}'}]);
+    base.push([{point: line[i]!, glyph: ball}]);
   }
   const masked = UnderlayEffect(base, {point: target, glyph});
   return SerialEffect([masked, ExplosionEffect(target)]);
@@ -160,10 +159,10 @@ interface Tile {
 };
 
 const kTiles: {[ch: string]: Tile} = {
-  '.': {blocked: false, glyph: '.'},
-  '"': {blocked: false, glyph: '{10-fg}"{/10-fg}'},
-  '#': {blocked: true, glyph: '{2-fg}#{/2-fg}'},
-  '^': {blocked: true, glyph: '{3-fg}^{/3-fg}'},
+  '.': {blocked: false, glyph: Glyph('.')},
+  '"': {blocked: false, glyph: Glyph('"', 'green', true)},
+  '#': {blocked: true, glyph: Glyph('#', 'green')},
+  '^': {blocked: true, glyph: Glyph('^', 'yellow')},
 };
 
 const kMap = `
@@ -307,14 +306,14 @@ const renderMap = (state: State): string => {
     text[point.x + (width + 1) * point.y] = glyph;
   };
   for (let i = 0; i < height; i++) {
-    show({x: width, y: i}, '\n');
+    show({x: width, y: i}, Glyph('\n'));
   }
 
   const {map, source, target} = state;
   map.forEach((line, x) => line.forEach(
     (tile, y) => { show({x, y}, tile.glyph); }));
-  show(source, '@');
-  show(target, '{1-fg}C{/1-fg}');
+  show(source, Glyph('@'));
+  show(target, Glyph('C', 'red'));
 
   if (state.effect.length) {
     state.effect[0]!.forEach(({point, glyph}) => show(point, glyph));
@@ -332,8 +331,8 @@ const initializeIO = (state: State): IO => {
   const screen = blessed.screen({smartCSR: true});
 
   const [width, height] = [state.map.length, state.map[0]!.length];
-  const [left, top, tags, wrap] = ['center', 'center', true, false];
-  const map = blessed.box({height, left, top, tags, width, wrap});
+  const [left, top, wrap] = ['center', 'center', false];
+  const map = blessed.box({height, left, top, width, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [fps, map].map(x => screen.append(x));
 

@@ -20,6 +20,31 @@ const range = (n: int): int[] => {
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Glyph helper to speed up blessed.js formatting.
+
+type Glyph = string & {__type__: 'glyph'};
+
+type Color = 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white';
+
+const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
+  assert(ch.length === 1);
+  if (!color) return ch as Glyph;
+  const index = (() => {
+    switch (color) {
+      case 'black':   return 0;
+      case 'red':     return 1;
+      case 'green':   return 2;
+      case 'yellow':  return 3;
+      case 'blue':    return 4;
+      case 'magenta': return 5;
+      case 'cyan':    return 6;
+      case 'white':   return 7;
+    }
+  })();
+  return `\x1b[${index + (light ? 90 : 30)}m${ch}\x1b[39m` as Glyph;
+};
+
+//////////////////////////////////////////////////////////////////////////////
 // Tran-Thong symmetric line-of-sight calculation.
 
 const LOS = (a: point, b: point): point[] => {
@@ -115,4 +140,4 @@ class FOV {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, point, range, FOV, LOS};
+export {assert, flatten, int, point, range, FOV, LOS, Glyph};
