@@ -1,8 +1,8 @@
-import {assert, flatten, int, point, range, LOS, Glyph} from './lib';
+import {assert, flatten, int, nonnull, range, Glyph, Point, Direction, Matrix, LOS} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
 
-interface Particle {point: point, glyph: Glyph};
+interface Particle {point: Point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
 interface Effect extends Array<Frame> {};
 
@@ -32,7 +32,7 @@ const ParallelEffect = (effects: Effect[]): Effect => {
   const result: Effect = [];
   effects.forEach(effect => effect.forEach((frame, i) => {
     if (i >= result.length) result.push([]);
-    frame.forEach(x => result[i]!.push(x));
+    frame.forEach(x => nonnull(result[i]).push(x));
   }));
   return result;
 };
@@ -41,55 +41,53 @@ const SerialEffect = (effects: Effect[]): Effect => {
   return flatten(effects);
 };
 
-const ExplosionEffect = (point: point): Effect => {
-  const {x, y} = point;
+const ExplosionEffect = (point: Point): Effect => {
   const base = [
-    [{point: {x, y}, glyph: Glyph('*', 'red')}],
+    [{point, glyph: Glyph('*', 'red')}],
     [
-      {point: {x, y}, glyph: Glyph('+', 'red')},
-      {point: {x: x - 1, y}, glyph: Glyph('-', 'red')},
-      {point: {x: x + 1, y}, glyph: Glyph('-', 'red')},
-      {point: {x, y: y - 1}, glyph: Glyph('|', 'red')},
-      {point: {x, y: y + 1}, glyph: Glyph('|', 'red')},
+      {point, glyph: Glyph('+', 'red')},
+      {point: point.add(Direction.n), glyph: Glyph('|', 'red')},
+      {point: point.add(Direction.s), glyph: Glyph('|', 'red')},
+      {point: point.add(Direction.e), glyph: Glyph('-', 'red')},
+      {point: point.add(Direction.w), glyph: Glyph('-', 'red')},
     ],
     [
-      {point: {x: x - 1, y}, glyph: Glyph('|', 'red')},
-      {point: {x: x + 1, y}, glyph: Glyph('|', 'red')},
-      {point: {x, y: y - 1}, glyph: Glyph('-', 'red')},
-      {point: {x, y: y + 1}, glyph: Glyph('-', 'red')},
-      {point: {x: x - 1, y: y - 1}, glyph: Glyph('/', 'red')},
-      {point: {x: x + 1, y: y + 1}, glyph: Glyph('/', 'red')},
-      {point: {x: x - 1, y: y + 1}, glyph: Glyph('\\', 'red')},
-      {point: {x: x + 1, y: y - 1}, glyph: Glyph('\\', 'red')},
+      {point: point.add(Direction.n), glyph: Glyph('-', 'red')},
+      {point: point.add(Direction.s), glyph: Glyph('-', 'red')},
+      {point: point.add(Direction.e), glyph: Glyph('|', 'red')},
+      {point: point.add(Direction.w), glyph: Glyph('|', 'red')},
+      {point: point.add(Direction.ne), glyph: Glyph('\\', 'red')},
+      {point: point.add(Direction.sw), glyph: Glyph('\\', 'red')},
+      {point: point.add(Direction.nw), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.se), glyph: Glyph('/', 'red')},
     ],
   ];
   return ExtendEffect(base, 4);
 };
 
-const ImplosionEffect = (point: point): Effect => {
-  const {x, y} = point;
+const ImplosionEffect = (point: Point): Effect => {
   const base = [
     [
-      {point: {x, y}, glyph: Glyph('*', 'red')},
-      {point: {x: x - 1, y: y - 1}, glyph: Glyph('\\', 'red')},
-      {point: {x: x + 1, y: y + 1}, glyph: Glyph('\\', 'red')},
-      {point: {x: x - 1, y: y + 1}, glyph: Glyph('/', 'red')},
-      {point: {x: x + 1, y: y - 1}, glyph: Glyph('/', 'red')},
+      {point, glyph: Glyph('*', 'red')},
+      {point: point.add(Direction.ne), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.sw), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.nw), glyph: Glyph('\\', 'red')},
+      {point: point.add(Direction.se), glyph: Glyph('\\', 'red')},
     ],
     [
-      {point: {x, y}, glyph: Glyph('#', 'red')},
-      {point: {x: x - 1, y: y - 1}, glyph: Glyph('\\', 'red')},
-      {point: {x: x + 1, y: y + 1}, glyph: Glyph('\\', 'red')},
-      {point: {x: x - 1, y: y + 1}, glyph: Glyph('/', 'red')},
-      {point: {x: x + 1, y: y - 1}, glyph: Glyph('/', 'red')},
+      {point, glyph: Glyph('#', 'red')},
+      {point: point.add(Direction.ne), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.sw), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.nw), glyph: Glyph('\\', 'red')},
+      {point: point.add(Direction.se), glyph: Glyph('\\', 'red')},
     ],
-    [{point: {x, y}, glyph: Glyph('*', 'red')}],
-    [{point: {x, y}, glyph: Glyph('#', 'red')}],
+    [{point, glyph: Glyph('*', 'red')}],
+    [{point, glyph: Glyph('#', 'red')}],
   ];
   return ExtendEffect(base, 3);
 };
 
-const RayEffect = (source: point, target: point, speed: int): Effect => {
+const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   const result: Effect = [];
   const line = LOS(source, target);
   if (line.length <= 2) return result;
@@ -105,23 +103,23 @@ const RayEffect = (source: point, target: point, speed: int): Effect => {
   const beam = Glyph(ch, 'red');
   const mod = (line.length - 2 + speed) % speed;
   for (let i = mod ? mod : mod + speed; i < line.length - 1; i += speed) {
-    result.push(range(i).map(j => ({point: line[j + 1]!, glyph: beam})));
+    result.push(range(i).map(j => ({point: nonnull(line[j + 1]), glyph: beam})));
   }
   return result;
 };
 
-const SummonEffect = (source: point, target: point, glyph: Glyph): Effect => {
+const SummonEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   const base: Effect = [];
   const line = LOS(source, target);
   const ball = Glyph('*', 'red');
   for (let i = 1; i < line.length - 1; i++) {
-    base.push([{point: line[i]!, glyph: ball}]);
+    base.push([{point: nonnull(line[i]), glyph: ball}]);
   }
   const masked = UnderlayEffect(base, {point: target, glyph});
   return SerialEffect([masked, ExplosionEffect(target)]);
 };
 
-const WithdrawEffect = (source: point, target: point, glyph: Glyph): Effect => {
+const WithdrawEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   const base = RayEffect(source, target, 4);
   const hide = {point: target, glyph};
   const impl = UnderlayEffect(ImplosionEffect(target), hide);
@@ -135,7 +133,7 @@ const WithdrawEffect = (source: point, target: point, glyph: Glyph): Effect => {
   ]);
 };
 
-const SwitchEffect = (source: point, target: point, glyph: Glyph): Effect => {
+const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   return SerialEffect([
     WithdrawEffect(source, target, glyph),
     ConstantEffect({point: target, glyph}, 4),
@@ -150,8 +148,6 @@ assert(!!{OverlayEffect, ParallelEffect, PauseEffect});
 const Constants = {
   FRAME_RATE: 60,
 };
-
-type Map = Tile[][];
 
 interface Tile {
   blocked: boolean,
@@ -194,73 +190,60 @@ const kMap = `
 `;
 
 interface State {
-  map: Map,
-  source: point,
-  target: point,
+  map: Matrix<Tile>,
+  source: Point,
+  target: Point,
   effect: Effect,
 };
 
 type Input = string;
 
-const add = (a: point, b: point): point => {
-  return {x: a.x + b.x, y: a.y + b.y};
-};
-
-const equal = (a: point, b: point): boolean => {
-  return a.x === b.x && a.y === b.y;
-};
-
-const bounded = (p: point, map: Map): boolean => {
-  const {x, y} = p;
-  return 0 <= x && x < map.length && 0 <= y && y < map[0]!.length;
-};
-
-const unblocked = (p: point, map: Map): boolean => {
-  return bounded(p, map) && !map[p.x]![p.y]!.blocked;
-};
-
 const processInput = (state: State, input: Input) => {
   if (input === 'f') {
-    const glyph = state.map[state.target.x]![state.target.y]!.glyph;
+    const glyph = state.map.get(state.target).glyph;
     state.effect = SwitchEffect(state.source, state.target, glyph);
   }
-  const deltas: {[key: string]: point} = {
-    'y': {x: -1, y: -1},
-    'u': {x: 1, y: -1},
-    'h': {x: -1, y: 0},
-    'j': {x: 0, y: 1},
-    'k': {x: 0, y: -1},
-    'l': {x: 1, y: 0},
-    'b': {x: -1, y: 1},
-    'n': {x: 1, y: 1},
+  const deltas: {[key: string]: Direction} = {
+    'h': Direction.w,
+    'j': Direction.s,
+    'k': Direction.n,
+    'l': Direction.e,
+    'y': Direction.nw,
+    'u': Direction.ne,
+    'b': Direction.sw,
+    'n': Direction.se,
   };
   const delta = deltas[input];
   if (!delta) return;
-  const source = add(state.source, delta);
-  if (unblocked(source, state.map) && !equal(source, state.target)) {
+  const source = state.source.add(delta);
+  const tile = state.map.getOrNull(source);
+  if (tile && !tile.blocked && !source.equal(state.target)) {
     state.source = source;
   }
 };
 
 const initializeState = (): State => {
   const lines = kMap.trim().split('\n');
-  const [rows, cols] = [lines.length, lines[0]!.length];
+  const [rows, cols] = [lines.length, nonnull(lines[0]).length];
   lines.forEach(x => assert(x.length === cols));
 
-  const source = {x: 0, y: 0};
-  const target = {x: 0, y: 0};
+  let source: Point | null = null;
+  let target: Point | null = null;
 
-  const map = range(cols).map(x => range(rows).map(y => {
-    const ch = lines[y]![x]!;
+  const map = new Matrix(new Point(cols, rows), nonnull(kTiles['.']));
+  range(cols).forEach(x => range(rows).forEach(y => {
+    const ch = nonnull(nonnull(lines[y])[x]);
     const tile = kTiles[ch];
-    if (tile) return tile;
+    if (tile) return map.set(new Point(x, y), tile);
     switch (ch) {
-      case '@': source.x = x; source.y = y; break;
-      case 'C': target.x = x; target.y = y; break;
+      case '@': source = new Point(x, y); break;
+      case 'C': target = new Point(x, y); break;
       default: assert(false, () => `Unknown char: ${ch}`);
     }
-    return kTiles['.']!;
   }));
+
+  source = nonnull(source);
+  target = nonnull(target);
   return {map, source, target, effect: []};
 };
 
@@ -300,23 +283,27 @@ interface IO {
 };
 
 const renderMap = (state: State): string => {
-  const [width, height] = [state.map.length, state.map[0]!.length];
+  const {x: width, y: height} = state.map.size;
   const text: string[] = Array((width + 1) * height).fill(' ');
-  const show = (point: point, glyph: Glyph) => {
-    text[point.x + (width + 1) * point.y] = glyph;
+  const show = (x: int, y: int, glyph: Glyph) => {
+    text[x + (width + 1) * y] = glyph;
   };
   for (let i = 0; i < height; i++) {
-    show({x: width, y: i}, Glyph('\n'));
+    show(width, i, Glyph('\n'));
   }
 
   const {map, source, target} = state;
-  map.forEach((line, x) => line.forEach(
-    (tile, y) => { show({x, y}, tile.glyph); }));
-  show(source, Glyph('@'));
-  show(target, Glyph('C', 'red'));
+  for (let x = 0; x < map.size.x; x++) {
+    for (let y = 0; y < map.size.y; y++) {
+      show(x, y, map.getXY(x, y).glyph);
+    }
+  }
+  show(source.x, source.y, Glyph('@'));
+  show(target.x, target.y, Glyph('C', 'red'));
 
   if (state.effect.length) {
-    state.effect[0]!.forEach(({point, glyph}) => show(point, glyph));
+    const frame = nonnull(state.effect[0]);
+    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
   }
 
   return text.join('');
@@ -330,7 +317,7 @@ const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const screen = blessed.screen({smartCSR: true});
 
-  const [width, height] = [state.map.length, state.map[0]!.length];
+  const {x: width, y: height} = state.map.size;
   const [left, top, wrap] = ['center', 'center', false];
   const map = blessed.box({height, left, top, width, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
@@ -354,11 +341,11 @@ const update = (io: IO) => {
 const render = (io: IO) => {
   io.map.setContent(renderMap(io.state));
 
-  const last = io.timing[io.timing.length - 1]!;
+  const last = nonnull(io.timing[io.timing.length - 1]);
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
 
   last.end = Date.now();
-  const total = Math.max(last.end - io.timing[0]!.start, 1);
+  const total = Math.max(last.end - nonnull(io.timing[0]).start, 1);
   const cpu = 100 * (last.end - last.start + base) / total;
   const fps = 1000 * io.timing.length / total;
 
@@ -375,7 +362,7 @@ const tick = (io: IO) => () => {
   io.screen.render();
   const fps = Constants.FRAME_RATE;
   const shift = Math.floor(1000 * io.timing.length / fps);
-  const delay = Math.max(io.timing[0]!.start + shift - Date.now(), 1);
+  const delay = Math.max(nonnull(io.timing[0]).start + shift - Date.now(), 1);
   setTimeout(tick(io), Math.min(delay, Math.floor(1000 / fps)));
 };
 

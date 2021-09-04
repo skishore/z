@@ -1,4 +1,4 @@
-import {assert, int, point, range} from './lib';
+import {assert, int, range, Point} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -8,7 +8,7 @@ interface FontConfig {
   height: int,
   rows: int,
   cols: int,
-  map: {[codepoint: number]: point},
+  map: {[codepoint: number]: Point},
 };
 
 const aquarius = (): FontConfig => {
@@ -20,7 +20,7 @@ const aquarius = (): FontConfig => {
     '`abcdefghijklmno',
     'pqrstuvwxyz{|}~ ',
   ];
-  const map: {[codepoint: number]: point} = {};
+  const map: {[codepoint: number]: Point} = {};
   rows.forEach((row, i) => {
     assert(row.length === 16);
     for (let j = 0; j < row.length; j++) {
@@ -32,7 +32,7 @@ const aquarius = (): FontConfig => {
         }
         return row.charCodeAt(j);
       })();
-      if (codepoint) map[codepoint] = {x: j, y: i + 2};
+      if (codepoint) map[codepoint] = new Point(j, i + 2);
     }
   });
   return {name: 'Aquarius', width: 8, height: 8, rows: 16, cols: 16, map};

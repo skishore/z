@@ -1,5 +1,4 @@
 type int = number;
-interface point {x: int, y: int};
 
 const assert = (x: boolean, fn?: () => string): void => {
   if (!x) throw new Error(fn && fn());
@@ -11,7 +10,13 @@ const flatten = <T>(xss: T[][]): T[] => {
   return result;
 };
 
+const nonnull = <T>(x: T): NonNullable<T> => {
+  if (x === null || x === undefined) throw new Error();
+  return x as NonNullable<T>;
+}
+
 const range = (n: int): int[] => {
+  n = n | 0;
   const result = [];
   for (let i = 0; i < n; i++) {
     result.push(i);
@@ -45,12 +50,94 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Simple 2D geometry helpers.
+
+class Point {
+  readonly x: int;
+  readonly y: int;
+
+  constructor(x: int, y: int) {
+    this.x = x | 0;
+    this.y = y | 0;
+  }
+
+  add(o: Point): Point { return new Point(this.x + o.x, this.y + o.y); }
+  sub(o: Point): Point { return new Point(this.x - o.x, this.y - o.y); }
+
+  equal(o: Point): boolean { return this.x === o.x && this.y === o.y; }
+
+  toString(): string { return `Point(${this.x}, ${this.y})`; }
+};
+
+class Direction extends Point {
+  static none = new Direction(0, 0);
+  static n    = new Direction(0, -1);
+  static ne   = new Direction(1, -1);
+  static e    = new Direction(1, 0);
+  static se   = new Direction(1, 1);
+  static s    = new Direction(0, 1);
+  static sw   = new Direction(-1, 1);
+  static w    = new Direction(-1, 0);
+  static nw   = new Direction(-1, -1);
+
+  static all = [Direction.n, Direction.ne, Direction.e, Direction.se,
+                Direction.s, Direction.sw, Direction.w, Direction.nw];
+
+  static cardinal = [Direction.n, Direction.e, Direction.s, Direction.w];
+
+  static diagonal = [Direction.ne, Direction.se, Direction.sw, Direction.nw];
+
+  private constructor(x: int, y: int) { super(x, y); }
+};
+
+class Matrix<T> {
+  readonly size: Point;
+  #data: T[];
+
+  constructor(size: Point, value: T) {
+    this.size = size;
+    this.#data = Array(size.x * size.y).fill(value);
+  }
+
+  get(point: Point): T {
+    if (!this.contains(point)) throw new Error(`${point} not in ${this.size}`);
+    return this.#data[point.x + this.size.x * point.y]!;
+  }
+
+  set(point: Point, value: T): void {
+    if (!this.contains(point)) throw new Error(`${point} not in ${this.size}`);
+    this.#data[point.x + this.size.x * point.y] = value;
+  }
+
+  getXY(x: int, y: int): T {
+    x = x | 0;
+    y = y | 0;
+    const {x: sx, y: sy} = this.size;
+    if (!(0 <= x && x < sx && 0 <= y && y < sy)) {
+      throw new Error(`${new Point(x, y)} not in ${this.size}`);
+    }
+    return this.#data[x + this.size.x * y]!;
+  }
+
+  getOrNull(point: Point): T | null {
+    if (!this.contains(point)) return null;
+    return this.#data[point.x + this.size.x * point.y]!;
+  }
+
+  contains(point: Point): boolean {
+    const {x: px, y: py} = point;
+    const {x: sx, y: sy} = this.size;
+    return 0 <= px && px < sx && 0 <= py && py < sy;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
 // Tran-Thong symmetric line-of-sight calculation.
 
-const LOS = (a: point, b: point): point[] => {
+const LOS = (a: Point, b: Point): Point[] => {
   const {x: xa, y: ya} = a;
   const {x: xb, y: yb} = b;
-  const result: point[] = [{x: xa, y: ya}];
+  const result: Point[] = [a];
 
   const x_diff = Math.abs(xa - xb);
   const y_diff = Math.abs(ya - yb);
@@ -69,7 +156,7 @@ const LOS = (a: point, b: point): point[] => {
         y += y_sign;
         test += x_diff;
       }
-      result.push({x, y});
+      result.push(new Point(x, y));
     }
   } else {
     test = Math.floor((y_diff + test) / 2);
@@ -80,7 +167,7 @@ const LOS = (a: point, b: point): point[] => {
         x += x_sign;
         test += y_diff;
       }
-      result.push({x, y});
+      result.push(new Point(x, y));
     }
   }
 
@@ -90,28 +177,27 @@ const LOS = (a: point, b: point): point[] => {
 //////////////////////////////////////////////////////////////////////////////
 // Pre-computed visibility trie, for field-of-vision computation.
 
-interface Node {
-  x: int,
-  y: int,
-  children: Node[],
+class Node extends Point {
+  public children: Node[];
+  constructor(x: int, y: int) { super(x, y); this.children = []; }
 };
 
 class FOV {
   #root: Node;
 
   constructor(radius: int) {
-    this.#root = {x: 0, y: 0, children: []};
+    this.#root = new Node(0, 0);
     for (let i = 0; i <= radius; i++) {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
         const [xb, yb] = [xa * ((j & 2) ? 1 : -1), ya * ((j & 4) ? 1 : -1)];
-        const line = LOS({x: 0, y: 0}, {x: xb, y: yb});
+        const line = LOS(new Point(0, 0), new Point(xb, yb));
         this.trieUpdate(this.#root, line, 0);
       }
     }
   }
 
-  fieldOfVision(blocked: (p: point) => boolean) {
+  fieldOfVision(blocked: (p: Point) => boolean) {
     const nodes = [this.#root];
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]!;
@@ -120,7 +206,7 @@ class FOV {
     }
   }
 
-  private trieUpdate(node: Node, line: point[], i: int) {
+  private trieUpdate(node: Node, line: Point[], i: int) {
     const [prev, next] = [line[i]!, line[i + 1]];
     assert(node.x === prev.x);
     assert(node.y === prev.y);
@@ -130,7 +216,7 @@ class FOV {
       for (const child of node.children) {
         if (child.x === next.x && child.y == next.y) return child;
       }
-      const result = {...next, children: []};
+      const result = new Node(next.x, next.y);
       node.children.push(result);
       return result;
     })();
@@ -140,4 +226,4 @@ class FOV {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, point, range, FOV, LOS, Glyph};
+export {assert, flatten, int, nonnull, range, Glyph, Point, Direction, Matrix, LOS, FOV};
