@@ -1,6 +1,8 @@
-import {assert, int, range, Point} from './lib';
+import {assert, int, range} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
+
+interface Point { x: int, y: int };
 
 interface FontConfig {
   name: string,
@@ -32,7 +34,7 @@ const aquarius = (): FontConfig => {
         }
         return row.charCodeAt(j);
       })();
-      if (codepoint) map[codepoint] = new Point(j, i + 2);
+      if (codepoint) map[codepoint] = {x: j, y: i + 2};
     }
   });
   return {name: 'Aquarius', width: 8, height: 8, rows: 16, cols: 16, map};

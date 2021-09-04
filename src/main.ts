@@ -1,4 +1,5 @@
-import {assert, nonnull, Point, Direction, Matrix, LOS, FOV} from './lib';
+import {assert, nonnull} from './lib';
+import {Point, Direction, Matrix, LOS, FOV} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 

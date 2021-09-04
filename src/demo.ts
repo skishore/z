@@ -1,4 +1,5 @@
-import {assert, flatten, int, nonnull, range, Glyph, Point, Direction, Matrix, LOS} from './lib';
+import {assert, flatten, int, nonnull, range, Glyph} from './lib';
+import {Point, Direction, Matrix, LOS} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
