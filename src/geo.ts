@@ -205,7 +205,8 @@ class AStarNode extends Point {
   }
 };
 
-const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean): Point[] | null => {
+const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
+               record?: Point[]): Point[] | null => {
   const map: Map<int, AStarNode> = new Map();
   const frontier: AStarNode[] = [];
 
@@ -217,6 +218,7 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean): Po
   while (frontier.length > 0) {
     frontier.sort((x, y) => y.score - x.score);
     const cur = frontier.pop()!;
+    if (record) record.push(cur);
 
     if (cur.equal(target)) {
       let current: AStarNode | null = cur;

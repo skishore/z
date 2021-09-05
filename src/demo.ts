@@ -142,11 +142,47 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
+const SearchEffect = (source: Point, target: Point, blocked: (p: Point) => boolean): Effect => {
+  const record: Point[] = [];
+  const path = (AStar(source, target, blocked, record) || []).reverse();
+
+  const phase1: Effect = [];
+  const g1 = Glyph('?', 'yellow');
+  for (let i = 0; i < record.length; i++) {
+    phase1.push(range(i + 1).map(j => ({point: record[j]!, glyph: g1})));
+  }
+
+  const phase2: Effect = [];
+  const g2 = Glyph('*', 'blue');
+  for (let i = 0; i < path.length; i++) {
+    phase2.push(range(i + 1).map(j => ({point: path[j]!, glyph: g2})));
+  }
+
+  const delay = 4;
+  const frame = phase1[phase1.length - 1] || [];
+  const result = SerialEffect([
+    phase1,
+    ParallelEffect([
+      Array(phase2.length * delay).fill(frame),
+      ExtendEffect(phase2, delay),
+    ]),
+  ]);
+
+  return ParallelEffect([
+    result,
+    Array(result.length).fill([
+      {point: source, glyph: Glyph('@')},
+      {point: target, glyph: Glyph('C', 'red')},
+    ]),
+  ]);
+};
+
 assert(!!{OverlayEffect, ParallelEffect, PauseEffect});
 
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
+  BLOCKED: 0.24,
   FRAME_RATE: 60,
 };
 
@@ -166,25 +202,25 @@ const kMap = `
 ........""""""""""##############################
 ..............."""""""""""""""##################
 """"....................""""""""""""""""""""####
-"""""""...................."""""""""""""""""""##
-"""""""......................"""""""""""""""....
-""""".........................""""""""""""......
-""""".........................""""""""""".......
+"""""""................##.."""""""""""""""""""##
+""""##"................##...."""""""""""""""....
+""""##.......##...............""""""""""""......
+"""""........##...............""""""""""".......
 """...........................""""""""""........
-............................."""""""""".........
-................................................
+.............................""""##""""...##....
+.................................##.......##....
 ...................C............................
 ................................................
-................................................
-............................."""""""............
-.........................."""""########.........
-......................."""""""##########........
-.................."""""""""#############........
-.............."""""""""""##############.........
-...........""""""""""""""""""""#######..@.......
+......##.................##.....................
+......##.................##.."""""""............
+..........................""""""###"""".........
+......................."""""""""######""........
+..............##.."""""""""##"""""""""""........
+..............##"""""""""#####"""######.........
+...........""""""""""""""""""""######...@.......
 ......""""""""""""""""""""""""""""""............
-"""""""""""""""""""""""""""""""""""""...........
-""""""""""""""""""""""""""""""""""""""".........
+""""##""""""""""""""""""""""##"""""""...........
+""""##""""""""""""""""""""""##""""""""".........
 #################"""""""""""""""""""""""""".....
 ^^^^^^###############################"""""""""""
 ^^^^^^^^^^^^^^^^^^^#############################
@@ -199,7 +235,34 @@ interface State {
 
 type Input = string;
 
+const addBlocks = (state: State): State => {
+  let add = Math.floor(state.map.size.x * state.map.size.y * Constants.BLOCKED);
+  for (let x = 0; x < state.map.size.x; x++) {
+    for (let y = 0; y < state.map.size.y; y++) {
+      if (state.map.getXY(x, y).blocked) add--;
+    }
+  }
+
+  const tile = nonnull(kTiles['#']);
+  for (let i = 0; i < add; i++) {
+    const x = Math.floor(Math.random() * state.map.size.x);
+    const y = Math.floor(Math.random() * state.map.size.y);
+    const point = new Point(x, y);
+    if (state.map.get(point).blocked) continue;
+    if (point.equal(state.source) || point.equal(state.target)) continue;
+    state.map.set(point, tile);
+    i--;
+  }
+  return state;
+};
+
 const processInput = (state: State, input: Input) => {
+  if (input === 's') {
+    state.effect = SearchEffect(state.source, state.target, x => {
+      const tile = state.map.getOrNull(x);
+      return !tile || tile.blocked;
+    });
+  }
   if (input === 'f') {
     const glyph = state.map.get(state.target).glyph;
     state.effect = SwitchEffect(state.source, state.target, glyph);
@@ -245,7 +308,7 @@ const initializeState = (): State => {
 
   source = nonnull(source);
   target = nonnull(target);
-  return {map, source, target, effect: []};
+  return addBlocks({map, source, target, effect: []});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
@@ -330,7 +393,7 @@ const initializeIO = (state: State): IO => {
 
   const inputs: Input[] = [];
   screen.key(['C-c', 'escape'], () => process.exit(0));
-  'hjklyubnf'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
+  'hjklyubnfs'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
   return {fps, map, inputs, screen, state, timing: []};
 };
 
