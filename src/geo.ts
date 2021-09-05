@@ -128,16 +128,16 @@ const LOS = (a: Point, b: Point): Point[] => {
 //////////////////////////////////////////////////////////////////////////////
 // Pre-computed visibility trie, for field-of-vision computation.
 
-class Node extends Point {
-  public children: Node[];
+class FOVNode extends Point {
+  public readonly children: FOVNode[];
   constructor(x: int, y: int) { super(x, y); this.children = []; }
 };
 
 class FOV {
-  #root: Node;
+  #root: FOVNode;
 
   constructor(radius: int) {
-    this.#root = new Node(0, 0);
+    this.#root = new FOVNode(0, 0);
     for (let i = 0; i <= radius; i++) {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
@@ -157,7 +157,7 @@ class FOV {
     }
   }
 
-  private trieUpdate(node: Node, line: Point[], i: int) {
+  private trieUpdate(node: FOVNode, line: Point[], i: int) {
     const [prev, next] = [line[i]!, line[i + 1]];
     assert(node.x === prev.x);
     assert(node.y === prev.y);
@@ -167,7 +167,7 @@ class FOV {
       for (const child of node.children) {
         if (child.x === next.x && child.y == next.y) return child;
       }
-      const result = new Node(next.x, next.y);
+      const result = new FOVNode(next.x, next.y);
       node.children.push(result);
       return result;
     })();
@@ -176,5 +176,83 @@ class FOV {
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Pathfinding: breadth-first-search and A-star.
 
-export {assert, int, Point, Direction, Matrix, LOS, FOV};
+const AStarDiagonalCost = 17;
+const AStarStraightCost = 16;
+
+// Correctness below relies on the fact that this heuristic is consistent.
+const AStarHeuristic = (a: Point, b: Point): int => {
+  const x = Math.abs(a.x - b.x);
+  const y = Math.abs(a.y - b.y);
+  const diagonal = Math.min(x, y);
+  const straight = Math.max(x, y) - diagonal;
+  return diagonal * AStarDiagonalCost + straight * AStarStraightCost;
+};
+
+// A simple injection from Z x Z -> Z used as a key for each AStarNode.
+const AStarHash = (p: Point): int => {
+  const {x, y} = p;
+  const s = Math.max(Math.abs(x), Math.abs(y));
+  const k = 2 * s + 1;
+  return (x + s + k * (y + s + k));
+};
+
+class AStarNode extends Point {
+  constructor(x: int, y: int, public parent: AStarNode | null,
+              public distance: int, public score: int) {
+    super(x, y);
+  }
+};
+
+const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean): Point[] | null => {
+  const map: Map<int, AStarNode> = new Map();
+  const frontier: AStarNode[] = [];
+
+  const score = AStarHeuristic(source, target);
+  const node = new AStarNode(source.x, source.y, null, 0, score);
+  frontier.push(node);
+  map.set(AStarHash(node), node);
+
+  while (frontier.length > 0) {
+    frontier.sort((x, y) => y.score - x.score);
+    const cur = frontier.pop()!;
+
+    if (cur.equal(target)) {
+      let current: AStarNode | null = cur;
+      const result: Point[] = [];
+      while (current) {
+        result.push(current);
+        current = current.parent;
+      }
+      return result.reverse();
+    }
+
+    for (const direction of Direction.all) {
+      const next = cur.add(direction);
+      if (blocked(next)) continue;
+
+      const distance = cur.distance + 1;
+      const score = distance * AStarDiagonalCost + AStarHeuristic(next, target);
+      assert(score >= cur.score);
+
+      const hash = AStarHash(next);
+      const existing = map.get(hash);
+      if (existing && existing.distance > distance) {
+        existing.parent = cur;
+        existing.distance = distance;
+        existing.score = score;
+      } else if (!existing) {
+        const created = new AStarNode(next.x, next.y, cur, distance, score);
+        frontier.push(created);
+        map.set(hash, created);
+      }
+    }
+  }
+
+  return null;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+export {assert, int, Point, Direction, Matrix, LOS, FOV, AStar};
