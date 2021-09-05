@@ -145,8 +145,9 @@ function Element(options) {
     this.screen._listenKeys(this);
   }
 
+  this.parseAttr = options.attr !== false;
   this.parseTags = options.parseTags || options.tags;
-  this.wrapContent = (options.wrap === false);
+  this.wrapContent = (options.wrap !== false);
 
   this.setContent(options.content || '', true);
 
@@ -523,6 +524,8 @@ Element.prototype._parseTags = function(text) {
 };
 
 Element.prototype._parseAttr = function(lines) {
+  if (!this.parseAttr) return;
+
   var dattr = this.sattr(this.style)
     , attr = dattr
     , attrs = []
