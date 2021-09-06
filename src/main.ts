@@ -139,7 +139,7 @@ const renderFrameRate = (cpu: number, fps: number): string => {
 
 const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
-  const screen = blessed.screen({smartCSR: true});
+  const screen = blessed.screen();
 
   const {x: width, y: height} = state.map.size;
   const [left, top, tags, wrap] = ['center', 'center', true, false];
