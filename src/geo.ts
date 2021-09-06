@@ -178,16 +178,16 @@ class FOV {
 //////////////////////////////////////////////////////////////////////////////
 // Pathfinding: breadth-first-search and A-star.
 
-const AStarDiagonalCost = 17;
-const AStarStraightCost = 16;
+const AStarUnitCost = 16;
+const AStarDiagonalPenalty = 1;
 
 // Correctness below relies on the fact that this heuristic is consistent.
 const AStarHeuristic = (a: Point, b: Point): int => {
   const x = Math.abs(a.x - b.x);
   const y = Math.abs(a.y - b.y);
-  const diagonal = Math.min(x, y);
-  const straight = Math.max(x, y) - diagonal;
-  return diagonal * AStarDiagonalCost + straight * AStarStraightCost;
+  const min = Math.min(x, y);
+  const max = Math.max(x, y);
+  return AStarUnitCost * max + 2 * AStarDiagonalPenalty * min;
 };
 
 // A simple injection from Z x Z -> Z used as a key for each AStarNode.
@@ -234,9 +234,10 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
       const next = cur.add(direction);
       if (blocked(next)) continue;
 
-      const distance = cur.distance + 1;
-      const score = distance * AStarDiagonalCost + AStarHeuristic(next, target);
-      assert(score >= cur.score);
+      const diagonal = direction.x !== 0 && direction.y !== 0;
+      const addition = AStarUnitCost + (diagonal ? AStarDiagonalPenalty : 0);
+      const distance = cur.distance + addition;
+      const score = distance + AStarHeuristic(next, target);
 
       const hash = AStarHash(next);
       const existing = map.get(hash);
