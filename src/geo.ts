@@ -182,17 +182,16 @@ const AStarUnitCost = 16;
 const AStarDiagonalPenalty = 1;
 
 // Intentionally not admissible to speed up search.
-const AStarHeuristic = (a: Point, b: Point): int => {
-  const x = Math.abs(a.x - b.x);
-  const y = Math.abs(a.y - b.y);
-  const min = Math.min(x, y);
-  const max = Math.max(x, y);
+const AStarHeuristic = (x: int, y: int, b: Point): int => {
+  const dx = Math.abs(x - b.x);
+  const dy = Math.abs(y - b.y);
+  const min = Math.min(dx, dy);
+  const max = Math.max(dx, dy);
   return AStarUnitCost * max + 2 * AStarDiagonalPenalty * min;
 };
 
 // A simple injection from Z x Z -> Z used as a key for each AStarNode.
-const AStarHash = (p: Point): int => {
-  const {x, y} = p;
+const AStarHash = (x: int, y: int): int => {
   const s = Math.max(Math.abs(x), Math.abs(y));
   const k = 2 * s + 1;
   return (x + s + k * (y + s + k));
@@ -281,10 +280,11 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
   const map: Map<int, AStarNode> = new Map();
   const heap: AStarHeap = [];
 
-  const score = AStarHeuristic(source, target);
-  const node = new AStarNode(source.x, source.y, null, 0, score);
+  const {x, y} = source;
+  const score = AStarHeuristic(x, y, target);
+  const node = new AStarNode(x, y, null, 0, score);
   AStarHeapPush(heap, node);
-  map.set(AStarHash(node), node);
+  map.set(AStarHash(x, y), node);
 
   while (heap.length > 0) {
     const cur = AStarHeapExtractMin(heap);
@@ -300,16 +300,18 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
       return result.reverse();
     }
 
+    const {x: cx, y: cy} = cur;
     for (const direction of Direction.all) {
-      const next = cur.add(direction);
-      if (blocked(next)) continue;
+      const {x: dx, y: dy} = direction;
+      const nx = cx + dx;
+      const ny = cy + dy;
 
-      const diagonal = direction.x !== 0 && direction.y !== 0;
+      const diagonal = dx !== 0 && dy !== 0;
       const addition = AStarUnitCost + (diagonal ? AStarDiagonalPenalty : 0);
       const distance = cur.distance + addition;
-      const score = distance + AStarHeuristic(next, target);
+      const score = distance + AStarHeuristic(nx, ny, target);
 
-      const hash = AStarHash(next);
+      const hash = AStarHash(nx, ny);
       const existing = map.get(hash);
 
       // index !== null is a check to see if we've already popped this node
@@ -323,7 +325,8 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
         existing.score = score;
         AStarHeapify(heap, existing, existing.index);
       } else if (!existing) {
-        const created = new AStarNode(next.x, next.y, cur, distance, score);
+        const created = new AStarNode(nx, ny, cur, distance, score);
+        if (blocked(created)) continue;
         AStarHeapPush(heap, created);
         map.set(hash, created);
       }
