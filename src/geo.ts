@@ -181,7 +181,7 @@ class FOV {
 const AStarUnitCost = 16;
 const AStarDiagonalPenalty = 1;
 
-// Correctness below relies on the fact that this heuristic is consistent.
+// Intentionally not admissible to speed up search.
 const AStarHeuristic = (a: Point, b: Point): int => {
   const x = Math.abs(a.x - b.x);
   const y = Math.abs(a.y - b.y);
@@ -199,25 +199,95 @@ const AStarHash = (p: Point): int => {
 };
 
 class AStarNode extends Point {
+  public index: int | null = null;
   constructor(x: int, y: int, public parent: AStarNode | null,
               public distance: int, public score: int) {
     super(x, y);
   }
 };
 
+// Min-heap implementation on lists of A* nodes. Nodes track indices as well.
+type AStarHeap = AStarNode[];
+
+const AStarHeapCheckInvariants = (heap: AStarHeap): void => {
+  return; // Comment this line out to enable debug checks.
+  heap.map(x => `(${x.index}, ${x.score})`).join('; ');
+  heap.forEach((node, index) => {
+    const debug = (label: string) => {
+      const contents = heap.map(x => `(${x.index}, ${x.score})`).join('; ');
+      return `Violated ${label} at ${index}: ${contents}`;
+    };
+    assert(node.index === index, () => debug('index'));
+    if (index === 0) return;
+    const parent_index = Math.floor((index - 1) / 2);
+    assert(heap[parent_index]!.score <= node.score, () => debug('ordering'));
+  });
+};
+
+const AStarHeapPush = (heap: AStarHeap, node: AStarNode): void => {
+  assert(node.index === null);
+  heap.push(node);
+  AStarHeapify(heap, node, heap.length - 1);
+}
+
+const AStarHeapify = (heap: AStarHeap, node: AStarNode, index: int): void => {
+  assert(0 <= index && index < heap.length);
+  const score = node.score;
+
+  while (index > 0) {
+    const parent_index = Math.floor((index - 1) / 2);
+    const parent = heap[parent_index]!;
+    if (parent.score <= score) break;
+
+    heap[index] = parent;
+    parent.index = index;
+    index = parent_index;
+  }
+
+  heap[index] = node;
+  node.index = index;
+  AStarHeapCheckInvariants(heap);
+};
+
+const AStarHeapExtractMin = (heap: AStarHeap): AStarNode => {
+  assert(heap.length > 0);
+  const result = heap[0]!;
+  const node = heap.pop()!;
+  result.index = null;
+
+  if (!heap.length) return result;
+
+  let index = 0;
+  while (2 * index + 1 < heap.length) {
+    const c1 = heap[2 * index + 1]!;
+    const c2 = heap[2 * index + 2] || c1;
+    if (node.score <= Math.min(c1.score, c2.score)) break;
+
+    const child_index = 2 * index + (c1.score > c2.score ? 2 : 1);
+    const child = (c1.score > c2.score ? c2 : c1);
+    heap[index] = child;
+    child.index = index;
+    index = child_index;
+  }
+
+  heap[index] = node;
+  node.index = index;
+  AStarHeapCheckInvariants(heap);
+  return result;
+};
+
 const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
                record?: Point[]): Point[] | null => {
   const map: Map<int, AStarNode> = new Map();
-  const frontier: AStarNode[] = [];
+  const heap: AStarHeap = [];
 
   const score = AStarHeuristic(source, target);
   const node = new AStarNode(source.x, source.y, null, 0, score);
-  frontier.push(node);
+  AStarHeapPush(heap, node);
   map.set(AStarHash(node), node);
 
-  while (frontier.length > 0) {
-    frontier.sort((x, y) => y.score - x.score);
-    const cur = frontier.pop()!;
+  while (heap.length > 0) {
+    const cur = AStarHeapExtractMin(heap);
     if (record) record.push(cur);
 
     if (cur.equal(target)) {
@@ -241,13 +311,20 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
 
       const hash = AStarHash(next);
       const existing = map.get(hash);
-      if (existing && existing.distance > distance) {
+
+      // index !== null is a check to see if we've already popped this node
+      // from the heap. We need it because our heuristic is not admissible.
+      //
+      // Using such a heuristic substantially speeds up search in easy cases,
+      // with the downside that we don't always find an optimal path.
+      if (existing && existing.index !== null && existing.distance > distance) {
         existing.parent = cur;
         existing.distance = distance;
         existing.score = score;
+        AStarHeapify(heap, existing, existing.index);
       } else if (!existing) {
         const created = new AStarNode(next.x, next.y, cur, distance, score);
-        frontier.push(created);
+        AStarHeapPush(heap, created);
         map.set(hash, created);
       }
     }
