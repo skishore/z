@@ -239,7 +239,7 @@ const addBlocks = (state: State): State => {
   let add = Math.floor(state.map.size.x * state.map.size.y * Constants.BLOCKED);
   for (let x = 0; x < state.map.size.x; x++) {
     for (let y = 0; y < state.map.size.y; y++) {
-      if (state.map.getXY(x, y).blocked) add--;
+      if (state.map.get(new Point(x, y)).blocked) add--;
     }
   }
 
@@ -363,7 +363,7 @@ const renderMap = (state: State): string => {
   const {map, source, target} = state;
   for (let x = 0; x < map.size.x; x++) {
     for (let y = 0; y < map.size.y; y++) {
-      show(x, y, map.getXY(x, y).glyph);
+      show(x, y, map.get(new Point(x, y)).glyph);
     }
   }
   show(source.x, source.y, Glyph('@'));
