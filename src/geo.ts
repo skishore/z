@@ -168,11 +168,14 @@ class FOV {
 //////////////////////////////////////////////////////////////////////////////
 // Pathfinding: breadth-first-search and A-star.
 
-const AStarUnitCost = 1 << 16;
+const AStarUnitCost = 16;
+const AStarDiagonalPenalty = 2;
+const AStarLOSDeltaPenalty = 1;
 
-// "offset" penalizes paths that travel far from the line ST. It equals:
-//
-//   (the distance from P to the line ST) * (the length of segment ST)
+// "delta" penalizes paths that travel far from the direct line-of-sight
+// from the source to the target. In order to compute it, we figure out if
+// this line is "more horizontal" or "more vertical", then compute the the
+// distance from the point to this line orthogonal to this main direction.
 //
 // Adding this term to our heuristic means that it's no longer admissible,
 // but it provides two benefits that are enough for us to use it anyway:
@@ -181,18 +184,39 @@ const AStarUnitCost = 1 << 16;
 //      we would with a consistent heuristic. We complete the search sooner
 //      at the cost of not always finding an optimal path.
 //
-//   2. By biasing towards the line ST, we select paths that are visually
+//   2. By biasing towards line-of-sight, we select paths that are visually
 //      more appealing than alternatives (e.g. that interleave cardinal and
 //      diagonal steps, rather than doing all the diagonal steps first).
 //
-const AStarHeuristic = (p: Point, source: Point, target: Point): int => {
+const AStarHeuristic = (p: Point, los: Point[]): int => {
   const {x: px, y: py} = p;
-  const {x: sx, y: sy} = source;
-  const {x: tx, y: ty} = target;
-  const x = Math.abs(px - tx);
-  const y = Math.abs(py - ty);
-  const offset = px * (ty - sy) - py * (tx - sx) + (tx * sy - sx * ty);
-  return AStarUnitCost * Math.max(x, y) + Math.abs(offset);
+  const {x: sx, y: sy} = los[0]!;
+  const {x: tx, y: ty} = los[los.length - 1]!;
+
+  const delta = (() => {
+    const dx = tx - sx;
+    const dy = ty - sy;
+    const l = los.length - 1;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const index = dx > 0 ? px - sx : sx - px;
+      if (index < 0) return Math.abs(px - sx) + Math.abs(py - sy);
+      if (index > l) return Math.abs(px - tx) + Math.abs(py - ty);
+      return Math.abs(py - los[index]!.y);
+    } else {
+      const index = dy > 0 ? py - sy : sy - py;
+      if (index < 0) return Math.abs(px - sx) + Math.abs(py - sy);
+      if (index > l) return Math.abs(px - tx) + Math.abs(py - ty);
+      return Math.abs(px - los[index]!.x);
+    }
+  })();
+
+  const x = Math.abs(tx - px);
+  const y = Math.abs(ty - py);
+  const min = Math.min(x, y);
+  const max = Math.max(x, y);
+  return AStarUnitCost * max +
+         AStarDiagonalPenalty * min +
+         AStarLOSDeltaPenalty * delta;
 };
 
 // A simple injection from Z x Z -> Z used as a key for each AStarNode.
@@ -283,10 +307,15 @@ const AStarHeapExtractMin = (heap: AStarHeap): AStarNode => {
 
 const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
                record?: Point[]): Point[] | null => {
+  // Try line-of-sight - if that path is clear, then we don't need to search.
+  // As with the full search below, we don't check if source is blocked here.
+  const los = LOS(source, target);
+  if (los.every((x, i) => i === 0 || !blocked(x))) return los;
+
   const map: Map<int, AStarNode> = new Map();
   const heap: AStarHeap = [];
 
-  const score = AStarHeuristic(source, source, target);
+  const score = AStarHeuristic(source, los);
   const node = new AStarNode(source.x, source.y, null, 0, score);
   AStarHeapPush(heap, node);
   map.set(AStarHash(node), node);
@@ -309,8 +338,9 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
       const next = cur.add(direction);
       if (blocked(next)) continue;
 
-      const distance = cur.distance + AStarUnitCost;
-      const score = distance + AStarHeuristic(next, source, target);
+      const diagonal = direction.x !== 0 && direction.y !== 0;
+      const addition = AStarUnitCost + (diagonal ? AStarDiagonalPenalty : 0);
+      const distance = cur.distance + addition;
 
       const hash = AStarHash(next);
       const existing = map.get(hash);
@@ -321,11 +351,12 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
       // Using such a heuristic substantially speeds up search in easy cases,
       // with the downside that we don't always find an optimal path.
       if (existing && existing.index !== null && existing.distance > distance) {
-        existing.parent = cur;
+        existing.score += distance - existing.distance;
         existing.distance = distance;
-        existing.score = score;
+        existing.parent = cur;
         AStarHeapify(heap, existing, existing.index);
       } else if (!existing) {
+        const score = distance + AStarHeuristic(next, los);
         const created = new AStarNode(next.x, next.y, cur, distance, score);
         AStarHeapPush(heap, created);
         map.set(hash, created);
