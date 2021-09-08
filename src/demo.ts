@@ -1,5 +1,164 @@
-import {assert, flatten, int, nonnull, range, Glyph} from './lib';
-import {Point, Direction, Matrix, LOS, AStar} from './geo';
+import {assert, flatten, int, nonnull, range, sample, Glyph} from './lib';
+import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
+
+//////////////////////////////////////////////////////////////////////////////
+
+class Board {
+  private map: Matrix<Tile>;
+  private entity: Entity[];
+  private entityAtPos: Map<int, Entity>;
+  private entityIndex: int;
+  private defaultTile: Tile;
+
+  constructor(size: Point) {
+    this.map = new Matrix(size, nonnull(kTiles['.']));
+    this.entity = [];
+    this.entityAtPos = new Map();
+    this.entityIndex = 0;
+    this.defaultTile = nonnull(kTiles['#']);
+  }
+
+  // Reads
+
+  getSize(): Point {
+    return this.map.size;
+  }
+
+  getTile(pos: Point): Tile {
+    return this.map.getOrNull(pos) || this.defaultTile;
+  }
+
+  getEntity(pos: Point): Entity | null {
+    return this.entityAtPos.get(pos.key()) || null;
+  }
+
+  getEntities(): Entity[] {
+    return this.entity;
+  }
+
+  getActiveEntity(): Entity {
+    return nonnull(this.entity[this.entityIndex]);
+  }
+
+  free(pos: Point): boolean {
+    return !this.getTile(pos).blocked && !this.entityAtPos.has(pos.key());
+  }
+
+  // Writes
+
+  setTile(pos: Point, tile: Tile) {
+    this.map.set(pos, tile);
+  }
+
+  advanceEntity() {
+    this.entityIndex = (this.entityIndex + 1) % this.entity.length;;
+  }
+
+  addEntity(pos: Point, entity: Entity) {
+    assert(this.getEntity(pos) === null);
+
+    this.entityAtPos.set(pos.key(), entity);
+    this.entity.push(entity);
+    entity.pos = pos;
+  }
+
+  moveEntity(from: Point, to: Point) {
+    const key = from.key();
+    const entity = nonnull(this.entityAtPos.get(key));
+    assert(this.getEntity(to) === null);
+    assert(entity.pos.equal(from));
+
+    this.entityAtPos.delete(key);
+    this.entityAtPos.set(to.key(), entity);
+    entity.pos = to;
+  }
+
+  swapEntities(a: Point, b: Point) {
+    const ak = a.key();
+    const bk = b.key();
+    const ae = nonnull(this.entityAtPos.get(ak));
+    const be = nonnull(this.entityAtPos.get(bk));
+    this.entityAtPos.set(ak, be);
+    this.entityAtPos.set(bk, ae);
+    ae.pos = b;
+    be.pos = a;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+enum AT { Idle, Move, WaitForInput };
+enum ET { Pokemon, Trainer };
+
+type Action =
+  {type: AT.Idle} |
+  {type: AT.WaitForInput} |
+  {type: AT.Move, direction: Direction};
+
+interface PokemonData {
+  trainer: Trainer | null,
+};
+
+interface TrainerData {
+  input: Action | null,
+  player: boolean,
+  pokemon: Pokemon[],
+};
+
+type Entity =
+  {type: ET.Pokemon, data: PokemonData, pos: Point, glyph: Glyph} |
+  {type: ET.Trainer, data: TrainerData, pos: Point, glyph: Glyph};
+
+type Pokemon = Entity & {type: ET.Pokemon};
+type Trainer = Entity & {type: ET.Trainer};
+
+const plan = (board: Board, entity: Entity): Action => {
+  switch (entity.type) {
+    case ET.Pokemon: {
+      const {trainer} = entity.data;
+      if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
+      const [a, b] = [entity.pos, trainer.pos];
+      const vision = () => LOS(b, a).every(
+        (x, i) => !i || !board.getTile(x).obscure);
+      if (a.distanceSquared(b) <= 25 && vision()) return {type: AT.Idle};
+      const path = AStar(a, b, x => board.getTile(x).blocked);
+      const direction = path
+        ? nonnull(path[0]).sub(entity.pos) as Direction
+        : sample(Direction.all);
+      return {type: AT.Move, direction};
+    }
+    case ET.Trainer: {
+      const {input, player} = entity.data;
+      if (!player) return {type: AT.Idle};
+      if (!input) return {type: AT.WaitForInput};
+      entity.data.input = null;
+      return input;
+    }
+  }
+};
+
+const act = (board: Board, entity: Entity, action: Action): boolean => {
+  switch (action.type) {
+    case AT.Idle: return true;
+    case AT.WaitForInput: return false;
+    case AT.Move: {
+      const pos = entity.pos.add(action.direction);
+      if (board.getTile(pos).blocked) return false;
+      const other = board.getEntity(pos);
+      if (other) {
+        if (other.type === ET.Pokemon && other.data.trainer === entity) {
+          board.swapEntities(entity.pos, pos);
+          return true;
+        }
+        return false;
+      }
+      board.moveEntity(entity.pos, pos);
+      return true;
+    }
+  }
+};
+
+export {act, plan};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -142,7 +301,8 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const SearchEffect = (source: Point, target: Point, blocked: (p: Point) => boolean): Effect => {
+const SearchEffect = (source: Point, target: Point,
+                      blocked: (p: Point) => boolean): Effect => {
   const record: Point[] = [];
   const path = (AStar(source, target, blocked, record) || []).reverse();
 
@@ -177,25 +337,26 @@ const SearchEffect = (source: Point, target: Point, blocked: (p: Point) => boole
   ]);
 };
 
-assert(!!{OverlayEffect, ParallelEffect, PauseEffect});
+export {OverlayEffect, PauseEffect};
 
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
-  BLOCKED: 0.24,
+  BLOCKED: 0,
   FRAME_RATE: 60,
 };
 
 interface Tile {
   blocked: boolean,
+  obscure: boolean,
   glyph: Glyph;
 };
 
 const kTiles: {[ch: string]: Tile} = {
-  '.': {blocked: false, glyph: Glyph('.')},
-  '"': {blocked: false, glyph: Glyph('"', 'green', true)},
-  '#': {blocked: true, glyph: Glyph('#', 'green')},
-  '^': {blocked: true, glyph: Glyph('^', 'yellow')},
+  '.': {blocked: false, obscure: false, glyph: Glyph('.')},
+  '"': {blocked: false, obscure: true, glyph: Glyph('"', 'green', true)},
+  '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
+  '^': {blocked: true, obscure: true, glyph: Glyph('^', 'yellow')},
 };
 
 const kMap = `
@@ -208,7 +369,7 @@ const kMap = `
 """""........##...............""""""""""".......
 """...........................""""""""""........
 .............................""""##""""...##....
-.................................##.......##....
+...............@.................##.......##....
 ...................C............................
 ................................................
 ......##.................##.....................
@@ -217,7 +378,7 @@ const kMap = `
 ......................."""""""""######""........
 ..............##.."""""""""##"""""""""""........
 ..............##"""""""""#####"""######.........
-...........""""""""""""""""""""######...@.......
+...........""""""""""""""""""""######...........
 ......""""""""""""""""""""""""""""""............
 """"##""""""""""""""""""""""##"""""""...........
 """"##""""""""""""""""""""""##""""""""".........
@@ -227,47 +388,54 @@ const kMap = `
 `;
 
 interface State {
-  map: Matrix<Tile>,
-  source: Point,
-  target: Point,
+  fov: FOV,
+  board: Board,
   effect: Effect,
+  player: Trainer,
 };
 
 type Input = string;
 
 const addBlocks = (state: State): State => {
-  let add = Math.floor(state.map.size.x * state.map.size.y * Constants.BLOCKED);
-  for (let x = 0; x < state.map.size.x; x++) {
-    for (let y = 0; y < state.map.size.y; y++) {
-      if (state.map.get(new Point(x, y)).blocked) add--;
+  const board = state.board;
+  const size = board.getSize();
+
+  let add = Math.floor(size.x * size.y * Constants.BLOCKED);
+  for (let x = 0; x < size.x; x++) {
+    for (let y = 0; y < size.y; y++) {
+      if (board.getTile(new Point(x, y)).blocked) add--;
     }
   }
 
   const tile = nonnull(kTiles['#']);
   for (let i = 0; i < add; i++) {
-    const x = Math.floor(Math.random() * state.map.size.x);
-    const y = Math.floor(Math.random() * state.map.size.y);
+    const x = Math.floor(Math.random() * size.x);
+    const y = Math.floor(Math.random() * size.y);
     const point = new Point(x, y);
-    if (state.map.get(point).blocked) continue;
-    if (point.equal(state.source) || point.equal(state.target)) continue;
-    state.map.set(point, tile);
+    if (!board.free(point)) continue;
+    board.setTile(point, tile);
     i--;
   }
   return state;
 };
 
 const processInput = (state: State, input: Input) => {
+  const {board, player} = state;
+  const others = board.getEntities().filter(x => x !== player);
+  const target = nonnull(others[0]);
+
   if (input === 's') {
-    state.effect = SearchEffect(state.source, state.target, x => {
-      const tile = state.map.getOrNull(x);
-      return !tile || tile.blocked;
-    });
+    state.effect = SearchEffect(
+      player.pos, target.pos, x => board.getTile(x).blocked);
   }
   if (input === 'f') {
-    const glyph = state.map.get(state.target).glyph;
-    state.effect = SwitchEffect(state.source, state.target, glyph);
+    const glyph = board.getTile(target.pos).glyph;
+    state.effect = SwitchEffect(player.pos, target.pos, glyph);
   }
-  const deltas: {[key: string]: Direction} = {
+
+  if (player.data.input !== null) return;
+
+  const directions: {[key: string]: Direction} = {
     'h': Direction.w,
     'j': Direction.s,
     'k': Direction.n,
@@ -277,13 +445,9 @@ const processInput = (state: State, input: Input) => {
     'b': Direction.sw,
     'n': Direction.se,
   };
-  const delta = deltas[input];
-  if (!delta) return;
-  const source = state.source.add(delta);
-  const tile = state.map.getOrNull(source);
-  if (tile && !tile.blocked && !source.equal(state.target)) {
-    state.source = source;
-  }
+  const direction = directions[input];
+  if (direction) player.data.input = {type: AT.Move, direction};
+  if (input === '.') player.data.input = {type: AT.Idle};
 };
 
 const initializeState = (): State => {
@@ -291,37 +455,61 @@ const initializeState = (): State => {
   const [rows, cols] = [lines.length, nonnull(lines[0]).length];
   lines.forEach(x => assert(x.length === cols));
 
-  let source: Point | null = null;
-  let target: Point | null = null;
+  const fov = new FOV(Math.max(cols, rows));
+  const board = new Board(new Point(cols, rows));
 
-  const map = new Matrix(new Point(cols, rows), nonnull(kTiles['.']));
   range(cols).forEach(x => range(rows).forEach(y => {
     const ch = nonnull(nonnull(lines[y])[x]);
+    const pos = new Point(x, y);
     const tile = kTiles[ch];
-    if (tile) return map.set(new Point(x, y), tile);
-    switch (ch) {
-      case '@': source = new Point(x, y); break;
-      case 'C': target = new Point(x, y); break;
-      default: assert(false, () => `Unknown char: ${ch}`);
-    }
+    if (tile) return board.setTile(pos, tile);
+    const entity = ((): Entity => {
+      switch (ch) {
+        case '@': {
+          const data = {input: null, player: true, pokemon: []};
+          return {type: ET.Trainer, data, pos, glyph: Glyph('@')};
+        }
+        case 'C': {
+          const data = {trainer: null};
+          return {type: ET.Pokemon, data, pos, glyph: Glyph('C', 'red')};
+        }
+        default: {
+          assert(false, () => `Unknown char: ${ch}`);
+          return null as unknown as Entity;
+        }
+      }
+    })();
+    board.addEntity(pos, nonnull(entity));
   }));
 
-  source = nonnull(source);
-  target = nonnull(target);
-  return addBlocks({map, source, target, effect: []});
+  const players = board.getEntities().filter(
+    x => x.type === ET.Trainer && x.data.player);
+  const player = nonnull(players[0]) as Trainer;
+  board.getEntities().forEach(x => {
+    if (x.type !== ET.Pokemon || x.data.trainer !== null) return;
+    player.data.pokemon.push(x);
+    x.data.trainer = player;
+  });
+
+  return addBlocks({fov, board, player, effect: []});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
-  if (state.effect.length) {
-    state.effect.shift();
+  const {board, effect, player} = state;
+  if (effect.length) {
+    effect.shift();
     return;
   }
-  AStar(state.source, state.target, x => {
-    const tile = state.map.getOrNull(x);
-    return !tile || tile.blocked;
-  });
   inputs.forEach(x => processInput(state, x));
   inputs.length = 0;
+
+  while (!effect.length) {
+    const entity = board.getActiveEntity();
+    const result = act(board, entity, plan(board, entity));
+    if (entity === player && !result) return;
+    board.advanceEntity();
+    continue;
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -351,27 +539,36 @@ interface IO {
 };
 
 const renderMap = (state: State): string => {
-  const {x: width, y: height} = state.map.size;
+  const {board, fov, player} = state;
+  const {x: width, y: height} = board.getSize();
   const text: string[] = Array((width + 1) * height).fill(' ');
-  const show = (x: int, y: int, glyph: Glyph) => {
-    text[x + (width + 1) * y] = glyph;
-  };
+  const newline = Glyph('\n');
   for (let i = 0; i < height; i++) {
-    show(width, i, Glyph('\n'));
+    text[width + (width + 1) * i] = newline;
   }
 
-  const {map, source, target} = state;
-  for (let x = 0; x < map.size.x; x++) {
-    for (let y = 0; y < map.size.y; y++) {
-      show(x, y, map.get(new Point(x, y)).glyph);
-    }
-  }
-  show(source.x, source.y, Glyph('@'));
-  show(target.x, target.y, Glyph('C', 'red'));
+  const show = (point: Point, glyph: Glyph, force?: boolean) => {
+    const {x, y} = point;
+    if (!(0 <= x && x < width && 0 <= y && y < height)) return;
+    const index = x + (width + 1) * y;
+    if (force || text[index] !== ' ') text[index] = glyph;
+  };
+
+  const blocked = (p: Point) => {
+    const q = p.add(player.pos);
+    const tile = board.getTile(q);
+    show(q, tile.glyph, true);
+    return tile.obscure && !p.equal(Direction.none);
+  };
+  fov.fieldOfVision(blocked);
+  board.getEntities().forEach(x => {
+    const force = x.type === ET.Pokemon && x.data.trainer === player;
+    show(x.pos, x.glyph, force);
+  });
 
   if (state.effect.length) {
     const frame = nonnull(state.effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
+    frame.forEach(({point: {x, y}, glyph}) => show(new Point(x, y), glyph));
   }
 
   return text.join('');
@@ -385,7 +582,7 @@ const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const screen = blessed.screen();
 
-  const {x: width, y: height} = state.map.size;
+  const {x: width, y: height} = state.board.getSize();
   const [attr, left, top, wrap] = [false, 'center', 'center', false];
   const map = blessed.box({attr, height, left, top, width, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
@@ -393,7 +590,7 @@ const initializeIO = (state: State): IO => {
 
   const inputs: Input[] = [];
   screen.key(['C-c', 'escape'], () => process.exit(0));
-  'hjklyubnfs'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
+  'hjklyubnfs.'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
   return {fps, map, inputs, screen, state, timing: []};
 };
 

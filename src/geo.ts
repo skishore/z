@@ -15,7 +15,30 @@ class Point {
   add(o: Point): Point { return new Point(this.x + o.x, this.y + o.y); }
   sub(o: Point): Point { return new Point(this.x - o.x, this.y - o.y); }
 
+  distanceL2(o: Point): number { return Math.sqrt(this.distanceSquared(o)); }
+
+  distanceSquared(o: Point): int {
+    const dx = this.x - o.x;
+    const dy = this.y - o.y;
+    return dx * dx + dy * dy;
+  }
+
+  distanceTaxicab(o: Point): int {
+    const dx = this.x - o.x;
+    const dy = this.y - o.y;
+    return Math.abs(dx) + Math.abs(dy);
+  }
+
   equal(o: Point): boolean { return this.x === o.x && this.y === o.y; }
+
+  // An injection from Z x Z -> Z suitable for use as a Map key.
+  // We can also try better ones with less multiplication and branching.
+  key(): int {
+    const {x, y} = this;
+    const s = Math.max(Math.abs(x), Math.abs(y));
+    const k = 2 * s + 1;
+    return (x + s + k * (y + s + k));
+  }
 
   toString(): string { return `Point(${this.x}, ${this.y})`; }
 };
@@ -219,14 +242,6 @@ const AStarHeuristic = (p: Point, los: Point[]): int => {
          AStarLOSDeltaPenalty * delta;
 };
 
-// A simple injection from Z x Z -> Z used as a key for each AStarNode.
-const AStarHash = (p: Point): int => {
-  const {x, y} = p;
-  const s = Math.max(Math.abs(x), Math.abs(y));
-  const k = 2 * s + 1;
-  return (x + s + k * (y + s + k));
-};
-
 class AStarNode extends Point {
   public index: int | null = null;
   constructor(x: int, y: int, public parent: AStarNode | null,
@@ -318,7 +333,7 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
   const score = AStarHeuristic(source, los);
   const node = new AStarNode(source.x, source.y, null, 0, score);
   AStarHeapPush(heap, node);
-  map.set(AStarHash(node), node);
+  map.set(node.key(), node);
 
   while (heap.length > 0) {
     const cur = AStarHeapExtractMin(heap);
@@ -342,8 +357,8 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
       const addition = AStarUnitCost + (diagonal ? AStarDiagonalPenalty : 0);
       const distance = cur.distance + addition;
 
-      const hash = AStarHash(next);
-      const existing = map.get(hash);
+      const key = next.key();
+      const existing = map.get(key);
 
       // index !== null is a check to see if we've already popped this node
       // from the heap. We need it because our heuristic is not admissible.
@@ -359,7 +374,7 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
         const score = distance + AStarHeuristic(next, los);
         const created = new AStarNode(next.x, next.y, cur, distance, score);
         AStarHeapPush(heap, created);
-        map.set(hash, created);
+        map.set(key, created);
       }
     }
   }

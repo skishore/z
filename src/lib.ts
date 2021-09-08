@@ -24,6 +24,11 @@ const range = (n: int): int[] => {
   return result;
 };
 
+const sample = <T>(xs: T[]): T => {
+  assert(xs.length > 0);
+  return xs[Math.floor(Math.random() * xs.length)]!;
+};
+
 //////////////////////////////////////////////////////////////////////////////
 // Glyph helper to speed up blessed.js formatting.
 
@@ -51,4 +56,4 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, nonnull, range, Glyph};
+export {assert, flatten, int, nonnull, range, sample, Glyph};
