@@ -310,7 +310,7 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
   // Try line-of-sight - if that path is clear, then we don't need to search.
   // As with the full search below, we don't check if source is blocked here.
   const los = LOS(source, target);
-  if (los.every((x, i) => i === 0 || !blocked(x))) return los;
+  if (los.every((x, i) => i === 0 || !blocked(x))) return los.slice(1);
 
   const map: Map<int, AStarNode> = new Map();
   const heap: AStarHeap = [];
@@ -325,9 +325,9 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
     if (record) record.push(cur);
 
     if (cur.equal(target)) {
-      let current: AStarNode | null = cur;
+      let current = cur;
       const result: Point[] = [];
-      while (current) {
+      while (current.parent) {
         result.push(current);
         current = current.parent;
       }
