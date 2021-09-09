@@ -93,6 +93,10 @@ class Matrix<T> {
     const {x: sx, y: sy} = this.size;
     return 0 <= px && px < sx && 0 <= py && py < sy;
   }
+
+  fill(value: T): void {
+    this.#data.fill(value);
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -142,15 +146,20 @@ const LOS = (a: Point, b: Point): Point[] => {
 // Pre-computed visibility trie, for field-of-vision computation.
 
 class FOVNode extends Point {
+  public readonly parent: FOVNode | null;
   public readonly children: FOVNode[];
-  constructor(x: int, y: int) { super(x, y); this.children = []; }
+  constructor(x: int, y: int, parent: FOVNode | null) {
+    super(x, y);
+    this.parent = parent;
+    this.children = [];
+  }
 };
 
 class FOV {
   #root: FOVNode;
 
   constructor(radius: int) {
-    this.#root = new FOVNode(0, 0);
+    this.#root = new FOVNode(0, 0, null);
     for (let i = 0; i <= radius; i++) {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
@@ -161,11 +170,11 @@ class FOV {
     }
   }
 
-  fieldOfVision(blocked: (p: Point) => boolean) {
+  fieldOfVision(blocked: (p: Point, parent: Point | null) => boolean) {
     const nodes = [this.#root];
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]!;
-      if (blocked(node)) continue;
+      if (blocked(node, node.parent)) continue;
       node.children.forEach(x => nodes.push(x));
     }
   }
@@ -180,7 +189,7 @@ class FOV {
       for (const child of node.children) {
         if (child.x === next.x && child.y == next.y) return child;
       }
-      const result = new FOVNode(next.x, next.y);
+      const result = new FOVNode(next.x, next.y, node);
       node.children.push(result);
       return result;
     })();

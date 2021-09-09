@@ -3,18 +3,24 @@ import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
+interface Vision { dirty: boolean, value: Matrix<int> };
+
 class Board {
+  private fov: FOV;
   private map: Matrix<Tile>;
   private entity: Entity[];
   private entityAtPos: Map<int, Entity>;
   private entityIndex: int;
+  private entityVision: Map<Entity, Vision>;
   private defaultTile: Tile;
 
   constructor(size: Point) {
+    this.fov = new FOV(Math.max(size.x, size.y));
     this.map = new Matrix(size, nonnull(kTiles['.']));
     this.entity = [];
     this.entityAtPos = new Map();
     this.entityIndex = 0;
+    this.entityVision = new Map();
     this.defaultTile = nonnull(kTiles['#']);
   }
 
@@ -48,6 +54,7 @@ class Board {
 
   setTile(pos: Point, tile: Tile) {
     this.map.set(pos, tile);
+    this.entity.forEach(x => this.dirtyVision(x));
   }
 
   advanceEntity() {
@@ -72,6 +79,7 @@ class Board {
     this.entityAtPos.delete(key);
     this.entityAtPos.set(to.key(), entity);
     entity.pos = to;
+    this.dirtyVision(entity);
   }
 
   swapEntities(a: Point, b: Point) {
@@ -83,6 +91,50 @@ class Board {
     this.entityAtPos.set(bk, ae);
     ae.pos = b;
     be.pos = a;
+    this.dirtyVision(ae);
+    this.dirtyVision(be);
+  }
+
+  // Cached field-of-vision
+
+  getVision(entity: Entity): Matrix<int> {
+    const vision = (() => {
+      const cached = this.entityVision.get(entity);
+      if (cached) return cached;
+      const result = {dirty: true, value: new Matrix(this.map.size, -1)};
+      this.entityVision.set(entity, result);
+      return result;
+    })();
+
+    if (vision.dirty) {
+      const pos = entity.pos;
+      const value = vision.value;
+
+      const blocked = (p: Point, parent: Point | null) => {
+        const q = p.add(pos);
+        const cached = value.getOrNull(q);
+        if (cached === null) return true;
+
+        const tile = this.getTile(q);
+        const prev = parent ? value.get(parent.add(pos)) : 2;
+        const loss = tile.blocked ? 2 : tile.obscure ? 1 : 0;
+        const next = Math.max(prev - loss, 0);
+        if (next > cached) value.set(q, next);
+        return next === 0;
+      };
+
+      value.fill(-1);
+      value.set(pos, 2);
+      this.fov.fieldOfVision(blocked);
+      vision.dirty = false;
+    }
+
+    return vision.value;
+  }
+
+  private dirtyVision(entity: Entity) {
+    const vision = this.entityVision.get(entity);
+    if (vision) vision.dirty = true;
   }
 };
 
@@ -140,9 +192,8 @@ const plan = (board: Board, entity: Entity): Action => {
       const {trainer} = entity.data;
       if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
       const [a, b] = [entity.pos, trainer.pos];
-      const vision = () => LOS(b, a).every(
-        (x, i) => !i || !board.getTile(x).obscure);
-      if (a.distanceSquared(b) <= 25 && vision()) return {type: AT.Idle};
+      const sight = () => board.getVision(trainer).get(a) >= 0;
+      if (a.distanceSquared(b) < 16 && sight()) return {type: AT.Idle};
       const path = AStar(a, b, x => board.getTile(x).blocked);
       const direction = path
         ? nonnull(path[0]).sub(entity.pos) as Direction
@@ -388,7 +439,7 @@ const kMap = `
 """"##"................##...."""""""""""""""....
 """"##.......##...............""""""""""""......
 """""........##...............""""""""""".......
-"""...........................""""""""""........
+"""..............S............""""""""""........
 .............................""""##""""...##....
 ...............@.................##.......##....
 ...................C............................
@@ -409,7 +460,6 @@ const kMap = `
 `;
 
 interface State {
-  fov: FOV,
   board: Board,
   effect: Effect,
   player: Trainer,
@@ -475,8 +525,6 @@ const initializeState = (): State => {
   const lines = kMap.trim().split('\n');
   const [rows, cols] = [lines.length, nonnull(lines[0]).length];
   lines.forEach(x => assert(x.length === cols));
-
-  const fov = new FOV(Math.max(cols, rows));
   const board = new Board(new Point(cols, rows));
 
   range(cols).forEach(x => range(rows).forEach(y => {
@@ -497,6 +545,11 @@ const initializeState = (): State => {
           const [data, glyph] = [{trainer: null}, Glyph('C', 'red')];
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
+        case 'S': {
+          const speed = Constants.TURN_TIMER / 4;
+          const [data, glyph] = [{trainer: null}, Glyph('S', 'blue')];
+          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
+        }
         default: {
           assert(false, () => `Unknown char: ${ch}`);
           return null as unknown as Entity;
@@ -509,13 +562,14 @@ const initializeState = (): State => {
   const players = board.getEntities().filter(
     x => x.type === ET.Trainer && x.data.player);
   const player = nonnull(players[0]) as Trainer;
+
   board.getEntities().forEach(x => {
     if (x.type !== ET.Pokemon || x.data.trainer !== null) return;
     player.data.pokemon.push(x);
     x.data.trainer = player;
   });
 
-  return addBlocks({fov, board, player, effect: []});
+  return addBlocks({board, player, effect: []});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
@@ -563,7 +617,7 @@ interface IO {
 };
 
 const renderMap = (state: State): string => {
-  const {board, fov, player} = state;
+  const {board, player} = state;
   const {x: width, y: height} = board.getSize();
   const text: string[] = Array((width + 1) * height).fill(' ');
   const newline = Glyph('\n');
@@ -571,28 +625,29 @@ const renderMap = (state: State): string => {
     text[width + (width + 1) * i] = newline;
   }
 
-  const show = (point: Point, glyph: Glyph, force?: boolean) => {
-    const {x, y} = point;
+  const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     if (force || text[index] !== ' ') text[index] = glyph;
   };
 
-  const blocked = (p: Point) => {
-    const q = p.add(player.pos);
-    const tile = board.getTile(q);
-    show(q, tile.glyph, true);
-    return tile.obscure && !p.equal(Direction.none);
-  };
-  fov.fieldOfVision(blocked);
+  const vision = board.getVision(player);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const point = new Point(x, y);
+      if (vision.get(point) < 0) continue;
+      show(x, y, board.getTile(point).glyph, true);
+    }
+  }
+
   board.getEntities().forEach(x => {
     const force = x.type === ET.Pokemon && x.data.trainer === player;
-    show(x.pos, x.glyph, force);
+    show(x.pos.x, x.pos.y, x.glyph, force);
   });
 
   if (state.effect.length) {
     const frame = nonnull(state.effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(new Point(x, y), glyph));
+    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
   }
 
   return text.join('');
