@@ -51,6 +51,7 @@ class Board {
   }
 
   advanceEntity() {
+    charge(nonnull(this.entity[this.entityIndex]));
     this.entityIndex = (this.entityIndex + 1) % this.entity.length;;
   }
 
@@ -95,6 +96,8 @@ type Action =
   {type: AT.WaitForInput} |
   {type: AT.Move, direction: Direction};
 
+interface Result { success: boolean, turns: int };
+
 interface PokemonData {
   trainer: Trainer | null,
 };
@@ -105,12 +108,31 @@ interface TrainerData {
   pokemon: Pokemon[],
 };
 
+interface EntityData {
+  glyph: Glyph,
+  speed: int,
+  timer: int,
+  pos: Point,
+};
+
 type Entity =
-  {type: ET.Pokemon, data: PokemonData, pos: Point, glyph: Glyph} |
-  {type: ET.Trainer, data: TrainerData, pos: Point, glyph: Glyph};
+  {type: ET.Pokemon, data: PokemonData} & EntityData |
+  {type: ET.Trainer, data: TrainerData} & EntityData;
 
 type Pokemon = Entity & {type: ET.Pokemon};
 type Trainer = Entity & {type: ET.Trainer};
+
+const charge = (entity: Entity) => {
+  entity.timer -= entity.speed;
+};
+
+const ready = (entity: Entity): boolean => {
+  return entity.timer <= 0;
+};
+
+const wait = (entity: Entity, turns: int): void => {
+  entity.timer += turns * Constants.TURN_TIMER;
+};
 
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
@@ -137,28 +159,26 @@ const plan = (board: Board, entity: Entity): Action => {
   }
 };
 
-const act = (board: Board, entity: Entity, action: Action): boolean => {
+const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
-    case AT.Idle: return true;
-    case AT.WaitForInput: return false;
+    case AT.Idle: return {success: true, turns: 1};
+    case AT.WaitForInput: return {success: false, turns: 0};
     case AT.Move: {
       const pos = entity.pos.add(action.direction);
-      if (board.getTile(pos).blocked) return false;
+      if (board.getTile(pos).blocked) return {success: false, turns: 0};
       const other = board.getEntity(pos);
       if (other) {
         if (other.type === ET.Pokemon && other.data.trainer === entity) {
           board.swapEntities(entity.pos, pos);
-          return true;
+          return {success: true, turns: 1};
         }
-        return false;
+        return {success: false, turns: 0};
       }
       board.moveEntity(entity.pos, pos);
-      return true;
+      return {success: true, turns: 1};
     }
   }
 };
-
-export {act, plan};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -344,6 +364,7 @@ export {OverlayEffect, PauseEffect};
 const Constants = {
   BLOCKED: 0,
   FRAME_RATE: 60,
+  TURN_TIMER: 120,
 };
 
 interface Tile {
@@ -466,12 +487,15 @@ const initializeState = (): State => {
     const entity = ((): Entity => {
       switch (ch) {
         case '@': {
+          const glyph = Glyph('@');
+          const speed = Constants.TURN_TIMER / 10;
           const data = {input: null, player: true, pokemon: []};
-          return {type: ET.Trainer, data, pos, glyph: Glyph('@')};
+          return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
         }
         case 'C': {
-          const data = {trainer: null};
-          return {type: ET.Pokemon, data, pos, glyph: Glyph('C', 'red')};
+          const speed = Constants.TURN_TIMER / 5;
+          const [data, glyph] = [{trainer: null}, Glyph('C', 'red')];
+          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         default: {
           assert(false, () => `Unknown char: ${ch}`);
@@ -503,12 +527,12 @@ const updateState = (state: State, inputs: Input[]) => {
   inputs.forEach(x => processInput(state, x));
   inputs.length = 0;
 
-  while (!effect.length) {
+  for (; !effect.length; board.advanceEntity()) {
     const entity = board.getActiveEntity();
+    if (!ready(entity)) continue;
     const result = act(board, entity, plan(board, entity));
-    if (entity === player && !result) return;
-    board.advanceEntity();
-    continue;
+    if (entity === player && !result.success) return;
+    wait(entity, result.turns);
   }
 };
 
