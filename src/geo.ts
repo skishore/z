@@ -37,7 +37,7 @@ class Point {
     const {x, y} = this;
     const s = Math.max(Math.abs(x), Math.abs(y));
     const k = 2 * s + 1;
-    return (x + s + k * (y + s + k));
+    return (x + s + k * (y + s + s * k));
   }
 
   toString(): string { return `Point(${this.x}, ${this.y})`; }
