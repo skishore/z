@@ -29,6 +29,18 @@ const sample = <T>(xs: T[]): T => {
   return xs[Math.floor(Math.random() * xs.length)]!;
 };
 
+const weighted = <T>(xs: [int, T][]): T => {
+  const total = xs.reduce((acc, x) => acc + (x[0] | 0), 0);
+  assert(total > 0);
+  let value = Math.floor(Math.random() * total);
+  for (const [weight, choice] of xs) {
+    value -= weight;
+    if (value <= 0) return choice;
+  }
+  assert(false);
+  return xs[xs.length - 1]![1];
+};
+
 //////////////////////////////////////////////////////////////////////////////
 // Glyph helper to speed up blessed.js formatting.
 
@@ -56,4 +68,4 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, nonnull, range, sample, Glyph};
+export {assert, flatten, int, nonnull, range, sample, weighted, Glyph};

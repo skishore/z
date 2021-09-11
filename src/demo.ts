@@ -1,4 +1,4 @@
-import {assert, flatten, int, nonnull, range, sample, Glyph} from './lib';
+import {assert, flatten, int, nonnull, range, sample, weighted, Glyph} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -191,10 +191,21 @@ const plan = (board: Board, entity: Entity): Action => {
     case ET.Pokemon: {
       const {trainer} = entity.data;
       if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
-      const [a, b] = [entity.pos, trainer.pos];
-      const sight = () => board.getVision(trainer).get(a) >= 0;
-      if (a.distanceSquared(b) < 16 && sight()) return {type: AT.Idle};
-      const path = AStar(a, b, x => board.getTile(x).blocked);
+
+      const [ep, tp] = [entity.pos, trainer.pos];
+      const okay = (pos: Point) => {
+        if (tp.distanceTaxicab(pos) > 2) return false;
+        const vision = board.getVision(trainer).getOrNull(pos);
+        return vision !== null && vision >= 0;
+      };
+      if (okay(ep)) {
+        const moves: [int, Direction][] =
+          Direction.all.filter(x => okay(entity.pos.add(x))).map(x => [1, x]);
+        moves.push([16, Direction.none]);
+        return {type: AT.Move, direction: weighted(moves)};
+      }
+
+      const path = AStar(ep, tp, x => board.getTile(x).blocked);
       const direction = path
         ? nonnull(path[0]).sub(entity.pos) as Direction
         : sample(Direction.all);
@@ -216,6 +227,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
     case AT.WaitForInput: return {success: false, turns: 0};
     case AT.Move: {
       const pos = entity.pos.add(action.direction);
+      if (pos.equal(entity.pos)) return {success: true, turns: 1};
       if (board.getTile(pos).blocked) return {success: false, turns: 0};
       const other = board.getEntity(pos);
       if (other) {
