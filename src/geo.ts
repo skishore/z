@@ -17,6 +17,14 @@ class Point {
 
   distanceL2(o: Point): number { return Math.sqrt(this.distanceSquared(o)); }
 
+  distanceNethack(o: Point): int {
+    const dx = Math.abs(this.x - o.x);
+    const dy = Math.abs(this.y - o.y);
+    const min = Math.min(dx, dy);
+    const max = Math.max(dx, dy);
+    return Math.floor((46 * min + 95 * max + 25) / 100);
+  }
+
   distanceSquared(o: Point): int {
     const dx = this.x - o.x;
     const dy = this.y - o.y;
