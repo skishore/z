@@ -203,12 +203,15 @@ const plan = (board: Board, entity: Entity): Action => {
       const {trainer} = entity.data;
       if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
 
+      // TODO(kshaunak): Use distanceNethack here and bump the radius.
       const [ep, tp] = [entity.pos, trainer.pos];
       const okay = (pos: Point) => {
         if (tp.distanceTaxicab(pos) > 2) return false;
         const vision = board.getVision(trainer).getOrNull(pos);
         return vision !== null && vision >= 0;
       };
+      // TODO(kshaunak): Use the visibility value, not just binary visibility,
+      // so that Pokemon move closer to trainers when in the tall grass.
       if (okay(ep)) {
         const moves: [int, Direction][] =
           Direction.all.filter(x => okay(entity.pos.add(x))).map(x => [1, x]);
@@ -216,6 +219,8 @@ const plan = (board: Board, entity: Entity): Action => {
         return {type: AT.Move, direction: weighted(moves)};
       }
 
+      // TODO(kshaunak): Account for other entities here, either by modifying
+      // the AStar `blocked` predicate to return a cost value, or using BFS.
       const path = AStar(ep, tp, x => board.getTile(x).blocked);
       const direction = path
         ? nonnull(path[0]).sub(entity.pos) as Direction
