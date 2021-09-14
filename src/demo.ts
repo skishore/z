@@ -115,16 +115,27 @@ class Board {
         const cached = value.getOrNull(q);
         if (cached === null) return true;
 
-        const tile = this.getTile(q);
-        const prev = parent ? value.get(parent.add(pos)) : 2;
-        const loss = tile.blocked ? 2 : tile.obscure ? 1 : 0;
-        const next = Math.max(prev - loss, 0);
-        if (next > cached) value.set(q, next);
-        return next === 0;
+        // The constants in these expressions come from Point.distanceNethack.
+        // They're chosen so that, in a field of tall grass, we can only see
+        // cells at a distanceNethack of <= kVisionRadius away.
+        const visibility = (() => {
+          const kVisionRadius = 3;
+          if (!parent) return 100 * (kVisionRadius + 1) - 95 - 46 - 25;
+
+          const tile = this.getTile(q);
+          if (tile.blocked) return 0;
+
+          const diagonal = p.x !== parent.x && p.y !== parent.y;
+          const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
+          const prev = value.get(parent.add(pos));
+          return Math.max(prev - loss, 0);
+        })();
+
+        if (visibility > cached) value.set(q, visibility);
+        return visibility <= 0;
       };
 
       value.fill(-1);
-      value.set(pos, 2);
       this.fov.fieldOfVision(blocked);
       vision.dirty = false;
     }
@@ -452,7 +463,7 @@ const kMap = `
 """"##.......##...............""""""""""""......
 """""........##...............""""""""""".......
 """..............S............""""""""""........
-.............................""""##""""...##....
+............B................""""##""""...##....
 ...............@.................##.......##....
 ...................C............................
 ................................................
@@ -551,6 +562,11 @@ const initializeState = (): State => {
           const speed = Constants.TURN_TIMER / 10;
           const data = {input: null, player: true, pokemon: []};
           return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
+        }
+        case 'B': {
+          const speed = Constants.TURN_TIMER / 6;
+          const [data, glyph] = [{trainer: null}, Glyph('B', 'green')];
+          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         case 'C': {
           const speed = Constants.TURN_TIMER / 5;
