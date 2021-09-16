@@ -51,19 +51,22 @@ interface Font {
   data: ImageData,
 };
 
-const glyph = (font: Font, codepoint: int): string => {
+const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string => {
+  assert(scale === Math.floor(scale));
   const {config, data} = font;
   const hex = '0123456789ABCDEF';
   assert(hex.length === 16);
+  const sx = scale * config.width;
+  const sy = scale * config.height;
 
   const {x: cx, y: cy} = nonnull(config.chars[codepoint]);
-  const lines = range(config.height).map(y => {
-    const bits = range(config.width).map(x => {
-      const px = cx * config.width + x;
-      const py = cy * config.height + y;
+  const lines = range(sy).map(y => {
+    const bits = range(sx).map(x => {
+      const px = cx * config.width + Math.floor(x / scale);
+      const py = cy * config.height + Math.floor(y / scale);
       return data.data[data.channels * (data.width * py + px)] === 0xff;
-    });
-    const bytes = range(Math.floor((config.width + 7) / 8)).map(i => {
+    })
+    const bytes = range(Math.floor((sx + 7) / 8)).map(i => {
       const byte = range(8).reduce(
         (acc, j) => acc | (bits[8 * i + j] ? (1 << (7 - j)) : 0), 0);
       assert(0 <= byte && byte <= 0xff);
@@ -72,12 +75,14 @@ const glyph = (font: Font, codepoint: int): string => {
     return bytes.join('');
   });
 
+  const encoding = wide ? codepoint + 0xff00 - 0x20 : codepoint;
+
   const header = `
-STARTCHAR char${codepoint}
-ENCODING ${codepoint}
-SWIDTH ${120 * config.width} 0
-DWIDTH ${config.width} 0
-BBX ${config.width} ${config.height} 0 0
+STARTCHAR char${encoding}
+ENCODING ${encoding}
+SWIDTH ${120 * sx} 0
+DWIDTH ${sx} 0
+BBX ${sx} ${sy} 0 0
 BITMAP
   `;
   const parts = [header];
@@ -86,16 +91,22 @@ BITMAP
   return parts.map(x => x.trim()).join('\n');
 };
 
-const bdf = (font: Font): string => {
+const bdf = (font: Font, wide?: Font): string => {
   const {config} = font;
   const foundry = 'Misc';
   const weight = 'Medium';
   const slant = 'R';
   const set_width = 'SemiCondensed';
-  const {name, height, width} = config;
+  const {height, width} = config;
+  const name = wide ? `${config.name}Plus${wide.config.name}` : config.name;
 
   const codepoints = Object.keys(config.chars).map(x => parseInt(x, 10));
   codepoints.sort((x, y) => x - y);
+
+  const wide_chars =
+    Object.keys(wide ? wide.config.chars : {})
+      .map(x => parseInt(x, 10))
+      .filter(x => 33 <= x && x < 128);
 
   const header = `
 STARTFONT 2.1
@@ -123,10 +134,12 @@ FONT_DESCENT 0
 FONT_ASCENT ${height}
 COPYRIGHT "Unknown"
 ENDPROPERTIES
-CHARS ${codepoints.length}
+CHARS ${codepoints.length + wide_chars.length}
   `;
   const parts = [header];
-  codepoints.forEach(x => parts.push(glyph(font, x)));
+  const scale = wide ? config.height / wide.config.height : 1;
+  codepoints.forEach(x => parts.push(glyph(font, x, 1)));
+  wide_chars.forEach(x => parts.push(glyph(nonnull(wide), x, scale, true)));
   parts.push('ENDFONT');
   return parts.map(x => x.trim()).join('\n');
 };
@@ -146,7 +159,7 @@ const show = (font: Font, codepoint: int) => {
   console.log(bits.map(x => x.map(y => y ? '##' : '  ').join('')).join('\n'));
 };
 
-const main = (font: Font) => {
+const main = (font: Font, wide?: Font) => {
   const {config, data} = font;
   assert(data.data.length === data.width * data.height * data.channels);
   assert(data.width === config.width * config.cols);
@@ -157,7 +170,7 @@ const main = (font: Font) => {
       show(font, message.charCodeAt(i));
     }
   }
-  console.log(bdf(font));
+  console.log(bdf(font, wide));
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -174,6 +187,6 @@ const load = (config: FontConfig, fn: (font: Font) => void) => {
   });
 };
 
-load(aquarius(), main);
+load(unifont(), font => load(aquarius(), wide => main(font, wide)));
 
-export {aquarius, unifont};
+export {};
