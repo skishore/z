@@ -649,19 +649,21 @@ interface IO {
   timing: Timing[],
 };
 
+const kBreakGlyph = Glyph('\n');
+const kEmptyGlyph = Glyph(' ');
+
 const renderMap = (state: State): string => {
   const {board, player} = state;
   const {x: width, y: height} = board.getSize();
-  const text: string[] = Array((width + 1) * height).fill(' ');
-  const newline = Glyph('\n');
+  const text: string[] = Array((width + 1) * height).fill(kEmptyGlyph);
   for (let i = 0; i < height; i++) {
-    text[width + (width + 1) * i] = newline;
+    text[width + (width + 1) * i] = kBreakGlyph;
   }
 
   const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    if (force || text[index] !== ' ') text[index] = glyph;
+    if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
   };
 
   const vision = board.getVision(player);
@@ -692,9 +694,10 @@ const renderFrameRate = (cpu: number, fps: number): string => {
 
 const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
-  const screen = blessed.screen();
+  const screen = blessed.screen({fullUnicode: true});
 
-  const {x: width, y: height} = state.board.getSize();
+  const {x, y} = state.board.getSize();
+  const [width, height] = [2 * x, y];
   const [attr, left, top, wrap] = [false, 'center', 'center', false];
   const map = blessed.box({attr, height, left, top, width, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
