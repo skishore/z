@@ -1,43 +1,40 @@
-import {assert, int, range} from './lib';
+import {assert, int, nonnull, range} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
 
 interface Point { x: int, y: int };
+interface Chars {[codepoint: number]: Point};
 
 interface FontConfig {
   name: string,
+  data: string,
   width: int,
   height: int,
   rows: int,
   cols: int,
-  map: {[codepoint: number]: Point},
+  chars: Chars,
+};
+
+const printable = (cols: int): Chars => {
+  const result: Chars = {};
+  for (let i = 32; i < 127; i++) {
+    result[i] = {x: i % cols, y: Math.floor(i / cols)};
+  }
+  return result;
 };
 
 const aquarius = (): FontConfig => {
-  const rows = [
-    ` !"#$%&'()*+,-./`,
-    '0123456789:;<=>?',
-    '@ABCDEFGHIJKLMNO',
-    'PQRSTUVWXYZ[ ]^_',
-    '`abcdefghijklmno',
-    'pqrstuvwxyz{|}~ ',
-  ];
-  const map: {[codepoint: number]: Point} = {};
-  rows.forEach((row, i) => {
-    assert(row.length === 16);
-    for (let j = 0; j < row.length; j++) {
-      const codepoint = (() => {
-        if (row[j] === ' ') {
-          if (i === 0) return ' '.charCodeAt(0);
-          if (i === 3) return '\\'.charCodeAt(0);
-          return 0;
-        }
-        return row.charCodeAt(j);
-      })();
-      if (codepoint) map[codepoint] = {x: j, y: i + 2};
-    }
-  });
-  return {name: 'Aquarius', width: 8, height: 8, rows: 16, cols: 16, map};
+  const data = 'fonts/aquarius_8x8.png';
+  const [width, height, rows, cols] = [8, 8, 16, 16];
+  const chars = printable(cols);
+  return {name: 'Aquarius', data, width, height, rows, cols, chars};
+};
+
+const unifont = (): FontConfig => {
+  const data = 'fonts/unifont_8x16.png';
+  const [width, height, rows, cols] = [8, 16, 16, 16];
+  const chars = printable(cols);
+  return {name: 'Unifont', data, width, height, rows, cols, chars};
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -49,11 +46,17 @@ interface ImageData {
   data: Uint8Array,
 };
 
-const glyph = (data: ImageData, config: FontConfig, codepoint: int): string => {
+interface Font {
+  config: FontConfig,
+  data: ImageData,
+};
+
+const glyph = (font: Font, codepoint: int): string => {
+  const {config, data} = font;
   const hex = '0123456789ABCDEF';
   assert(hex.length === 16);
 
-  const {x: cx, y: cy} = config.map[codepoint]!;
+  const {x: cx, y: cy} = nonnull(config.chars[codepoint]);
   const lines = range(config.height).map(y => {
     const bits = range(config.width).map(x => {
       const px = cx * config.width + x;
@@ -83,14 +86,15 @@ BITMAP
   return parts.map(x => x.trim()).join('\n');
 };
 
-const bdf = (data: ImageData, config: FontConfig): string => {
+const bdf = (font: Font): string => {
+  const {config} = font;
   const foundry = 'Misc';
   const weight = 'Medium';
   const slant = 'R';
   const set_width = 'SemiCondensed';
   const {name, height, width} = config;
 
-  const codepoints = Object.keys(config.map).map(x => parseInt(x, 10));
+  const codepoints = Object.keys(config.chars).map(x => parseInt(x, 10));
   codepoints.sort((x, y) => x - y);
 
   const header = `
@@ -122,35 +126,38 @@ ENDPROPERTIES
 CHARS ${codepoints.length}
   `;
   const parts = [header];
-  codepoints.forEach(x => parts.push(glyph(data, config, x)));
+  codepoints.forEach(x => parts.push(glyph(font, x)));
   parts.push('ENDFONT');
   return parts.map(x => x.trim()).join('\n');
 };
 
-const show = (data: ImageData, config: FontConfig, codepoint: int) => {
-  const unknown = '?'.codePointAt(0)!;
-  const {x: cx, y: cy} = config.map[codepoint] || config.map[unknown]!;
+const show = (font: Font, codepoint: int) => {
+  const {config, data} = font;
+  const unknown = nonnull('?'.codePointAt(0));
+  const {width, height, chars} = config;
+  const {x: cx, y: cy} = nonnull(chars[codepoint] || chars[unknown]);
 
-  const bits = range(config.height).map(y => range(config.width).map(x => {
-    const px = cx * config.width + x;
-    const py = cy * config.height + y;
+  const bits = range(height).map(y => range(width).map(x => {
+    const px = cx * width + x;
+    const py = cy * height + y;
     return data.data[data.channels * (data.width * py + px)] === 0xff;
   }));
 
   console.log(bits.map(x => x.map(y => y ? '##' : '  ').join('')).join('\n'));
 };
 
-const main = (data: ImageData, config: FontConfig) => {
+const main = (font: Font) => {
+  const {config, data} = font;
   assert(data.data.length === data.width * data.height * data.channels);
   assert(data.width === config.width * config.cols);
   assert(data.height === config.height * config.rows);
   if (false) {
     const message = 'Hello!';
     for (let i = 0; i < message.length; i++) {
-      show(data, config, message.charCodeAt(i));
+      show(font, message.charCodeAt(i));
     }
   }
-  console.log(bdf(data, config));
+  console.log(bdf(font));
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -160,10 +167,13 @@ declare const require: any;
 
 const pngparse = require('../extern/pngparse');
 
-pngparse.parseFile('fonts/aquarius_8x8.png',
-  (error: Error, data: ImageData) => {
+const load = (config: FontConfig, fn: (font: Font) => void) => {
+  pngparse.parseFile(config.data, (error: Error, data: ImageData) => {
     if (error) throw error;
-    main(data, aquarius());
-});
+    fn({config, data});
+  });
+};
 
-export {};
+load(aquarius(), main);
+
+export {aquarius, unifont};
