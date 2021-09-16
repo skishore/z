@@ -680,6 +680,15 @@ const renderMap = (state: State): string => {
     show(x.pos.x, x.pos.y, x.glyph, force);
   });
 
+  const label = '<- You are here.';
+  const {x, y} = state.player.pos;
+  for (let i = 0; i < Math.floor((label.length + 1) / 2); i++) {
+    const part = label.substr(2 * i, 2);
+    const color = `\x1b[1;30;47m${part}\x1b[0m`;
+    const padded = part.length === 2 ? color : `${color} `;
+    show(x + i + 1, y, padded as Glyph, true);
+  }
+
   if (state.effect.length) {
     const frame = nonnull(state.effect[0]);
     frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
