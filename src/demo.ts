@@ -428,33 +428,21 @@ const SearchEffect = (source: Point, target: Point,
   const record: Point[] = [];
   const path = (AStar(source, target, blocked, record) || []).reverse();
 
-  const phase1: Effect = [];
-  const g1 = Glyph('?', 'yellow');
-  for (let i = 0; i < record.length; i++) {
-    phase1.push(range(i + 1).map(j => ({point: record[j]!, glyph: g1})));
-  }
-
-  const phase2: Effect = [];
-  const g2 = Glyph('*', 'blue');
-  for (let i = 0; i < path.length; i++) {
-    phase2.push(range(i + 1).map(j => ({point: path[j]!, glyph: g2})));
-  }
+  const phase = (points: Point[], glyph: Glyph): Effect => {
+    const filtered = points.filter(x => !(x.equal(source) || x.equal(target)));
+    return range(filtered.length).map(
+      i => range(i + 1).map(j => ({point: filtered[j]!, glyph})));
+  };
+  const phase1 = phase(record, Glyph('?', 'yellow'));
+  const phase2 = phase(path, Glyph('*', 'blue'));
 
   const delay = 4;
   const frame = phase1[phase1.length - 1] || [];
-  const result = SerialEffect([
+  return SerialEffect([
     phase1,
     ParallelEffect([
       Array(phase2.length * delay).fill(frame),
       ExtendEffect(phase2, delay),
-    ]),
-  ]);
-
-  return ParallelEffect([
-    result,
-    Array(result.length).fill([
-      {point: source, glyph: Glyph('@')},
-      {point: target, glyph: Glyph('C', 'red')},
     ]),
   ]);
 };
