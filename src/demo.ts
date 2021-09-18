@@ -203,10 +203,9 @@ const plan = (board: Board, entity: Entity): Action => {
       const {trainer} = entity.data;
       if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
 
-      // TODO(kshaunak): Use distanceNethack here and bump the radius.
       const [ep, tp] = [entity.pos, trainer.pos];
       const okay = (pos: Point) => {
-        if (tp.distanceTaxicab(pos) > 2) return false;
+        if (tp.distanceNethack(pos) > 2) return false;
         const vision = board.getVision(trainer).getOrNull(pos);
         return vision !== null && vision >= 0;
       };
@@ -257,6 +256,30 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       return {success: true, turns: 1};
     }
   }
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+const targetAtDirection =
+    (pos: Point, dir: Direction, vision: Matrix<int>): Point | null => {
+  let prev = pos;
+  while (true) {
+    const next = prev.add(dir);
+    const sight = vision.getOrNull(next);
+    if (sight === null || sight < 0) return prev.equal(pos) ? null : prev;
+    if (sight === 0) return next;
+    prev = next;
+  }
+};
+
+const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
+  const vision = board.getVision(trainer || source);
+  const options: {[key: string]: Point} = {};
+  Direction.all.forEach((dir, i) => {
+    const result = targetAtDirection(source.pos, dir, vision);
+    if (result) options['kulnjbhy'[i]!] = result;
+  });
+  return {source, options};
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -467,10 +490,10 @@ const kMap = `
 """"##"................##...."""""""""""""""....
 """"##.......##...............""""""""""""......
 """""........##...............""""""""""".......
-"""..............S............""""""""""........
-............B................""""##""""...##....
+"""...........................""""""""""........
+.............................""""##""""...##....
 ...............@.................##.......##....
-...................C............................
+...................S............................
 ................................................
 ......##.................##.....................
 ......##.................##.."""""""............
@@ -487,13 +510,19 @@ const kMap = `
 ^^^^^^^^^^^^^^^^^^^#############################
 `;
 
+type Input = string;
+
 interface State {
   board: Board,
   effect: Effect,
   player: Trainer,
+  target: Target | null,
 };
 
-type Input = string;
+interface Target {
+  source: Entity,
+  options: {[key: string]: Point},
+};
 
 const addBlocks = (state: State): State => {
   const board = state.board;
@@ -523,13 +552,25 @@ const processInput = (state: State, input: Input) => {
   const others = board.getEntities().filter(x => x !== player);
   const target = nonnull(others[0]);
 
-  if (input === 's') {
-    state.effect = SearchEffect(
-      player.pos, target.pos, x => board.getTile(x).blocked);
+  if (state.target) {
+    const point = state.target.options[input];
+    if (point) {
+      state.effect = ExtendEffect(RayEffect(target.pos, point, 1), 2);
+      state.target = null;
+    } else if (input === 'escape') {
+      state.target = null;
+    }
+    return;
   }
+
   if (input === 'f') {
+    state.target = targets(board, target, player);
+  } else if (input === 'r') {
     const glyph = board.getTile(target.pos).glyph;
     state.effect = SwitchEffect(player.pos, target.pos, glyph);
+  } else if (input === 's') {
+    state.effect = SearchEffect(
+      player.pos, target.pos, x => board.getTile(x).blocked);
   }
 
   if (player.data.input !== null) return;
@@ -602,7 +643,7 @@ const initializeState = (): State => {
     x.data.trainer = player;
   });
 
-  return addBlocks({board, player, effect: []});
+  return addBlocks({board, player, effect: [], target: null});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
@@ -611,8 +652,10 @@ const updateState = (state: State, inputs: Input[]) => {
     effect.shift();
     return;
   }
-  inputs.forEach(x => processInput(state, x));
-  inputs.length = 0;
+
+  while (inputs.length && !effect.length) {
+    processInput(state, inputs.shift()!);
+  }
 
   for (; !effect.length; board.advanceEntity()) {
     const entity = board.getActiveEntity();
@@ -680,13 +723,14 @@ const renderMap = (state: State): string => {
     show(x.pos.x, x.pos.y, x.glyph, force);
   });
 
-  const label = '<- You are here.';
-  const {x, y} = state.player.pos;
-  for (let i = 0; i < Math.floor((label.length + 1) / 2); i++) {
-    const part = label.substr(2 * i, 2);
-    const color = `\x1b[1;30;47m${part}\x1b[0m`;
-    const padded = part.length === 2 ? color : `${color} `;
-    show(x + i + 1, y, padded as Glyph, true);
+  if (state.target) {
+    for (const [key, {x, y}] of Object.entries(state.target.options)) {
+      assert(key.length === 1);
+      const label = key.toUpperCase();
+      const index = x + (width + 1) * y;
+      text[index] = `\x1b[41m${text[index]}\x1b[0m`;
+      show(x + 1, y, `\x1b[31m-\x1b[1m${label}\x1b[0m` as Glyph, true);
+    }
   }
 
   if (state.effect.length) {
@@ -713,8 +757,9 @@ const initializeIO = (state: State): IO => {
   [fps, map].map(x => screen.append(x));
 
   const inputs: Input[] = [];
-  screen.key(['C-c', 'escape'], () => process.exit(0));
-  'hjklyubnfs.'.split('').forEach(x => screen.key([x], () => inputs.push(x)));
+  screen.key(['C-c'], () => process.exit(0));
+  ['escape'].concat('hjklyubnfrs.'.split('')).forEach(
+    x => screen.key([x], () => inputs.push(x)));
   return {fps, map, inputs, screen, state, timing: []};
 };
 

@@ -37,6 +37,12 @@ class Point {
     return Math.abs(dx) + Math.abs(dy);
   }
 
+  distanceWalking(o: Point): int {
+    const dx = this.x - o.x;
+    const dy = this.y - o.y;
+    return Math.max(Math.abs(dx), Math.abs(dy));
+  }
+
   equal(o: Point): boolean { return this.x === o.x && this.y === o.y; }
 
   // An injection from Z x Z -> Z suitable for use as a Map key.
