@@ -3,7 +3,7 @@ import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
-interface Vision { dirty: boolean, value: Matrix<int> };
+interface Vision { dirty: boolean, blockers: Point[], value: Matrix<int> };
 
 class Board {
   private fov: FOV;
@@ -97,23 +97,33 @@ class Board {
 
   // Cached field-of-vision
 
+  getBlockers(entity: Entity): Point[] {
+    return this.getCachedVision(entity).blockers;
+  }
+
   getVision(entity: Entity): Matrix<int> {
+    return this.getCachedVision(entity).value;
+  }
+
+  private getCachedVision(entity: Entity): Vision {
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
-      const result = {dirty: true, value: new Matrix(this.map.size, -1)};
+      const value = new Matrix(this.map.size, -1);
+      const result = {dirty: true, blockers: [], value};
       this.entityVision.set(entity, result);
       return result;
     })();
 
     if (vision.dirty) {
       const pos = entity.pos;
-      const value = vision.value;
+      const {blockers, value} = vision;
 
       const blocked = (p: Point, parent: Point | null) => {
         const q = p.add(pos);
         const cached = value.getOrNull(q);
         if (cached === null) return true;
+        let tile: Tile | null = null;
 
         // The constants in these expressions come from Point.distanceNethack.
         // They're chosen so that, in a field of tall grass, we can only see
@@ -122,8 +132,8 @@ class Board {
           const kVisionRadius = 3;
           if (!parent) return 100 * (kVisionRadius + 1) - 95 - 46 - 25;
 
-          const tile = this.getTile(q);
-          if (tile.blocked) return 0;
+          tile = this.map.getOrNull(q);
+          if (!tile || tile.blocked) return 0;
 
           const diagonal = p.x !== parent.x && p.y !== parent.y;
           const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
@@ -131,16 +141,20 @@ class Board {
           return Math.max(prev - loss, 0);
         })();
 
-        if (visibility > cached) value.set(q, visibility);
+        if (visibility > cached) {
+          value.set(q, visibility);
+          if (tile && tile.blocked) blockers.push(q);
+        }
         return visibility <= 0;
       };
 
       value.fill(-1);
+      blockers.length = 0;
       this.fov.fieldOfVision(blocked);
       vision.dirty = false;
     }
 
-    return vision.value;
+    return vision;
   }
 
   private dirtyVision(entity: Entity) {
@@ -273,12 +287,26 @@ const targetAtDirection =
 };
 
 const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
-  const vision = board.getVision(trainer || source);
   const options: {[key: string]: Point} = {};
-  Direction.all.forEach((dir, i) => {
-    const result = targetAtDirection(source.pos, dir, vision);
-    if (result) options['kulnjbhy'[i]!] = result;
-  });
+  const vision = board.getVision(trainer || source);
+  const blockers = board.getBlockers(trainer || source);
+
+  const kDirectionNames = 'kulnjbhy';
+  const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
+
+  let j = 0;
+  for (let i = 0; i < kAllNames.length && j < blockers.length; i++) {
+    const key = kAllNames[i]!;
+    if (kDirectionNames.includes(key)) continue;
+    options[key] = blockers[j++]!;
+  }
+
+  if (false) {
+    Direction.all.forEach((dir, i) => {
+      const result = targetAtDirection(source.pos, dir, vision);
+      if (result) options[kDirectionNames[i]!] = result;
+    });
+  }
   return {source, options};
 };
 
@@ -492,9 +520,9 @@ const kMap = `
 ...........""""""""""""""""""""######...........
 ......""""""""""""""""""""""""""""""............
 """"##""""""""""""""""""""""##"""""""...........
-""""##""""""""""""""""""""""##""""""""".........
-#################"""""""""""""""""""""""""".....
-^^^^^^###############################"""""""""""
+""""##""""""""""""""""""""""##""""""""""........
+#################""""...........................
+^^^^^^###############################...........
 ^^^^^^^^^^^^^^^^^^^#############################
 `;
 
@@ -746,7 +774,7 @@ const initializeIO = (state: State): IO => {
 
   const inputs: Input[] = [];
   screen.key(['C-c'], () => process.exit(0));
-  ['escape'].concat('hjklyubnfrs.'.split('')).forEach(
+  ['escape'].concat('abcdefghijklmnopqrstuvwxyz.'.split('')).forEach(
     x => screen.key([x], () => inputs.push(x)));
   return {fps, map, inputs, screen, state, timing: []};
 };
