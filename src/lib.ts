@@ -72,4 +72,4 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, nonnull, range, sample, weighted, Glyph};
+export {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph};

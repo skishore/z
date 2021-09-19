@@ -1,4 +1,4 @@
-import {assert, flatten, int, nonnull, range, sample, weighted, Glyph} from './lib';
+import {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -274,14 +274,14 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-const targetAtDirection =
-    (pos: Point, dir: Direction, vision: Matrix<int>): Point | null => {
+const targetAtDirection = (board: Board, pos: Point, dir: Direction,
+                           vision: Matrix<int>): Point | null => {
   let prev = pos;
   while (true) {
     const next = prev.add(dir);
     const sight = vision.getOrNull(next);
     if (sight === null || sight < 0) return prev.equal(pos) ? null : prev;
-    if (sight === 0) return next;
+    if (sight === 0 && board.getTile(next).blocked) return next;
     prev = next;
   }
 };
@@ -290,22 +290,24 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
   const options: {[key: string]: Point} = {};
   const vision = board.getVision(trainer || source);
   const blockers = board.getBlockers(trainer || source);
+  const used: Set<int> = new Set();
 
   const kDirectionNames = 'kulnjbhy';
   const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
 
+  Direction.all.forEach((dir, i) => {
+    const result = targetAtDirection(board, source.pos, dir, vision);
+    if (!result) return;
+    options[nonnull(kDirectionNames[i])] = result;
+    used.add(result.key());
+  });
+
   let j = 0;
   for (let i = 0; i < kAllNames.length && j < blockers.length; i++) {
-    const key = kAllNames[i]!;
+    const key = nonnull(kAllNames[i]);
     if (kDirectionNames.includes(key)) continue;
-    options[key] = blockers[j++]!;
-  }
-
-  if (false) {
-    Direction.all.forEach((dir, i) => {
-      const result = targetAtDirection(source.pos, dir, vision);
-      if (result) options[kDirectionNames[i]!] = result;
-    });
+    const point = nonnull(blockers[j++]);
+    if (!used.has(point.key())) options[key] = point;
   }
   return {source, options};
 };
@@ -459,7 +461,7 @@ const SearchEffect = (source: Point, target: Point,
   const phase = (points: Point[], glyph: Glyph): Effect => {
     const filtered = points.filter(x => !(x.equal(source) || x.equal(target)));
     return range(filtered.length).map(
-      i => range(i + 1).map(j => ({point: filtered[j]!, glyph})));
+      i => range(i + 1).map(j => ({point: nonnull(filtered[j]), glyph})));
   };
   const phase1 = phase(record, Glyph('?', 'yellow'));
   const phase2 = phase(path, Glyph('*', 'blue'));
@@ -473,6 +475,61 @@ const SearchEffect = (source: Point, target: Point,
       ExtendEffect(phase2, delay),
     ]),
   ]);
+};
+
+const EmberEffect = (source: Point, target: Point) => {
+  const base: Effect = [];
+  const line = LOS(source, target);
+
+  const random = (n: int): int => Math.floor(Math.random() * n);
+
+  type Spec = [string, Color, boolean?][];
+
+  const trail: Spec = [
+    ['*^^', 'yellow', true],
+    ['*^', 'yellow'],
+    ['**^', 'red'],
+    ['**^#%', 'red'],
+    ['#%', 'white'],
+  ];
+  const flame: Spec = [
+    ['*^^', 'yellow', true],
+    ['*^', 'yellow'],
+    ['**^', 'red'],
+    ['**^#%', 'yellow', true],
+    ['*^#%', 'yellow'],
+    ['*^#%', 'red'],
+  ];
+
+  const add = (frame: int, particle: Particle) => {
+    while (frame >= base.length) base.push([]);
+    nonnull(base[frame]).push(particle);
+  };
+
+  const effect = (speed: int, spec: Spec, frame: int, point: Point) => {
+    const glyphs: Glyph[] = [];
+    spec.forEach((x, i) => {
+      const [chars, color, light] = x;
+      let count = 1;
+      while (count < (i + 2) * (i + 2) && random(i + 3) > 1) count++;
+      for (let j = 0; j < count; j++) {
+        const ch = nonnull(chars[random(chars.length)]);
+        glyphs.push(Glyph(ch, color, light));
+      }
+    });
+    glyphs.forEach((glyph, j) => {
+      if (j % speed === 0) add(frame + j / speed, {glyph, point});
+    });
+  };
+
+  for (let i = 1; i < line.length; i++) {
+    effect(1, trail, i - 1, nonnull(line[i]));
+  }
+  for (const direction of Direction.all) {
+    const norm = direction.distanceTaxicab(Direction.none);
+    effect(2, flame, 2 * norm + line.length - 1, target.add(direction));
+  }
+  return base;
 };
 
 export {OverlayEffect, PauseEffect};
@@ -571,7 +628,7 @@ const processInput = (state: State, input: Input) => {
   if (state.target) {
     const point = state.target.options[input];
     if (point) {
-      state.effect = ExtendEffect(RayEffect(target.pos, point, 1), 2);
+      state.effect = EmberEffect(target.pos, point);
       state.target = null;
     } else if (input === 'escape') {
       state.target = null;
@@ -670,7 +727,7 @@ const updateState = (state: State, inputs: Input[]) => {
   }
 
   while (inputs.length && !effect.length) {
-    processInput(state, inputs.shift()!);
+    processInput(state, nonnull(inputs.shift()));
   }
 
   for (; !effect.length; board.advanceEntity()) {
