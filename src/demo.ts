@@ -290,7 +290,7 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
   const entity = trainer || source;
   const vision = board.getVision(entity);
   const blockers = board.getBlockers(entity);
-  const options: {[key: string]: Point} = {};
+  const options: Map<string, Point> = new Map();
 
   const kDirectionNames = 'kulnjbhy';
   const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
@@ -304,7 +304,7 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
   Direction.all.forEach((dir, i) => {
     const result = targetAtDirection(board, source.pos, dir, vision);
     if (!result) return;
-    options[nonnull(kDirectionNames[i])] = result;
+    options.set(nonnull(kDirectionNames[i]), result);
     add_to_used(result);
   });
 
@@ -320,7 +320,7 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
     while (!found && j < blockers.length) {
       const point = nonnull(blockers[j++]);
       found = !used.has(point.key());
-      if (found) options[key] = point;
+      if (found) options.set(key, point);
       add_to_used(point);
     }
   }
@@ -609,7 +609,7 @@ interface State {
 
 interface Target {
   source: Entity,
-  options: {[key: string]: Point},
+  options: Map<string, Point>,
 };
 
 const addBlocks = (state: State): State => {
@@ -641,7 +641,7 @@ const processInput = (state: State, input: Input) => {
   const target = nonnull(others[0]);
 
   if (state.target) {
-    const point = state.target.options[input];
+    const point = state.target.options.get(input);
     if (point) {
       state.effect = EmberEffect(target.pos, point);
       state.target = null;
@@ -811,8 +811,10 @@ const renderMap = (state: State): string => {
     show(x.pos.x, x.pos.y, x.glyph, force);
   });
 
+  // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
+  // select label directions here. Precompute the match on action selection.
   if (state.target) {
-    for (const [key, {x, y}] of Object.entries(state.target.options)) {
+    for (const [key, {x, y}] of state.target.options.entries()) {
       assert(key.length === 1);
       const label = key.toUpperCase();
       const index = x + (width + 1) * y;
