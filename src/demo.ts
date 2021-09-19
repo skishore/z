@@ -287,27 +287,42 @@ const targetAtDirection = (board: Board, pos: Point, dir: Direction,
 };
 
 const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
+  const entity = trainer || source;
+  const vision = board.getVision(entity);
+  const blockers = board.getBlockers(entity);
   const options: {[key: string]: Point} = {};
-  const vision = board.getVision(trainer || source);
-  const blockers = board.getBlockers(trainer || source);
-  const used: Set<int> = new Set();
 
   const kDirectionNames = 'kulnjbhy';
   const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
+
+  const used: Set<int> = new Set();
+  const add_to_used = (pos: Point) => {
+    used.add(pos.key());
+    Direction.all.forEach(x => used.add(pos.add(x).key()));
+  };
 
   Direction.all.forEach((dir, i) => {
     const result = targetAtDirection(board, source.pos, dir, vision);
     if (!result) return;
     options[nonnull(kDirectionNames[i])] = result;
-    used.add(result.key());
+    add_to_used(result);
   });
+
+  const p = entity.pos;
+  const sorted = blockers.slice();
+  sorted.sort((a, b) => b.distanceSquared(p) - a.distanceSquared(p));
 
   let j = 0;
   for (let i = 0; i < kAllNames.length && j < blockers.length; i++) {
     const key = nonnull(kAllNames[i]);
     if (kDirectionNames.includes(key)) continue;
-    const point = nonnull(blockers[j++]);
-    if (!used.has(point.key())) options[key] = point;
+    let found = false;
+    while (!found && j < blockers.length) {
+      const point = nonnull(blockers[j++]);
+      found = !used.has(point.key());
+      if (found) options[key] = point;
+      add_to_used(point);
+    }
   }
   return {source, options};
 };
@@ -802,7 +817,11 @@ const renderMap = (state: State): string => {
       const label = key.toUpperCase();
       const index = x + (width + 1) * y;
       text[index] = `\x1b[41m${text[index]}\x1b[0m`;
-      show(x + 1, y, `\x1b[31m-\x1b[1m${label}\x1b[0m` as Glyph, true);
+      const dash = `\x1b[31m-\x1b[0m`;
+      const name = `\x1b[1;31m${label}\x1b[0m`;
+      const left = x === width - 1 || (0 < x && x < player.pos.x);
+      left ? show(x - 1, y, `${name}${dash}` as Glyph, true)
+           : show(x + 1, y, `${dash}${name}` as Glyph, true);
     }
   }
 
