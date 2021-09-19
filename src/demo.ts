@@ -508,9 +508,8 @@ const EmberEffect = (source: Point, target: Point) => {
     ['#%', 'white'],
   ];
   const flame: Spec = [
-    ['*^^', 'yellow', true],
+    ['*^^', 'red'],
     ['*^', 'yellow'],
-    ['**^', 'red'],
     ['**^#%', 'yellow', true],
     ['*^#%', 'yellow'],
     ['*^#%', 'red'],
@@ -521,28 +520,28 @@ const EmberEffect = (source: Point, target: Point) => {
     nonnull(base[frame]).push(particle);
   };
 
-  const effect = (speed: int, spec: Spec, frame: int, point: Point) => {
+  const effect = (spec: Spec, frame: int, point: Point) => {
     const glyphs: Glyph[] = [];
     spec.forEach((x, i) => {
       const [chars, color, light] = x;
       let count = 1;
-      while (count < (i + 2) * (i + 2) && random(i + 3) > 1) count++;
+      const limit = Math.floor(1.5 * (i + 2));
+      while (count < limit && random(i + 2)) count++;
       for (let j = 0; j < count; j++) {
         const ch = nonnull(chars[random(chars.length)]);
         glyphs.push(Glyph(ch, color, light));
       }
     });
-    glyphs.forEach((glyph, j) => {
-      if (j % speed === 0) add(frame + j / speed, {glyph, point});
-    });
+    glyphs.forEach((glyph, j) => add(frame + j, {glyph, point}));
   };
 
-  for (let i = 1; i < line.length; i++) {
-    effect(1, trail, i - 1, nonnull(line[i]));
+  for (let i = 1; i < line.length - 1; i++) {
+    effect(trail, Math.floor((i - 1) / 2), nonnull(line[i]));
   }
-  for (const direction of Direction.all) {
+  for (const direction of [Direction.none].concat(Direction.all)) {
     const norm = direction.distanceTaxicab(Direction.none);
-    effect(2, flame, 2 * norm + line.length - 1, target.add(direction));
+    const frame = 2 * norm + Math.floor((line.length - 1) / 2);
+    effect(flame, frame, target.add(direction));
   }
   return base;
 };
