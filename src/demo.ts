@@ -290,7 +290,7 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
   const entity = trainer || source;
   const vision = board.getVision(entity);
   const blockers = board.getBlockers(entity);
-  const options: Map<string, Point> = new Map();
+  const options: Map<string, Option> = new Map();
 
   const kDirectionNames = 'kulnjbhy';
   const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
@@ -301,11 +301,17 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
     Direction.all.forEach(x => used.add(pos.add(x).key()));
   };
 
+  const safe = (point: Point) => {
+    const kMinDistance = 3;
+    return point.distanceNethack(source.pos) >= kMinDistance &&
+           (!trainer || point.distanceNethack(trainer.pos)) >= kMinDistance;
+  };
+
   Direction.all.forEach((dir, i) => {
-    const result = targetAtDirection(board, source.pos, dir, vision);
-    if (!result) return;
-    options.set(nonnull(kDirectionNames[i]), result);
-    add_to_used(result);
+    const point = targetAtDirection(board, source.pos, dir, vision);
+    if (!point) return;
+    options.set(nonnull(kDirectionNames[i]), {hidden: !safe(point), point});
+    add_to_used(point);
   });
 
   const p = entity.pos;
@@ -319,8 +325,8 @@ const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
     let found = false;
     while (!found && j < blockers.length) {
       const point = nonnull(blockers[j++]);
-      found = !used.has(point.key());
-      if (found) options.set(key, point);
+      found = safe(point) && !used.has(point.key());
+      if (found) options.set(key, {hidden: false, point});
       add_to_used(point);
     }
   }
@@ -606,9 +612,14 @@ interface State {
   target: Target | null,
 };
 
+interface Option {
+  hidden: boolean;
+  point: Point;
+};
+
 interface Target {
   source: Entity,
-  options: Map<string, Point>,
+  options: Map<string, Option>,
 };
 
 const addBlocks = (state: State): State => {
@@ -640,9 +651,9 @@ const processInput = (state: State, input: Input) => {
   const target = nonnull(others[0]);
 
   if (state.target) {
-    const point = state.target.options.get(input);
-    if (point) {
-      state.effect = EmberEffect(target.pos, point);
+    const option = state.target.options.get(input);
+    if (option) {
+      state.effect = EmberEffect(target.pos, option.point);
       state.target = null;
     } else if (input === 'escape') {
       state.target = null;
@@ -813,8 +824,10 @@ const renderMap = (state: State): string => {
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
   // select label directions here. Precompute the match on action selection.
   if (state.target) {
-    for (const [key, {x, y}] of state.target.options.entries()) {
+    for (const [key, option] of state.target.options.entries()) {
       assert(key.length === 1);
+      const {hidden, point: {x, y}} = option;
+      if (hidden) continue;
       const label = key.toUpperCase();
       const index = x + (width + 1) * y;
       text[index] = `\x1b[41m${text[index]}\x1b[0m`;
