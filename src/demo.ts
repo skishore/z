@@ -237,7 +237,7 @@ const plan = (board: Board, entity: Entity): Action => {
       // the AStar `blocked` predicate to return a cost value, or using BFS.
       const path = AStar(ep, tp, x => board.getTile(x).blocked);
       const direction = path
-        ? nonnull(path[0]).sub(ep) as Direction
+        ? Direction.assert(nonnull(path[0]).sub(ep))
         : sample(Direction.all);
       return {type: AT.Move, direction};
     }

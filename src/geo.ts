@@ -1,4 +1,4 @@
-import {assert, int} from './lib';
+import {assert, int, nonnull} from './lib';
 
 //////////////////////////////////////////////////////////////////////////////
 // Simple 2D geometry helpers.
@@ -76,6 +76,11 @@ class Direction extends Point {
   static diagonal = [Direction.ne, Direction.se, Direction.sw, Direction.nw];
 
   private constructor(x: int, y: int) { super(x, y); }
+
+  static assert(point: Point): Direction {
+    if (point.equal(Direction.none)) return Direction.none;
+    return nonnull(Direction.all.filter(x => x.equal(point))[0]);
+  }
 };
 
 class Matrix<T> {
