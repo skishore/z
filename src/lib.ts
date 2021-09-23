@@ -32,7 +32,7 @@ const sample = <T>(xs: T[]): T => {
 const weighted = <T>(xs: [int, T][]): T => {
   const total = xs.reduce((acc, x) => acc + (x[0] | 0), 0);
   assert(total > 0);
-  let value = Math.floor(Math.random() * total);
+  let value = Math.floor(Math.random() * total) + 1;
   for (const [weight, choice] of xs) {
     value -= weight;
     if (value <= 0) return choice;

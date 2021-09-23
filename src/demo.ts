@@ -218,25 +218,26 @@ const plan = (board: Board, entity: Entity): Action => {
       if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
 
       const [ep, tp] = [entity.pos, trainer.pos];
-      const okay = (pos: Point) => {
-        if (tp.distanceNethack(pos) > 2) return false;
-        const vision = board.getVision(trainer).getOrNull(pos);
-        return vision !== null && vision >= 0;
+      const vision = board.getVision(trainer);
+      const max = vision.getOrNull(tp);
+      const okay = (pos: Point): boolean => {
+        const dn = tp.distanceNethack(pos);
+        if (dn > 2) return false;
+        const vn = vision.getOrNull(pos) || 0;
+        return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
       };
-      // TODO(kshaunak): Use the visibility value, not just binary visibility,
-      // so that Pokemon move closer to trainers when in the tall grass.
-      if (okay(ep)) {
+      if (ep.distanceNethack(tp) <= 3) {
         const moves: [int, Direction][] =
-          Direction.all.filter(x => okay(entity.pos.add(x))).map(x => [1, x]);
-        moves.push([16, Direction.none]);
-        return {type: AT.Move, direction: weighted(moves)};
+          Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
+        if (okay(ep)) moves.push([8, Direction.none]);
+        if (moves.length) return {type: AT.Move, direction: weighted(moves)};
       }
 
       // TODO(kshaunak): Account for other entities here, either by modifying
       // the AStar `blocked` predicate to return a cost value, or using BFS.
       const path = AStar(ep, tp, x => board.getTile(x).blocked);
       const direction = path
-        ? nonnull(path[0]).sub(entity.pos) as Direction
+        ? nonnull(path[0]).sub(ep) as Direction
         : sample(Direction.all);
       return {type: AT.Move, direction};
     }
@@ -583,8 +584,8 @@ const kMap = `
 """"##"................##...."""""""""""""""....
 """"##.......##...............""""""""""""......
 """""........##...............""""""""""".......
-"""...........................""""""""""........
-.............................""""##""""...##....
+""".............C.............""""""""""........
+............B................""""##""""...##....
 ...............@.................##.......##....
 ...................S............................
 ................................................
