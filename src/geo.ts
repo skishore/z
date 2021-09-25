@@ -222,6 +222,7 @@ class FOV {
 const AStarUnitCost = 16;
 const AStarDiagonalPenalty = 2;
 const AStarLOSDeltaPenalty = 1;
+const AStarOccupiedPenalty = 64;
 
 // "delta" penalizes paths that travel far from the direct line-of-sight
 // from the source to the target. In order to compute it, we figure out if
@@ -348,12 +349,20 @@ const AStarHeapExtractMin = (heap: AStarHeap): AStarNode => {
   return result;
 };
 
-const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
+enum Status { FREE, BLOCKED, OCCUPIED };
+
+const AStar = (source: Point, target: Point, check: (p: Point) => Status,
                record?: Point[]): Point[] | null => {
   // Try line-of-sight - if that path is clear, then we don't need to search.
   // As with the full search below, we don't check if source is blocked here.
   const los = LOS(source, target);
-  if (los.every((x, i) => i === 0 || !blocked(x))) return los.slice(1);
+  const free = (() => {
+    for (let i = 1; i < los.length - 1; i++) {
+      if (check(los[i]!) !== Status.FREE) return false;
+    }
+    return true;
+  })();
+  if (free) return los.slice(1);
 
   const map: Map<int, AStarNode> = new Map();
   const heap: AStarHeap = [];
@@ -379,11 +388,14 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
 
     for (const direction of Direction.all) {
       const next = cur.add(direction);
-      if (blocked(next)) continue;
+      const test = next.equal(target) ? Status.FREE : check(next);
+      if (test === Status.BLOCKED) continue;
 
       const diagonal = direction.x !== 0 && direction.y !== 0;
-      const addition = AStarUnitCost + (diagonal ? AStarDiagonalPenalty : 0);
-      const distance = cur.distance + addition;
+      const occupied = test === Status.OCCUPIED;
+      const distance = cur.distance + AStarUnitCost +
+                       (diagonal ? AStarDiagonalPenalty : 0) +
+                       (occupied ? AStarOccupiedPenalty : 0);
 
       const key = next.key();
       const existing = map.get(key);
@@ -412,4 +424,4 @@ const AStar = (source: Point, target: Point, blocked: (p: Point) => boolean,
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, int, Point, Direction, Matrix, LOS, FOV, AStar};
+export {assert, int, Point, Direction, Matrix, LOS, FOV, AStar, Status};

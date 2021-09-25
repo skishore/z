@@ -1,5 +1,5 @@
 import {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph} from './lib';
-import {Point, Direction, Matrix, LOS, FOV, AStar} from './geo';
+import {Point, Direction, Matrix, LOS, FOV, AStar, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -46,8 +46,10 @@ class Board {
     return nonnull(this.entity[this.entityIndex]);
   }
 
-  free(pos: Point): boolean {
-    return !this.getTile(pos).blocked && !this.entityAtPos.has(pos.key());
+  getStatus(pos: Point): Status {
+    if (this.getTile(pos).blocked) return Status.BLOCKED;
+    if (this.entityAtPos.has(pos.key())) return Status.OCCUPIED;
+    return Status.FREE;
   }
 
   // Writes
@@ -221,6 +223,7 @@ const plan = (board: Board, entity: Entity): Action => {
       const vision = board.getVision(trainer);
       const max = vision.getOrNull(tp);
       const okay = (pos: Point): boolean => {
+        if (!pos.equal(ep) && board.getEntity(pos)) return false;
         const dn = tp.distanceNethack(pos);
         if (dn > 2) return false;
         const vn = vision.getOrNull(pos) || 0;
@@ -233,9 +236,8 @@ const plan = (board: Board, entity: Entity): Action => {
         if (moves.length) return {type: AT.Move, direction: weighted(moves)};
       }
 
-      // TODO(kshaunak): Account for other entities here, either by modifying
-      // the AStar `blocked` predicate to return a cost value, or using BFS.
-      const path = AStar(ep, tp, x => board.getTile(x).blocked);
+      const check = board.getStatus.bind(board);
+      const path = AStar(ep, tp, check);
       const direction = path
         ? Direction.assert(nonnull(path[0]).sub(ep))
         : sample(Direction.all);
@@ -475,10 +477,10 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const SearchEffect = (source: Point, target: Point,
-                      blocked: (p: Point) => boolean): Effect => {
+const SearchEffect = (source: Point, target: Point, board: Board): Effect => {
   const record: Point[] = [];
-  const path = (AStar(source, target, blocked, record) || []).reverse();
+  const check = board.getStatus.bind(board);
+  const path = (AStar(source, target, check, record) || []).reverse();
 
   const phase = (points: Point[], glyph: Glyph): Effect => {
     const filtered = points.filter(x => !(x.equal(source) || x.equal(target)));
@@ -639,7 +641,7 @@ const addBlocks = (state: State): State => {
     const x = Math.floor(Math.random() * size.x);
     const y = Math.floor(Math.random() * size.y);
     const point = new Point(x, y);
-    if (!board.free(point)) continue;
+    if (board.getStatus(point) !== Status.FREE) continue;
     board.setTile(point, tile);
     i--;
   }
@@ -668,8 +670,7 @@ const processInput = (state: State, input: Input) => {
     const glyph = board.getTile(target.pos).glyph;
     state.effect = SwitchEffect(player.pos, target.pos, glyph);
   } else if (input === 's') {
-    state.effect = SearchEffect(
-      player.pos, target.pos, x => board.getTile(x).blocked);
+    state.effect = SearchEffect(player.pos, target.pos, board);
   }
 
   if (player.data.input !== null) return;
