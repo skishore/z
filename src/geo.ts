@@ -46,12 +46,12 @@ class Point {
   equal(o: Point): boolean { return this.x === o.x && this.y === o.y; }
 
   // An injection from Z x Z -> Z suitable for use as a Map key.
-  // We can also try better ones with less multiplication and branching.
   key(): int {
     const {x, y} = this;
-    const s = Math.max(Math.abs(x), Math.abs(y));
-    const k = 2 * s + 1;
-    return (x + s + k * (y + s + s * k));
+    const ax = x < 0 ? -2 * x + 1 : 2 * x;
+    const ay = y < 0 ? -2 * y + 1 : 2 * y;
+    const n = ax + ay;
+    return n * (n + 1) / 2 + ax;
   }
 
   toString(): string { return `Point(${this.x}, ${this.y})`; }
