@@ -7,6 +7,8 @@ class Point {
   readonly x: int;
   readonly y: int;
 
+  static origin = new Point(0, 0);
+
   constructor(x: int, y: int) {
     this.x = x | 0;
     this.y = y | 0;
@@ -183,7 +185,7 @@ class FOV {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
         const [xb, yb] = [xa * ((j & 2) ? 1 : -1), ya * ((j & 4) ? 1 : -1)];
-        const line = LOS(new Point(0, 0), new Point(xb, yb));
+        const line = LOS(Point.origin, new Point(xb, yb));
         this.trieUpdate(this.#root, line, 0);
       }
     }
@@ -217,7 +219,7 @@ class FOV {
 };
 
 //////////////////////////////////////////////////////////////////////////////
-// Pathfinding: breadth-first-search and A-star.
+// A-star, for finding a path from a source to a known target.
 
 const AStarUnitCost = 16;
 const AStarDiagonalPenalty = 2;
@@ -423,5 +425,68 @@ const AStar = (source: Point, target: Point, check: (p: Point) => Status,
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Breadth-first search, for finding the closest point matching a predicate.
 
-export {assert, int, Point, Direction, Matrix, LOS, FOV, AStar, Status};
+const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
+             check: (p: Point) => Status, record?: Point[]): Direction[] => {
+  assert(0 <= limit);
+  assert(limit === (limit | 0));
+  const kUnknown = -1;
+  const kBlocked = -2;
+
+  const n = 2 * limit + 1;
+  const distances = new Matrix(new Point(n, n), kUnknown);
+  distances.set(Point.origin, 0);
+  if (record) record.push(source);
+
+  let i = 1;
+  let prev = [Point.origin];
+  let next: Point[] = [];
+  const targets = [];
+
+  for (; i = limit; i++) {
+    for (const pp of prev) {
+      for (const direction of Direction.all) {
+        const np = pp.add(direction);
+        const distance = distances.get(np);
+        if (distance !== kUnknown) continue;
+
+        const point = np.add(source);
+        if (target(point)) targets.push(point);
+        distances.set(np, check(point) === Status.FREE ? i : kBlocked);
+        if (record) record.push(point);
+        next.push(np);
+      }
+    }
+    if (targets.length || !next.length) break;
+    [prev, next] = [next, prev];
+    next.length = 0;
+  }
+
+  if (!targets.length) return [];
+  prev = targets;
+  next.length = 0;
+  i--;
+
+  for (; i > 0; i--) {
+    for (const pp of prev) {
+      for (const direction of Direction.all) {
+        const np = pp.add(direction);
+        const distance = distances.get(np);
+        if (distance !== i) continue;
+
+        distances.set(np, kUnknown);
+        next.push(np);
+      }
+    }
+    [prev, next] = [next, prev];
+    next.length = 0;
+  }
+
+  assert(next.length > 0);
+  return next.map(Direction.assert);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+export {assert, int, Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status};
