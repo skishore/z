@@ -13,6 +13,7 @@ class Board {
   private entityIndex: int;
   private entityVision: Map<Entity, Vision>;
   private defaultTile: Tile;
+  private logs: string[];
 
   constructor(size: Point) {
     this.fov = new FOV(Math.max(size.x, size.y));
@@ -22,9 +23,14 @@ class Board {
     this.entityIndex = 0;
     this.entityVision = new Map();
     this.defaultTile = nonnull(kTiles['#']);
+    this.logs = [];
   }
 
   // Reads
+
+  getLog(): string[] {
+    return this.logs;
+  }
 
   getSize(): Point {
     return this.map.size;
@@ -70,6 +76,15 @@ class Board {
     this.entityAtPos.set(pos.key(), entity);
     this.entity.push(entity);
     entity.pos = pos;
+  }
+
+  log(line: string) {
+    this.logs.push(line);
+    if (this.logs.length > Constants.LOG_SIZE) this.logs.shift();
+  }
+
+  logIfPlayer(entity: Entity, line: string) {
+    if (entity.type === ET.Trainer && entity.data.player) this.log(line);
   }
 
   moveEntity(from: Point, to: Point) {
@@ -167,6 +182,20 @@ class Board {
 
 //////////////////////////////////////////////////////////////////////////////
 
+const describe = (entity: Entity): string => {
+  if (entity.type === ET.Trainer) {
+    const {name, player} = entity.data;
+    return player ? 'you' : name;
+  } else {
+    const {species, trainer} = entity.data;
+    if (!trainer) return `the wild ${species}`;
+    const {name, player} = trainer.data;
+    return player ? `your ${species}` : `${name}'s ${species}`;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 enum AT { Idle, Move, WaitForInput };
 enum ET { Pokemon, Trainer };
 
@@ -178,6 +207,7 @@ type Action =
 interface Result { success: boolean, turns: int };
 
 interface PokemonData {
+  species: string,
   trainer: Trainer | null,
 };
 
@@ -185,6 +215,7 @@ interface TrainerData {
   input: Action | null,
   player: boolean,
   pokemon: Pokemon[],
+  name: string,
 };
 
 interface EntityData {
@@ -213,35 +244,38 @@ const wait = (entity: Entity, turns: int): void => {
   entity.timer += turns * Constants.TURN_TIMER;
 };
 
+const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
+  const [ep, tp] = [entity.pos, leader.pos];
+  const vision = board.getVision(leader);
+  const max = vision.getOrNull(tp);
+  const okay = (pos: Point): boolean => {
+    if (!pos.equal(ep) && board.getEntity(pos)) return false;
+    const dn = tp.distanceNethack(pos);
+    if (dn > 2) return false;
+    const vn = vision.getOrNull(pos) || 0;
+    return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
+  };
+  if (ep.distanceNethack(tp) <= 3) {
+    const moves: [int, Direction][] =
+      Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
+    if (okay(ep)) moves.push([8, Direction.none]);
+    if (moves.length) return {type: AT.Move, direction: weighted(moves)};
+  }
+
+  const check = board.getStatus.bind(board);
+  const path = AStar(ep, tp, check);
+  const direction = path
+    ? Direction.assert(nonnull(path[0]).sub(ep))
+    : sample(Direction.all);
+  return {type: AT.Move, direction};
+};
+
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
       const {trainer} = entity.data;
-      if (!trainer) return {type: AT.Move, direction: sample(Direction.all)};
-
-      const [ep, tp] = [entity.pos, trainer.pos];
-      const vision = board.getVision(trainer);
-      const max = vision.getOrNull(tp);
-      const okay = (pos: Point): boolean => {
-        if (!pos.equal(ep) && board.getEntity(pos)) return false;
-        const dn = tp.distanceNethack(pos);
-        if (dn > 2) return false;
-        const vn = vision.getOrNull(pos) || 0;
-        return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
-      };
-      if (ep.distanceNethack(tp) <= 3) {
-        const moves: [int, Direction][] =
-          Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
-        if (okay(ep)) moves.push([8, Direction.none]);
-        if (moves.length) return {type: AT.Move, direction: weighted(moves)};
-      }
-
-      const check = board.getStatus.bind(board);
-      const path = AStar(ep, tp, check);
-      const direction = path
-        ? Direction.assert(nonnull(path[0]).sub(ep))
-        : sample(Direction.all);
-      return {type: AT.Move, direction};
+      return trainer ? followLeader(board, entity, trainer)
+                     : {type: AT.Move, direction: sample(Direction.all)};
     }
     case ET.Trainer: {
       const {input, player} = entity.data;
@@ -265,6 +299,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (other) {
         if (other.type === ET.Pokemon && other.data.trainer === entity) {
           board.swapEntities(entity.pos, pos);
+          board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
           return {success: true, turns: 1};
         }
         return {success: false, turns: 0};
@@ -561,6 +596,7 @@ export {OverlayEffect, PauseEffect};
 
 const Constants = {
   BLOCKED: 0,
+  LOG_SIZE: 4,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
 };
@@ -706,22 +742,25 @@ const initializeState = (): State => {
         case '@': {
           const glyph = Glyph('@');
           const speed = Constants.TURN_TIMER / 10;
-          const data = {input: null, player: true, pokemon: []};
+          const data = {input: null, player: true, pokemon: [], name: ''};
           return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
         }
         case 'B': {
+          const species = 'Bulbasaur';
           const speed = Constants.TURN_TIMER / 6;
-          const [data, glyph] = [{trainer: null}, Glyph('B', 'green')];
+          const [data, glyph] = [{species, trainer: null}, Glyph('B', 'green')];
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         case 'C': {
+          const species = 'Charmander';
           const speed = Constants.TURN_TIMER / 5;
-          const [data, glyph] = [{trainer: null}, Glyph('C', 'red')];
+          const [data, glyph] = [{species, trainer: null}, Glyph('C', 'red')];
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         case 'S': {
+          const species = 'Squirtle';
           const speed = Constants.TURN_TIMER / 4;
-          const [data, glyph] = [{trainer: null}, Glyph('S', 'blue')];
+          const [data, glyph] = [{species, trainer: null}, Glyph('S', 'blue')];
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         default: {
@@ -785,6 +824,7 @@ interface Timing {
 
 interface IO {
   fps: Element,
+  log: Element,
   map: Element,
   inputs: Input[],
   screen: Element,
@@ -794,6 +834,10 @@ interface IO {
 
 const kBreakGlyph = Glyph('\n');
 const kEmptyGlyph = Glyph(' ');
+
+const renderLog = (state: State): string => {
+  return state.board.getLog().join('\n');
+};
 
 const renderMap = (state: State): string => {
   const {board, player} = state;
@@ -857,18 +901,26 @@ const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const screen = blessed.screen({fullUnicode: true});
 
+  const kLogMapSpacer = 1;
   const {x, y} = state.board.getSize();
-  const [width, height] = [2 * x, y];
-  const [attr, left, top, wrap] = [false, 'center', 'center', false];
-  const map = blessed.box({attr, height, left, top, width, wrap});
+  const [lh, mh] = [Constants.LOG_SIZE, y];
+  const [lt, mt] = [0, kLogMapSpacer + Constants.LOG_SIZE];
+
+  const [width, height] = [2 * x, y + kLogMapSpacer + Constants.LOG_SIZE];
+  const [left, top, attr, wrap] = ['center', 'center', false, false];
+  const content = blessed.box({width, height, left, top, attr, wrap});
+
+  const log = blessed.box({width, height: lh, left: 0, top: lt, attr, wrap});
+  const map = blessed.box({width, height: mh, left: 0, top: mt, attr, wrap});
   const fps = blessed.box({align: 'right', top: '100%-1'});
-  [fps, map].map(x => screen.append(x));
+  [content, fps].map(x => screen.append(x));
+  [log, map].map(x => content.append(x));
 
   const inputs: Input[] = [];
   screen.key(['C-c'], () => process.exit(0));
   ['escape'].concat('abcdefghijklmnopqrstuvwxyz.'.split('')).forEach(
     x => screen.key([x], () => inputs.push(x)));
-  return {fps, map, inputs, screen, state, timing: []};
+  return {fps, log, map, inputs, screen, state, timing: []};
 };
 
 const update = (io: IO) => {
@@ -881,6 +933,7 @@ const update = (io: IO) => {
 };
 
 const render = (io: IO) => {
+  io.log.setContent(renderLog(io.state));
   io.map.setContent(renderMap(io.state));
 
   const last = nonnull(io.timing[io.timing.length - 1]);
