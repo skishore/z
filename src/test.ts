@@ -1,5 +1,5 @@
 import {assert, int, nonnull, range} from './lib';
-import {Point, Matrix, AStar, Status} from './geo';
+import {Point, Matrix, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -115,7 +115,7 @@ const parseSearchTestCase = (input: string): SearchTestCase => {
 };
 
 const runAStarTestCase = (input: string) => {
-  input = input.trim();
+  const expected = input.trim();
   const test = parseSearchTestCase(input);
   assert(test.targets.length === 1);
   const target = nonnull(test.targets[0]);
@@ -133,7 +133,37 @@ const runAStarTestCase = (input: string) => {
   path.forEach(x => set(x, '*'));
 
   const actual = test.raw.map(x => x.join('')).join('\n');
-  assert(actual === input, () => `Actual:\n\n${actual}\n\nExpected:\n\n${input}`);
+  assert(actual === expected,
+         () => `Actual:\n\n${actual}\n\nExpected:\n\n${expected}`);
+};
+
+const runBFSTestCase = (input: string) => {
+  const expected = input.trim();
+  const lines = expected.split('\n');
+  const limit = parseInt(nonnull(lines[0]).substr('Limit: '.length), 10);
+  input = lines.slice(1).join('\n');
+
+  const test = parseSearchTestCase(input);
+  const targets: Set<int> = new Set();
+  test.targets.forEach(x => targets.add(x.key()));
+  const target = (x: Point) => targets.has(x.key());
+
+  const set = (point: Point, ch: string) => {
+    const {x, y} = point;
+    const old = nonnull(nonnull(test.raw[y])[x]);
+    if (old === '@' || old === 'T' || old === 'X' || old === '#') return;
+    test.raw[y]![x] = ch;
+  };
+
+  const seen: Point[] = [];
+  const dirs = BFS(test.source, target, limit, test.check, seen) || [];
+  seen.forEach(x => set(x, '?'));
+  dirs.forEach(x => set(x.add(test.source), '*'));
+
+  const prefix = `Limit: ${limit}\n`;
+  const actual = prefix + test.raw.map(x => x.join('')).join('\n');
+  assert(actual === expected,
+         () => `Actual:\n\n${actual}\n\nExpected:\n\n${expected}`);
 };
 
 const testAStar = () => {
@@ -230,12 +260,73 @@ const testAStar = () => {
   cases.split('\n\n').forEach(runAStarTestCase);
 };
 
+const testBFS = () => {
+  const cases = `
+Limit: 2
+.........
+...T.....
+..?????..
+..?????..
+..??@??..
+..?????..
+..?????..
+.T.......
+.........
+
+Limit: 3
+.........
+.??T????.
+.???????.
+.??***??.
+.???@???.
+.??*????.
+.???????.
+.T??????.
+.........
+
+Limit: 3
+.........
+.?T?????.
+.???????.
+.??**???.
+.???@???.
+.???????.
+.???????.
+.???????.
+.........
+
+Limit: 3
+.........
+...?????.
+..##????.
+.?##????.
+.???@???.
+.??###??.
+.???.???.
+.........
+.........
+
+Limit: 3
+.........
+.???T....
+.???###?.
+.??**???.
+.???@???.
+.???????.
+.???????.
+.???????.
+.........
+  `;
+  cases.split('\n\n').forEach(runBFSTestCase);
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 const main = () => {
   testPointDistanceNethack();
   testPointKeyIsAnInjection();
   testAStar();
+  testBFS();
 };
 
 main();

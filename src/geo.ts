@@ -435,25 +435,32 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
   const kBlocked = -2;
 
   const n = 2 * limit + 1;
+  const initial = new Point(limit, limit);
   const distances = new Matrix(new Point(n, n), kUnknown);
-  distances.set(Point.origin, 0);
+  distances.set(initial, 0);
   if (record) record.push(source);
 
   let i = 1;
-  let prev = [Point.origin];
+  let prev = [initial];
   let next: Point[] = [];
   const targets = [];
 
-  for (; i = limit; i++) {
+  for (; i <= limit; i++) {
     for (const pp of prev) {
       for (const direction of Direction.all) {
         const np = pp.add(direction);
         const distance = distances.get(np);
         if (distance !== kUnknown) continue;
 
-        const point = np.add(source);
-        if (target(point)) targets.push(point);
-        distances.set(np, check(point) === Status.FREE ? i : kBlocked);
+        const x = np.x + source.x - limit;
+        const y = np.y + source.y - limit;
+        const point = new Point(x, y);
+
+        const free = check(point) === Status.FREE;
+        const done = free && target(point);
+        if (done) targets.push(np);
+        distances.set(np, free ? i : kBlocked);
+        if (!free) continue;
         if (record) record.push(point);
         next.push(np);
       }
@@ -472,7 +479,7 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
     for (const pp of prev) {
       for (const direction of Direction.all) {
         const np = pp.add(direction);
-        const distance = distances.get(np);
+        const distance = distances.getOrNull(np);
         if (distance !== i) continue;
 
         distances.set(np, kUnknown);
@@ -483,8 +490,8 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
     next.length = 0;
   }
 
-  assert(next.length > 0);
-  return next.map(Direction.assert);
+  assert(prev.length > 0);
+  return prev.map(x => Direction.assert(x.sub(initial)));
 };
 
 //////////////////////////////////////////////////////////////////////////////
