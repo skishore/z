@@ -403,7 +403,8 @@ const targetAtDirection = (board: Board, pos: Point, dir: Direction,
   }
 };
 
-const targets = (board: Board, source: Entity, trainer?: Trainer): Target => {
+const targets = (board: Board, source: Entity): Target => {
+  const trainer = source && source.type === ET.Pokemon && source.data.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
   const blockers = board.getBlockers(entity);
@@ -780,7 +781,7 @@ const processInput = (state: State, input: Input) => {
   }
 
   if (input === 'f') {
-    state.target = targets(board, target, player);
+    state.target = targets(board, target);
   } else if (input === 'r') {
     const glyph = board.getTile(target.pos).glyph;
     board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
