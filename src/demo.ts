@@ -201,7 +201,7 @@ const describe = (entity: Entity): string => {
     const {name, player} = entity.data;
     return player ? 'you' : name;
   } else {
-    const {species, trainer} = entity.data;
+    const {species: {name: species}, trainer} = entity.data.self;
     if (!trainer) return `the wild ${species}`;
     const {name, player} = trainer.data;
     return player ? species : `${name}'s ${species}`;
@@ -211,7 +211,7 @@ const describe = (entity: Entity): string => {
 const shout = (trainer: Trainer, pokemon: Pokemon): string => {
   const {name, player} = trainer.data;
   const prefix = player ? 'You shout' : `${name} shouts`;
-  return `${prefix}: "${pokemon.data.species}, attack!"`;
+  return `${prefix}: "${pokemon.data.self.species.name}, attack!"`;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -227,15 +227,25 @@ type Action =
   {type: AT.Shout, command: Command, entity: Entity} |
   {type: AT.WaitForInput};
 
-interface Result { success: boolean, turns: int, effect?: Effect };
+interface Result { success: boolean, turns: number };
 
 type Command =
   {type: CT.Attack, target: Point};
 
+interface PokemonSpeciesData {
+  glyph: Glyph;
+  name: string;
+  speed: number;
+};
+
+interface PokemonIndividualData {
+  species: PokemonSpeciesData,
+  trainer: Trainer | null,
+};
+
 interface PokemonData {
   commands: Command[],
-  species: string,
-  trainer: Trainer | null,
+  self: PokemonIndividualData,
 };
 
 interface TrainerData {
@@ -247,7 +257,7 @@ interface TrainerData {
 
 interface EntityData {
   glyph: Glyph,
-  speed: int,
+  speed: number,
   timer: int,
   pos: Point,
 };
@@ -260,15 +270,19 @@ type Pokemon = Entity & {type: ET.Pokemon};
 type Trainer = Entity & {type: ET.Trainer};
 
 const charge = (entity: Entity) => {
-  entity.timer -= entity.speed;
+  entity.timer -= Math.round(Constants.TURN_TIMER * entity.speed);
 };
 
 const ready = (entity: Entity): boolean => {
   return entity.timer <= 0;
 };
 
-const wait = (entity: Entity, turns: int): void => {
-  entity.timer += turns * Constants.TURN_TIMER;
+const trainer = (entity: Entity): Trainer | null => {
+  return entity.type === ET.Pokemon ? entity.data.self.trainer : null;
+};
+
+const wait = (entity: Entity, turns: number): void => {
+  entity.timer += Math.round(Constants.TURN_TIMER * turns);
 };
 
 const hasLineOfSight =
@@ -337,7 +351,7 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
-      const {commands, trainer} = entity.data;
+      const {commands, self: {trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
       return trainer ? followLeader(board, entity, trainer)
                      : {type: AT.Move, direction: sample(Direction.all)};
@@ -366,21 +380,18 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (board.getTile(pos).blocked) return {success: false, turns: 1};
       const other = board.getEntity(pos);
       if (other) {
-        if (other.type === ET.Pokemon && other.data.trainer === entity) {
-          board.swapEntities(entity.pos, pos);
-          board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
-          return {success: true, turns: 1};
-        }
-        return {success: false, turns: 1};
+        if (trainer(other) !== entity) return {success: false, turns: 1};
+        board.swapEntities(entity.pos, pos);
+        board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
+        return {success: true, turns: 1};
       }
       board.moveEntity(entity.pos, pos);
       return {success: true, turns: 1};
     }
     case AT.Shout: {
       const listener = action.entity;
-      if (listener.type !== ET.Pokemon || listener.data.trainer !== entity) {
-        return {success: false, turns: 1};
-      }
+      if (listener.type !== ET.Pokemon) return {success: false, turns: 1};
+      if (trainer(listener) !== entity) return {success: false, turns: 1};
       listener.data.commands.push(action.command);
       board.log(shout(entity, listener));
       return {success: true, turns: 1};
@@ -406,7 +417,7 @@ const targetAtDirection = (board: Board, pos: Point, dir: Direction,
 };
 
 const targets = (board: Board, source: Entity, range: int): Target => {
-  const trainer = source && source.type === ET.Pokemon && source.data.trainer;
+  const trainer = source.type === ET.Pokemon && source.data.self.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
   const blockers = board.getBlockers(entity);
@@ -683,6 +694,7 @@ const Constants = {
   FRAME_RATE: 60,
   TURN_TIMER: 120,
   ATTACK_RANGE: 8,
+  TRAINER_SPEED: 1/10,
 };
 
 interface Tile {
@@ -696,6 +708,12 @@ const kTiles: {[ch: string]: Tile} = {
   '"': {blocked: false, obscure: true, glyph: Glyph('"', 'green', true)},
   '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
   '^': {blocked: true, obscure: true, glyph: Glyph('^', 'yellow')},
+};
+
+const kPokemon: {[key: string]: PokemonSpeciesData} = {
+  B: {name: 'Bulbasaur', glyph: Glyph('B', 'green'), speed: 1/6},
+  C: {name: 'Charmander', glyph: Glyph('C', 'red'), speed: 1/5},
+  S: {name: 'Squirtle', glyph: Glyph('S', 'blue'), speed: 1/4},
 };
 
 const kMap = `
@@ -825,31 +843,15 @@ const initializeState = (): State => {
       switch (ch) {
         case '@': {
           const glyph = Glyph('@');
-          const speed = Constants.TURN_TIMER / 10;
+          const speed = Constants.TRAINER_SPEED;
           const data = {input: null, player: true, pokemon: [], name: ''};
           return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
         }
-        case 'B': {
-          const speed = Constants.TURN_TIMER / 6;
-          const glyph = Glyph('B', 'green');
-          const data = {commands: [], species: 'Bulbasaur', trainer: null};
-          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
-        }
-        case 'C': {
-          const speed = Constants.TURN_TIMER / 5;
-          const glyph = Glyph('C', 'red');
-          const data = {commands: [], species: 'Charmander', trainer: null};
-          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
-        }
-        case 'S': {
-          const speed = Constants.TURN_TIMER / 4;
-          const glyph = Glyph('S', 'blue');
-          const data = {commands: [], species: 'Squirtle', trainer: null};
-          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
-        }
         default: {
-          assert(false, () => `Unknown char: ${ch}`);
-          return null as unknown as Entity;
+          const species = nonnull(kPokemon[ch]);
+          const {glyph, speed} = species;
+          const data = {commands: [], self: {species, trainer: null}};
+          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
       }
     })();
@@ -861,9 +863,9 @@ const initializeState = (): State => {
   const player = nonnull(players[0]) as Trainer;
 
   board.getEntities().forEach(x => {
-    if (x.type !== ET.Pokemon || x.data.trainer !== null) return;
+    if (x.type !== ET.Pokemon || x.data.self.trainer !== null) return;
     player.data.pokemon.push(x);
-    x.data.trainer = player;
+    x.data.self.trainer = player;
   });
 
   return addBlocks({board, player, target: null});
@@ -949,8 +951,7 @@ const renderMap = (state: State): string => {
   }
 
   board.getEntities().forEach(x => {
-    const force = x.type === ET.Pokemon && x.data.trainer === player;
-    show(x.pos.x, x.pos.y, x.glyph, force);
+    show(x.pos.x, x.pos.y, x.glyph, trainer(x) === player);
   });
 
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
@@ -983,7 +984,7 @@ const renderMap = (state: State): string => {
 const renderStatus = (state: State): string => {
   const pokemon: Pokemon[] = [];
   state.board.getEntities().forEach(x => {
-    if (x.type === ET.Pokemon && x.data.trainer === state.player) pokemon.push(x);
+    if (x.type === ET.Pokemon && trainer(x) === state.player) pokemon.push(x);
   });
   if (pokemon.length === 0) return '';
 
@@ -1000,7 +1001,7 @@ const renderStatus = (state: State): string => {
       const padding = left - lines[j]!.replace(/\x1b\[[\d;]*m/g, '').length;
       if (padding > 0) lines[j] += ' '.repeat(padding);
     });
-    lines[0] += `${nonnull(hotkeys[i])}) ${x.data.species}`;
+    lines[0] += `${nonnull(hotkeys[i])}) ${x.data.self.species.name}`;
     lines[1] += `HP: [${Color('='.repeat(width - 6), 'green')}]`;
     lines[2] += `PP: [${Color('='.repeat(width - 6), 'blue')}]`;
     left += outer;
