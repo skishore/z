@@ -248,10 +248,15 @@ interface PokemonData {
   self: PokemonIndividualData,
 };
 
+interface PokemonEdge {
+  entity: Pokemon | null,
+  self: PokemonIndividualData,
+};
+
 interface TrainerData {
   input: Action | null,
   player: boolean,
-  pokemon: Pokemon[],
+  pokemon: PokemonEdge[],
   name: string,
 };
 
@@ -423,9 +428,6 @@ const targets = (board: Board, source: Entity, range: int): Target => {
   const blockers = board.getBlockers(entity);
   const options: Map<string, Option> = new Map();
 
-  const kDirectionNames = 'kulnjbhy';
-  const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
-
   const used: Set<int> = new Set();
   const add_to_used = (point: Point, hidden?: boolean) => {
     used.add(point.key());
@@ -442,7 +444,7 @@ const targets = (board: Board, source: Entity, range: int): Target => {
     const point = targetAtDirection(board, source.pos, dir, range, vision);
     if (!point) return;
     const hidden = !board.getTile(point).blocked || !safe(point);
-    options.set(nonnull(kDirectionNames[i]), {hidden, point});
+    options.set(nonnull(kDirectionKeys[i]), {hidden, point});
     add_to_used(point, hidden);
   });
 
@@ -451,9 +453,9 @@ const targets = (board: Board, source: Entity, range: int): Target => {
   sorted.sort((a, b) => b.distanceSquared(p) - a.distanceSquared(p));
 
   let j = 0;
-  for (let i = 0; i < kAllNames.length && j < blockers.length; i++) {
-    const key = nonnull(kAllNames[i]);
-    if (kDirectionNames.includes(key)) continue;
+  for (let i = 0; i < kAllKeys.length && j < blockers.length; i++) {
+    const key = nonnull(kAllKeys[i]);
+    if (kDirectionKeys.includes(key)) continue;
     let found = false;
     while (!found && j < blockers.length) {
       const point = nonnull(blockers[j++]);
@@ -703,6 +705,10 @@ interface Tile {
   glyph: Glyph,
 };
 
+const kPokemonKeys = 'asd';
+const kDirectionKeys = 'kulnjbhy';
+const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
+
 const kTiles: {[ch: string]: Tile} = {
   '.': {blocked: false, obscure: false, glyph: Glyph('.')},
   '"': {blocked: false, obscure: true, glyph: Glyph('"', 'green', true)},
@@ -724,10 +730,10 @@ const kMap = `
 """"##"................##...."""""""""""""""....
 """"##.......##...............""""""""""""......
 """""........##...............""""""""""".......
-""".............C.............""""""""""........
-............B................""""##""""...##....
+"""...........................""""""""""........
+.............................""""##""""...##....
 ...............@.................##.......##....
-...................S............................
+................................................
 ................................................
 ......##.................##.....................
 ......##.................##.."""""""............
@@ -788,11 +794,11 @@ const addBlocks = (state: State): State => {
 const processInput = (state: State, input: Input) => {
   const {board, player} = state;
   const others = board.getEntities().filter(x => x !== player);
-  const target = nonnull(others[0]);
+  const target = others[0] || null;
 
   if (state.target) {
     const option = state.target.options.get(input);
-    if (option) {
+    if (option && target) {
       const command = {type: CT.Attack, target: option.point};
       player.data.input = {type: AT.Shout, command, entity: target};
       state.target = null;
@@ -802,28 +808,19 @@ const processInput = (state: State, input: Input) => {
     return;
   }
 
-  if (input === 'f') {
-    state.target = targets(board, target, Constants.ATTACK_RANGE);
-  } else if (input === 'r') {
-    const glyph = board.getTile(target.pos).glyph;
-    board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
-  } else if (input === 's') {
-    board.addEffect(SearchEffect(player.pos, target.pos, board));
+  if (target) {
+    if (input === 'f') {
+      state.target = targets(board, target, Constants.ATTACK_RANGE);
+    } else if (input === 'r') {
+      const glyph = board.getTile(target.pos).glyph;
+      board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
+    } else if (input === 's') {
+      board.addEffect(SearchEffect(player.pos, target.pos, board));
+    }
   }
 
   if (player.data.input !== null) return;
-
-  const directions: {[key: string]: Direction} = {
-    'h': Direction.w,
-    'j': Direction.s,
-    'k': Direction.n,
-    'l': Direction.e,
-    'y': Direction.nw,
-    'u': Direction.ne,
-    'b': Direction.sw,
-    'n': Direction.se,
-  };
-  const direction = directions[input];
+  const direction = Direction.all[kDirectionKeys.indexOf(input)];
   if (direction) player.data.input = {type: AT.Move, direction};
   if (input === '.') player.data.input = {type: AT.Idle};
 };
@@ -862,10 +859,9 @@ const initializeState = (): State => {
     x => x.type === ET.Trainer && x.data.player);
   const player = nonnull(players[0]) as Trainer;
 
-  board.getEntities().forEach(x => {
-    if (x.type !== ET.Pokemon || x.data.self.trainer !== null) return;
-    player.data.pokemon.push(x);
-    x.data.self.trainer = player;
+  const n = kPokemonKeys.length;
+  Object.entries(kPokemon).slice(0, n).forEach(([_, species]) => {
+    player.data.pokemon.push({entity: null, self: {species, trainer: player}});
   });
 
   return addBlocks({board, player, target: null});
@@ -982,10 +978,7 @@ const renderMap = (state: State): string => {
 };
 
 const renderStatus = (state: State): string => {
-  const pokemon: Pokemon[] = [];
-  state.board.getEntities().forEach(x => {
-    if (x.type === ET.Pokemon && trainer(x) === state.player) pokemon.push(x);
-  });
+  const pokemon = state.player.data.pokemon;
   if (pokemon.length === 0) return '';
 
   const kPadding = 2;
@@ -995,13 +988,12 @@ const renderStatus = (state: State): string => {
   const lines = ['', '', ''];
 
   let left = Math.floor((total - outer * pokemon.length) / 2) + kPadding;
-  const hotkeys = 'ASD';
   pokemon.forEach((x, i) => {
     range(3).forEach(j => {
       const padding = left - lines[j]!.replace(/\x1b\[[\d;]*m/g, '').length;
       if (padding > 0) lines[j] += ' '.repeat(padding);
     });
-    lines[0] += `${nonnull(hotkeys[i])}) ${x.data.self.species.name}`;
+    lines[0] += `${nonnull(kPokemonKeys[i])}) ${x.self.species.name}`;
     lines[1] += `HP: [${Color('='.repeat(width - 6), 'green')}]`;
     lines[2] += `PP: [${Color('='.repeat(width - 6), 'blue')}]`;
     left += outer;
@@ -1040,7 +1032,7 @@ const initializeIO = (state: State): IO => {
 
   const inputs: Input[] = [];
   screen.key(['C-c'], () => process.exit(0));
-  ['escape'].concat('abcdefghijklmnopqrstuvwxyz.'.split('')).forEach(
+  ['escape'].concat(Array.from(kAllKeys)).forEach(
     x => screen.key([x], () => inputs.push(x)));
   return {fps, log, map, status, inputs, screen, state, timing: []};
 };
