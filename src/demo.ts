@@ -902,6 +902,7 @@ interface IO {
   fps: Element,
   log: Element,
   map: Element,
+  status: Element,
   inputs: Input[],
   screen: Element,
   state: State,
@@ -910,6 +911,10 @@ interface IO {
 
 const kBreakGlyph = Glyph('\n');
 const kEmptyGlyph = Glyph(' ');
+
+const renderFrameRate = (cpu: number, fps: number): string => {
+  return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
+};
 
 const renderLog = (state: State): string => {
   return state.board.getLog().join('\n');
@@ -970,23 +975,48 @@ const renderMap = (state: State): string => {
   return text.join('');
 };
 
-const renderFrameRate = (cpu: number, fps: number): string => {
-  return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
+const renderStatus = (state: State): string => {
+  const pokemon: Pokemon[] = [];
+  state.board.getEntities().forEach(x => {
+    if (x.type === ET.Pokemon && x.data.trainer === state.player) pokemon.push(x);
+  });
+  if (pokemon.length === 0) return '';
+
+  const kPadding = 2;
+  const total = 2 * state.board.getSize().x + 2;
+  const outer = Math.floor(total / pokemon.length);
+  const width = outer - 2 * kPadding;
+  const lines = ['', '', ''];
+
+  let left = Math.floor((total - outer * pokemon.length) / 2) + kPadding;
+  const hotkeys = 'ASD';
+  pokemon.forEach((x, i) => {
+    range(3).forEach(j => {
+      const padding = left - lines[j]!.replace(/\x1b\[[\d;]*m/g, '').length;
+      if (padding > 0) lines[j] += ' '.repeat(padding);
+    });
+    lines[0] += `${nonnull(hotkeys[i])}) ${x.data.species}`;
+    lines[1] += `HP: [${Color('='.repeat(width - 6), 'green')}]`;
+    lines[2] += `PP: [${Color('='.repeat(width - 6), 'blue')}]`;
+    left += outer;
+  });
+
+  return lines.join('\n');
 };
 
 const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const screen = blessed.screen({fullUnicode: true});
 
-  const kLogMapSpacer = 1;
+  const kSpacer = 1;
   const {x, y} = state.board.getSize();
-  const [lh, mh] = [Constants.LOG_SIZE, y];
-  const [lt, mt] = [0, kLogMapSpacer + Constants.LOG_SIZE];
+  const [lh, lt] = [Constants.LOG_SIZE, 0];
+  const [mh, mt] = [y, lh + lt + kSpacer];
+  const [sh, st] = [3, mh + mt + kSpacer];
 
   const width = 2 * x + 2;
-  const height = y + kLogMapSpacer + Constants.LOG_SIZE + 2;
   const [left, top, attr, wrap] = ['center', 'center', false, false];
-  const content = blessed.box({width, height, left, top, attr, wrap});
+  const content = blessed.box({width, height: sh + st, left, top, attr, wrap});
 
   const element = (height: int, top: int, x?: {[k: string]: any}): Element => {
     const data: {[k: string]: any} = {width, height, left: 0, top, attr, wrap};
@@ -998,6 +1028,7 @@ const initializeIO = (state: State): IO => {
 
   const log = element(lh, lt);
   const map = element(mh, mt, {border: {type: 'line'}});
+  const status = element(sh, st);
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => screen.append(x));
 
@@ -1005,7 +1036,7 @@ const initializeIO = (state: State): IO => {
   screen.key(['C-c'], () => process.exit(0));
   ['escape'].concat('abcdefghijklmnopqrstuvwxyz.'.split('')).forEach(
     x => screen.key([x], () => inputs.push(x)));
-  return {fps, log, map, inputs, screen, state, timing: []};
+  return {fps, log, map, status, inputs, screen, state, timing: []};
 };
 
 const update = (io: IO) => {
@@ -1020,6 +1051,7 @@ const update = (io: IO) => {
 const render = (io: IO) => {
   io.log.setContent(renderLog(io.state));
   io.map.setContent(renderMap(io.state));
+  io.status.setContent(renderStatus(io.state));
 
   const last = nonnull(io.timing[io.timing.length - 1]);
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);

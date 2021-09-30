@@ -48,13 +48,7 @@ type Glyph = string & {__type__: 'glyph'};
 
 type Color = 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white';
 
-const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
-  assert(ch.length === 1);
-  if (ch === ' ') return '  ' as Glyph;
-  if (ch === '\n') return '\n' as Glyph;
-  const wide = String.fromCodePoint(ch.codePointAt(0)! + 0xff00 - 0x20);
-  if (!color) return wide as Glyph;
-
+const Color = (text: string, color: Color, light?: boolean): string => {
   const index = (() => {
     switch (color) {
       case 'black':   return 0;
@@ -67,7 +61,15 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
       case 'white':   return 7;
     }
   })();
-  return `\x1b[${index + (light ? 90 : 30)}m${wide}\x1b[39m` as Glyph;
+  return `\x1b[${index + (light ? 90 : 30)}m${text}\x1b[39m`;
+};
+
+const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
+  assert(ch.length === 1);
+  if (ch === ' ') return '  ' as Glyph;
+  if (ch === '\n') return '\n' as Glyph;
+  const wide = String.fromCodePoint(ch.codePointAt(0)! + 0xff00 - 0x20);
+  return (color ? Color(wide, color, light) : wide) as Glyph;
 };
 
 //////////////////////////////////////////////////////////////////////////////
