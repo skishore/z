@@ -363,7 +363,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
     case AT.Move: {
       const pos = entity.pos.add(action.direction);
       if (pos.equal(entity.pos)) return {success: true, turns: 1};
-      if (board.getTile(pos).blocked) return {success: false, turns: 0};
+      if (board.getTile(pos).blocked) return {success: false, turns: 1};
       const other = board.getEntity(pos);
       if (other) {
         if (other.type === ET.Pokemon && other.data.trainer === entity) {
@@ -371,7 +371,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
           board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
           return {success: true, turns: 1};
         }
-        return {success: false, turns: 0};
+        return {success: false, turns: 1};
       }
       board.moveEntity(entity.pos, pos);
       return {success: true, turns: 1};
@@ -379,13 +379,13 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
     case AT.Shout: {
       const listener = action.entity;
       if (listener.type !== ET.Pokemon || listener.data.trainer !== entity) {
-        return {success: false, turns: 0};
+        return {success: false, turns: 1};
       }
       listener.data.commands.push(action.command);
       board.log(shout(entity, listener));
       return {success: true, turns: 1};
     }
-    case AT.WaitForInput: return {success: false, turns: 0};
+    case AT.WaitForInput: return {success: false, turns: 1};
   }
 };
 
@@ -688,7 +688,7 @@ const Constants = {
 interface Tile {
   blocked: boolean,
   obscure: boolean,
-  glyph: Glyph;
+  glyph: Glyph,
 };
 
 const kTiles: {[ch: string]: Tile} = {
