@@ -273,7 +273,7 @@ const wait = (entity: Entity, turns: int): void => {
 
 const hasLineOfSight =
     (board: Board, source: Point, target: Point, range: int): boolean => {
-  if (source.distanceSquared(target) > range * range) return false;
+  if (source.distanceNethack(target) > range) return false;
 
   const line = LOS(source, target);
   const last = line.length - 1;
@@ -287,7 +287,7 @@ const followCommands =
   const command = nonnull(commands[0]);
   switch (command.type) {
     case CT.Attack: {
-      const [kRange, kLimit] = [8, 8];
+      const [kRange, kLimit] = [Constants.ATTACK_RANGE, Constants.ATTACK_RANGE];
       const [source, target] = [entity.pos, command.target];
       if (hasLineOfSight(board, source, target, kRange)) {
         commands.shift();
@@ -392,10 +392,12 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 //////////////////////////////////////////////////////////////////////////////
 
 const targetAtDirection = (board: Board, pos: Point, dir: Direction,
-                           vision: Matrix<int>): Point | null => {
+                           range: int, vision: Matrix<int>): Point | null => {
   let prev = pos;
+  range = range > 0 ? range : Number.MAX_SAFE_INTEGER;
   while (true) {
     const next = prev.add(dir);
+    if (pos.distanceNethack(next) > range) return prev;
     const sight = vision.getOrNull(next);
     if (sight === null || sight < 0) return prev.equal(pos) ? null : prev;
     if (sight === 0 && board.getTile(next).blocked) return next;
@@ -403,7 +405,7 @@ const targetAtDirection = (board: Board, pos: Point, dir: Direction,
   }
 };
 
-const targets = (board: Board, source: Entity): Target => {
+const targets = (board: Board, source: Entity, range: int): Target => {
   const trainer = source && source.type === ET.Pokemon && source.data.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
@@ -414,9 +416,9 @@ const targets = (board: Board, source: Entity): Target => {
   const kAllNames = 'abcdefghijklmnopqrstuvwxyz';
 
   const used: Set<int> = new Set();
-  const add_to_used = (pos: Point) => {
-    used.add(pos.key());
-    Direction.all.forEach(x => used.add(pos.add(x).key()));
+  const add_to_used = (point: Point, hidden?: boolean) => {
+    used.add(point.key());
+    if (!hidden) Direction.all.forEach(x => used.add(point.add(x).key()));
   };
 
   const safe = (point: Point) => {
@@ -426,10 +428,11 @@ const targets = (board: Board, source: Entity): Target => {
   };
 
   Direction.all.forEach((dir, i) => {
-    const point = targetAtDirection(board, source.pos, dir, vision);
+    const point = targetAtDirection(board, source.pos, dir, range, vision);
     if (!point) return;
-    options.set(nonnull(kDirectionNames[i]), {hidden: !safe(point), point});
-    add_to_used(point);
+    const hidden = !board.getTile(point).blocked || !safe(point);
+    options.set(nonnull(kDirectionNames[i]), {hidden, point});
+    add_to_used(point, hidden);
   });
 
   const p = entity.pos;
@@ -679,6 +682,7 @@ const Constants = {
   LOG_SIZE: 4,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
+  ATTACK_RANGE: 8,
 };
 
 interface Tile {
@@ -781,7 +785,7 @@ const processInput = (state: State, input: Input) => {
   }
 
   if (input === 'f') {
-    state.target = targets(board, target);
+    state.target = targets(board, target, Constants.ATTACK_RANGE);
   } else if (input === 'r') {
     const glyph = board.getTile(target.pos).glyph;
     board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
