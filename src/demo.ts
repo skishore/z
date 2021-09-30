@@ -983,15 +983,23 @@ const initializeIO = (state: State): IO => {
   const [lh, mh] = [Constants.LOG_SIZE, y];
   const [lt, mt] = [0, kLogMapSpacer + Constants.LOG_SIZE];
 
-  const [width, height] = [2 * x, y + kLogMapSpacer + Constants.LOG_SIZE];
+  const width = 2 * x + 2;
+  const height = y + kLogMapSpacer + Constants.LOG_SIZE + 2;
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width, height, left, top, attr, wrap});
 
-  const log = blessed.box({width, height: lh, left: 0, top: lt, attr, wrap});
-  const map = blessed.box({width, height: mh, left: 0, top: mt, attr, wrap});
+  const element = (height: int, top: int, x?: {[k: string]: any}): Element => {
+    const data: {[k: string]: any} = {width, height, left: 0, top, attr, wrap};
+    Object.entries(x || {}).forEach(([k, v]) => data[k] = v);
+    const result = blessed.box(data);
+    content.append(result);
+    return result;
+  };
+
+  const log = element(lh, lt);
+  const map = element(mh, mt, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => screen.append(x));
-  [log, map].map(x => content.append(x));
 
   const inputs: Input[] = [];
   screen.key(['C-c'], () => process.exit(0));
