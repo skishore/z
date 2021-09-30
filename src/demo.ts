@@ -1,5 +1,5 @@
 import {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph} from './lib';
-import {Point, Direction, Matrix, LOS, FOV, AStar, Status} from './geo';
+import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -8,6 +8,7 @@ interface Vision { dirty: boolean, blockers: Point[], value: Matrix<int> };
 class Board {
   private fov: FOV;
   private map: Matrix<Tile>;
+  private effect: Effect;
   private entity: Entity[];
   private entityAtPos: Map<int, Entity>;
   private entityIndex: int;
@@ -18,6 +19,7 @@ class Board {
   constructor(size: Point) {
     this.fov = new FOV(Math.max(size.x, size.y));
     this.map = new Matrix(size, nonnull(kTiles['.']));
+    this.effect = [];
     this.entity = [];
     this.entityAtPos = new Map();
     this.entityIndex = 0;
@@ -38,6 +40,10 @@ class Board {
 
   getTile(pos: Point): Tile {
     return this.map.getOrNull(pos) || this.defaultTile;
+  }
+
+  getEffect(): Effect {
+    return this.effect;
   }
 
   getEntity(pos: Point): Entity | null {
@@ -65,9 +71,12 @@ class Board {
     this.entity.forEach(x => this.dirtyVision(x));
   }
 
-  advanceEntity() {
-    charge(nonnull(this.entity[this.entityIndex]));
-    this.entityIndex = (this.entityIndex + 1) % this.entity.length;;
+  addEffect(effect: Effect) {
+    this.effect = ParallelEffect([this.effect, effect]);
+  }
+
+  advanceEffect(): boolean {
+    return !!this.effect.shift();
   }
 
   addEntity(pos: Point, entity: Entity) {
@@ -78,13 +87,9 @@ class Board {
     entity.pos = pos;
   }
 
-  log(line: string) {
-    this.logs.push(line);
-    if (this.logs.length > Constants.LOG_SIZE) this.logs.shift();
-  }
-
-  logIfPlayer(entity: Entity, line: string) {
-    if (entity.type === ET.Trainer && entity.data.player) this.log(line);
+  advanceEntity() {
+    charge(nonnull(this.entity[this.entityIndex]));
+    this.entityIndex = (this.entityIndex + 1) % this.entity.length;;
   }
 
   moveEntity(from: Point, to: Point) {
@@ -110,6 +115,15 @@ class Board {
     be.pos = a;
     this.dirtyVision(ae);
     this.dirtyVision(be);
+  }
+
+  log(line: string) {
+    this.logs.push(line);
+    if (this.logs.length > Constants.LOG_SIZE) this.logs.shift();
+  }
+
+  logIfPlayer(entity: Entity, line: string) {
+    if (entity.type === ET.Trainer && entity.data.player) this.log(line);
   }
 
   // Cached field-of-vision
@@ -190,23 +204,36 @@ const describe = (entity: Entity): string => {
     const {species, trainer} = entity.data;
     if (!trainer) return `the wild ${species}`;
     const {name, player} = trainer.data;
-    return player ? `your ${species}` : `${name}'s ${species}`;
+    return player ? species : `${name}'s ${species}`;
   }
+};
+
+const shout = (trainer: Trainer, pokemon: Pokemon): string => {
+  const {name, player} = trainer.data;
+  const prefix = player ? 'You shout' : `${name} shouts`;
+  return `${prefix}: "${pokemon.data.species}, attack!"`;
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-enum AT { Idle, Move, WaitForInput };
+enum AT { Attack, Idle, Move, Shout, WaitForInput };
+enum CT { Attack, };
 enum ET { Pokemon, Trainer };
 
 type Action =
+  {type: AT.Attack, target: Point} |
   {type: AT.Idle} |
-  {type: AT.WaitForInput} |
-  {type: AT.Move, direction: Direction};
+  {type: AT.Move, direction: Direction} |
+  {type: AT.Shout, command: Command, entity: Entity} |
+  {type: AT.WaitForInput};
 
-interface Result { success: boolean, turns: int };
+interface Result { success: boolean, turns: int, effect?: Effect };
+
+type Command =
+  {type: CT.Attack, target: Point};
 
 interface PokemonData {
+  commands: Command[],
   species: string,
   trainer: Trainer | null,
 };
@@ -244,6 +271,43 @@ const wait = (entity: Entity, turns: int): void => {
   entity.timer += turns * Constants.TURN_TIMER;
 };
 
+const hasLineOfSight =
+    (board: Board, source: Point, target: Point, range: int): boolean => {
+  if (source.distanceSquared(target) > range * range) return false;
+
+  const line = LOS(source, target);
+  const last = line.length - 1;
+  return line.every((x, i) => {
+    return i === 0 || i === last || board.getStatus(x) === Status.FREE;
+  });
+}
+
+const followCommands =
+    (board: Board, entity: Entity, commands: Command[]): Action => {
+  const command = nonnull(commands[0]);
+  switch (command.type) {
+    case CT.Attack: {
+      const [kRange, kLimit] = [8, 8];
+      const [source, target] = [entity.pos, command.target];
+      if (hasLineOfSight(board, source, target, kRange)) {
+        commands.shift();
+        return {type: AT.Attack, target: target};
+      }
+
+      const check = board.getStatus.bind(board);
+      const found = (x: Point) => hasLineOfSight(board, x, target, kRange);
+      const dirs = BFS(source, found, kLimit, check);
+      if (dirs.length > 0) return {type: AT.Move, direction: sample(dirs)};
+
+      const path = AStar(source, target, check);
+      const direction = path
+        ? Direction.assert(nonnull(path[0]).sub(source))
+        : sample(Direction.all);
+      return {type: AT.Move, direction};
+    }
+  }
+};
+
 const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   const [ep, tp] = [entity.pos, leader.pos];
   const vision = board.getVision(leader);
@@ -273,7 +337,8 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
-      const {trainer} = entity.data;
+      const {commands, trainer} = entity.data;
+      if (commands.length > 0) return followCommands(board, entity, commands);
       return trainer ? followLeader(board, entity, trainer)
                      : {type: AT.Move, direction: sample(Direction.all)};
     }
@@ -289,8 +354,12 @@ const plan = (board: Board, entity: Entity): Action => {
 
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
+    case AT.Attack: {
+      board.addEffect(EmberEffect(entity.pos, action.target));
+      board.log(`${describe(entity)} used Ember!`);
+      return {success: true, turns: 1};
+    }
     case AT.Idle: return {success: true, turns: 1};
-    case AT.WaitForInput: return {success: false, turns: 0};
     case AT.Move: {
       const pos = entity.pos.add(action.direction);
       if (pos.equal(entity.pos)) return {success: true, turns: 1};
@@ -307,6 +376,16 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       board.moveEntity(entity.pos, pos);
       return {success: true, turns: 1};
     }
+    case AT.Shout: {
+      const listener = action.entity;
+      if (listener.type !== ET.Pokemon || listener.data.trainer !== entity) {
+        return {success: false, turns: 0};
+      }
+      listener.data.commands.push(action.command);
+      board.log(shout(entity, listener));
+      return {success: true, turns: 1};
+    }
+    case AT.WaitForInput: return {success: false, turns: 0};
   }
 };
 
@@ -646,7 +725,6 @@ type Input = string;
 
 interface State {
   board: Board,
-  effect: Effect,
   player: Trainer,
   target: Target | null,
 };
@@ -692,7 +770,8 @@ const processInput = (state: State, input: Input) => {
   if (state.target) {
     const option = state.target.options.get(input);
     if (option) {
-      state.effect = EmberEffect(target.pos, option.point);
+      const command = {type: CT.Attack, target: option.point};
+      player.data.input = {type: AT.Shout, command, entity: target};
       state.target = null;
     } else if (input === 'escape') {
       state.target = null;
@@ -704,9 +783,9 @@ const processInput = (state: State, input: Input) => {
     state.target = targets(board, target, player);
   } else if (input === 'r') {
     const glyph = board.getTile(target.pos).glyph;
-    state.effect = SwitchEffect(player.pos, target.pos, glyph);
+    board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
   } else if (input === 's') {
-    state.effect = SearchEffect(player.pos, target.pos, board);
+    board.addEffect(SearchEffect(player.pos, target.pos, board));
   }
 
   if (player.data.input !== null) return;
@@ -746,21 +825,21 @@ const initializeState = (): State => {
           return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
         }
         case 'B': {
-          const species = 'Bulbasaur';
           const speed = Constants.TURN_TIMER / 6;
-          const [data, glyph] = [{species, trainer: null}, Glyph('B', 'green')];
+          const glyph = Glyph('B', 'green');
+          const data = {commands: [], species: 'Bulbasaur', trainer: null};
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         case 'C': {
-          const species = 'Charmander';
           const speed = Constants.TURN_TIMER / 5;
-          const [data, glyph] = [{species, trainer: null}, Glyph('C', 'red')];
+          const glyph = Glyph('C', 'red');
+          const data = {commands: [], species: 'Charmander', trainer: null};
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         case 'S': {
-          const species = 'Squirtle';
           const speed = Constants.TURN_TIMER / 4;
-          const [data, glyph] = [{species, trainer: null}, Glyph('S', 'blue')];
+          const glyph = Glyph('S', 'blue');
+          const data = {commands: [], species: 'Squirtle', trainer: null};
           return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
         }
         default: {
@@ -782,21 +861,18 @@ const initializeState = (): State => {
     x.data.trainer = player;
   });
 
-  return addBlocks({board, player, effect: [], target: null});
+  return addBlocks({board, player, target: null});
 };
 
 const updateState = (state: State, inputs: Input[]) => {
-  const {board, effect, player} = state;
-  if (effect.length) {
-    effect.shift();
-    return;
-  }
+  const {board, player} = state;
+  if (board.advanceEffect()) return;
 
-  while (inputs.length && !effect.length) {
+  while (inputs.length && !board.getEffect().length) {
     processInput(state, nonnull(inputs.shift()));
   }
 
-  for (; !effect.length; board.advanceEntity()) {
+  for (; !board.getEffect().length; board.advanceEntity()) {
     const entity = board.getActiveEntity();
     if (!ready(entity)) continue;
     const result = act(board, entity, plan(board, entity));
@@ -885,8 +961,9 @@ const renderMap = (state: State): string => {
     }
   }
 
-  if (state.effect.length) {
-    const frame = nonnull(state.effect[0]);
+  const effect = board.getEffect();
+  if (effect.length) {
+    const frame = nonnull(effect[0]);
     frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
   }
 
