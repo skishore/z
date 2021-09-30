@@ -216,15 +216,17 @@ const shout = (trainer: Trainer, pokemon: Pokemon): string => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-enum AT { Attack, Idle, Move, Shout, WaitForInput };
+enum AT { Attack, Idle, Move, Shout, Summon, WaitForInput };
 enum CT { Attack, };
 enum ET { Pokemon, Trainer };
+enum TT { Attack, Summon };
 
 type Action =
   {type: AT.Attack, target: Point} |
   {type: AT.Idle} |
   {type: AT.Move, direction: Direction} |
   {type: AT.Shout, command: Command, entity: Entity} |
+  {type: AT.Summon, index: int, target: Point} |
   {type: AT.WaitForInput};
 
 interface Result { success: boolean, turns: number };
@@ -288,6 +290,19 @@ const trainer = (entity: Entity): Trainer | null => {
 
 const wait = (entity: Entity, turns: number): void => {
   entity.timer += Math.round(Constants.TURN_TIMER * turns);
+};
+
+const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
+  const {glyph, speed} = self.species;
+  const data = {commands: [], self};
+  return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
+};
+
+const makeTrainer = (pos: Point, player: boolean): Trainer => {
+  const glyph = Glyph('@');
+  const speed = Constants.TRAINER_SPEED;
+  const data = {input: null, player, pokemon: [], name: ''};
+  return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
 };
 
 const hasLineOfSight =
@@ -371,62 +386,87 @@ const plan = (board: Board, entity: Entity): Action => {
   }
 };
 
+const kSuccess: Result = {success: true, turns: 1};
+const kFailure: Result = {success: false, turns: 1};
+
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
       board.addEffect(EmberEffect(entity.pos, action.target));
       board.log(`${describe(entity)} used Ember!`);
-      return {success: true, turns: 1};
+      return kSuccess;
     }
-    case AT.Idle: return {success: true, turns: 1};
+    case AT.Idle: return kSuccess;
     case AT.Move: {
       const pos = entity.pos.add(action.direction);
-      if (pos.equal(entity.pos)) return {success: true, turns: 1};
-      if (board.getTile(pos).blocked) return {success: false, turns: 1};
+      if (pos.equal(entity.pos)) return kSuccess;
+      if (board.getTile(pos).blocked) return kFailure;
       const other = board.getEntity(pos);
       if (other) {
-        if (trainer(other) !== entity) return {success: false, turns: 1};
+        if (trainer(other) !== entity) return kFailure;
         board.swapEntities(entity.pos, pos);
         board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
-        return {success: true, turns: 1};
+        return kSuccess;
       }
       board.moveEntity(entity.pos, pos);
-      return {success: true, turns: 1};
+      return kSuccess;
     }
     case AT.Shout: {
       const listener = action.entity;
-      if (listener.type !== ET.Pokemon) return {success: false, turns: 1};
-      if (trainer(listener) !== entity) return {success: false, turns: 1};
+      if (listener.type !== ET.Pokemon) return kFailure;
+      if (trainer(listener) !== entity) return kFailure;
       listener.data.commands.push(action.command);
       board.log(shout(entity, listener));
-      return {success: true, turns: 1};
+      return kSuccess;
     }
-    case AT.WaitForInput: return {success: false, turns: 1};
+    case AT.Summon: {
+      const {index, target} = action;
+      if (entity.type !== ET.Trainer) return kFailure;
+      const pokemon = entity.data.pokemon[index];
+      if (!pokemon || pokemon.entity) return kFailure;
+      if (board.getStatus(target) !== Status.FREE) return kFailure;
+      const glyph = board.getTile(target).glyph;
+      pokemon.entity = makePokemon(target, pokemon.self);
+      board.addEntity(target, nonnull(pokemon.entity));
+      board.addEffect(SummonEffect(entity.pos, target, glyph));
+      return kSuccess;
+    }
+    case AT.WaitForInput: return kFailure;
   }
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-const targetAtDirection = (board: Board, pos: Point, dir: Direction,
-                           range: int, vision: Matrix<int>): Point | null => {
+const findOptionAtDirection =
+    (board: Board, blocked: boolean, pos: Point, dir: Direction,
+     range: int, vision: Matrix<int>): Point => {
   let prev = pos;
   range = range > 0 ? range : Number.MAX_SAFE_INTEGER;
+
   while (true) {
     const next = prev.add(dir);
     if (pos.distanceNethack(next) > range) return prev;
     const sight = vision.getOrNull(next);
-    if (sight === null || sight < 0) return prev.equal(pos) ? null : prev;
-    if (sight === 0 && board.getTile(next).blocked) return next;
+    if (sight === null || sight < 0) return prev;
+    if (board.getTile(next).blocked) return blocked ? next : prev;
     prev = next;
   }
 };
 
-const targets = (board: Board, source: Entity, range: int): Target => {
+const findOptions =
+    (board: Board, source: Entity, type: TT): Map<string, Option> => {
+  const [range, summon] = ((): [int, boolean] => {
+    switch (type) {
+      case TT.Attack: return [Constants.ATTACK_RANGE, false];
+      case TT.Summon: return [Constants.SUMMON_RANGE, true];
+    }
+  })();
+
+  const options: Map<string, Option> = new Map();
   const trainer = source.type === ET.Pokemon && source.data.self.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
-  const blockers = board.getBlockers(entity);
-  const options: Map<string, Option> = new Map();
+  const start = source.pos;
 
   const used: Set<int> = new Set();
   const add_to_used = (point: Point, hidden?: boolean) => {
@@ -436,21 +476,22 @@ const targets = (board: Board, source: Entity, range: int): Target => {
 
   const safe = (point: Point) => {
     const kMinDistance = 3;
-    return point.distanceNethack(source.pos) >= kMinDistance &&
+    return point.distanceNethack(start) >= kMinDistance &&
            (!trainer || point.distanceNethack(trainer.pos)) >= kMinDistance;
   };
 
   Direction.all.forEach((dir, i) => {
-    const point = targetAtDirection(board, source.pos, dir, range, vision);
-    if (!point) return;
-    const hidden = !board.getTile(point).blocked || !safe(point);
+    const point = findOptionAtDirection(
+      board, !summon, start, dir, range, vision);
+    if (point.equal(start)) return;
+    const hidden = !board.getTile(point).blocked || !safe(point) || summon;
     options.set(nonnull(kDirectionKeys[i]), {hidden, point});
     add_to_used(point, hidden);
   });
 
   const p = entity.pos;
-  const sorted = blockers.slice();
-  sorted.sort((a, b) => b.distanceSquared(p) - a.distanceSquared(p));
+  const blockers = board.getBlockers(entity).slice();
+  blockers.sort((a, b) => b.distanceSquared(p) - a.distanceSquared(p));
 
   let j = 0;
   for (let i = 0; i < kAllKeys.length && j < blockers.length; i++) {
@@ -464,7 +505,29 @@ const targets = (board: Board, source: Entity, range: int): Target => {
       add_to_used(point);
     }
   }
-  return {source, options};
+  return options;
+};
+
+const targetsForAttack = (board: Board, source: Pokemon): Target => {
+  const type = TT.Attack;
+  const options = findOptions(board, source, type);
+  return {type, options, source};
+};
+
+const targetsForSummon = (board: Board, source: Trainer, index: int): Target => {
+  const type = TT.Summon;
+  const options = findOptions(board, source, type);
+  return {type, options, index};
+};
+
+const resolveTarget = (base: Target, target: Point): Action => {
+  switch (base.type) {
+    case TT.Attack: {
+      const command = {type: CT.Attack, target};
+      return {type: AT.Shout, command, entity: base.source};
+    }
+    case TT.Summon: return {type: AT.Summon, index: base.index, target};
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -608,30 +671,6 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const SearchEffect = (source: Point, target: Point, board: Board): Effect => {
-  const record: Point[] = [];
-  const check = board.getStatus.bind(board);
-  const path = (AStar(source, target, check, record) || []).reverse();
-
-  const phase = (points: Point[], glyph: Glyph): Effect => {
-    const filtered = points.filter(x => !(x.equal(source) || x.equal(target)));
-    return range(filtered.length).map(
-      i => range(i + 1).map(j => ({point: nonnull(filtered[j]), glyph})));
-  };
-  const phase1 = phase(record, Glyph('?', 'yellow'));
-  const phase2 = phase(path, Glyph('*', 'blue'));
-
-  const delay = 4;
-  const frame = phase1[phase1.length - 1] || [];
-  return SerialEffect([
-    phase1,
-    ParallelEffect([
-      Array(phase2.length * delay).fill(frame),
-      ExtendEffect(phase2, delay),
-    ]),
-  ]);
-};
-
 const EmberEffect = (source: Point, target: Point) => {
   const base: Effect = [];
   const line = LOS(source, target);
@@ -686,7 +725,7 @@ const EmberEffect = (source: Point, target: Point) => {
   return base;
 };
 
-export {OverlayEffect, PauseEffect};
+export {OverlayEffect, PauseEffect, SwitchEffect};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -696,6 +735,7 @@ const Constants = {
   FRAME_RATE: 60,
   TURN_TIMER: 120,
   ATTACK_RANGE: 8,
+  SUMMON_RANGE: 3,
   TRAINER_SPEED: 1/10,
 };
 
@@ -763,10 +803,9 @@ interface Option {
   point: Point;
 };
 
-interface Target {
-  source: Entity,
-  options: Map<string, Option>,
-};
+type Target =
+  {type: TT.Attack, options: Map<string, Option>, source: Pokemon} |
+  {type: TT.Summon, options: Map<string, Option>, index: int};
 
 const addBlocks = (state: State): State => {
   const board = state.board;
@@ -793,14 +832,12 @@ const addBlocks = (state: State): State => {
 
 const processInput = (state: State, input: Input) => {
   const {board, player} = state;
-  const others = board.getEntities().filter(x => x !== player);
-  const target = others[0] || null;
 
   if (state.target) {
-    const option = state.target.options.get(input);
-    if (option && target) {
-      const command = {type: CT.Attack, target: option.point};
-      player.data.input = {type: AT.Shout, command, entity: target};
+    const target = state.target;
+    const option = target.options.get(input);
+    if (option) {
+      player.data.input = resolveTarget(target, option.point);
       state.target = null;
     } else if (input === 'escape') {
       state.target = null;
@@ -808,18 +845,16 @@ const processInput = (state: State, input: Input) => {
     return;
   }
 
-  if (target) {
-    if (input === 'f') {
-      state.target = targets(board, target, Constants.ATTACK_RANGE);
-    } else if (input === 'r') {
-      const glyph = board.getTile(target.pos).glyph;
-      board.addEffect(SwitchEffect(player.pos, target.pos, glyph));
-    } else if (input === 's') {
-      board.addEffect(SearchEffect(player.pos, target.pos, board));
-    }
+  if (player.data.input !== null) return;
+
+  const index = kPokemonKeys.indexOf(input);
+  if (0 <= index && index < player.data.pokemon.length) {
+    const pokemon = nonnull(player.data.pokemon[index]).entity;
+    state.target = pokemon
+      ? targetsForAttack(board, pokemon)
+      : targetsForSummon(board, player, index);
   }
 
-  if (player.data.input !== null) return;
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
   if (direction) player.data.input = {type: AT.Move, direction};
   if (input === '.') player.data.input = {type: AT.Idle};
@@ -838,17 +873,11 @@ const initializeState = (): State => {
     if (tile) return board.setTile(pos, tile);
     const entity = ((): Entity => {
       switch (ch) {
-        case '@': {
-          const glyph = Glyph('@');
-          const speed = Constants.TRAINER_SPEED;
-          const data = {input: null, player: true, pokemon: [], name: ''};
-          return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
-        }
+        case '@': return makeTrainer(pos, true);
         default: {
-          const species = nonnull(kPokemon[ch]);
-          const {glyph, speed} = species;
-          const data = {commands: [], self: {species, trainer: null}};
-          return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
+          const species = kPokemon[ch];
+          assert(!!species, () => `Unknown character: ${ch}`);
+          return makePokemon(pos, {species: nonnull(species), trainer: null});
         }
       }
     })();
