@@ -1017,14 +1017,23 @@ const renderStatus = (state: State): string => {
   const lines = ['', '', ''];
 
   let left = Math.floor((total - outer * pokemon.length) / 2) + kPadding;
+  const append = (i: int, text: string) => {
+    const padding = left - lines[i]!.replace(/\x1b\[[\d;]*m/g, '').length;
+    if (padding > 0) lines[i] += ' '.repeat(padding);
+    lines[i] += text;
+  };
+
   pokemon.forEach((x, i) => {
-    range(3).forEach(j => {
-      const padding = left - lines[j]!.replace(/\x1b\[[\d;]*m/g, '').length;
-      if (padding > 0) lines[j] += ' '.repeat(padding);
-    });
-    lines[0] += `${nonnull(kPokemonKeys[i])}) ${x.self.species.name}`;
-    lines[1] += `HP: [${Color('='.repeat(width - 6), 'green')}]`;
-    lines[2] += `PP: [${Color('='.repeat(width - 6), 'blue')}]`;
+    const header = `${nonnull(kPokemonKeys[i])}) ${x.self.species.name}`;
+    if (x.entity) {
+      append(0, header);
+      append(1, `HP: [${Color('='.repeat(width - 6), 'green')}]`);
+      append(2, `PP: [${Color('='.repeat(width - 6), 'blue')}]`);
+    } else {
+      append(0, Color(header, 'white'));
+      append(1, Color(`HP: [${'='.repeat(width - 6)}]`, 'white'));
+      append(2, Color(`PP: [${'='.repeat(width - 6)}]`, 'white'));
+    }
     left += outer;
   });
 
