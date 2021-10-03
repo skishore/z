@@ -477,7 +477,7 @@ const findOptions =
   const safe = (point: Point) => {
     const kMinDistance = 3;
     return point.distanceNethack(start) >= kMinDistance &&
-           (!trainer || point.distanceNethack(trainer.pos)) >= kMinDistance;
+           (!trainer || point.distanceNethack(trainer.pos) >= kMinDistance);
   };
 
   Direction.all.forEach((dir, i) => {
@@ -488,10 +488,11 @@ const findOptions =
     options.set(nonnull(kDirectionKeys[i]), {hidden, point});
     add_to_used(point, hidden);
   });
+  if (summon) return options;
 
   const p = entity.pos;
   const blockers = board.getBlockers(entity).slice();
-  blockers.sort((a, b) => b.distanceSquared(p) - a.distanceSquared(p));
+  blockers.sort((a, b) => a.distanceSquared(p) - b.distanceSquared(p));
 
   let j = 0;
   for (let i = 0; i < kAllKeys.length && j < blockers.length; i++) {
