@@ -1098,7 +1098,7 @@ const initializeIO = (state: State): IO => {
   const kSpacer = 1;
   const {x, y} = state.board.getSize();
   const [lh, lt] = [Constants.LOG_SIZE, 0];
-  const [mh, mt] = [y, lh + lt + kSpacer];
+  const [mh, mt] = [y + 2, lh + lt + kSpacer];
   const [sh, st] = [3, mh + mt + kSpacer];
 
   const width = 2 * x + 2;
