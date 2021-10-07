@@ -392,7 +392,7 @@ const kFailure: Result = {success: false, turns: 1};
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
-      board.addEffect(EmberEffect(entity.pos, action.target));
+      board.addEffect(IceBeamEffect(entity.pos, action.target));
       board.log(`${describe(entity)} used Ember!`);
       return kSuccess;
     }
@@ -524,6 +524,9 @@ const targetsForSummon = (board: Board, source: Trainer, index: int): Target => 
 const resolveTarget = (base: Target, target: Point): Action => {
   switch (base.type) {
     case TT.Attack: {
+      if (base.source.type as ET === ET.Trainer) {
+        return {type: AT.Attack, target};
+      }
       const command = {type: CT.Attack, target};
       return {type: AT.Shout, command, entity: base.source};
     }
@@ -536,6 +539,14 @@ const resolveTarget = (base: Target, target: Point): Action => {
 interface Particle {point: Point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
 interface Effect extends Array<Frame> {};
+
+const ray_character = (source: Point, target: Point): string => {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  if (Math.abs(dx) > 2 * Math.abs(dy)) return '-';
+  if (Math.abs(dy) > 2 * Math.abs(dx)) return '|';
+  return ((dx > 0) === (dy > 0)) ? '\\' : '/';
+};
 
 const ConstantEffect = (particle: Particle, n: int): Effect => {
   return Array(n).fill([particle]);
@@ -623,15 +634,7 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   const line = LOS(source, target);
   if (line.length <= 2) return result;
 
-  const ch = (() => {
-    const dx = target.x - source.x;
-    const dy = target.y - source.y;
-    if (Math.abs(dx) > 2 * Math.abs(dy)) return '-';
-    if (Math.abs(dy) > 2 * Math.abs(dx)) return '|';
-    return ((dx > 0) === (dy > 0)) ? '\\' : '/';
-  })();
-
-  const beam = Glyph(ch, 'red');
+  const beam = Glyph(ray_character(source, target), 'red');
   const mod = (line.length - 2 + speed) % speed;
   for (let i = mod ? mod : mod + speed; i < line.length - 1; i += speed) {
     result.push(range(i).map(j => ({point: nonnull(line[j + 1]), glyph: beam})));
@@ -705,8 +708,8 @@ const EmberEffect = (source: Point, target: Point) => {
     spec.forEach((x, i) => {
       const [chars, color, light] = x;
       let count = 1;
-      const limit = Math.floor(1.5 * (i + 2));
-      while (count < limit && random(i + 2)) count++;
+      const limit = Math.floor(1.5 * (i + 1));
+      while (count < limit && random(i + 1)) count++;
       for (let j = 0; j < count; j++) {
         const ch = nonnull(chars[random(chars.length)]);
         glyphs.push(Glyph(ch, color, light));
@@ -726,7 +729,50 @@ const EmberEffect = (source: Point, target: Point) => {
   return base;
 };
 
-export {OverlayEffect, PauseEffect, SwitchEffect};
+const IceBeamEffect = (source: Point, target: Point) => {
+  const base: Effect = [];
+  const line = LOS(source, target);
+
+  const ch = ray_character(source, target);
+  const random = (n: int): int => Math.floor(Math.random() * n);
+
+  type Spec = [string, Color, boolean?][];
+
+  const trail: Spec = [
+    [ch, 'blue'],
+    [ch, 'cyan'],
+  ];
+  const flame: Spec = [
+    ['*', 'blue'],
+    ['*', 'cyan'],
+  ];
+
+  const add = (frame: int, particle: Particle) => {
+    while (frame >= base.length) base.push([]);
+    nonnull(base[frame]).push(particle);
+  };
+
+  const effect = (spec: Spec, frame: int, point: Point) => {
+    const glyphs: Glyph[] = [];
+    spec.forEach((x, _) => {
+      const [chars, color, light] = x;
+      let count = 3;
+      for (let j = 0; j < count; j++) {
+        const ch = nonnull(chars[random(chars.length)]);
+        glyphs.push(Glyph(ch, color, light));
+      }
+    });
+    glyphs.forEach((glyph, j) => add(frame + j, {glyph, point}));
+  };
+
+  for (let i = 1; i < line.length; i++) {
+    effect(trail, Math.floor((i - 1) / 2), nonnull(line[i]));
+  }
+  effect(flame, Math.floor((line.length - 1) / 2), target);
+  return base;
+};
+
+export {EmberEffect, OverlayEffect, PauseEffect, SwitchEffect};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -854,6 +900,10 @@ const processInput = (state: State, input: Input) => {
     state.target = pokemon
       ? targetsForAttack(board, pokemon)
       : targetsForSummon(board, player, index);
+  }
+
+  if (input === 'f') {
+    state.target = targetsForAttack(board, player as any as Pokemon);
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
