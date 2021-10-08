@@ -392,8 +392,13 @@ const kFailure: Result = {success: false, turns: 1};
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
-      board.addEffect(IceBeamEffect(entity.pos, action.target));
-      board.log(`${describe(entity)} used Ember!`);
+      if (sample([0, 1])) {
+        board.addEffect(EmberEffect(entity.pos, action.target));
+        board.log(`${describe(entity)} used Ember!`);
+      } else {
+        board.addEffect(IceBeamEffect(entity.pos, action.target));
+        board.log(`${describe(entity)} used Ice Beam!`);
+      }
       return kSuccess;
     }
     case AT.Idle: return kSuccess;
@@ -540,6 +545,31 @@ interface Particle {point: Point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
 interface Effect extends Array<Frame> {};
 
+type Sparkle = [int, string, Color, boolean?][];
+
+const add_particle = (effect: Effect, frame: int, particle: Particle) => {
+  while (frame >= effect.length) effect.push([]);
+  nonnull(effect[frame]).push(particle);
+};
+
+const add_sparkle =
+    (effect: Effect, sparkle: Sparkle, frame: int, point: Point) => {
+  sparkle.forEach(x => {
+    const [delay, ch, color, light] = x;
+    const glyph = Glyph(ch, color, light);
+    for (let i = 0; i < delay; i++, frame++) {
+      add_particle(effect, frame, {glyph, point});
+    }
+  });
+};
+
+const random_delay = (n: int): int => {
+  let count = 1;
+  const limit = Math.floor(1.5 * n);
+  while (count < limit && Math.floor(Math.random() * n)) count++;
+  return count;
+};
+
 const ray_character = (source: Point, target: Point): string => {
   const dx = target.x - source.x;
   const dy = target.y - source.y;
@@ -676,100 +706,56 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
 };
 
 const EmberEffect = (source: Point, target: Point) => {
-  const base: Effect = [];
+  const effect: Effect = [];
   const line = LOS(source, target);
 
-  const random = (n: int): int => Math.floor(Math.random() * n);
-
-  type Spec = [string, Color, boolean?][];
-
-  const trail: Spec = [
-    ['*^^', 'yellow', true],
-    ['*^', 'yellow'],
-    ['**^', 'red'],
-    ['**^#%', 'red'],
-    ['#%', 'white'],
+  const trail = (): Sparkle => [
+    [random_delay(0), sample(Array.from('*^^')), 'red'],
+    [random_delay(1), sample(Array.from('*^')), 'yellow'],
+    [random_delay(2), sample(Array.from('**^')), 'yellow', true],
+    [random_delay(3), sample(Array.from('**^#%')), 'yellow'],
+    [random_delay(4), sample(Array.from('#%')), 'red'],
   ];
-  const flame: Spec = [
-    ['*^^', 'red'],
-    ['*^', 'yellow'],
-    ['**^#%', 'yellow', true],
-    ['*^#%', 'yellow'],
-    ['*^#%', 'red'],
+  const flame = (): Sparkle => [
+    [random_delay(0), sample(Array.from('*^^')), 'red'],
+    [random_delay(1), sample(Array.from('*^')), 'yellow'],
+    [random_delay(2), sample(Array.from('**^#%')), 'yellow', true],
+    [random_delay(3), sample(Array.from('*^#%')), 'yellow'],
+    [random_delay(4), sample(Array.from('*^#%')), 'red'],
   ];
-
-  const add = (frame: int, particle: Particle) => {
-    while (frame >= base.length) base.push([]);
-    nonnull(base[frame]).push(particle);
-  };
-
-  const effect = (spec: Spec, frame: int, point: Point) => {
-    const glyphs: Glyph[] = [];
-    spec.forEach((x, i) => {
-      const [chars, color, light] = x;
-      let count = 1;
-      const limit = Math.floor(1.5 * (i + 1));
-      while (count < limit && random(i + 1)) count++;
-      for (let j = 0; j < count; j++) {
-        const ch = nonnull(chars[random(chars.length)]);
-        glyphs.push(Glyph(ch, color, light));
-      }
-    });
-    glyphs.forEach((glyph, j) => add(frame + j, {glyph, point}));
-  };
 
   for (let i = 1; i < line.length - 1; i++) {
-    effect(trail, Math.floor((i - 1) / 2), nonnull(line[i]));
+    add_sparkle(effect, trail(), Math.floor((i - 1) / 2), nonnull(line[i]));
   }
   for (const direction of [Direction.none].concat(Direction.all)) {
     const norm = direction.distanceTaxicab(Direction.none);
     const frame = 2 * norm + Math.floor((line.length - 1) / 2);
-    effect(flame, frame, target.add(direction));
+    add_sparkle(effect, flame(), frame, target.add(direction));
   }
-  return base;
+  return effect;
 };
 
 const IceBeamEffect = (source: Point, target: Point) => {
-  const base: Effect = [];
+  const effect: Effect = [];
   const line = LOS(source, target);
-
   const ch = ray_character(source, target);
-  const random = (n: int): int => Math.floor(Math.random() * n);
 
-  type Spec = [string, Color, boolean?][];
-
-  const trail: Spec = [
-    [ch, 'blue'],
-    [ch, 'cyan'],
+  const trail: Sparkle = [
+    [2, ch, 'white'],
+    [2, ch, 'cyan'],
+    [2, ch, 'blue'],
   ];
-  const flame: Spec = [
-    ['*', 'blue'],
-    ['*', 'cyan'],
+  const flame: Sparkle = [
+    [2, '*', 'white'],
+    [2, '*', 'cyan'],
+    [2, '*', 'blue'],
   ];
-
-  const add = (frame: int, particle: Particle) => {
-    while (frame >= base.length) base.push([]);
-    nonnull(base[frame]).push(particle);
-  };
-
-  const effect = (spec: Spec, frame: int, point: Point) => {
-    const glyphs: Glyph[] = [];
-    spec.forEach((x, _) => {
-      const [chars, color, light] = x;
-      let count = 3;
-      for (let j = 0; j < count; j++) {
-        const ch = nonnull(chars[random(chars.length)]);
-        glyphs.push(Glyph(ch, color, light));
-      }
-    });
-    glyphs.forEach((glyph, j) => add(frame + j, {glyph, point}));
-  };
 
   for (let i = 1; i < line.length; i++) {
-    effect(trail, Math.floor((i - 1) / 2), nonnull(line[i]));
+    add_sparkle(effect, trail, Math.floor((i - 1) / 2), nonnull(line[i]));
   }
-  effect(flame, Math.floor((line.length - 1) / 2), target);
-  return base;
+  add_sparkle(effect, flame, Math.floor((line.length - 1) / 2), target);
+  return effect;
 };
 
 export {EmberEffect, OverlayEffect, PauseEffect, SwitchEffect};
