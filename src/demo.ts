@@ -1112,7 +1112,7 @@ const initializeIO = (state: State): IO => {
 
   const inputs: Input[] = [];
   screen.key(['C-c'], () => process.exit(0));
-  ['escape'].concat(Array.from(kAllKeys)).forEach(
+  ['escape', '.'].concat(Array.from(kAllKeys)).forEach(
     x => screen.key([x], () => inputs.push(x)));
   return {fps, log, map, status, inputs, screen, state, timing: []};
 };
