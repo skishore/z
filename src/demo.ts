@@ -222,7 +222,7 @@ enum ET { Pokemon, Trainer };
 enum TT { Attack, Summon };
 
 type Action =
-  {type: AT.Attack, target: Point} |
+  {type: AT.Attack, attack: Attack, target: Point} |
   {type: AT.Idle} |
   {type: AT.Move, direction: Direction} |
   {type: AT.Shout, command: Command, entity: Entity} |
@@ -231,8 +231,13 @@ type Action =
 
 interface Result { success: boolean, turns: number };
 
-type Command =
-  {type: CT.Attack, target: Point};
+interface Command {type: CT.Attack, attack: Attack, target: Point};
+
+interface Attack {
+  name: string,
+  range: int,
+  effect: (source: Point, target: Point) => Effect,
+};
 
 interface PokemonSpeciesData {
   glyph: Glyph;
@@ -321,11 +326,12 @@ const followCommands =
   const command = nonnull(commands[0]);
   switch (command.type) {
     case CT.Attack: {
-      const [kRange, kLimit] = [Constants.ATTACK_RANGE, Constants.ATTACK_RANGE];
-      const [source, target] = [entity.pos, command.target];
+      const [kRange, kLimit] = [command.attack.range, 6];
+      const {attack, target} = command;
+      const source = entity.pos;
       if (hasLineOfSight(board, source, target, kRange)) {
         commands.shift();
-        return {type: AT.Attack, target: target};
+        return {type: AT.Attack, attack, target};
       }
 
       const check = board.getStatus.bind(board);
@@ -392,13 +398,9 @@ const kFailure: Result = {success: false, turns: 1};
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
-      if (sample([0, 1])) {
-        board.addEffect(EmberEffect(entity.pos, action.target));
-        board.log(`${describe(entity)} used Ember!`);
-      } else {
-        board.addEffect(IceBeamEffect(entity.pos, action.target));
-        board.log(`${describe(entity)} used Ice Beam!`);
-      }
+      const {attack, target} = action;
+      board.addEffect(attack.effect(entity.pos, target));
+      board.log(`${describe(entity)} used ${attack.name}!`);
       return kSuccess;
     }
     case AT.Idle: return kSuccess;
@@ -459,15 +461,9 @@ const findOptionAtDirection =
 };
 
 const findOptions =
-    (board: Board, source: Entity, type: TT): Map<string, Option> => {
-  const [range, summon] = ((): [int, boolean] => {
-    switch (type) {
-      case TT.Attack: return [Constants.ATTACK_RANGE, false];
-      case TT.Summon: return [Constants.SUMMON_RANGE, true];
-    }
-  })();
-
-  const options: Map<string, Option> = new Map();
+    (board: Board, source: Entity, type: TT, range: int): Options => {
+  const summon = type === TT.Summon;
+  const options: Options = new Map();
   const trainer = source.type === ET.Pokemon && source.data.self.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
@@ -514,25 +510,27 @@ const findOptions =
   return options;
 };
 
-const targetsForAttack = (board: Board, source: Pokemon): Target => {
+const targetsForAttack =
+    (board: Board, source: Pokemon, attack: Attack): Target => {
   const type = TT.Attack;
-  const options = findOptions(board, source, type);
-  return {type, options, source};
+  const options = findOptions(board, source, type, attack.range);
+  return {type, options, source, attack};
 };
 
 const targetsForSummon = (board: Board, source: Trainer, index: int): Target => {
   const type = TT.Summon;
-  const options = findOptions(board, source, type);
+  const options = findOptions(board, source, type, Constants.SUMMON_RANGE);
   return {type, options, index};
 };
 
 const resolveTarget = (base: Target, target: Point): Action => {
   switch (base.type) {
     case TT.Attack: {
+      const attack = base.attack;
       if (base.source.type as ET === ET.Trainer) {
-        return {type: AT.Attack, target};
+        return {type: AT.Attack, attack, target};
       }
-      const command = {type: CT.Attack, target};
+      const command = {type: CT.Attack, attack, target};
       return {type: AT.Shout, command, entity: base.source};
     }
     case TT.Summon: return {type: AT.Summon, index: base.index, target};
@@ -758,7 +756,7 @@ const IceBeamEffect = (source: Point, target: Point) => {
   return effect;
 };
 
-export {EmberEffect, OverlayEffect, PauseEffect, SwitchEffect};
+export {OverlayEffect, PauseEffect, SwitchEffect};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -767,7 +765,6 @@ const Constants = {
   LOG_SIZE: 4,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
-  ATTACK_RANGE: 8,
   SUMMON_RANGE: 3,
   TRAINER_SPEED: 1/10,
 };
@@ -794,6 +791,11 @@ const kPokemon: {[key: string]: PokemonSpeciesData} = {
   C: {name: 'Charmander', glyph: Glyph('C', 'red'), speed: 1/5},
   S: {name: 'Squirtle', glyph: Glyph('S', 'blue'), speed: 1/4},
 };
+
+const kAttacks: Attack[] = [
+  {name: 'Ember', range: 12, effect: EmberEffect},
+  {name: 'Ice Beam', range: 12, effect: IceBeamEffect},
+];
 
 const kMap = `
 ........""""""""""##############################
@@ -836,9 +838,11 @@ interface Option {
   point: Point;
 };
 
+type Options = Map<string, Option>;
+
 type Target =
-  {type: TT.Attack, options: Map<string, Option>, source: Pokemon} |
-  {type: TT.Summon, options: Map<string, Option>, index: int};
+  {type: TT.Attack, options: Options, source: Pokemon, attack: Attack} |
+  {type: TT.Summon, options: Options, index: int};
 
 const addBlocks = (state: State): State => {
   const board = state.board;
@@ -884,12 +888,13 @@ const processInput = (state: State, input: Input) => {
   if (0 <= index && index < player.data.pokemon.length) {
     const pokemon = nonnull(player.data.pokemon[index]).entity;
     state.target = pokemon
-      ? targetsForAttack(board, pokemon)
+      ? targetsForAttack(board, pokemon, sample(kAttacks))
       : targetsForSummon(board, player, index);
   }
 
   if (input === 'f') {
-    state.target = targetsForAttack(board, player as any as Pokemon);
+    const attack = sample(kAttacks);
+    state.target = targetsForAttack(board, player as any as Pokemon, attack);
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
