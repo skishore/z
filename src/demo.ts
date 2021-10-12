@@ -469,7 +469,7 @@ const findOptions =
   const vision = board.getVision(entity);
   const start = source.pos;
 
-  const used: Set<int> = new Set();
+  const used = new Set();
   const add_to_used = (point: Point, hidden?: boolean) => {
     used.add(point.key());
     if (!hidden) Direction.all.forEach(x => used.add(point.add(x).key()));
@@ -553,9 +553,10 @@ const add_particle = (effect: Effect, frame: int, particle: Particle) => {
 const add_sparkle =
     (effect: Effect, sparkle: Sparkle, frame: int, point: Point) => {
   sparkle.forEach(x => {
-    const [delay, ch, color, light] = x;
-    const glyph = Glyph(ch, color, light);
+    const [delay, chars, color, light] = x;
     for (let i = 0; i < delay; i++, frame++) {
+      const index = Math.floor(Math.random() * chars.length);
+      const glyph = Glyph(nonnull(chars[index]), color, light);
       add_particle(effect, frame, {glyph, point});
     }
   });
@@ -708,18 +709,18 @@ const EmberEffect = (source: Point, target: Point) => {
   const line = LOS(source, target);
 
   const trail = (): Sparkle => [
-    [random_delay(0), sample(Array.from('*^^')), 'red'],
-    [random_delay(1), sample(Array.from('*^')), 'yellow'],
-    [random_delay(2), sample(Array.from('**^')), 'yellow', true],
-    [random_delay(3), sample(Array.from('**^#%')), 'yellow'],
-    [random_delay(4), sample(Array.from('#%')), 'red'],
+    [random_delay(0), '*^^', 'red'],
+    [random_delay(1), '*^', 'yellow'],
+    [random_delay(2), '**^', 'yellow', true],
+    [random_delay(3), '**^#%', 'yellow'],
+    [random_delay(4), '#%', 'red'],
   ];
   const flame = (): Sparkle => [
-    [random_delay(0), sample(Array.from('*^^')), 'red'],
-    [random_delay(1), sample(Array.from('*^')), 'yellow'],
-    [random_delay(2), sample(Array.from('**^#%')), 'yellow', true],
-    [random_delay(3), sample(Array.from('*^#%')), 'yellow'],
-    [random_delay(4), sample(Array.from('*^#%')), 'red'],
+    [random_delay(0), '*^^', 'red'],
+    [random_delay(1), '*^', 'yellow'],
+    [random_delay(2), '**^#%', 'yellow', true],
+    [random_delay(3), '*^#%', 'yellow'],
+    [random_delay(4), '*^#%', 'red'],
   ];
 
   for (let i = 1; i < line.length - 1; i++) {
@@ -747,6 +748,9 @@ const IceBeamEffect = (source: Point, target: Point) => {
     [2, '*', 'white'],
     [2, '*', 'cyan'],
     [2, '*', 'blue'],
+    [2, '*', 'white'],
+    [2, '*', 'cyan'],
+    [2, '*', 'blue'],
   ];
 
   for (let i = 1; i < line.length; i++) {
@@ -754,6 +758,46 @@ const IceBeamEffect = (source: Point, target: Point) => {
   }
   add_sparkle(effect, flame, Math.floor((line.length - 1) / 2), target);
   return effect;
+};
+
+const BlizzardEffect = (source: Point, target: Point) => {
+  const effect: Effect = [];
+  const ch = ray_character(source, target);
+
+  const points = [target];
+  const used = new Set<int>();
+  while (points.length < 4) {
+    const alt = target.add(sample(Direction.all));
+    const key = alt.key();
+    if (used.has(key)) continue;
+    points.push(alt);
+    used.add(key);
+  }
+
+  const trail: Sparkle = [
+    [1, ch, 'white'],
+    [1, ch, 'cyan'],
+    [1, ch, 'blue'],
+  ];
+  const flame: Sparkle = [
+    [2, '*', 'white'],
+    [2, '*', 'cyan'],
+    [2, '*', 'blue'],
+    [2, '*', 'white'],
+    [2, '*', 'cyan'],
+    [2, '*', 'blue'],
+  ];
+
+  for (let p = 0; p < points.length; p++) {
+    const d = 12 * p;
+    const next = nonnull(points[p]);
+    const line = LOS(source, next);
+    for (let i = 1; i < line.length; i++) {
+      add_sparkle(effect, trail, d + i, nonnull(line[i]));
+    }
+    add_sparkle(effect, flame, d + line.length - 1, next);
+  }
+  return effect.filter((_, i) => i % 3);
 };
 
 export {OverlayEffect, PauseEffect, SwitchEffect};
@@ -795,6 +839,7 @@ const kPokemon: {[key: string]: PokemonSpeciesData} = {
 const kAttacks: Attack[] = [
   {name: 'Ember', range: 12, effect: EmberEffect},
   {name: 'Ice Beam', range: 12, effect: IceBeamEffect},
+  {name: 'Blizzard', range: 12, effect: BlizzardEffect},
 ];
 
 const kMap = `
