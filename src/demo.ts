@@ -79,12 +79,11 @@ class Board {
     return !!this.effect.shift();
   }
 
-  addEntity(pos: Point, entity: Entity) {
+  addEntity(entity: Entity) {
+    const pos = entity.pos;
     assert(this.getEntity(pos) === null);
-
     this.entityAtPos.set(pos.key(), entity);
     this.entity.push(entity);
-    entity.pos = pos;
   }
 
   advanceEntity() {
@@ -434,7 +433,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (board.getStatus(target) !== Status.FREE) return kFailure;
       const glyph = board.getTile(target).glyph;
       pokemon.entity = makePokemon(target, pokemon.self);
-      board.addEntity(target, nonnull(pokemon.entity));
+      board.addEntity(nonnull(pokemon.entity));
       board.addEffect(SummonEffect(entity.pos, target, glyph));
       return kSuccess;
     }
@@ -805,8 +804,8 @@ export {OverlayEffect, PauseEffect, SwitchEffect};
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
-  BLOCKED: 0,
   LOG_SIZE: 4,
+  MAP_SIZE: 41,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
   SUMMON_RANGE: 3,
@@ -827,7 +826,6 @@ const kTiles: {[ch: string]: Tile} = {
   '.': {blocked: false, obscure: false, glyph: Glyph('.')},
   '"': {blocked: false, obscure: true, glyph: Glyph('"', 'green', true)},
   '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
-  '^': {blocked: true, obscure: true, glyph: Glyph('^', 'yellow')},
 };
 
 const kPokemon: {[key: string]: PokemonSpeciesData} = {
@@ -841,34 +839,6 @@ const kAttacks: Attack[] = [
   {name: 'Ice Beam', range: 12, effect: IceBeamEffect},
   {name: 'Blizzard', range: 12, effect: BlizzardEffect},
 ];
-
-const kMap = `
-........""""""""""##############################
-..............."""""""""""""""##################
-""""....................""""""""""""""""""""####
-"""""""................##.."""""""""""""""""""##
-""""##"................##...."""""""""""""""....
-""""##.......##...............""""""""""""......
-"""""........##...............""""""""""".......
-"""...........................""""""""""........
-.............................""""##""""...##....
-...............@.................##.......##....
-................................................
-................................................
-......##.................##.....................
-......##.................##.."""""""............
-..........................""""""###"""".........
-......................."""""""""######""........
-..............##.."""""""""##"""""""""""........
-..............##"""""""""#####"""######.........
-...........""""""""""""""""""""######...........
-......""""""""""""""""""""""""""""""............
-""""##""""""""""""""""""""""##"""""""...........
-""""##""""""""""""""""""""""##""""""""""........
-#################""""...........................
-^^^^^^###############################...........
-^^^^^^^^^^^^^^^^^^^#############################
-`;
 
 type Input = string;
 
@@ -888,29 +858,6 @@ type Options = Map<string, Option>;
 type Target =
   {type: TT.Attack, options: Options, source: Pokemon, attack: Attack} |
   {type: TT.Summon, options: Options, index: int};
-
-const addBlocks = (state: State): State => {
-  const board = state.board;
-  const size = board.getSize();
-
-  let add = Math.floor(size.x * size.y * Constants.BLOCKED);
-  for (let x = 0; x < size.x; x++) {
-    for (let y = 0; y < size.y; y++) {
-      if (board.getTile(new Point(x, y)).blocked) add--;
-    }
-  }
-
-  const tile = nonnull(kTiles['#']);
-  for (let i = 0; i < add; i++) {
-    const x = Math.floor(Math.random() * size.x);
-    const y = Math.floor(Math.random() * size.y);
-    const point = new Point(x, y);
-    if (board.getStatus(point) !== Status.FREE) continue;
-    board.setTile(point, tile);
-    i--;
-  }
-  return state;
-};
 
 const processInput = (state: State, input: Input) => {
   const {board, player} = state;
@@ -947,40 +894,97 @@ const processInput = (state: State, input: Input) => {
   if (input === '.') player.data.input = {type: AT.Idle};
 };
 
-const initializeState = (): State => {
-  const lines = kMap.trim().split('\n');
-  const [rows, cols] = [lines.length, nonnull(lines[0]).length];
-  lines.forEach(x => assert(x.length === cols));
-  const board = new Board(new Point(cols, rows));
+const initializeBoard = (): Board => {
+  const base = Constants.MAP_SIZE;
+  const size = new Point(base, base);
+  const board = new Board(size);
 
-  range(cols).forEach(x => range(rows).forEach(y => {
-    const ch = nonnull(nonnull(lines[y])[x]);
-    const pos = new Point(x, y);
-    const tile = kTiles[ch];
-    if (tile) return board.setTile(pos, tile);
-    const entity = ((): Entity => {
-      switch (ch) {
-        case '@': return makeTrainer(pos, true);
-        default: {
-          const species = kPokemon[ch];
-          assert(!!species, () => `Unknown character: ${ch}`);
-          return makePokemon(pos, {species: nonnull(species), trainer: null});
+  const automata = (): Matrix<boolean> => {
+    let result = new Matrix(size, false);
+    for (let x = 0; x < size.x; x++) {
+      result.set(new Point(x, 0), true);
+      result.set(new Point(x, size.y - 1), true);
+    }
+    for (let y = 0; y < size.x; y++) {
+      result.set(new Point(0, y), true);
+      result.set(new Point(size.x - 1, y), true);
+    }
+
+    for (let x = 0; x < size.x; x++) {
+      for (let y = 0; y < size.y; y++) {
+        if (Math.random() < 0.45) result.set(new Point(x, y), true);
+      }
+    }
+
+    for (let i = 0; i < 3; i++) {
+      let next = new Matrix(size, false);
+      for (let x = 0; x < size.x; x++) {
+        for (let y = 0; y < size.y; y++) {
+          const point = new Point(x, y);
+          next.set(point, result.get(point));
         }
       }
-    })();
-    board.addEntity(pos, nonnull(entity));
-  }));
 
-  const players = board.getEntities().filter(
-    x => x.type === ET.Trainer && x.data.player);
-  const player = nonnull(players[0]) as Trainer;
+      for (let x = 1; x < size.x - 1; x++) {
+        for (let y = 1; y < size.y - 1; y++) {
+          let [adj1, adj2] = [0, 0];
+          for (let dx = -2; dx <= 2; dx++) {
+            for (let dy = -2; dy <= 2; dy++) {
+              if (dx === 0 && dy === 0) continue;
+              if (Math.min(Math.abs(dx), Math.abs(dy)) === 2) continue;
+              const test = result.getOrNull(new Point(x + dx, y + dy));
+              if (test === false) continue;
+              const distance = Math.max(Math.abs(dx), Math.abs(dy));
+              if (distance <= 1) adj1++;
+              if (distance <= 2) adj2++;
+            }
+          }
+
+          const blocked = adj1 >= 5 || (i < 2 && adj2 <= 1);
+          next.set(new Point(x, y), blocked);
+        }
+      }
+
+      result = next;
+    }
+
+    return result;
+  };
+
+  const walls = automata();
+  const grass = automata();
+  const wt = nonnull(kTiles['#']);
+  const gt = nonnull(kTiles['"']);
+  for (let x = 0; x < size.x; x++) {
+    for (let y = 0; y < size.y; y++) {
+      const point = new Point(x, y);
+      if (walls.get(point)) {
+        board.setTile(point, wt);
+      } else if (grass.get(point)) {
+        board.setTile(point, gt);
+      }
+    }
+  }
+
+  return board;
+};
+
+const initializeState = (): State => {
+  const start = Math.floor((Constants.MAP_SIZE + 1) / 2);
+  const point = new Point(start, start);
+  let board: Board | null = null;
+  while (!board || board.getTile(point).blocked) {
+    board = initializeBoard();
+  }
+  const player = makeTrainer(point, true);
+  board.addEntity(player);
 
   const n = kPokemonKeys.length;
   Object.entries(kPokemon).slice(0, n).forEach(([_, species]) => {
     player.data.pokemon.push({entity: null, self: {species, trainer: player}});
   });
 
-  return addBlocks({board, player, target: null});
+  return {board, player, target: null};
 };
 
 const updateState = (state: State, inputs: Input[]) => {
