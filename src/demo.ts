@@ -1014,6 +1014,7 @@ declare const setTimeout: any;
 interface Element {
   render: () => void;
   setContent: (x: string) => void;
+  cachedContent: string | null,
 };
 
 interface Timing {
@@ -1030,6 +1031,7 @@ interface IO {
   screen: Element,
   state: State,
   timing: Timing[],
+  count: int,
 };
 
 const kBreakGlyph = Glyph('\n');
@@ -1163,7 +1165,7 @@ const initializeIO = (state: State): IO => {
   screen.key(['C-c'], () => process.exit(0));
   ['escape', '.'].concat(Array.from(kAllKeys)).forEach(
     x => screen.key([x], () => inputs.push(x)));
-  return {fps, log, map, status, inputs, screen, state, timing: []};
+  return {fps, log, map, status, inputs, screen, state, timing: [], count: 0};
 };
 
 const update = (io: IO) => {
@@ -1171,14 +1173,24 @@ const update = (io: IO) => {
   io.timing.push({start, end: start});
   if (io.timing.length > Constants.FRAME_RATE) io.timing.shift();
   assert(io.timing.length <= Constants.FRAME_RATE);
+  io.count++;
 
   updateState(io.state, io.inputs);
 };
 
+const cachedSetContent = (element: Element, content: string): boolean => {
+  if (content === element.cachedContent) return false;
+  element.cachedContent = content;
+  element.setContent(content);
+  return true;
+};
+
 const render = (io: IO) => {
-  io.log.setContent(renderLog(io.state));
-  io.map.setContent(renderMap(io.state));
-  io.status.setContent(renderStatus(io.state));
+  let refresh = io.count % 10 === 0;
+  refresh = cachedSetContent(io.log, renderLog(io.state)) || refresh;
+  refresh = cachedSetContent(io.map, renderMap(io.state)) || refresh;
+  refresh = cachedSetContent(io.status, renderStatus(io.state)) || refresh;
+  if (!refresh) return;
 
   const last = nonnull(io.timing[io.timing.length - 1]);
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
@@ -1189,6 +1201,7 @@ const render = (io: IO) => {
   const fps = 1000 * io.timing.length / total;
 
   io.fps.setContent(renderFrameRate(cpu, fps));
+  io.screen.render();
 };
 
 const tick = (io: IO) => () => {
@@ -1198,7 +1211,6 @@ const tick = (io: IO) => () => {
   } catch (error) {
     console.error(error);
   }
-  io.screen.render();
   const fps = Constants.FRAME_RATE;
   const shift = Math.floor(1000 * io.timing.length / fps);
   const delay = Math.max(nonnull(io.timing[0]).start + shift - Date.now(), 1);
