@@ -107,6 +107,7 @@ const bdf = (font: Font, wide?: Font): string => {
     Object.keys(wide ? wide.config.chars : {})
       .map(x => parseInt(x, 10))
       .filter(x => 33 <= x && x < 128);
+  const last = wide_chars[wide_chars.length - 1];
 
   const header = `
 STARTFONT 2.1
@@ -134,12 +135,23 @@ FONT_DESCENT 0
 FONT_ASCENT ${height}
 COPYRIGHT "Unknown"
 ENDPROPERTIES
-CHARS ${codepoints.length + wide_chars.length}
+CHARS ${codepoints.length + wide_chars.length + (last ? 1 : 0)}
   `;
   const parts = [header];
   const scale = wide ? config.height / wide.config.height : 1;
   codepoints.forEach(x => parts.push(glyph(font, x, 1)));
   wide_chars.forEach(x => parts.push(glyph(nonnull(wide), x, scale, true)));
+
+  // There's some bug in font rendering on both Mac OS X Terminal.app and on
+  // Alacritty, where the last character of a font is not rendered correctly.
+  //
+  // Work around this bug by appending a dummy character at the end.
+  if (last) {
+    const part = glyph(nonnull(wide), last, scale, true);
+    const code = last + 0xff00 - 0x20;
+    parts.push(part.replace(new RegExp(`${code}`, 'g'), `${code + 1}`));
+  }
+
   parts.push('ENDFONT');
   return parts.map(x => x.trim()).join('\n');
 };
