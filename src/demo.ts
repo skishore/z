@@ -995,9 +995,12 @@ const updateState = (state: State, inputs: Input[]) => {
     processInput(state, nonnull(inputs.shift()));
   }
 
-  for (; !board.getEffect().length; board.advanceEntity()) {
+  while (!board.getEffect().length) {
     const entity = board.getActiveEntity();
-    if (!ready(entity)) continue;
+    if (!ready(entity)) {
+      board.advanceEntity();
+      continue;
+    }
     const result = act(board, entity, plan(board, entity));
     if (entity === player && !result.success) return;
     wait(entity, result.turns);
