@@ -466,44 +466,38 @@ const findOptions =
   const trainer = source.type === ET.Pokemon && source.data.self.trainer;
   const entity = trainer || source;
   const vision = board.getVision(entity);
-  const start = source.pos;
 
-  const used = new Set();
-  const add_to_used = (point: Point, hidden?: boolean) => {
-    used.add(point.key());
-    if (!hidden) Direction.all.forEach(x => used.add(point.add(x).key()));
-  };
-
-  const safe = (point: Point) => {
-    const kMinDistance = 3;
-    return point.distanceNethack(start) >= kMinDistance &&
-           (!trainer || point.distanceNethack(trainer.pos) >= kMinDistance);
-  };
+  const ep = entity.pos;
+  const sp = entity.pos;
 
   Direction.all.forEach((dir, i) => {
-    const point = findOptionAtDirection(
-      board, !summon, start, dir, range, vision);
-    if (point.equal(start)) return;
-    const hidden = !board.getTile(point).blocked || !safe(point) || summon;
-    options.set(nonnull(kDirectionKeys[i]), {hidden, point});
-    add_to_used(point, hidden);
+    const point = findOptionAtDirection(board, !summon, sp, dir, range, vision);
+    if (point.equal(sp)) return;
+    options.set(nonnull(kDirectionKeys[i]), {hidden: true, point});
   });
   if (summon) return options;
+
+  const kMinDistance = 4;
+  const kMinAngle = Math.PI / 12;
 
   const p = entity.pos;
   const blockers = board.getBlockers(entity).slice();
   blockers.sort((a, b) => a.distanceSquared(p) - b.distanceSquared(p));
 
-  let j = 0;
-  for (let i = 0; i < kAllKeys.length && j < blockers.length; i++) {
+  const used: Point[] = [];
+  for (let i = 0, j = 0; i < kAllKeys.length && j < blockers.length; i++) {
     const key = nonnull(kAllKeys[i]);
     if (kDirectionKeys.includes(key)) continue;
-    let found = false;
-    while (!found && j < blockers.length) {
+    while (j < blockers.length) {
       const point = nonnull(blockers[j++]);
-      found = safe(point) && !used.has(point.key());
-      if (found) options.set(key, {hidden: false, point});
-      add_to_used(point);
+      const found =
+        point.distanceNethack(ep) >= kMinDistance &&
+        used.every(x => point.distanceNethack(x) >= kMinDistance &&
+                        point.sub(ep).angle(x.sub(ep)) >= kMinAngle);
+      if (!found) continue;
+      options.set(key, {hidden: false, point});
+      used.push(point);
+      break;
     }
   }
   return options;

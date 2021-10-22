@@ -17,6 +17,16 @@ class Point {
   add(o: Point): Point { return new Point(this.x + o.x, this.y + o.y); }
   sub(o: Point): Point { return new Point(this.x - o.x, this.y - o.y); }
 
+  angle(o: Point): number {
+    const {x: tx, y: ty} = this;
+    const {x: ox, y: oy} = o;
+    const tl = tx * tx + ty * ty;
+    const ol = ox * ox + oy * oy;
+    if (tl === 0 || ol === 0) return 0;
+    const dot = this.x * o.x + this.y * o.y;
+    return Math.acos(dot / Math.sqrt(tl * ol));
+  }
+
   distanceL2(o: Point): number { return Math.sqrt(this.distanceSquared(o)); }
 
   distanceNethack(o: Point): int {
