@@ -799,7 +799,8 @@ export {OverlayEffect, PauseEffect, SwitchEffect};
 
 const Constants = {
   LOG_SIZE: 4,
-  MAP_SIZE: 41,
+  MAP_SIZE: 37,
+  STATUS_SIZE: 72,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
   SUMMON_RANGE: 3,
@@ -1100,13 +1101,15 @@ const renderStatus = (state: State): string => {
   const pokemon = state.player.data.pokemon;
   if (pokemon.length === 0) return '';
 
+  const w = Constants.STATUS_SIZE;
+  const h = state.board.getSize().y + 2;
+
   const kPadding = 2;
-  const total = 2 * state.board.getSize().x + 2;
-  const outer = Math.floor(total / pokemon.length);
+  const outer = Math.floor(w / pokemon.length);
   const width = outer - 2 * kPadding;
   const lines = ['', '', ''];
 
-  let left = Math.floor((total - outer * pokemon.length) / 2) + kPadding;
+  let left = Math.floor((w - outer * pokemon.length) / 2) + kPadding;
   const append = (i: int, text: string) => {
     const padding = left - lines[i]!.replace(/\x1b\[[\d;]*m/g, '').length;
     if (padding > 0) lines[i] += ' '.repeat(padding);
@@ -1127,6 +1130,7 @@ const renderStatus = (state: State): string => {
     left += outer;
   });
 
+  lines.unshift('\n'.repeat(Math.floor(h - 3) / 2));
   return lines.join('\n');
 };
 
@@ -1136,25 +1140,27 @@ const initializeIO = (state: State): IO => {
 
   const kSpacer = 1;
   const {x, y} = state.board.getSize();
-  const [lh, lt] = [Constants.LOG_SIZE, 0];
-  const [mh, mt] = [y + 2, lh + lt + kSpacer];
-  const [sh, st] = [3, mh + mt + kSpacer];
+  const h = x + 2 + kSpacer + Constants.LOG_SIZE;
+  const w = 2 * x + 2 + kSpacer + Constants.STATUS_SIZE;
 
-  const width = 2 * x + 2;
+  const [lw, lh, ll, lt] = [w - 4, Constants.LOG_SIZE, 2, 0];
+  const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kSpacer];
+  const [sw, sh, sl, st] = [Constants.STATUS_SIZE, mh, mw + kSpacer, mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
-  const content = blessed.box({width, height: sh + st, left, top, attr, wrap});
+  const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
-  const element = (height: int, top: int, x?: {[k: string]: any}): Element => {
-    const data: {[k: string]: any} = {width, height, left: 0, top, attr, wrap};
-    Object.entries(x || {}).forEach(([k, v]) => data[k] = v);
+  const element = (width: int, height: int, left: int, top: int,
+                   extra?: {[k: string]: any}): Element => {
+    const data: {[k: string]: any} = {width, height, left, top, attr, wrap};
+    Object.entries(extra || {}).forEach(([k, v]) => data[k] = v);
     const result = blessed.box(data);
     content.append(result);
     return result;
   };
 
-  const log = element(lh, lt);
-  const map = element(mh, mt, {border: {type: 'line'}});
-  const status = element(sh, st);
+  const log = element(lw, lh, ll, lt);
+  const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
+  const status = element(sw, sh, sl, st);
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => screen.append(x));
 
