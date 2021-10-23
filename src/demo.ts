@@ -800,7 +800,7 @@ export {OverlayEffect, PauseEffect, SwitchEffect};
 const Constants = {
   LOG_SIZE: 4,
   MAP_SIZE: 37,
-  STATUS_SIZE: 72,
+  STATUS_SIZE: 92,
   FRAME_RATE: 60,
   TURN_TIMER: 120,
   SUMMON_RANGE: 3,
@@ -813,7 +813,7 @@ interface Tile {
   glyph: Glyph,
 };
 
-const kPokemonKeys = 'asd';
+const kPokemonKeys = 'sdfwer';
 const kDirectionKeys = 'kulnjbhy';
 const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
 
@@ -827,6 +827,8 @@ const kPokemon: {[key: string]: PokemonSpeciesData} = {
   B: {name: 'Bulbasaur', glyph: Glyph('B', 'green'), speed: 1/6},
   C: {name: 'Charmander', glyph: Glyph('C', 'red'), speed: 1/5},
   S: {name: 'Squirtle', glyph: Glyph('S', 'blue'), speed: 1/4},
+  E: {name: 'Eevee', glyph: Glyph('E', 'yellow'), speed: 1/5},
+  P: {name: 'Pikachu', glyph: Glyph('P', 'yellow', true), speed: 1/4},
 };
 
 const kAttacks: Attack[] = [
@@ -879,7 +881,7 @@ const processInput = (state: State, input: Input) => {
       : targetsForSummon(board, player, index);
   }
 
-  if (input === 'f') {
+  if (input === 'a') {
     const attack = sample(kAttacks);
     state.target = targetsForAttack(board, player as any as Pokemon, attack);
   }
@@ -1098,39 +1100,50 @@ const renderMap = (state: State): string => {
 };
 
 const renderStatus = (state: State): string => {
-  const pokemon = state.player.data.pokemon;
-  if (pokemon.length === 0) return '';
-
   const w = Constants.STATUS_SIZE;
   const h = state.board.getSize().y + 2;
 
   const kPadding = 2;
-  const outer = Math.floor(w / pokemon.length);
+  const kPokemonPerRow = 3;
+  const kRows = Math.ceil(kPokemonKeys.length / kPokemonPerRow);
+  const outer = Math.floor(w / kPokemonPerRow);
   const width = outer - 2 * kPadding;
-  const lines = ['', '', ''];
 
-  let left = Math.floor((w - outer * pokemon.length) / 2) + kPadding;
-  const append = (i: int, text: string) => {
-    const padding = left - lines[i]!.replace(/\x1b\[[\d;]*m/g, '').length;
-    if (padding > 0) lines[i] += ' '.repeat(padding);
-    lines[i] += text;
+  const row_space = 3;
+  const row_total = (3 + row_space) * kRows - row_space
+  const top_space = Math.floor((h - row_total) / 2);
+  const lines: string[] = [];
+  for (let i = 0; i < kRows; i++) {
+    const space = i === 0 ? top_space : row_space;
+    ['\n'.repeat(space - 1), '', '', ''].forEach(x => lines.push(x));
+  }
+
+  const base = Math.floor((w - outer * kPokemonPerRow) / 2) + kPadding;
+  const append = (i: int, j: int, text: string) => {
+    const k = j + 4 * (kRows - Math.floor(i / kPokemonPerRow)) - 3;
+    const left = base + outer * (i % kPokemonPerRow);
+    const padding = left - lines[k]!.replace(/\x1b\[[\d;]*m/g, '').length;
+    if (padding > 0) lines[k] += ' '.repeat(padding);
+    lines[k] += text;
   };
 
-  pokemon.forEach((x, i) => {
-    const header = `${nonnull(kPokemonKeys[i])}) ${x.self.species.name}`;
-    if (x.entity) {
-      append(0, header);
-      append(1, `HP: [${Color('='.repeat(width - 6), 'green')}]`);
-      append(2, `PP: [${Color('='.repeat(width - 6), 'blue')}]`);
+  Array.from(kPokemonKeys).forEach((key, i) => {
+    const pokemon = state.player.data.pokemon[i] || null;
+    const entity = pokemon ? pokemon.entity : null;
+    const header = `${key}) ${pokemon ? pokemon.self.species.name : '---'}`;
+    if (entity) {
+      append(i, 0, header);
+      append(i, 1, `HP: [${Color('='.repeat(width - 6), 'green')}]`);
+      append(i, 2, `PP: [${Color('='.repeat(width - 6), 'blue')}]`);
+    } else if (pokemon) {
+      append(i, 0, Color(header, 'white'));
+      append(i, 1, Color(`HP: [${'='.repeat(width - 6)}]`, 'white'));
+      append(i, 2, Color(`PP: [${'='.repeat(width - 6)}]`, 'white'));
     } else {
-      append(0, Color(header, 'white'));
-      append(1, Color(`HP: [${'='.repeat(width - 6)}]`, 'white'));
-      append(2, Color(`PP: [${'='.repeat(width - 6)}]`, 'white'));
+      append(i, 0, Color(header, 'white'));
     }
-    left += outer;
   });
 
-  lines.unshift('\n'.repeat(Math.floor(h - 3) / 2));
   return lines.join('\n');
 };
 
