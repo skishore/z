@@ -361,7 +361,7 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   if (ep.distanceNethack(tp) <= 3) {
     const moves: [int, Direction][] =
       Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
-    if (okay(ep)) moves.push([8, Direction.none]);
+    if (okay(ep)) moves.push([16, Direction.none]);
     if (moves.length) return {type: AT.Move, direction: weighted(moves)};
   }
 
