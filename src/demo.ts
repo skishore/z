@@ -1227,9 +1227,11 @@ const tick = (io: IO) => () => {
   } catch (error) {
     console.error(error);
   }
+  const len = io.timing.length;
   const fps = Constants.FRAME_RATE;
-  const shift = Math.floor(1000 * io.timing.length / fps);
-  const delay = Math.max(nonnull(io.timing[0]).start + shift - Date.now(), 1);
+  const next_a = nonnull(io.timing[0]).start + Math.floor(1000 * len / fps);
+  const next_b = nonnull(io.timing[len - 1]).start + Math.floor(900 / fps);
+  const delay = Math.max(Math.max(next_a, next_b) - Date.now(), 1);
   setTimeout(tick(io), Math.min(delay, Math.floor(1000 / fps)));
 };
 
