@@ -17,7 +17,7 @@ class Board {
   private logs: string[];
 
   constructor(size: Point) {
-    this.fov = new FOV(Math.max(size.x, size.y));
+    this.fov = new FOV(int(Math.max(size.x, size.y)));
     this.map = new Matrix(size, nonnull(kTiles['.']));
     this.effect = [];
     this.entity = [];
@@ -88,7 +88,7 @@ class Board {
 
   advanceEntity() {
     charge(nonnull(this.entity[this.entityIndex]));
-    this.entityIndex = (this.entityIndex + 1) % this.entity.length;;
+    this.entityIndex = int((this.entityIndex + 1) % this.entity.length);
   }
 
   moveEntity(from: Point, to: Point) {
@@ -139,7 +139,7 @@ class Board {
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
-      const value = new Matrix(this.map.size, -1);
+      const value = new Matrix<int>(this.map.size, -1);
       const result = {dirty: true, blockers: [], value};
       this.entityVision.set(entity, result);
       return result;
@@ -158,9 +158,9 @@ class Board {
         // The constants in these expressions come from Point.distanceNethack.
         // They're chosen so that, in a field of tall grass, we can only see
         // cells at a distanceNethack of <= kVisionRadius away.
-        const visibility = (() => {
+        const visibility = ((): int => {
           const kVisionRadius = 3;
-          if (!parent) return 100 * (kVisionRadius + 1) - 95 - 46 - 25;
+          if (!parent) return int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
 
           tile = this.map.getOrNull(q);
           if (!tile || tile.blocked) return 0;
@@ -168,7 +168,7 @@ class Board {
           const diagonal = p.x !== parent.x && p.y !== parent.y;
           const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
           const prev = value.get(parent.add(pos));
-          return Math.max(prev - loss, 0);
+          return int(Math.max(prev - loss, 0));
         })();
 
         if (visibility > cached) {
@@ -325,7 +325,7 @@ const followCommands =
   const command = nonnull(commands[0]);
   switch (command.type) {
     case CT.Attack: {
-      const [kRange, kLimit] = [command.attack.range, 6];
+      const [kRange, kLimit] = [command.attack.range, int(6)];
       const {attack, target} = command;
       const source = entity.pos;
       if (hasLineOfSight(board, source, target, kRange)) {
@@ -447,7 +447,7 @@ const findOptionAtDirection =
     (board: Board, blocked: boolean, pos: Point, dir: Direction,
      range: int, vision: Matrix<int>): Point => {
   let prev = pos;
-  range = range > 0 ? range : Number.MAX_SAFE_INTEGER;
+  range = range > 0 ? range : int(255);
 
   while (true) {
     const next = prev.add(dir);
@@ -556,7 +556,7 @@ const add_sparkle =
 };
 
 const random_delay = (n: int): int => {
-  let count = 1;
+  let count = int(1);
   const limit = Math.floor(1.5 * n);
   while (count < limit && Math.floor(Math.random() * n)) count++;
   return count;
@@ -579,11 +579,13 @@ const PauseEffect = (n: int): Effect => {
 };
 
 const OverlayEffect = (effect: Effect, particle: Particle): Effect => {
-  return ParallelEffect([effect, ConstantEffect(particle, effect.length)]);
+  const constant = ConstantEffect(particle, int(effect.length));
+  return ParallelEffect([effect, constant]);
 };
 
 const UnderlayEffect = (effect: Effect, particle: Particle): Effect => {
-  return ParallelEffect([ConstantEffect(particle, effect.length), effect]);
+  const constant = ConstantEffect(particle, int(effect.length));
+  return ParallelEffect([constant, effect]);
 };
 
 const ExtendEffect = (effect: Effect, n: int): Effect => {
@@ -657,8 +659,9 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   if (line.length <= 2) return result;
 
   const beam = Glyph(ray_character(source, target), 'red');
-  const mod = (line.length - 2 + speed) % speed;
-  for (let i = mod ? mod : mod + speed; i < line.length - 1; i += speed) {
+  const mod = int((line.length - 2 + speed) % speed);
+  const start = int(mod ? mod : mod + speed);
+  for (let i = start; i < line.length - 1; i = int(i + speed)) {
     result.push(range(i).map(j => ({point: nonnull(line[j + 1]), glyph: beam})));
   }
   return result;
@@ -684,7 +687,7 @@ const WithdrawEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
 
   return SerialEffect([
     base,
-    ParallelEffect([ExtendEffect([full], impl.length), impl]),
+    ParallelEffect([ExtendEffect([full], int(impl.length)), impl]),
     UnderlayEffect(base.slice().reverse(), hide),
   ]);
 };
@@ -717,11 +720,12 @@ const EmberEffect = (source: Point, target: Point) => {
   ];
 
   for (let i = 1; i < line.length - 1; i++) {
-    add_sparkle(effect, trail(), Math.floor((i - 1) / 2), nonnull(line[i]));
+    const frame = int(Math.floor((i - 1) / 2));
+    add_sparkle(effect, trail(), frame, nonnull(line[i]));
   }
   for (const direction of [Direction.none].concat(Direction.all)) {
     const norm = direction.distanceTaxicab(Direction.none);
-    const frame = 2 * norm + Math.floor((line.length - 1) / 2);
+    const frame = int(2 * norm + Math.floor((line.length - 1) / 2));
     add_sparkle(effect, flame(), frame, target.add(direction));
   }
   return effect;
@@ -747,9 +751,11 @@ const IceBeamEffect = (source: Point, target: Point) => {
   ];
 
   for (let i = 1; i < line.length; i++) {
-    add_sparkle(effect, trail, Math.floor((i - 1) / 2), nonnull(line[i]));
+    const frame = int(Math.floor((i - 1) / 2));
+    add_sparkle(effect, trail, frame, nonnull(line[i]));
   }
-  add_sparkle(effect, flame, Math.floor((line.length - 1) / 2), target);
+  const frame = int(Math.floor((line.length - 1) / 2));
+  add_sparkle(effect, flame, frame, target);
   return effect;
 };
 
@@ -786,9 +792,9 @@ const BlizzardEffect = (source: Point, target: Point) => {
     const next = nonnull(points[p]);
     const line = LOS(source, next);
     for (let i = 1; i < line.length; i++) {
-      add_sparkle(effect, trail, d + i, nonnull(line[i]));
+      add_sparkle(effect, trail, int(d + i), nonnull(line[i]));
     }
-    add_sparkle(effect, flame, d + line.length - 1, next);
+    add_sparkle(effect, flame, int(d + line.length - 1), next);
   }
   return effect.filter((_, i) => i % 3);
 };
@@ -798,12 +804,12 @@ export {OverlayEffect, PauseEffect, SwitchEffect};
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
-  LOG_SIZE: 4,
-  MAP_SIZE: 37,
-  STATUS_SIZE: 92,
-  FRAME_RATE: 60,
-  TURN_TIMER: 120,
-  SUMMON_RANGE: 3,
+  LOG_SIZE:      int(4),
+  MAP_SIZE:      int(37),
+  STATUS_SIZE:   int(92),
+  FRAME_RATE:    int(60),
+  TURN_TIMER:    int(120),
+  SUMMON_RANGE:  int(3),
   TRAINER_SPEED: 1/10,
 };
 
@@ -873,7 +879,7 @@ const processInput = (state: State, input: Input) => {
 
   if (player.data.input !== null) return;
 
-  const index = kPokemonKeys.indexOf(input);
+  const index = int(kPokemonKeys.indexOf(input));
   if (0 <= index && index < player.data.pokemon.length) {
     const pokemon = nonnull(player.data.pokemon[index]).entity;
     state.target = pokemon
@@ -898,38 +904,39 @@ const initializeBoard = (): Board => {
 
   const automata = (): Matrix<boolean> => {
     let result = new Matrix(size, false);
-    for (let x = 0; x < size.x; x++) {
+    for (let x = int(0); x < size.x; x++) {
       result.set(new Point(x, 0), true);
-      result.set(new Point(x, size.y - 1), true);
+      result.set(new Point(x, int(size.y - 1)), true);
     }
-    for (let y = 0; y < size.x; y++) {
+    for (let y = int(0); y < size.x; y++) {
       result.set(new Point(0, y), true);
-      result.set(new Point(size.x - 1, y), true);
+      result.set(new Point(int(size.x - 1), y), true);
     }
 
-    for (let x = 0; x < size.x; x++) {
-      for (let y = 0; y < size.y; y++) {
+    for (let x = int(0); x < size.x; x++) {
+      for (let y = int(0); y < size.y; y++) {
         if (Math.random() < 0.45) result.set(new Point(x, y), true);
       }
     }
 
     for (let i = 0; i < 3; i++) {
       let next = new Matrix(size, false);
-      for (let x = 0; x < size.x; x++) {
-        for (let y = 0; y < size.y; y++) {
+      for (let x = int(0); x < size.x; x++) {
+        for (let y = int(0); y < size.y; y++) {
           const point = new Point(x, y);
           next.set(point, result.get(point));
         }
       }
 
-      for (let x = 1; x < size.x - 1; x++) {
-        for (let y = 1; y < size.y - 1; y++) {
+      for (let x = int(1); x < size.x - 1; x++) {
+        for (let y = int(1); y < size.y - 1; y++) {
           let [adj1, adj2] = [0, 0];
           for (let dx = -2; dx <= 2; dx++) {
             for (let dy = -2; dy <= 2; dy++) {
               if (dx === 0 && dy === 0) continue;
               if (Math.min(Math.abs(dx), Math.abs(dy)) === 2) continue;
-              const test = result.getOrNull(new Point(x + dx, y + dy));
+              const ax = int(x + dx), ay = int(y + dy);
+              const test = result.getOrNull(new Point(ax, ay));
               if (test === false) continue;
               const distance = Math.max(Math.abs(dx), Math.abs(dy));
               if (distance <= 1) adj1++;
@@ -952,8 +959,8 @@ const initializeBoard = (): Board => {
   const grass = automata();
   const wt = nonnull(kTiles['#']);
   const gt = nonnull(kTiles['"']);
-  for (let x = 0; x < size.x; x++) {
-    for (let y = 0; y < size.y; y++) {
+  for (let x = int(0); x < size.x; x++) {
+    for (let y = int(0); y < size.y; y++) {
       const point = new Point(x, y);
       if (walls.get(point)) {
         board.setTile(point, wt);
@@ -967,7 +974,7 @@ const initializeBoard = (): Board => {
 };
 
 const initializeState = (): State => {
-  const start = Math.floor((Constants.MAP_SIZE + 1) / 2);
+  const start = int(Math.floor((Constants.MAP_SIZE + 1) / 2));
   const point = new Point(start, start);
   let board: Board | null = null;
   while (!board || board.getTile(point).blocked) {
@@ -1060,8 +1067,8 @@ const renderMap = (state: State): string => {
   };
 
   const vision = board.getVision(player);
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
+  for (let x = int(0); x < width; x++) {
+    for (let y = int(0); y < height; y++) {
       const point = new Point(x, y);
       if (vision.get(point) < 0) continue;
       show(x, y, board.getTile(point).glyph, true);
@@ -1085,8 +1092,8 @@ const renderMap = (state: State): string => {
       const dash = `\x1b[31m-\x1b[0m`;
       const name = `\x1b[1;31m${label}\x1b[0m`;
       const left = x === width - 1 || (0 < x && x < player.pos.x);
-      left ? show(x - 1, y, `${name}${dash}` as Glyph, true)
-           : show(x + 1, y, `${dash}${name}` as Glyph, true);
+      left ? show(int(x - 1), y, `${name}${dash}` as Glyph, true)
+           : show(int(x + 1), y, `${dash}${name}` as Glyph, true);
     }
   }
 
@@ -1127,7 +1134,8 @@ const renderStatus = (state: State): string => {
     lines[k] += text;
   };
 
-  Array.from(kPokemonKeys).forEach((key, i) => {
+  Array.from(kPokemonKeys).forEach((key, ii) => {
+    const i = int(ii);
     const pokemon = state.player.data.pokemon[i] || null;
     const entity = pokemon ? pokemon.entity : null;
     const header = `${key}) ${pokemon ? pokemon.self.species.name : '---'}`;
@@ -1162,7 +1170,7 @@ const initializeIO = (state: State): IO => {
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
-  const element = (width: int, height: int, left: int, top: int,
+  const element = (width: number, height: number, left: number, top: number,
                    extra?: {[k: string]: any}): Element => {
     const data: {[k: string]: any} = {width, height, left, top, attr, wrap};
     Object.entries(extra || {}).forEach(([k, v]) => data[k] = v);
@@ -1230,7 +1238,7 @@ const tick = (io: IO) => () => {
   const len = io.timing.length;
   const fps = Constants.FRAME_RATE;
   const next_a = nonnull(io.timing[0]).start + Math.floor(1000 * len / fps);
-  const next_b = nonnull(io.timing[len - 1]).start + Math.floor(900 / fps);
+  const next_b = nonnull(io.timing[len - 1]).start + Math.floor(500 / fps);
   const delay = Math.max(Math.max(next_a, next_b) - Date.now(), 1);
   setTimeout(tick(io), Math.min(delay, Math.floor(1000 / fps)));
 };

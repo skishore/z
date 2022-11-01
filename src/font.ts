@@ -18,21 +18,21 @@ interface FontConfig {
 const printable = (cols: int): Chars => {
   const result: Chars = {};
   for (let i = 32; i < 127; i++) {
-    result[i] = {x: i % cols, y: Math.floor(i / cols)};
+    result[i] = {x: int(i % cols), y: int(Math.floor(i / cols))};
   }
   return result;
 };
 
 const aquarius = (): FontConfig => {
   const data = 'fonts/aquarius_8x8.png';
-  const [width, height, rows, cols] = [8, 8, 16, 16];
+  const [width, height, rows, cols] = [8, 8, 16, 16] as [int, int, int, int];
   const chars = printable(cols);
   return {name: 'Aquarius', data, width, height, rows, cols, chars};
 };
 
 const unifont = (): FontConfig => {
   const data = 'fonts/unifont_8x16.png';
-  const [width, height, rows, cols] = [8, 16, 16, 16];
+  const [width, height, rows, cols] = [8, 16, 16, 16] as [int, int, int, int];
   const chars = printable(cols);
   return {name: 'Unifont', data, width, height, rows, cols, chars};
 };
@@ -52,12 +52,11 @@ interface Font {
 };
 
 const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string => {
-  assert(scale === Math.floor(scale));
   const {config, data} = font;
   const hex = '0123456789ABCDEF';
   assert(hex.length === 16);
-  const sx = scale * config.width;
-  const sy = scale * config.height;
+  const sx = int(scale * config.width);
+  const sy = int(scale * config.height);
 
   const {x: cx, y: cy} = nonnull(config.chars[codepoint]);
   const lines = range(sy).map(y => {
@@ -66,9 +65,9 @@ const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string =
       const py = cy * config.height + Math.floor(y / scale);
       return data.data[data.channels * (data.width * py + px)] === 0xff;
     })
-    const bytes = range(Math.floor((sx + 7) / 8)).map(i => {
+    const bytes = range(int(Math.floor((sx + 7) / 8))).map(i => {
       const byte = range(8).reduce(
-        (acc, j) => acc | (bits[8 * i + j] ? (1 << (7 - j)) : 0), 0);
+        (acc, j) => int(acc | (bits[8 * i + j] ? (1 << (7 - j)) : 0)), 0);
       assert(0 <= byte && byte <= 0xff);
       return `${hex[Math.floor(byte / 16)]}${hex[byte % 16]}`;
     });
@@ -100,12 +99,12 @@ const bdf = (font: Font, wide?: Font): string => {
   const {height, width} = config;
   const name = wide ? `${config.name}Plus${wide.config.name}` : config.name;
 
-  const codepoints = Object.keys(config.chars).map(x => parseInt(x, 10));
+  const codepoints = Object.keys(config.chars).map(x => int(parseInt(x, 10)));
   codepoints.sort((x, y) => x - y);
 
   const wide_chars =
     Object.keys(wide ? wide.config.chars : {})
-      .map(x => parseInt(x, 10))
+      .map(x => int(parseInt(x, 10)))
       .filter(x => 33 <= x && x < 128);
   const last = wide_chars[wide_chars.length - 1];
 
@@ -138,7 +137,7 @@ ENDPROPERTIES
 CHARS ${codepoints.length + wide_chars.length + (last ? 1 : 0)}
   `;
   const parts = [header];
-  const scale = wide ? config.height / wide.config.height : 1;
+  const scale = wide ? int(config.height / wide.config.height) : 1;
   codepoints.forEach(x => parts.push(glyph(font, x, 1)));
   wide_chars.forEach(x => parts.push(glyph(nonnull(wide), x, scale, true)));
 
@@ -179,7 +178,7 @@ const main = (font: Font, wide?: Font) => {
   if (false) {
     const message = 'Hello!';
     for (let i = 0; i < message.length; i++) {
-      show(font, message.charCodeAt(i));
+      show(font, int(message.charCodeAt(i)));
     }
   }
   console.log(bdf(font, wide));

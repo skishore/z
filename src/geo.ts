@@ -10,12 +10,16 @@ class Point {
   static origin = new Point(0, 0);
 
   constructor(x: int, y: int) {
-    this.x = x | 0;
-    this.y = y | 0;
+    this.x = x;
+    this.y = y;
   }
 
-  add(o: Point): Point { return new Point(this.x + o.x, this.y + o.y); }
-  sub(o: Point): Point { return new Point(this.x - o.x, this.y - o.y); }
+  add(o: Point): Point {
+    return new Point(int(this.x + o.x), int(this.y + o.y));
+  }
+  sub(o: Point): Point {
+    return new Point(int(this.x - o.x), int(this.y - o.y));
+  }
 
   angle(o: Point): number {
     const {x: tx, y: ty} = this;
@@ -34,25 +38,25 @@ class Point {
     const dy = Math.abs(this.y - o.y);
     const min = Math.min(dx, dy);
     const max = Math.max(dx, dy);
-    return Math.floor((46 * min + 95 * max + 25) / 100);
+    return int(Math.floor((46 * min + 95 * max + 25) / 100));
   }
 
   distanceSquared(o: Point): int {
     const dx = this.x - o.x;
     const dy = this.y - o.y;
-    return dx * dx + dy * dy;
+    return int(dx * dx + dy * dy);
   }
 
   distanceTaxicab(o: Point): int {
     const dx = this.x - o.x;
     const dy = this.y - o.y;
-    return Math.abs(dx) + Math.abs(dy);
+    return int(Math.abs(dx) + Math.abs(dy));
   }
 
   distanceWalking(o: Point): int {
     const dx = this.x - o.x;
     const dy = this.y - o.y;
-    return Math.max(Math.abs(dx), Math.abs(dy));
+    return int(Math.max(Math.abs(dx), Math.abs(dy)));
   }
 
   equal(o: Point): boolean { return this.x === o.x && this.y === o.y; }
@@ -63,7 +67,7 @@ class Point {
     const ax = x < 0 ? -2 * x + 1 : 2 * x;
     const ay = y < 0 ? -2 * y + 1 : 2 * y;
     const n = ax + ay;
-    return n * (n + 1) / 2 + ax;
+    return int(n * (n + 1) / 2 + ax);
   }
 
   toString(): string { return `Point(${this.x}, ${this.y})`; }
@@ -149,7 +153,7 @@ const LOS = (a: Point, b: Point): Point[] => {
   if (x_diff >= y_diff) {
     test = Math.floor((x_diff + test) / 2);
     for (let i = 0; i < x_diff; i++) {
-      x += x_sign;
+      x = int(x + x_sign);
       test -= y_diff;
       if (test < 0) {
         y += y_sign;
@@ -160,7 +164,7 @@ const LOS = (a: Point, b: Point): Point[] => {
   } else {
     test = Math.floor((y_diff + test) / 2);
     for (let i = 0; i < y_diff; i++) {
-      y += y_sign;
+      y = int(y + y_sign);
       test -= x_diff;
       if (test < 0) {
         x += x_sign;
@@ -194,7 +198,8 @@ class FOV {
     for (let i = 0; i <= radius; i++) {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
-        const [xb, yb] = [xa * ((j & 2) ? 1 : -1), ya * ((j & 4) ? 1 : -1)];
+        const xb = int(xa * ((j & 2) ? 1 : -1));
+        const yb = int(ya * ((j & 4) ? 1 : -1));
         const line = LOS(Point.origin, new Point(xb, yb));
         this.trieUpdate(this.#root, line, 0);
       }
@@ -224,7 +229,7 @@ class FOV {
       node.children.push(result);
       return result;
     })();
-    this.trieUpdate(child, line, i + 1);
+    this.trieUpdate(child, line, int(i + 1));
   }
 };
 
@@ -278,9 +283,9 @@ const AStarHeuristic = (p: Point, los: Point[]): int => {
   const y = Math.abs(ty - py);
   const min = Math.min(x, y);
   const max = Math.max(x, y);
-  return AStarUnitCost * max +
-         AStarDiagonalPenalty * min +
-         AStarLOSDeltaPenalty * delta;
+  return int(AStarUnitCost * max +
+             AStarDiagonalPenalty * min +
+             AStarLOSDeltaPenalty * delta);
 };
 
 class AStarNode extends Point {
@@ -312,7 +317,7 @@ const AStarHeapCheckInvariants = (heap: AStarHeap): void => {
 const AStarHeapPush = (heap: AStarHeap, node: AStarNode): void => {
   assert(node.index === null);
   heap.push(node);
-  AStarHeapify(heap, node, heap.length - 1);
+  AStarHeapify(heap, node, int(heap.length - 1));
 }
 
 const AStarHeapify = (heap: AStarHeap, node: AStarNode, index: int): void => {
@@ -320,7 +325,7 @@ const AStarHeapify = (heap: AStarHeap, node: AStarNode, index: int): void => {
   const score = node.score;
 
   while (index > 0) {
-    const parent_index = Math.floor((index - 1) / 2);
+    const parent_index = int(Math.floor((index - 1) / 2));
     const parent = heap[parent_index]!;
     if (parent.score <= score) break;
 
@@ -342,13 +347,13 @@ const AStarHeapExtractMin = (heap: AStarHeap): AStarNode => {
 
   if (!heap.length) return result;
 
-  let index = 0;
+  let index = int(0);
   while (2 * index + 1 < heap.length) {
     const c1 = heap[2 * index + 1]!;
     const c2 = heap[2 * index + 2] || c1;
     if (node.score <= Math.min(c1.score, c2.score)) break;
 
-    const child_index = 2 * index + (c1.score > c2.score ? 2 : 1);
+    const child_index = int(2 * index + (c1.score > c2.score ? 2 : 1));
     const child = (c1.score > c2.score ? c2 : c1);
     heap[index] = child;
     child.index = index;
@@ -405,9 +410,9 @@ const AStar = (source: Point, target: Point, check: (p: Point) => Status,
 
       const diagonal = direction.x !== 0 && direction.y !== 0;
       const occupied = test === Status.OCCUPIED;
-      const distance = cur.distance + AStarUnitCost +
-                       (diagonal ? AStarDiagonalPenalty : 0) +
-                       (occupied ? AStarOccupiedPenalty : 0);
+      const distance = int(cur.distance + AStarUnitCost +
+                           (diagonal ? AStarDiagonalPenalty : 0) +
+                           (occupied ? AStarOccupiedPenalty : 0));
 
       const key = next.key();
       const existing = map.get(key);
@@ -423,7 +428,7 @@ const AStar = (source: Point, target: Point, check: (p: Point) => Status,
         existing.parent = cur;
         AStarHeapify(heap, existing, existing.index);
       } else if (!existing) {
-        const score = distance + AStarHeuristic(next, los);
+        const score = int(distance + AStarHeuristic(next, los));
         const created = new AStarNode(next.x, next.y, cur, distance, score);
         AStarHeapPush(heap, created);
         map.set(key, created);
@@ -444,7 +449,7 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
   const kUnknown = -1;
   const kBlocked = -2;
 
-  const n = 2 * limit + 1;
+  const n = int(2 * limit + 1);
   const initial = new Point(limit, limit);
   const distances = new Matrix(new Point(n, n), kUnknown);
   distances.set(initial, 0);
@@ -462,8 +467,8 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
         const distance = distances.get(np);
         if (distance !== kUnknown) continue;
 
-        const x = np.x + source.x - limit;
-        const y = np.y + source.y - limit;
+        const x = int(np.x + source.x - limit);
+        const y = int(np.y + source.y - limit);
         const point = new Point(x, y);
 
         const free = check(point) === Status.FREE;

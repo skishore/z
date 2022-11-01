@@ -1,13 +1,13 @@
-import {assert, nonnull} from './lib';
+import {assert, int, nonnull} from './lib';
 import {Point, Direction, Matrix, LOS, FOV} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
   BLOCKED: 0.1,
-  FRAME_RATE: 60,
-  COLS: 79,
-  ROWS: 23,
+  FRAME_RATE: int(60),
+  COLS: int(79),
+  ROWS: int(23),
 };
 
 interface State {
@@ -25,7 +25,9 @@ const addBlocks = (state: State): State => {
   state.map.set(state.source, true);
 
   for (let i = 0; i < count;) {
-    const point = new Point(Math.random() * width, Math.random() * height);
+    const x = int(Math.random() * width);
+    const y = int(Math.random() * height);
+    const point = new Point(x, y);
     if (state.map.get(point)) continue;
     state.map.set(point, true);
     i++;
@@ -63,9 +65,9 @@ const processInput = (state: State, input: Input) => {
 
 const initializeState = (): State => {
   const {COLS, ROWS} = Constants;
-  const fov = new FOV(Math.max(COLS, ROWS));
+  const fov = new FOV(int(Math.max(COLS, ROWS)));
   const map = new Matrix(new Point(COLS, ROWS), false);
-  const source = new Point(Math.floor(COLS / 2), Math.floor(ROWS / 2));
+  const source = new Point(int(Math.floor(COLS / 2)), int(Math.floor(ROWS / 2)));
   return addBlocks({fov, map, source, target: null});
 };
 
@@ -106,7 +108,7 @@ const renderMap = (state: State): string => {
   const show = (point: Point, glyph: string) => {
     text[point.x + (width + 1) * point.y] = glyph;
   };
-  for (let i = 0; i < height; i++) {
+  for (let i = int(0); i < height; i++) {
     show(new Point(width, i), '\n');
   }
 

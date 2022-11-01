@@ -40,8 +40,10 @@ const testPointDistanceNethack = () => {
       for (const sy of [-1, 1]) {
         for (let dx = -n; dx <= n; dx++) {
           for (let dy = -n; dy <= n; dy++) {
-            const mo = new Point(origin.x * sx + dx, origin.y * sy + dy);
-            const mp = new Point(point.x * sx + dx, point.y * sy + dy);
+            const mo = new Point(int(origin.x * sx + dx),
+                                 int(origin.y * sy + dy));
+            const mp = new Point(int(point.x * sx + dx),
+                                 int(point.y * sy + dy));
             assert(mo.distanceNethack(mp) === expected);
             const no = new Point(mo.y, mo.x);
             const np = new Point(mp.y, mp.x);
@@ -57,8 +59,8 @@ const testPointKeyIsAnInjection = () => {
   const n = 100;
   const map: Map<int, Point> = new Map();
 
-  for (let x = -n; x <= n; x++) {
-    for (let y = -n; y <= n; y++) {
+  for (let x = int(-n); x <= n; x++) {
+    for (let y = int(-n); y <= n; y++) {
       const point = new Point(x, y);
       const match = map.get(point.key());
       assert(!match, () => `Point.key collision: ${match}, ${point}`);
@@ -82,15 +84,16 @@ type SearchTestCase = {
 const parseSearchTestCase = (input: string): SearchTestCase => {
   const lines = input.trim().split('\n');
   assert(lines.length > 0);
-  const size = new Point(nonnull(lines[0]).length, lines.length);
+  const size = new Point(int(nonnull(lines[0]).length), int(lines.length));
   const map = new Matrix(size, Status.FREE);
   const raw = range(size.y).map(_ => range(size.x).map(_ => '.'));
   const sources: Point[] = [];
   const targets: Point[] = [];
 
-  lines.forEach((line, y) => {
+  lines.forEach((line, yy) => {
+    const y = int(yy);
     assert(line.length === size.x);
-    for (let x = 0; x < size.x; x++) {
+    for (let x = int(0); x < size.x; x++) {
       const ch = nonnull(line[x]);
       const point = new Point(x, y);
       if (ch === '.' || ch === '?' || ch === '*') continue;
@@ -140,7 +143,7 @@ const runAStarTestCase = (input: string) => {
 const runBFSTestCase = (input: string) => {
   const expected = input.trim();
   const lines = expected.split('\n');
-  const limit = parseInt(nonnull(lines[0]).substr('Limit: '.length), 10);
+  const limit = int(parseInt(nonnull(lines[0]).substr('Limit: '.length), 10));
   input = lines.slice(1).join('\n');
 
   const test = parseSearchTestCase(input);
