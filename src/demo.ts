@@ -806,7 +806,7 @@ export {OverlayEffect, PauseEffect, SwitchEffect};
 const Constants = {
   LOG_SIZE:      int(4),
   MAP_SIZE:      int(37),
-  STATUS_SIZE:   int(92),
+  STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
   TURN_TIMER:    int(120),
   SUMMON_RANGE:  int(3),
