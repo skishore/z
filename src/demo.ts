@@ -504,7 +504,7 @@ const findOptions =
 };
 
 const targetsForAttack =
-    (board: Board, source: Pokemon, attack: Attack): Target => {
+    (board: Board, source: Entity, attack: Attack): Target => {
   const type = TT.Attack;
   const options = findOptions(board, source, type, attack.range);
   return {type, options, source, attack};
@@ -859,7 +859,7 @@ interface Option {
 type Options = Map<string, Option>;
 
 type Target =
-  {type: TT.Attack, options: Options, source: Pokemon, attack: Attack} |
+  {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
   {type: TT.Summon, options: Options, index: int};
 
 const processInput = (state: State, input: Input) => {
@@ -889,7 +889,7 @@ const processInput = (state: State, input: Input) => {
 
   if (input === 'a') {
     const attack = sample(kAttacks);
-    state.target = targetsForAttack(board, player as any as Pokemon, attack);
+    state.target = targetsForAttack(board, player, attack);
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
@@ -1016,7 +1016,8 @@ const updateState = (state: State, inputs: Input[]) => {
 declare const console: any;
 declare const process: any;
 declare const require: any;
-declare const setTimeout: any;
+
+declare const setTimeout: (fn: () => void, delay: number) => void;
 
 interface Element {
   render: () => void;
@@ -1171,8 +1172,8 @@ const initializeIO = (state: State): IO => {
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
   const element = (width: number, height: number, left: number, top: number,
-                   extra?: {[k: string]: any}): Element => {
-    const data: {[k: string]: any} = {width, height, left, top, attr, wrap};
+                   extra?: {[k: string]: unknown}): Element => {
+    const data: {[k: string]: unknown} = {width, height, left, top, attr, wrap};
     Object.entries(extra || {}).forEach(([k, v]) => data[k] = v);
     const result = blessed.box(data);
     content.append(result);

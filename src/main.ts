@@ -81,7 +81,8 @@ const updateState = (state: State, inputs: Input[]) => {
 declare const console: any;
 declare const process: any;
 declare const require: any;
-declare const setTimeout: any;
+
+declare const setTimeout: (fn: () => void, delay: number) => void;
 
 interface Element {
   render: () => void;
