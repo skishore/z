@@ -11,8 +11,6 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "outDir": "target",
     "rootDirs": ["src", "test"],
     "sourceMap": true,

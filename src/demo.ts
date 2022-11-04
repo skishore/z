@@ -235,7 +235,7 @@ interface Command {type: CT.Attack, attack: Attack, target: Point};
 interface Attack {
   name: string,
   range: int,
-  effect: (source: Point, target: Point) => Effect,
+  effect: (board: Board, source: Point, target: Point) => Effect,
 };
 
 interface PokemonSpeciesData {
@@ -318,7 +318,7 @@ const hasLineOfSight =
   return line.every((x, i) => {
     return i === 0 || i === last || board.getStatus(x) === Status.FREE;
   });
-}
+};
 
 const followCommands =
     (board: Board, entity: Entity, commands: Command[]): Action => {
@@ -398,7 +398,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
       const {attack, target} = action;
-      board.addEffect(attack.effect(entity.pos, target));
+      board.addEffect(attack.effect(board, entity.pos, target));
       board.log(`${describe(entity)} used ${attack.name}!`);
       return kSuccess;
     }
@@ -536,7 +536,7 @@ interface Particle {point: Point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
 interface Effect extends Array<Frame> {};
 
-type Sparkle = [int, string, Color, boolean?][];
+type Sparkle = [int, string, Color?, boolean?][];
 
 const add_particle = (effect: Effect, frame: int, particle: Particle) => {
   while (frame >= effect.length) effect.push([]);
@@ -700,7 +700,7 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const EmberEffect = (source: Point, target: Point) => {
+const EmberEffect = (board: Board, source: Point, target: Point) => {
   const effect: Effect = [];
   const line = LOS(source, target);
 
@@ -731,7 +731,7 @@ const EmberEffect = (source: Point, target: Point) => {
   return effect;
 };
 
-const IceBeamEffect = (source: Point, target: Point) => {
+const IceBeamEffect = (board: Board, source: Point, target: Point) => {
   const effect: Effect = [];
   const line = LOS(source, target);
   const ch = ray_character(source, target);
@@ -759,7 +759,7 @@ const IceBeamEffect = (source: Point, target: Point) => {
   return effect;
 };
 
-const BlizzardEffect = (source: Point, target: Point) => {
+const BlizzardEffect = (board: Board, source: Point, target: Point) => {
   const effect: Effect = [];
   const ch = ray_character(source, target);
 
@@ -799,7 +799,42 @@ const BlizzardEffect = (source: Point, target: Point) => {
   return effect.filter((_, i) => i % 3);
 };
 
-export {OverlayEffect, PauseEffect, SwitchEffect};
+const HeadbuttEffect = (board: Board, source: Point, target: Point) => {
+  const source_tile = board.getTile(source);
+  const source_entity = board.getEntity(source);
+  const glyph = source_entity ? source_entity.glyph : source_tile.glyph;
+  const ch = ray_character(source, target);
+
+  const trail = (): Sparkle => [
+    [8, '#', 'white'],
+  ];
+
+  const line = LOS(source, target);
+
+  const move_along_line = (line: Point[]) => {
+    const effect: Effect = [];
+    for (let i = 1; i < line.length - 1; i++) {
+      const point = nonnull(line[i]);
+      add_particle(effect, int(i), {point, glyph});
+      add_sparkle(effect, trail(), int(i + 1), point);
+    }
+    return effect;
+  };
+
+  const hold_pause = PauseEffect(int(line.length - 2));
+  const hold_point = line[line.length - 2] || source;
+  const hold_effect = ConstantEffect({point: hold_point, glyph}, int(32));
+
+  const towards = move_along_line(line);
+  const hold    = SerialEffect([hold_pause, hold_effect]);
+  const away    = move_along_line(line.reverse());
+
+  const result = UnderlayEffect(
+      SerialEffect([ParallelEffect([towards, hold]), away]),
+      {point: source, glyph: source_tile.glyph});
+
+  return result.filter((_, i) => i % 2);
+};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -841,6 +876,7 @@ const kAttacks: Attack[] = [
   {name: 'Ember', range: 12, effect: EmberEffect},
   {name: 'Ice Beam', range: 12, effect: IceBeamEffect},
   {name: 'Blizzard', range: 12, effect: BlizzardEffect},
+  {name: 'Headbutt', range: 8, effect: HeadbuttEffect},
 ];
 
 type Input = string;
