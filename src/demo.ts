@@ -235,7 +235,7 @@ type Action =
   {type: AT.Summon, index: int, target: Point} |
   {type: AT.WaitForInput};
 
-interface Result { success: boolean, turns: number };
+interface Result { success: boolean, moves: number, turns: number };
 
 interface Command {type: CT.Attack, attack: Attack, target: Point};
 
@@ -276,7 +276,8 @@ interface TrainerData {
 interface EntityData {
   glyph: Glyph,
   speed: number,
-  timer: int,
+  move_timer: int,
+  turn_timer: int,
   pos: Point,
 };
 
@@ -287,33 +288,40 @@ type Entity =
 type Pokemon = Entity & {type: ET.Pokemon};
 type Trainer = Entity & {type: ET.Trainer};
 
-const charge = (entity: Entity) => {
-  entity.timer -= Math.round(Constants.TURN_TIMER * entity.speed);
+const charge = (entity: Entity): void => {
+  const charge = int(Math.round(Constants.TURN_TIMER * entity.speed));
+  if (entity.move_timer > 0) entity.move_timer -= charge;
+  if (entity.turn_timer > 0) entity.turn_timer -= charge;
 };
 
-const ready = (entity: Entity): boolean => {
-  return entity.timer <= 0;
+const move_ready = (entity: Entity): boolean => {
+  return entity.move_timer <= 0;
+};
+
+const turn_ready = (entity: Entity): boolean => {
+  return entity.turn_timer <= 0;
 };
 
 const trainer = (entity: Entity): Trainer | null => {
   return entity.type === ET.Pokemon ? entity.data.self.trainer : null;
 };
 
-const wait = (entity: Entity, turns: number): void => {
-  entity.timer += Math.round(Constants.TURN_TIMER * turns);
+const wait = (entity: Entity, moves: number, turns: number): void => {
+  entity.move_timer += int(Math.round(Constants.MOVE_TIMER * moves));
+  entity.turn_timer += int(Math.round(Constants.TURN_TIMER * turns));
 };
 
 const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
   const {glyph, speed} = self.species;
   const data = {commands: [], self};
-  return {type: ET.Pokemon, data, pos, glyph, speed, timer: 0};
+  return {type: ET.Pokemon, data, pos, glyph, speed, move_timer: 0, turn_timer: 0};
 };
 
 const makeTrainer = (pos: Point, player: boolean): Trainer => {
   const glyph = Glyph('@');
   const speed = Constants.TRAINER_SPEED;
   const data = {input: null, player, pokemon: [], name: ''};
-  return {type: ET.Trainer, data, pos, glyph, speed, timer: 0};
+  return {type: ET.Trainer, data, pos, glyph, speed, move_timer: 0, turn_timer: 0};
 };
 
 const hasLineOfSight =
@@ -335,7 +343,7 @@ const followCommands =
       const [kRange, kLimit] = [command.attack.range, int(6)];
       const {attack, target} = command;
       const source = entity.pos;
-      if (hasLineOfSight(board, source, target, kRange)) {
+      if (move_ready(entity) && hasLineOfSight(board, source, target, kRange)) {
         commands.shift();
         return {type: AT.Attack, attack, target};
       }
@@ -343,7 +351,17 @@ const followCommands =
       const check = board.getStatus.bind(board);
       const found = (x: Point) => hasLineOfSight(board, x, target, kRange);
       const dirs = BFS(source, found, kLimit, check);
-      if (dirs.length > 0) return {type: AT.Move, direction: sample(dirs)};
+      const options = dirs.map(x => source.add(x));
+      if (found(source)) options.push(source);
+
+      if (options.length > 0) {
+        const scores = options.map(
+            x => Math.abs(x.distanceNethack(target) - kRange));
+        const best = Math.min.apply(null, scores);
+        const move = sample(options.filter((_, i) => scores[i] === best));
+        if (move.equal(source)) return {type: AT.Idle};
+        return {type: AT.Move, direction: Direction.assert(move.sub(source))};
+      }
 
       const path = AStar(source, target, check);
       const direction = path
@@ -414,8 +432,8 @@ const plan = (board: Board, entity: Entity): Action => {
   }
 };
 
-const kSuccess: Result = {success: true, turns: 1};
-const kFailure: Result = {success: false, turns: 1};
+const kSuccess: Result = {success: true,  moves: 0, turns: 1};
+const kFailure: Result = {success: false, moves: 0, turns: 1};
 
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
@@ -423,7 +441,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       const {attack, target} = action;
       board.addEffect(attack.effect(board, entity.pos, target));
       board.log(`${capitalize(describe(entity))} used ${attack.name}!`);
-      return kSuccess;
+      return {success: true, moves: 1, turns: 1};
     }
     case AT.Idle: return kSuccess;
     case AT.Move: {
@@ -561,13 +579,13 @@ interface Effect extends Array<Frame> {};
 
 type Sparkle = [int, string, Color?, boolean?][];
 
-const add_particle = (effect: Effect, frame: int, particle: Particle) => {
+const add_particle = (effect: Effect, frame: int, particle: Particle): void => {
   while (frame >= effect.length) effect.push([]);
   nonnull(effect[frame]).push(particle);
 };
 
 const add_sparkle =
-    (effect: Effect, sparkle: Sparkle, frame: int, point: Point) => {
+    (effect: Effect, sparkle: Sparkle, frame: int, point: Point): void => {
   sparkle.forEach(x => {
     const [delay, chars, color, light] = x;
     for (let i = 0; i < delay; i++, frame++) {
@@ -723,7 +741,7 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const EmberEffect = (board: Board, source: Point, target: Point) => {
+const EmberEffect = (board: Board, source: Point, target: Point): Effect => {
   const effect: Effect = [];
   const line = LOS(source, target);
 
@@ -754,7 +772,7 @@ const EmberEffect = (board: Board, source: Point, target: Point) => {
   return effect;
 };
 
-const IceBeamEffect = (board: Board, source: Point, target: Point) => {
+const IceBeamEffect = (board: Board, source: Point, target: Point): Effect => {
   const effect: Effect = [];
   const line = LOS(source, target);
   const ch = ray_character(source, target);
@@ -782,7 +800,7 @@ const IceBeamEffect = (board: Board, source: Point, target: Point) => {
   return effect;
 };
 
-const BlizzardEffect = (board: Board, source: Point, target: Point) => {
+const BlizzardEffect = (board: Board, source: Point, target: Point): Effect => {
   const effect: Effect = [];
   const ch = ray_character(source, target);
 
@@ -822,7 +840,7 @@ const BlizzardEffect = (board: Board, source: Point, target: Point) => {
   return effect.filter((_, i) => i % 3);
 };
 
-const HeadbuttEffect = (board: Board, source: Point, target: Point) => {
+const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
   const source_tile = board.getTile(source);
   const source_entity = board.getEntity(source);
   const glyph = source_entity ? source_entity.glyph : source_tile.glyph;
@@ -866,6 +884,7 @@ const Constants = {
   MAP_SIZE:      int(37),
   STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
+  MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
   SUMMON_RANGE:  int(2),
   TRAINER_SPEED: 1/10,
@@ -923,7 +942,7 @@ type Target =
   {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
   {type: TT.Summon, options: Options, index: int};
 
-const processInput = (state: State, input: Input) => {
+const processInput = (state: State, input: Input): void => {
   const {board, player} = state;
 
   if (state.target) {
@@ -1069,7 +1088,7 @@ const initializeState = (): State => {
   return {board, player, target: null};
 };
 
-const updateState = (state: State, inputs: Input[]) => {
+const updateState = (state: State, inputs: Input[]): void => {
   const {board, player} = state;
   if (board.advanceEffect()) return;
 
@@ -1079,13 +1098,13 @@ const updateState = (state: State, inputs: Input[]) => {
 
   while (!board.getEffect().length) {
     const entity = board.getActiveEntity();
-    if (!ready(entity)) {
+    if (!turn_ready(entity)) {
       board.advanceEntity();
       continue;
     }
     const result = act(board, entity, plan(board, entity));
     if (entity === player && !result.success) return;
-    wait(entity, result.turns);
+    wait(entity, result.moves, result.turns);
   }
 };
 

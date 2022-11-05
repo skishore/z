@@ -206,7 +206,7 @@ class FOV {
     }
   }
 
-  fieldOfVision(blocked: (p: Point, parent: Point | null) => boolean) {
+  fieldOfVision(blocked: (p: Point, parent: Point | null) => boolean): void {
     const nodes = [this.#root];
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]!;
@@ -215,7 +215,7 @@ class FOV {
     }
   }
 
-  private trieUpdate(node: FOVNode, line: Point[], i: int) {
+  private trieUpdate(node: FOVNode, line: Point[], i: int): void {
     const [prev, next] = [line[i]!, line[i + 1]];
     assert(node.x === prev.x);
     assert(node.y === prev.y);

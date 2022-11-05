@@ -37,7 +37,7 @@ const addBlocks = (state: State): State => {
   return state;
 };
 
-const processInput = (state: State, input: Input) => {
+const processInput = (state: State, input: Input): void => {
   if (input == 'f') {
     state.target = state.target ? null : state.source;
     return;
@@ -71,7 +71,7 @@ const initializeState = (): State => {
   return addBlocks({fov, map, source, target: null});
 };
 
-const updateState = (state: State, inputs: Input[]) => {
+const updateState = (state: State, inputs: Input[]): void => {
   inputs.forEach(x => processInput(state, x));
   inputs.length = 0;
 };
@@ -156,7 +156,7 @@ const initializeIO = (state: State): IO => {
   return {fps, map, inputs, screen, state, timing: []};
 };
 
-const update = (io: IO) => {
+const update = (io: IO): void => {
   const start = Date.now();
   io.timing.push({start, end: start});
   if (io.timing.length > Constants.FRAME_RATE) io.timing.shift();
@@ -165,7 +165,7 @@ const update = (io: IO) => {
   updateState(io.state, io.inputs);
 };
 
-const render = (io: IO) => {
+const render = (io: IO): void => {
   io.map.setContent(renderMap(io.state));
 
   const last = nonnull(io.timing[io.timing.length - 1]);
