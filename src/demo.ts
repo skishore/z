@@ -195,13 +195,19 @@ class Board {
 
 //////////////////////////////////////////////////////////////////////////////
 
+const capitalize = (input: string): string => {
+  const ch = input[0];
+  if (!ch || ch.toUpperCase() === ch) return input;
+  return `${ch.toUpperCase()}${input.slice(1)}`;
+};
+
 const describe = (entity: Entity): string => {
   if (entity.type === ET.Trainer) {
     const {name, player} = entity.data;
     return player ? 'you' : name;
   } else {
     const {species: {name: species}, trainer} = entity.data.self;
-    if (!trainer) return `the wild ${species}`;
+    if (!trainer) return `wild ${species}`;
     const {name, player} = trainer.data;
     return player ? species : `${name}'s ${species}`;
   }
@@ -215,6 +221,7 @@ const shout = (trainer: Trainer, pokemon: Pokemon): string => {
 
 //////////////////////////////////////////////////////////////////////////////
 
+// {Action,Command,Entity,Target}Type enums:
 enum AT { Attack, Idle, Move, Shout, Summon, WaitForInput };
 enum CT { Attack, };
 enum ET { Pokemon, Trainer };
@@ -373,13 +380,29 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   return {type: AT.Move, direction};
 };
 
+const findRivals = (board: Board, pokemon: Pokemon): Entity[] => {
+  return board.getEntities().filter(other => {
+    if (other === pokemon) return false;
+    if (other.type === ET.Pokemon && !other.data.self.trainer) return false;
+    return true;
+  });
+};
+
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
       const {commands, self: {trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
-      return trainer ? followLeader(board, entity, trainer)
-                     : {type: AT.Move, direction: sample(Direction.all)};
+      if (trainer) return followLeader(board, entity, trainer);
+
+      const rivals = findRivals(board, entity);
+      if (rivals.length > 0) {
+        const attack = sample(kAttacks);
+        const target = sample(rivals).pos;
+        const commands: Command[] = [{type: CT.Attack, attack, target}];
+        return followCommands(board, entity, commands);
+      }
+      return {type: AT.Move, direction: sample(Direction.all)};
     }
     case ET.Trainer: {
       const {input, player} = entity.data;
@@ -399,7 +422,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
     case AT.Attack: {
       const {attack, target} = action;
       board.addEffect(attack.effect(board, entity.pos, target));
-      board.log(`${describe(entity)} used ${attack.name}!`);
+      board.log(`${capitalize(describe(entity))} used ${attack.name}!`);
       return kSuccess;
     }
     case AT.Idle: return kSuccess;
@@ -844,7 +867,7 @@ const Constants = {
   STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
   TURN_TIMER:    int(120),
-  SUMMON_RANGE:  int(3),
+  SUMMON_RANGE:  int(2),
   TRAINER_SPEED: 1/10,
 };
 
@@ -864,13 +887,15 @@ const kTiles: {[ch: string]: Tile} = {
   '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
 };
 
-const kPokemon: {[key: string]: PokemonSpeciesData} = {
-  B: {name: 'Bulbasaur', glyph: Glyph('B', 'green'), speed: 1/6},
-  C: {name: 'Charmander', glyph: Glyph('C', 'red'), speed: 1/5},
-  S: {name: 'Squirtle', glyph: Glyph('S', 'blue'), speed: 1/4},
-  E: {name: 'Eevee', glyph: Glyph('E', 'yellow'), speed: 1/5},
-  P: {name: 'Pikachu', glyph: Glyph('P', 'yellow', true), speed: 1/4},
-};
+const kPokemon: PokemonSpeciesData[] = [
+  {name: 'Bulbasaur',  glyph: Glyph('B', 'green'),        speed: 1/6},
+  {name: 'Charmander', glyph: Glyph('C', 'red'),          speed: 1/5},
+  {name: 'Squirtle',   glyph: Glyph('S', 'blue'),         speed: 1/4},
+  {name: 'Eevee',      glyph: Glyph('E', 'yellow'),       speed: 1/5},
+  {name: 'Pikachu',    glyph: Glyph('P', 'yellow', true), speed: 1/4},
+  {name: 'Rattata',    glyph: Glyph('R'),                 speed: 1/4},
+  {name: 'Pidgey',     glyph: Glyph('P'),                 speed: 1/4},
+];
 
 const kAttacks: Attack[] = [
   {name: 'Ember', range: 12, effect: EmberEffect},
@@ -1012,17 +1037,34 @@ const initializeBoard = (): Board => {
 const initializeState = (): State => {
   const start = int(Math.floor((Constants.MAP_SIZE + 1) / 2));
   const point = new Point(start, start);
-  let board: Board | null = null;
-  while (!board || board.getTile(point).blocked) {
-    board = initializeBoard();
-  }
+  const board = (() => {
+    while (true) {
+      const board = initializeBoard();
+      if (!board.getTile(point).blocked) return board;
+    }
+  })();
   const player = makeTrainer(point, true);
   board.addEntity(player);
 
-  const n = kPokemonKeys.length;
-  Object.entries(kPokemon).slice(0, n).forEach(([_, species]) => {
+  const n = Math.min(kPokemonKeys.length, 5);
+  kPokemon.slice(0, n).forEach(species => {
     player.data.pokemon.push({entity: null, self: {species, trainer: player}});
   });
+
+  for (let i = 0; i < 4; i++) {
+    const pos = (() => {
+      for (let i = 0; i < 100; i++) {
+        const x = int(Math.floor(Math.random() * Constants.MAP_SIZE));
+        const y = int(Math.floor(Math.random() * Constants.MAP_SIZE));
+        const pos = new Point(x, y);
+        if (board.getStatus(pos) === Status.FREE) return pos;
+      }
+      return null;
+    })();
+    if (!pos) break;
+    const species = sample(kPokemon.slice(n));
+    board.addEntity(makePokemon(pos, {species, trainer: null}));
+  }
 
   return {board, player, target: null};
 };
