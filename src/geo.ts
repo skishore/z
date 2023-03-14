@@ -159,7 +159,7 @@ const LOS = (a: Point, b: Point): Point[] => {
         y += y_sign;
         test += x_diff;
       }
-      result.push(new Point(x, y));
+      result.push(new Point(x, int(y)));
     }
   } else {
     test = Math.floor((y_diff + test) / 2);
@@ -170,7 +170,7 @@ const LOS = (a: Point, b: Point): Point[] => {
         x += x_sign;
         test += y_diff;
       }
-      result.push(new Point(x, y));
+      result.push(new Point(int(x), y));
     }
   }
 
