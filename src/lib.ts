@@ -19,6 +19,11 @@ const nonnull = <T>(x: T): NonNullable<T> => {
   return x as NonNullable<T>;
 };
 
+const only = <T>(xs: T[]): T => {
+  assert(xs.length === 1);
+  return xs[0]!;
+};
+
 const range = (n: int): int[] => {
   const result: int[] = [];
   for (let i = int(0); i < n; i++) {
@@ -77,4 +82,4 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph};
+export {assert, flatten, int, nonnull, only, range, sample, weighted, Color, Glyph};

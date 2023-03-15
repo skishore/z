@@ -1,4 +1,4 @@
-import {assert, flatten, int, nonnull, range, sample, weighted, Color, Glyph} from './lib';
+import {assert, flatten, int, nonnull, only, range, sample, weighted, Color, Glyph} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -263,9 +263,11 @@ interface Command {type: CT.Attack, attack: Attack, target: Entity | Point};
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
 interface PokemonSpeciesData {
-  glyph: Glyph;
-  name: string;
-  speed: number;
+  name: string,
+  glyph: Glyph,
+  hp: int,
+  speed: number,
+  attacks: Attack[],
 };
 
 interface PokemonIndividualData {
@@ -438,17 +440,17 @@ const findRivals = (board: Board, entity: Entity): Entity[] => {
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
-      const {commands, self: {trainer}} = entity.data;
+      const {commands, self: {species, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
-      if (trainer) return followLeader(board, entity, trainer);
 
       const rivals = findRivals(board, entity);
-      if (rivals.length > 0) {
-        const attack = sample(kAttacks);
+      if (rivals.length > 0 && species.attacks.length > 0) {
         const target = sample(rivals).pos;
+        const attack = sample(species.attacks);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
+      if (trainer) return followLeader(board, entity, trainer);
       return {type: AT.Move, direction: sample(Direction.all)};
     }
     case ET.Trainer: {
@@ -955,21 +957,30 @@ const kTiles: {[ch: string]: Tile} = {
   '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
 };
 
-const kPokemon: PokemonSpeciesData[] = [
-  {name: 'Bulbasaur',  glyph: Glyph('B', 'green'),        speed: 1/6},
-  {name: 'Charmander', glyph: Glyph('C', 'red'),          speed: 1/5},
-  {name: 'Squirtle',   glyph: Glyph('S', 'blue'),         speed: 1/4},
-  {name: 'Eevee',      glyph: Glyph('E', 'yellow'),       speed: 1/5},
-  {name: 'Pikachu',    glyph: Glyph('P', 'yellow', true), speed: 1/4},
-  {name: 'Rattata',    glyph: Glyph('R'),                 speed: 1/4},
-  {name: 'Pidgey',     glyph: Glyph('P'),                 speed: 1/4},
+const kAttacks: Attack[] = [
+  {name: 'Ember',    range: 12, damage: int(40), effect: EmberEffect},
+  {name: 'Ice Beam', range: 12, damage: int(60), effect: IceBeamEffect},
+  {name: 'Blizzard', range: 12, damage: int(80), effect: BlizzardEffect},
+  {name: 'Headbutt', range: 8,  damage: int(80), effect: HeadbuttEffect},
+  {name: 'Tackle',   range: 4,  damage: int(40), effect: HeadbuttEffect},
 ];
 
-const kAttacks: Attack[] = [
-  //{name: 'Ember',    range: 12, damage: int(40), effect: EmberEffect},
-  //{name: 'Ice Beam', range: 12, damage: int(60), effect: IceBeamEffect},
-  //{name: 'Blizzard', range: 12, damage: int(80), effect: BlizzardEffect},
-  {name: 'Headbutt', range: 8,  damage: int(40), effect: HeadbuttEffect},
+const species = (name: string, hp: int, speed: number,
+                 attack_names: string[], glyph: Glyph): PokemonSpeciesData => {
+  attack_names = attack_names.slice();
+  attack_names.push('Tackle');
+  const attacks = attack_names.map(x=> only(kAttacks.filter(y => y.name === x)));
+  return {name, glyph, hp, speed, attacks};
+};
+
+const kPokemon: PokemonSpeciesData[] = [
+  species('Bulbasaur',  int(90), 1/6, [],           Glyph('B', 'green')),
+  species('Charmander', int(80), 1/5, ['Ember'],    Glyph('C', 'red')),
+  species('Squirtle',   int(70), 1/4, ['Ice Beam'], Glyph('S', 'blue')),
+  species('Eevee',      int(80), 1/5, ['Headbutt'], Glyph('E', 'yellow')),
+  species('Pikachu',    int(60), 1/4, [],           Glyph('P', 'yellow', true)),
+  species('Rattata',    int(60), 1/4, ['Headbutt'], Glyph('R')),
+  species('Pidgey',     int(30), 1/3, [],           Glyph('P')),
 ];
 
 type Input = string;
@@ -1011,14 +1022,13 @@ const processInput = (state: State, input: Input): void => {
   const index = int(kPokemonKeys.indexOf(input));
   if (0 <= index && index < player.data.pokemon.length) {
     const pokemon = nonnull(player.data.pokemon[index]).entity;
-    state.target = pokemon
-      ? targetsForAttack(board, pokemon, sample(kAttacks))
-      : targetsForSummon(board, player, index);
-  }
-
-  if (input === 'a') {
-    const attack = sample(kAttacks);
-    state.target = targetsForAttack(board, player, attack);
+    if (pokemon) {
+      const attacks = pokemon.data.self.species.attacks;
+      if (attacks.length === 0) return;
+      state.target = targetsForAttack(board, pokemon, sample(attacks));
+    } else {
+      state.target = targetsForSummon(board, player, index);
+    }
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
