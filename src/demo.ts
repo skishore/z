@@ -933,6 +933,7 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
 const Constants = {
   LOG_SIZE:      int(4),
   MAP_SIZE:      int(37),
+  WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
@@ -1037,7 +1038,7 @@ const processInput = (state: State, input: Input): void => {
 };
 
 const initializeBoard = (): Board => {
-  const base = Constants.MAP_SIZE;
+  const base = Constants.WORLD_SIZE;
   const size = new Point(base, base);
   const board = new Board(size);
 
@@ -1113,7 +1114,7 @@ const initializeBoard = (): Board => {
 };
 
 const initializeState = (): State => {
-  const start = int(Math.floor((Constants.MAP_SIZE + 1) / 2));
+  const start = int(Math.floor((Constants.WORLD_SIZE + 1) / 2));
   const point = new Point(start, start);
   const board = (() => {
     while (true) {
@@ -1130,11 +1131,11 @@ const initializeState = (): State => {
     player.data.pokemon.push({entity: null, self});
   });
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 20; i++) {
     const pos = (() => {
       for (let i = 0; i < 100; i++) {
-        const x = int(Math.floor(Math.random() * Constants.MAP_SIZE));
-        const y = int(Math.floor(Math.random() * Constants.MAP_SIZE));
+        const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
+        const y = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
         const pos = new Point(x, y);
         if (board.getStatus(pos) === Status.FREE) return pos;
       }
@@ -1215,13 +1216,20 @@ const renderLog = (state: State): string => {
 
 const renderMap = (state: State): string => {
   const {board, player} = state;
-  const {x: width, y: height} = board.getSize();
+  const width  = Constants.MAP_SIZE;
+  const height = Constants.MAP_SIZE;
   const text: string[] = Array((width + 1) * height).fill(kEmptyGlyph);
   for (let i = 0; i < height; i++) {
     text[width + (width + 1) * i] = kBreakGlyph;
   }
 
+
+  const offset_x = int(player.pos.x - (width - 1) / 2);
+  const offset_y = int(player.pos.y - (height - 1) / 2);
+  const offset = new Point(offset_x, offset_y);
+
   const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
+    x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
@@ -1230,9 +1238,9 @@ const renderMap = (state: State): string => {
   const vision = board.getVision(player);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
-      const point = new Point(x, y);
-      if (vision.get(point) < 0) continue;
-      show(x, y, board.getTile(point).glyph, true);
+      const point = (new Point(x, y)).add(offset);
+      if ((vision.getOrNull(point) ?? -1) < 0) continue;
+      show(point.x, point.y, board.getTile(point).glyph, true);
     }
   }
 
@@ -1269,7 +1277,7 @@ const renderMap = (state: State): string => {
 
 const renderStatus = (state: State): string => {
   const w = Constants.STATUS_SIZE;
-  const h = state.board.getSize().y + 2;
+  const h = Constants.MAP_SIZE + 2;
 
   const kPadding = 2;
   const kPokemonPerRow = 3;
@@ -1329,7 +1337,8 @@ const initializeIO = (state: State): IO => {
   const screen = blessed.screen({fullUnicode: true});
 
   const kSpacer = 1;
-  const {x, y} = state.board.getSize();
+  const x = Constants.MAP_SIZE;
+  const y = Constants.MAP_SIZE;
   const h = x + 2 + kSpacer + Constants.LOG_SIZE;
   const w = 2 * x + 2 + kSpacer + Constants.STATUS_SIZE;
 
