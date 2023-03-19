@@ -1,4 +1,5 @@
-import {assert, flatten, int, nonnull, only, range, sample, weighted, Color, Glyph} from './lib';
+import {Color, Glyph, Recolor} from './lib';
+import {assert, flatten, int, nonnull, only, range, sample, weighted} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -254,13 +255,15 @@ type Action =
   {type: AT.Summon, index: int, target: Point} |
   {type: AT.WaitForInput};
 
-type GenEffect = (board: Board, source: Point, target: Point) => Effect;
+type GenEffect = (board: Board, source: Point, target: Point) => AttackEffect;
 
 interface Result { success: boolean, moves: number, turns: number };
 
 interface Command {type: CT.Attack, attack: Attack, target: Entity | Point};
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
+
+interface AttackEffect { effect: Effect, hitFrame: int };
 
 interface PokemonSpeciesData {
   name: string,
@@ -470,7 +473,8 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
       const {attack, target} = action;
-      board.addEffect(attack.effect(board, entity.pos, target));
+      const attack_effect = attack.effect(board, entity.pos, target);
+      board.addEffect(ApplyAttack(board, attack_effect, target));
       const user = capitalize(describe(entity));
 
       const target_entity = board.getEntity(target);
@@ -636,7 +640,7 @@ const add_particle = (effect: Effect, frame: int, particle: Particle): void => {
 };
 
 const add_sparkle =
-    (effect: Effect, sparkle: Sparkle, frame: int, point: Point): void => {
+    (effect: Effect, sparkle: Sparkle, frame: int, point: Point): int => {
   sparkle.forEach(x => {
     const [delay, chars, color, light] = x;
     for (let i = 0; i < delay; i++, frame++) {
@@ -645,6 +649,7 @@ const add_sparkle =
       add_particle(effect, frame, {glyph, point});
     }
   });
+  return frame;
 };
 
 const random_delay = (n: int): int => {
@@ -792,7 +797,7 @@ const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   ]);
 };
 
-const EmberEffect = (board: Board, source: Point, target: Point): Effect => {
+const EmberEffect = (board: Board, source: Point, target: Point): AttackEffect => {
   const effect: Effect = [];
   const line = LOS(source, target);
 
@@ -815,15 +820,17 @@ const EmberEffect = (board: Board, source: Point, target: Point): Effect => {
     const frame = int(Math.floor((i - 1) / 2));
     add_sparkle(effect, trail(), frame, nonnull(line[i]));
   }
+  let hitFrame: int = 0;
   for (const direction of [Direction.none].concat(Direction.all)) {
     const norm = direction.distanceTaxicab(Direction.none);
     const frame = int(2 * norm + Math.floor((line.length - 1) / 2));
-    add_sparkle(effect, flame(), frame, target.add(direction));
+    const finish = add_sparkle(effect, flame(), frame, target.add(direction));
+    if (norm === 0) hitFrame = finish;
   }
-  return effect;
+  return {effect, hitFrame};
 };
 
-const IceBeamEffect = (board: Board, source: Point, target: Point): Effect => {
+const IceBeamEffect = (board: Board, source: Point, target: Point): AttackEffect => {
   const effect: Effect = [];
   const line = LOS(source, target);
   const ch = ray_character(source, target);
@@ -847,11 +854,11 @@ const IceBeamEffect = (board: Board, source: Point, target: Point): Effect => {
     add_sparkle(effect, trail, frame, nonnull(line[i]));
   }
   const frame = int(Math.floor((line.length - 1) / 2));
-  add_sparkle(effect, flame, frame, target);
-  return effect;
+  const hitFrame = add_sparkle(effect, flame, frame, target);
+  return {effect, hitFrame};
 };
 
-const BlizzardEffect = (board: Board, source: Point, target: Point): Effect => {
+const BlizzardEffect = (board: Board, source: Point, target: Point): AttackEffect => {
   const effect: Effect = [];
   const ch = ray_character(source, target);
 
@@ -879,6 +886,7 @@ const BlizzardEffect = (board: Board, source: Point, target: Point): Effect => {
     [2, '*', 'blue'],
   ];
 
+  let hitFrame: int = 0;
   for (let p = 0; p < points.length; p++) {
     const d = 12 * p;
     const next = nonnull(points[p]);
@@ -886,12 +894,14 @@ const BlizzardEffect = (board: Board, source: Point, target: Point): Effect => {
     for (let i = 1; i < line.length; i++) {
       add_sparkle(effect, trail, int(d + i), nonnull(line[i]));
     }
-    add_sparkle(effect, flame, int(d + line.length - 1), next);
+    const finish = add_sparkle(effect, flame, int(d + line.length - 1), next);
+    if (p === 0) hitFrame = finish;
   }
-  return effect.filter((_, i) => i % 3);
+  hitFrame = int(hitFrame - Math.ceil(hitFrame / 3));
+  return {effect: effect.filter((_, i) => i % 3), hitFrame};
 };
 
-const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
+const HeadbuttEffect = (board: Board, source: Point, target: Point): AttackEffect => {
   const source_tile = board.getTile(source);
   const source_entity = board.getEntity(source);
   const glyph = source_entity ? source_entity.glyph : source_tile.glyph;
@@ -916,6 +926,7 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
   const hold_pause = PauseEffect(int(line.length - 2));
   const hold_point = line[line.length - 2] || source;
   const hold_effect = ConstantEffect({point: hold_point, glyph}, int(32));
+  let hitFrame = int(Math.max(line.length - 2, 0));
 
   const towards = move_along_line(line);
   const hold    = SerialEffect([hold_pause, hold_effect]);
@@ -925,7 +936,24 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
       SerialEffect([ParallelEffect([towards, hold]), away]),
       {point: source, glyph: source_tile.glyph});
 
-  return result.filter((_, i) => i % 2);
+  hitFrame = int(hitFrame - Math.ceil(hitFrame / 2));
+  return {effect: result.filter((_, i) => i % 2), hitFrame};
+};
+
+const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect => {
+  let effect = init.effect;
+  const frame = init.hitFrame;
+  const entity = board.getEntity(target);
+  if (entity !== null) {
+    const source = {point: target, glyph: entity.glyph}
+    const damage = {point: target, glyph: Recolor(entity.glyph)};
+    effect = ParallelEffect([
+      ConstantEffect(source, frame),
+      SerialEffect([PauseEffect(frame), ConstantEffect(damage, 8)]),
+      effect,
+    ]);
+  }
+  return effect;
 };
 
 //////////////////////////////////////////////////////////////////////////////

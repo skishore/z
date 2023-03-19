@@ -56,6 +56,8 @@ type Glyph = string & {__type__: 'glyph'};
 
 type Color = 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white';
 
+const WideCharOffset = 0xff00 - 0x20;
+
 const Color = (text: string, color: Color, light?: boolean): string => {
   const index = (() => {
     switch (color) {
@@ -76,10 +78,19 @@ const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
   assert(ch.length === 1);
   if (ch === ' ') return '  ' as Glyph;
   if (ch === '\n') return '\n' as Glyph;
-  const wide = String.fromCodePoint(ch.codePointAt(0)! + 0xff00 - 0x20);
+  const wide = String.fromCodePoint(ch.codePointAt(0)! + WideCharOffset);
   return (color ? Color(wide, color, light) : wide) as Glyph;
+};
+
+const Recolor = (glyph: Glyph): Glyph => {
+  const index = glyph.indexOf('m');
+  const wide = index < 0 ? glyph : (glyph[index + 1] || ' ');
+  const code = wide.codePointAt(0)! - WideCharOffset;
+  const ch = code < 0 ? wide : String.fromCodePoint(code);
+  return `\x1b[41m${Glyph(ch, 'black')}\x1b[0m` as Glyph;
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {assert, flatten, int, nonnull, only, range, sample, weighted, Color, Glyph};
+export {Color, Glyph, Recolor};
+export {assert, flatten, int, nonnull, only, range, sample, weighted};
