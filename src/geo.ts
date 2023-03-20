@@ -101,26 +101,26 @@ class Direction extends Point {
 
 class Matrix<T> {
   readonly size: Point;
-  #data: T[];
+  private data: T[];
 
   constructor(size: Point, value: T) {
     this.size = size;
-    this.#data = Array(size.x * size.y).fill(value);
+    this.data = Array(size.x * size.y).fill(value);
   }
 
   get(point: Point): T {
     if (!this.contains(point)) throw new Error(`${point} not in ${this.size}`);
-    return this.#data[point.x + this.size.x * point.y]!;
+    return this.data[point.x + this.size.x * point.y]!;
   }
 
   set(point: Point, value: T): void {
     if (!this.contains(point)) throw new Error(`${point} not in ${this.size}`);
-    this.#data[point.x + this.size.x * point.y] = value;
+    this.data[point.x + this.size.x * point.y] = value;
   }
 
   getOrNull(point: Point): T | null {
     if (!this.contains(point)) return null;
-    return this.#data[point.x + this.size.x * point.y]!;
+    return this.data[point.x + this.size.x * point.y]!;
   }
 
   contains(point: Point): boolean {
@@ -130,7 +130,7 @@ class Matrix<T> {
   }
 
   fill(value: T): void {
-    this.#data.fill(value);
+    this.data.fill(value);
   }
 };
 
@@ -191,23 +191,25 @@ class FOVNode extends Point {
 };
 
 class FOV {
-  #root: FOVNode;
+  private radius: int;
+  private root: FOVNode;
 
   constructor(radius: int) {
-    this.#root = new FOVNode(0, 0, null);
+    this.radius = radius;
+    this.root = new FOVNode(0, 0, null);
     for (let i = 0; i <= radius; i++) {
       for (let j = 0; j < 8; j++) {
         const [xa, ya] = (j & 1) ? [radius, i] : [i, radius];
         const xb = int(xa * ((j & 2) ? 1 : -1));
         const yb = int(ya * ((j & 4) ? 1 : -1));
         const line = LOS(Point.origin, new Point(xb, yb));
-        this.trieUpdate(this.#root, line, 0);
+        this.trieUpdate(this.root, line, 0);
       }
     }
   }
 
   fieldOfVision(blocked: (p: Point, parent: Point | null) => boolean): void {
-    const nodes = [this.#root];
+    const nodes = [this.root];
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]!;
       if (blocked(node, node.parent)) continue;
@@ -216,6 +218,7 @@ class FOV {
   }
 
   private trieUpdate(node: FOVNode, line: Point[], i: int): void {
+    if (node.distanceL2(Point.origin) > this.radius - 0.5) return;
     const [prev, next] = [line[i]!, line[i + 1]];
     assert(node.x === prev.x);
     assert(node.y === prev.y);

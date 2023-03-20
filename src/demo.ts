@@ -17,8 +17,8 @@ class Board {
   private defaultTile: Tile;
   private logs: string[];
 
-  constructor(size: Point) {
-    this.fov = new FOV(int(Math.max(size.x, size.y)));
+  constructor(size: Point, fov: int) {
+    this.fov = new FOV(int(Math.max(fov, fov)));
     this.map = new Matrix(size, nonnull(kTiles['.']));
     this.effect = [];
     this.entity = [];
@@ -960,7 +960,8 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE:      int(37),
+  MAP_SIZE:      int(49),
+  FOV_RADIUS:    int(24),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
@@ -971,9 +972,9 @@ const Constants = {
 };
 
 interface Tile {
-  blocked: boolean,
-  obscure: boolean,
-  glyph: Glyph,
+  readonly blocked: boolean,
+  readonly obscure: boolean,
+  readonly glyph: Glyph,
 };
 
 const kPokemonKeys = 'sdfwer';
@@ -982,8 +983,8 @@ const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
 
 const kTiles: {[ch: string]: Tile} = {
   '.': {blocked: false, obscure: false, glyph: Glyph('.')},
-  '"': {blocked: false, obscure: true, glyph: Glyph('"', 'green', true)},
-  '#': {blocked: true, obscure: true, glyph: Glyph('#', 'green')},
+  '"': {blocked: false, obscure: true,  glyph: Glyph('"', 'green', true)},
+  '#': {blocked: true,  obscure: true,  glyph: Glyph('#', 'green')},
 };
 
 const kAttacks: Attack[] = [
@@ -1068,7 +1069,7 @@ const processInput = (state: State, input: Input): void => {
 const initializeBoard = (): Board => {
   const base = Constants.WORLD_SIZE;
   const size = new Point(base, base);
-  const board = new Board(size);
+  const board = new Board(size, Constants.FOV_RADIUS);
 
   const automata = (): Matrix<boolean> => {
     let result = new Matrix(size, false);
