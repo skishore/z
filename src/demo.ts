@@ -917,23 +917,29 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): AttackEffec
     const effect: Effect = [];
     for (let i = 1; i < line.length - 1; i++) {
       const point = nonnull(line[i]);
-      add_particle(effect, int(i), {point, glyph});
-      add_sparkle(effect, trail(), int(i + 1), point);
+      add_particle(effect, int(i - 1), {point, glyph});
+      add_sparkle(effect, trail(), int(i), point);
     }
     return effect;
   };
 
-  const hold_pause = PauseEffect(int(line.length - 2));
-  const hold_point = line[line.length - 2] || source;
+  const move_length = int(line.length - 2);
+  const hold_pause = PauseEffect(move_length);
+  const hold_point = line[move_length] || source;
   const hold_effect = ConstantEffect({point: hold_point, glyph}, int(32));
-  let hitFrame = int(Math.max(line.length - 2, 0));
+  let hitFrame = int(Math.max(move_length, 0));
 
   const towards = move_along_line(line);
   const hold    = SerialEffect([hold_pause, hold_effect]);
   const away    = move_along_line(line.reverse());
 
+  const back_length = int(hold.length + hitFrame);
+  const back_pause = PauseEffect(back_length);
+  const back_effect = ConstantEffect({point: source, glyph}, int(away.length - hitFrame));
+  const back = SerialEffect([back_pause, back_effect]);
+
   const result = UnderlayEffect(
-      SerialEffect([ParallelEffect([towards, hold]), away]),
+      ParallelEffect([SerialEffect([ParallelEffect([towards, hold]), away]), back]),
       {point: source, glyph: source_tile.glyph});
 
   hitFrame = int(hitFrame - Math.ceil(hitFrame / 2));
