@@ -1,4 +1,4 @@
-import {Color, Glyph, Recolor} from './lib';
+import {Color, Glyph} from './lib';
 import {assert, flatten, int, nonnull, only, range, sample, weighted} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
@@ -344,7 +344,7 @@ const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
 };
 
 const makeTrainer = (pos: Point, player: boolean): Trainer => {
-  const glyph = Glyph('@');
+  const glyph = new Glyph('@');
   const speed = Constants.TRAINER_SPEED;
   const data = {input: null, player, pokemon: [], name: ''};
   return {type: ET.Trainer, data, pos, glyph, speed,
@@ -645,7 +645,7 @@ const add_sparkle =
     const [delay, chars, color, light] = x;
     for (let i = 0; i < delay; i++, frame++) {
       const index = Math.floor(Math.random() * chars.length);
-      const glyph = Glyph(nonnull(chars[index]), color, light);
+      const glyph = new Glyph(nonnull(chars[index]), color, light);
       add_particle(effect, frame, {glyph, point});
     }
   });
@@ -706,23 +706,23 @@ const SerialEffect = (effects: Effect[]): Effect => {
 
 const ExplosionEffect = (point: Point): Effect => {
   const base = [
-    [{point, glyph: Glyph('*', 'red')}],
+    [{point, glyph: new Glyph('*', 'red')}],
     [
-      {point, glyph: Glyph('+', 'red')},
-      {point: point.add(Direction.n), glyph: Glyph('|', 'red')},
-      {point: point.add(Direction.s), glyph: Glyph('|', 'red')},
-      {point: point.add(Direction.e), glyph: Glyph('-', 'red')},
-      {point: point.add(Direction.w), glyph: Glyph('-', 'red')},
+      {point, glyph: new Glyph('+', 'red')},
+      {point: point.add(Direction.n), glyph: new Glyph('|', 'red')},
+      {point: point.add(Direction.s), glyph: new Glyph('|', 'red')},
+      {point: point.add(Direction.e), glyph: new Glyph('-', 'red')},
+      {point: point.add(Direction.w), glyph: new Glyph('-', 'red')},
     ],
     [
-      {point: point.add(Direction.n), glyph: Glyph('-', 'red')},
-      {point: point.add(Direction.s), glyph: Glyph('-', 'red')},
-      {point: point.add(Direction.e), glyph: Glyph('|', 'red')},
-      {point: point.add(Direction.w), glyph: Glyph('|', 'red')},
-      {point: point.add(Direction.ne), glyph: Glyph('\\', 'red')},
-      {point: point.add(Direction.sw), glyph: Glyph('\\', 'red')},
-      {point: point.add(Direction.nw), glyph: Glyph('/', 'red')},
-      {point: point.add(Direction.se), glyph: Glyph('/', 'red')},
+      {point: point.add(Direction.n), glyph: new Glyph('-', 'red')},
+      {point: point.add(Direction.s), glyph: new Glyph('-', 'red')},
+      {point: point.add(Direction.e), glyph: new Glyph('|', 'red')},
+      {point: point.add(Direction.w), glyph: new Glyph('|', 'red')},
+      {point: point.add(Direction.ne), glyph: new Glyph('\\', 'red')},
+      {point: point.add(Direction.sw), glyph: new Glyph('\\', 'red')},
+      {point: point.add(Direction.nw), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.se), glyph: new Glyph('/', 'red')},
     ],
   ];
   return ExtendEffect(base, 4);
@@ -731,21 +731,21 @@ const ExplosionEffect = (point: Point): Effect => {
 const ImplosionEffect = (point: Point): Effect => {
   const base = [
     [
-      {point, glyph: Glyph('*', 'red')},
-      {point: point.add(Direction.ne), glyph: Glyph('/', 'red')},
-      {point: point.add(Direction.sw), glyph: Glyph('/', 'red')},
-      {point: point.add(Direction.nw), glyph: Glyph('\\', 'red')},
-      {point: point.add(Direction.se), glyph: Glyph('\\', 'red')},
+      {point, glyph: new Glyph('*', 'red')},
+      {point: point.add(Direction.ne), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.sw), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.nw), glyph: new Glyph('\\', 'red')},
+      {point: point.add(Direction.se), glyph: new Glyph('\\', 'red')},
     ],
     [
-      {point, glyph: Glyph('#', 'red')},
-      {point: point.add(Direction.ne), glyph: Glyph('/', 'red')},
-      {point: point.add(Direction.sw), glyph: Glyph('/', 'red')},
-      {point: point.add(Direction.nw), glyph: Glyph('\\', 'red')},
-      {point: point.add(Direction.se), glyph: Glyph('\\', 'red')},
+      {point, glyph: new Glyph('#', 'red')},
+      {point: point.add(Direction.ne), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.sw), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.nw), glyph: new Glyph('\\', 'red')},
+      {point: point.add(Direction.se), glyph: new Glyph('\\', 'red')},
     ],
-    [{point, glyph: Glyph('*', 'red')}],
-    [{point, glyph: Glyph('#', 'red')}],
+    [{point, glyph: new Glyph('*', 'red')}],
+    [{point, glyph: new Glyph('#', 'red')}],
   ];
   return ExtendEffect(base, 3);
 };
@@ -755,7 +755,7 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   const line = LOS(source, target);
   if (line.length <= 2) return result;
 
-  const beam = Glyph(ray_character(source, target), 'red');
+  const beam = new Glyph(ray_character(source, target), 'red');
   const mod = int((line.length - 2 + speed) % speed);
   const start = int(mod ? mod : mod + speed);
   for (let i = start; i < line.length - 1; i = int(i + speed)) {
@@ -767,7 +767,7 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
 const SummonEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   const base: Effect = [];
   const line = LOS(source, target);
-  const ball = Glyph('*', 'red');
+  const ball = new Glyph('*', 'red');
   for (let i = 1; i < line.length - 1; i++) {
     base.push([{point: nonnull(line[i]), glyph: ball}]);
   }
@@ -952,7 +952,7 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
   const entity = board.getEntity(target);
   if (entity !== null) {
     const source = {point: target, glyph: entity.glyph}
-    const damage = {point: target, glyph: Recolor(entity.glyph)};
+    const damage = {point: target, glyph: entity.glyph.recolor()};
     effect = ParallelEffect([
       ConstantEffect(source, frame),
       SerialEffect([PauseEffect(frame), ConstantEffect(damage, 8)]),
@@ -988,9 +988,9 @@ const kDirectionKeys = 'kulnjbhy';
 const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
 
 const kTiles: {[ch: string]: Tile} = {
-  '.': {blocked: false, obscure: false, glyph: Glyph('.')},
-  '"': {blocked: false, obscure: true,  glyph: Glyph('"', 'green', true)},
-  '#': {blocked: true,  obscure: true,  glyph: Glyph('#', 'green')},
+  '.': {blocked: false, obscure: false, glyph: new Glyph('.')},
+  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', 'green', true)},
+  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', 'green')},
 };
 
 const kAttacks: Attack[] = [
@@ -1010,13 +1010,13 @@ const species = (name: string, hp: int, speed: number,
 };
 
 const kPokemon: PokemonSpeciesData[] = [
-  species('Bulbasaur',  int(90), 1/6, [],           Glyph('B', 'green')),
-  species('Charmander', int(80), 1/5, ['Ember'],    Glyph('C', 'red')),
-  species('Squirtle',   int(70), 1/4, ['Ice Beam'], Glyph('S', 'blue')),
-  species('Eevee',      int(80), 1/5, ['Headbutt'], Glyph('E', 'yellow')),
-  species('Pikachu',    int(60), 1/4, [],           Glyph('P', 'yellow', true)),
-  species('Rattata',    int(60), 1/4, ['Headbutt'], Glyph('R')),
-  species('Pidgey',     int(30), 1/3, [],           Glyph('P')),
+  species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', 'green')),
+  species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', 'red')),
+  species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', 'blue')),
+  species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', 'yellow')),
+  species('Pikachu',    int(60), 1/4, [],           new Glyph('P', 'yellow', true)),
+  species('Rattata',    int(60), 1/4, ['Headbutt'], new Glyph('R')),
+  species('Pidgey',     int(30), 1/3, [],           new Glyph('P')),
 ];
 
 type Input = string;
@@ -1238,8 +1238,8 @@ interface IO {
   count: int,
 };
 
-const kBreakGlyph = Glyph('\n');
-const kEmptyGlyph = Glyph(' ');
+const kBreakGlyph = new Glyph('\n').toString();
+const kEmptyGlyph = new Glyph(' ').toString();
 
 const renderFrameRate = (cpu: number, fps: number): string => {
   return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
@@ -1263,11 +1263,11 @@ const renderMap = (state: State): string => {
   const offset_y = int(player.pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
-  const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
+  const show = (x: int, y: int, glyph: string, force?: boolean) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
+    if (force || text[index] !== kEmptyGlyph) text[index] = glyph.toString();
   };
 
   const vision = board.getVision(player);
@@ -1275,12 +1275,12 @@ const renderMap = (state: State): string => {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
       if ((vision.getOrNull(point) ?? -1) < 0) continue;
-      show(point.x, point.y, board.getTile(point).glyph, true);
+      show(point.x, point.y, board.getTile(point).glyph.toString(), true);
     }
   }
 
   board.getEntities().forEach(x => {
-    show(x.pos.x, x.pos.y, x.glyph, trainer(x) === player);
+    show(x.pos.x, x.pos.y, x.glyph.toString(), trainer(x) === player);
   });
 
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
@@ -1296,15 +1296,15 @@ const renderMap = (state: State): string => {
       const dash = `\x1b[31m-\x1b[0m`;
       const name = `\x1b[1;31m${label}\x1b[0m`;
       const left = x === width - 1 || (0 < x && x < player.pos.x);
-      left ? show(int(x - 1), y, `${name}${dash}` as Glyph, true)
-           : show(int(x + 1), y, `${dash}${name}` as Glyph, true);
+      left ? show(int(x - 1), y, `${name}${dash}`, true)
+           : show(int(x + 1), y, `${dash}${name}`, true);
     }
   }
 
   const effect = board.getEffect();
   if (effect.length) {
     const frame = nonnull(effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
+    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph.toString()));
   }
 
   return text.join('');

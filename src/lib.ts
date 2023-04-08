@@ -52,8 +52,6 @@ const weighted = <T>(xs: [int, T][]): T => {
 //////////////////////////////////////////////////////////////////////////////
 // Glyph helper to speed up blessed.js formatting.
 
-type Glyph = string & {__type__: 'glyph'};
-
 type Color = 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white';
 
 const WideCharOffset = 0xff00 - 0x20;
@@ -72,25 +70,36 @@ const Color = (text: string, color: Color, light?: boolean): string => {
     }
   })();
   return `\x1b[${index + (light ? 90 : 30)}m${text}\x1b[39m`;
-};
+}
 
-const Glyph = (ch: string, color?: Color, light?: boolean): Glyph => {
-  assert(ch.length === 1);
-  if (ch === ' ') return '  ' as Glyph;
-  if (ch === '\n') return '\n' as Glyph;
-  const wide = String.fromCodePoint(ch.codePointAt(0)! + WideCharOffset);
-  return (color ? Color(wide, color, light) : wide) as Glyph;
-};
+class Glyph {
+  private readonly ch: string;
+  private readonly color: Color | null;
+  private readonly light: boolean;
+  private readonly text: string;
 
-const Recolor = (glyph: Glyph): Glyph => {
-  const index = glyph.indexOf('m');
-  const wide = index < 0 ? glyph : (glyph[index + 1] || ' ');
-  const code = wide.codePointAt(0)! - WideCharOffset;
-  const ch = code < 0 ? wide : String.fromCodePoint(code);
-  return `\x1b[41m${Glyph(ch, 'black')}\x1b[0m` as Glyph;
+  constructor(ch: string, color?: Color, light?: boolean) {
+    assert(ch.length === 1);
+    this.ch = ch;
+    this.color = color || null;
+    this.light = light || false;
+    this.text = Glyph.getColoredText(this.ch, this.color, this.light);
+  }
+
+  recolor(): Glyph { return new Glyph(this.ch, 'red'); }
+
+  toString(): string { return this.text; }
+
+  private static getColoredText(
+      ch: string, color: Color | null, light: boolean): string {
+    if (ch === ' ')  return '  ';
+    if (ch === '\n') return '\n';
+    const wide = String.fromCodePoint(ch.codePointAt(0)! + WideCharOffset);
+    return color ? Color(wide, color, light) : wide;
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-export {Color, Glyph, Recolor};
+export {Color, Glyph};
 export {assert, flatten, int, nonnull, only, range, sample, weighted};
