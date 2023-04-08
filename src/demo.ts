@@ -632,7 +632,7 @@ interface Particle {point: Point, glyph: Glyph};
 interface Frame extends Array<Particle> {};
 interface Effect extends Array<Frame> {};
 
-type Sparkle = [int, string, Color?, boolean?][];
+type Sparkle = [int, string, Color?][];
 
 const add_particle = (effect: Effect, frame: int, particle: Particle): void => {
   while (frame >= effect.length) effect.push([]);
@@ -642,10 +642,10 @@ const add_particle = (effect: Effect, frame: int, particle: Particle): void => {
 const add_sparkle =
     (effect: Effect, sparkle: Sparkle, frame: int, point: Point): int => {
   sparkle.forEach(x => {
-    const [delay, chars, color, light] = x;
+    const [delay, chars, color] = x;
     for (let i = 0; i < delay; i++, frame++) {
       const index = Math.floor(Math.random() * chars.length);
-      const glyph = new Glyph(nonnull(chars[index]), color, light);
+      const glyph = new Glyph(nonnull(chars[index]), color);
       add_particle(effect, frame, {glyph, point});
     }
   });
@@ -705,57 +705,60 @@ const SerialEffect = (effects: Effect[]): Effect => {
 };
 
 const ExplosionEffect = (point: Point): Effect => {
+  const color = '400';
   const base = [
-    [{point, glyph: new Glyph('*', 'red')}],
+    [{point, glyph: new Glyph('*', color)}],
     [
-      {point, glyph: new Glyph('+', 'red')},
-      {point: point.add(Direction.n), glyph: new Glyph('|', 'red')},
-      {point: point.add(Direction.s), glyph: new Glyph('|', 'red')},
-      {point: point.add(Direction.e), glyph: new Glyph('-', 'red')},
-      {point: point.add(Direction.w), glyph: new Glyph('-', 'red')},
+      {point, glyph: new Glyph('+', color)},
+      {point: point.add(Direction.n), glyph: new Glyph('|', color)},
+      {point: point.add(Direction.s), glyph: new Glyph('|', color)},
+      {point: point.add(Direction.e), glyph: new Glyph('-', color)},
+      {point: point.add(Direction.w), glyph: new Glyph('-', color)},
     ],
     [
-      {point: point.add(Direction.n), glyph: new Glyph('-', 'red')},
-      {point: point.add(Direction.s), glyph: new Glyph('-', 'red')},
-      {point: point.add(Direction.e), glyph: new Glyph('|', 'red')},
-      {point: point.add(Direction.w), glyph: new Glyph('|', 'red')},
-      {point: point.add(Direction.ne), glyph: new Glyph('\\', 'red')},
-      {point: point.add(Direction.sw), glyph: new Glyph('\\', 'red')},
-      {point: point.add(Direction.nw), glyph: new Glyph('/', 'red')},
-      {point: point.add(Direction.se), glyph: new Glyph('/', 'red')},
+      {point: point.add(Direction.n),  glyph: new Glyph('-', color)},
+      {point: point.add(Direction.s),  glyph: new Glyph('-', color)},
+      {point: point.add(Direction.e),  glyph: new Glyph('|', color)},
+      {point: point.add(Direction.w),  glyph: new Glyph('|', color)},
+      {point: point.add(Direction.ne), glyph: new Glyph('\\', color)},
+      {point: point.add(Direction.sw), glyph: new Glyph('\\', color)},
+      {point: point.add(Direction.nw), glyph: new Glyph('/', color)},
+      {point: point.add(Direction.se), glyph: new Glyph('/', color)},
     ],
   ];
   return ExtendEffect(base, 4);
 };
 
 const ImplosionEffect = (point: Point): Effect => {
+  const color = '400';
   const base = [
     [
-      {point, glyph: new Glyph('*', 'red')},
-      {point: point.add(Direction.ne), glyph: new Glyph('/', 'red')},
-      {point: point.add(Direction.sw), glyph: new Glyph('/', 'red')},
-      {point: point.add(Direction.nw), glyph: new Glyph('\\', 'red')},
-      {point: point.add(Direction.se), glyph: new Glyph('\\', 'red')},
+      {point, glyph: new Glyph('*', color)},
+      {point: point.add(Direction.ne), glyph: new Glyph('/', color)},
+      {point: point.add(Direction.sw), glyph: new Glyph('/', color)},
+      {point: point.add(Direction.nw), glyph: new Glyph('\\', color)},
+      {point: point.add(Direction.se), glyph: new Glyph('\\', color)},
     ],
     [
-      {point, glyph: new Glyph('#', 'red')},
-      {point: point.add(Direction.ne), glyph: new Glyph('/', 'red')},
-      {point: point.add(Direction.sw), glyph: new Glyph('/', 'red')},
-      {point: point.add(Direction.nw), glyph: new Glyph('\\', 'red')},
-      {point: point.add(Direction.se), glyph: new Glyph('\\', 'red')},
+      {point, glyph: new Glyph('#', color)},
+      {point: point.add(Direction.ne), glyph: new Glyph('/', color)},
+      {point: point.add(Direction.sw), glyph: new Glyph('/', color)},
+      {point: point.add(Direction.nw), glyph: new Glyph('\\', color)},
+      {point: point.add(Direction.se), glyph: new Glyph('\\', color)},
     ],
-    [{point, glyph: new Glyph('*', 'red')}],
-    [{point, glyph: new Glyph('#', 'red')}],
+    [{point, glyph: new Glyph('*', color)}],
+    [{point, glyph: new Glyph('#', color)}],
   ];
   return ExtendEffect(base, 3);
 };
 
 const RayEffect = (source: Point, target: Point, speed: int): Effect => {
+  const color = '400';
   const result: Effect = [];
   const line = LOS(source, target);
   if (line.length <= 2) return result;
 
-  const beam = new Glyph(ray_character(source, target), 'red');
+  const beam = new Glyph(ray_character(source, target), color);
   const mod = int((line.length - 2 + speed) % speed);
   const start = int(mod ? mod : mod + speed);
   for (let i = start; i < line.length - 1; i = int(i + speed)) {
@@ -765,9 +768,10 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
 };
 
 const SummonEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
+  const color = '400';
   const base: Effect = [];
   const line = LOS(source, target);
-  const ball = new Glyph('*', 'red');
+  const ball = new Glyph('*', color);
   for (let i = 1; i < line.length - 1; i++) {
     base.push([{point: nonnull(line[i]), glyph: ball}]);
   }
@@ -802,18 +806,18 @@ const EmberEffect = (board: Board, source: Point, target: Point): AttackEffect =
   const line = LOS(source, target);
 
   const trail = (): Sparkle => [
-    [random_delay(0), '*^^', 'red'],
-    [random_delay(1), '*^', 'yellow'],
-    [random_delay(2), '**^', 'yellow', true],
-    [random_delay(3), '**^#%', 'yellow'],
-    [random_delay(4), '#%', 'red'],
+    [random_delay(0), '*^^',   '400'],
+    [random_delay(1), '*^',    '420'],
+    [random_delay(2), '**^',   '440'],
+    [random_delay(3), '**^#%', '420'],
+    [random_delay(4), '#%',    '400'],
   ];
   const flame = (): Sparkle => [
-    [random_delay(0), '*^^', 'red'],
-    [random_delay(1), '*^', 'yellow'],
-    [random_delay(2), '**^#%', 'yellow', true],
-    [random_delay(3), '*^#%', 'yellow'],
-    [random_delay(4), '*^#%', 'red'],
+    [random_delay(0), '*^^',   '400'],
+    [random_delay(1), '*^',    '420'],
+    [random_delay(2), '**^#%', '440'],
+    [random_delay(3), '*^#%',  '420'],
+    [random_delay(4), '*^#%',  '400'],
   ];
 
   for (let i = 1; i < line.length - 1; i++) {
@@ -836,17 +840,17 @@ const IceBeamEffect = (board: Board, source: Point, target: Point): AttackEffect
   const ch = ray_character(source, target);
 
   const trail: Sparkle = [
-    [2, ch, 'white'],
-    [2, ch, 'cyan'],
-    [2, ch, 'blue'],
+    [2, ch, '555'],
+    [2, ch, '044'],
+    [2, ch, '004'],
   ];
   const flame: Sparkle = [
-    [2, '*', 'white'],
-    [2, '*', 'cyan'],
-    [2, '*', 'blue'],
-    [2, '*', 'white'],
-    [2, '*', 'cyan'],
-    [2, '*', 'blue'],
+    [2, '*', '555'],
+    [2, '*', '044'],
+    [2, '*', '004'],
+    [2, '*', '555'],
+    [2, '*', '044'],
+    [2, '*', '004'],
   ];
 
   for (let i = 1; i < line.length; i++) {
@@ -873,17 +877,17 @@ const BlizzardEffect = (board: Board, source: Point, target: Point): AttackEffec
   }
 
   const trail: Sparkle = [
-    [1, ch, 'white'],
-    [1, ch, 'cyan'],
-    [1, ch, 'blue'],
+    [1, ch, '555'],
+    [1, ch, '044'],
+    [1, ch, '004'],
   ];
   const flame: Sparkle = [
-    [2, '*', 'white'],
-    [2, '*', 'cyan'],
-    [2, '*', 'blue'],
-    [2, '*', 'white'],
-    [2, '*', 'cyan'],
-    [2, '*', 'blue'],
+    [2, '*', '555'],
+    [2, '*', '044'],
+    [2, '*', '004'],
+    [2, '*', '555'],
+    [2, '*', '044'],
+    [2, '*', '004'],
   ];
 
   let hitFrame: int = 0;
@@ -908,7 +912,10 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): AttackEffec
   const ch = ray_character(source, target);
 
   const trail = (): Sparkle => [
-    [8, '#', 'white'],
+    [2, '#', '444'],
+    [2, '#', '333'],
+    [2, '#', '222'],
+    [2, '#', '111'],
   ];
 
   const line = LOS(source, target);
@@ -952,7 +959,7 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
   const entity = board.getEntity(target);
   if (entity !== null) {
     const source = {point: target, glyph: entity.glyph}
-    const damage = {point: target, glyph: entity.glyph.recolor()};
+    const damage = {point: target, glyph: entity.glyph.recolor('black', '400')};
     effect = ParallelEffect([
       ConstantEffect(source, frame),
       SerialEffect([PauseEffect(frame), ConstantEffect(damage, 8)]),
@@ -989,8 +996,8 @@ const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
 
 const kTiles: {[ch: string]: Tile} = {
   '.': {blocked: false, obscure: false, glyph: new Glyph('.')},
-  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', 'green', true)},
-  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', 'green')},
+  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', '231')},
+  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', '010')},
 };
 
 const kAttacks: Attack[] = [
@@ -1010,11 +1017,11 @@ const species = (name: string, hp: int, speed: number,
 };
 
 const kPokemon: PokemonSpeciesData[] = [
-  species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', 'green')),
-  species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', 'red')),
-  species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', 'blue')),
-  species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', 'yellow')),
-  species('Pikachu',    int(60), 1/4, [],           new Glyph('P', 'yellow', true)),
+  species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', '020')),
+  species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', '410')),
+  species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
+  species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', '420')),
+  species('Pikachu',    int(60), 1/4, [],           new Glyph('P', '440')),
   species('Rattata',    int(60), 1/4, ['Headbutt'], new Glyph('R')),
   species('Pidgey',     int(30), 1/3, [],           new Glyph('P')),
 ];
@@ -1238,8 +1245,8 @@ interface IO {
   count: int,
 };
 
-const kBreakGlyph = new Glyph('\n').toString();
-const kEmptyGlyph = new Glyph(' ').toString();
+const kBreakGlyph = new Glyph('\n');
+const kEmptyGlyph = new Glyph(' ');
 
 const renderFrameRate = (cpu: number, fps: number): string => {
   return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
@@ -1253,7 +1260,7 @@ const renderMap = (state: State): string => {
   const {board, player} = state;
   const width  = Constants.MAP_SIZE;
   const height = Constants.MAP_SIZE;
-  const text: string[] = Array((width + 1) * height).fill(kEmptyGlyph);
+  const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
   for (let i = 0; i < height; i++) {
     text[width + (width + 1) * i] = kBreakGlyph;
   }
@@ -1263,11 +1270,11 @@ const renderMap = (state: State): string => {
   const offset_y = int(player.pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
-  const show = (x: int, y: int, glyph: string, force?: boolean) => {
+  const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    if (force || text[index] !== kEmptyGlyph) text[index] = glyph.toString();
+    if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
   };
 
   const vision = board.getVision(player);
@@ -1275,12 +1282,12 @@ const renderMap = (state: State): string => {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
       if ((vision.getOrNull(point) ?? -1) < 0) continue;
-      show(point.x, point.y, board.getTile(point).glyph.toString(), true);
+      show(point.x, point.y, board.getTile(point).glyph, true);
     }
   }
 
   board.getEntities().forEach(x => {
-    show(x.pos.x, x.pos.y, x.glyph.toString(), trainer(x) === player);
+    show(x.pos.x, x.pos.y, x.glyph, trainer(x) === player);
   });
 
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
@@ -1292,19 +1299,19 @@ const renderMap = (state: State): string => {
       if (hidden) continue;
       const label = key.toUpperCase();
       const index = x + (width + 1) * y;
-      text[index] = `\x1b[41m${text[index]}\x1b[0m`;
+      text[index] = `\x1b[41m${text[index]}\x1b[0m` as any as Glyph;
       const dash = `\x1b[31m-\x1b[0m`;
       const name = `\x1b[1;31m${label}\x1b[0m`;
       const left = x === width - 1 || (0 < x && x < player.pos.x);
-      left ? show(int(x - 1), y, `${name}${dash}`, true)
-           : show(int(x + 1), y, `${dash}${name}`, true);
+      left ? show(int(x - 1), y, `${name}${dash}` as any as Glyph, true)
+           : show(int(x + 1), y, `${dash}${name}` as any as Glyph, true);
     }
   }
 
   const effect = board.getEffect();
   if (effect.length) {
     const frame = nonnull(effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph.toString()));
+    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
   }
 
   return text.join('');
@@ -1348,19 +1355,16 @@ const renderStatus = (state: State): string => {
     const bar = (value: number, color: Color): string => {
       const total = width - 6;
       const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
-      return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
+      return Color('='.repeat(chars), color, null) + ' '.repeat(total - chars);
     };
 
+    append(i, 0, header);
     if (entity) {
-      append(i, 0, header);
-      append(i, 1, `HP: [${bar(health, 'green')}]`);
-      append(i, 2, `PP: [${bar(1, 'blue')}]`);
+      append(i, 1, `HP: [${bar(health, '020')}]`);
+      append(i, 2, `PP: [${bar(1, '234')}]`);
     } else if (pokemon) {
-      append(i, 0, Color(header, 'white'));
-      append(i, 1, `HP: [${bar(health, 'white')}]`);
-      append(i, 2, `PP: [${bar(1, 'white')}]`);
-    } else {
-      append(i, 0, Color(header, 'white'));
+      append(i, 1, `HP: [${bar(health, '555')}]`);
+      append(i, 2, `PP: [${bar(1, '555')}]`);
     }
   });
 

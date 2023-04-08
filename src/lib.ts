@@ -52,50 +52,51 @@ const weighted = <T>(xs: [int, T][]): T => {
 //////////////////////////////////////////////////////////////////////////////
 // Glyph helper to speed up blessed.js formatting.
 
-type Color = 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white';
+type Digit = ('0' | '1' | '2' | '3' | '4' | '5');
+type Color = 'black' | `${Digit}${Digit}${Digit}`;
 
 const WideCharOffset = 0xff00 - 0x20;
 
-const Color = (text: string, color: Color, light?: boolean): string => {
-  const index = (() => {
-    switch (color) {
-      case 'black':   return 0;
-      case 'red':     return 1;
-      case 'green':   return 2;
-      case 'yellow':  return 3;
-      case 'blue':    return 4;
-      case 'magenta': return 5;
-      case 'cyan':    return 6;
-      case 'white':   return 7;
-    }
-  })();
-  return `\x1b[${index + (light ? 90 : 30)}m${text}\x1b[39m`;
+const Color = (text: string, fg: Color | null, bg: Color | null): string => {
+  const index = (color: Color) => {
+    if (color === 'black') return 0;
+    const base = '0'.charCodeAt(0);
+    const r = color.charCodeAt(0) - base;
+    const g = color.charCodeAt(1) - base;
+    const b = color.charCodeAt(2) - base;
+    return 16 + b + 6 * g + 36 * r;
+  };
+  if (fg) text = `\x1b[38;5;${index(fg)}m${text}\x1b[39m`;
+  if (bg) text = `\x1b[48;5;${index(bg)}m${text}\x1b[49m`;
+  return text;
 }
 
 class Glyph {
   private readonly ch: string;
-  private readonly color: Color | null;
-  private readonly light: boolean;
+  private readonly fg: Color | null;
+  private readonly bg: Color | null;
   private readonly text: string;
 
-  constructor(ch: string, color?: Color, light?: boolean) {
+  constructor(ch: string, fg?: Color | null, bg?: Color | null) {
     assert(ch.length === 1);
     this.ch = ch;
-    this.color = color || null;
-    this.light = light || false;
-    this.text = Glyph.getColoredText(this.ch, this.color, this.light);
+    this.fg = fg || null;
+    this.bg = bg || null;
+    this.text = Glyph.getColoredText(this.ch, this.fg, this.bg);
   }
 
-  recolor(): Glyph { return new Glyph(this.ch, 'red'); }
+  recolor(fg: Color | null, bg: Color | null): Glyph {
+    return new Glyph(this.ch, fg, bg);
+  }
 
   toString(): string { return this.text; }
 
   private static getColoredText(
-      ch: string, color: Color | null, light: boolean): string {
+      ch: string, fg: Color | null, bg: Color | null): string {
     if (ch === ' ')  return '  ';
     if (ch === '\n') return '\n';
     const wide = String.fromCodePoint(ch.codePointAt(0)! + WideCharOffset);
-    return color ? Color(wide, color, light) : wide;
+    return Color(wide, fg, bg);
   }
 };
 
