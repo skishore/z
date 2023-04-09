@@ -70,6 +70,8 @@ class Point {
     return int(n * (n + 1) / 2 + ax);
   }
 
+  scale(n: int): Point { return new Point(int(this.x * n), int(this.y * n)); }
+
   toString(): string { return `Point(${this.x}, ${this.y})`; }
 };
 

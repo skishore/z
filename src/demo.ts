@@ -626,6 +626,14 @@ const resolveTarget = (board: Board, base: Target, target: Point): Action => {
   }
 };
 
+const checkSummon = (state: State, summon: Summon): boolean => {
+  const {board, player} = state;
+  const {range, target} = summon;
+  return board.getStatus(target) === Status.FREE &&
+         player.pos.distanceNethack(target) <= range &&
+         (board.getVision(player).getOrNull(target) ?? -1) >= 0;
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 interface Particle {point: Point, glyph: Glyph};
@@ -980,7 +988,7 @@ const Constants = {
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
-  SUMMON_RANGE:  int(2),
+  SUMMON_RANGE:  int(12),
   TRAINER_SPEED: 1/10,
 };
 
@@ -1031,6 +1039,7 @@ type Input = string;
 interface State {
   board: Board,
   player: Trainer,
+  summon: Summon | null,
   target: Target | null,
 };
 
@@ -1041,15 +1050,33 @@ interface Option {
 
 type Options = Map<string, Option>;
 
+type Summon = {index: int, ok: boolean, range: int, target: Point};
+
 type Target =
   {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
   {type: TT.Summon, options: Options, index: int};
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player} = state;
+  const {board, player, summon, target} = state;
 
-  if (state.target) {
-    const target = state.target;
+  if (summon) {
+    const lower = input.startsWith('S-') ? input.substr(2) : input;
+    const direction = Direction.all[kDirectionKeys.indexOf(lower)];
+    if (direction) {
+      const scale = input === lower ? 1 : 4;
+      summon.target = summon.target.add(direction.scale(scale));
+      summon.ok = checkSummon(state, summon);
+    } else if (input === '.' && summon.ok) {
+      const {index, target} = summon;
+      player.data.input = {type: AT.Summon, index, target};
+      state.summon = null;
+    } else if (input === 'escape') {
+      state.summon = null;
+    }
+    return;
+  }
+
+  if (target) {
     const option = target.options.get(input);
     if (option) {
       player.data.input = resolveTarget(state.board, target, option.point);
@@ -1070,7 +1097,9 @@ const processInput = (state: State, input: Input): void => {
       if (attacks.length === 0) return;
       state.target = targetsForAttack(board, pokemon, sample(attacks));
     } else {
-      state.target = targetsForSummon(board, player, index);
+      const range = Constants.SUMMON_RANGE;
+      state.summon = {index, ok: false, range, target: player.pos};
+      state.summon.ok = checkSummon(state, state.summon);
     }
   }
 
@@ -1189,7 +1218,7 @@ const initializeState = (): State => {
     board.addEntity(makePokemon(pos, data));
   }
 
-  return {board, player, target: null};
+  return {board, player, summon: null, target: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1257,7 +1286,7 @@ const renderLog = (state: State): string => {
 };
 
 const renderMap = (state: State): string => {
-  const {board, player} = state;
+  const {board, player, summon, target} = state;
   const width  = Constants.MAP_SIZE;
   const height = Constants.MAP_SIZE;
   const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
@@ -1265,9 +1294,9 @@ const renderMap = (state: State): string => {
     text[width + (width + 1) * i] = kBreakGlyph;
   }
 
-
-  const offset_x = int(player.pos.x - (width - 1) / 2);
-  const offset_y = int(player.pos.y - (height - 1) / 2);
+  const pos = player.pos;
+  const offset_x = int(pos.x - (width - 1) / 2);
+  const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
   const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
@@ -1277,12 +1306,22 @@ const renderMap = (state: State): string => {
     if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
   };
 
+  const recolor = (x: int, y: int, fg?: Color | null, bg?: Color | null) => {
+    x -= offset_x; y -= offset_y;
+    if (!(0 <= x && x < width && 0 <= y && y < height)) return;
+    const index = x + (width + 1) * y;
+    text[index] = text[index]!.recolor(fg, bg);
+  };
+
   const vision = board.getVision(player);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
       if ((vision.getOrNull(point) ?? -1) < 0) continue;
-      show(point.x, point.y, board.getTile(point).glyph, true);
+      const glyph = board.getTile(point).glyph;
+      const out_of_range = summon && point.distanceNethack(pos) > summon.range;
+      const shaded_glyph = out_of_range ? glyph.recolor('111') : glyph;
+      show(point.x, point.y, shaded_glyph, true);
     }
   }
 
@@ -1290,10 +1329,15 @@ const renderMap = (state: State): string => {
     show(x.pos.x, x.pos.y, x.glyph, trainer(x) === player);
   });
 
+  if (summon) {
+    const color: Color = summon.ok ? '440' : '400';
+    recolor(summon.target.x, summon.target.y, 'black', color);
+  }
+
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
   // select label directions here. Precompute the match on action selection.
-  if (state.target) {
-    for (const [key, option] of state.target.options.entries()) {
+  if (target) {
+    for (const [key, option] of target.options.entries()) {
       assert(key.length === 1);
       const {hidden, point: {x, y}} = option;
       if (hidden) continue;
@@ -1355,7 +1399,7 @@ const renderStatus = (state: State): string => {
     const bar = (value: number, color: Color): string => {
       const total = width - 6;
       const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
-      return Color('='.repeat(chars), color, null) + ' '.repeat(total - chars);
+      return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
     };
 
     append(i, 0, header);
@@ -1403,8 +1447,9 @@ const initializeIO = (state: State): IO => {
   [content, fps].map(x => screen.append(x));
 
   const inputs: Input[] = [];
-  screen.key(['C-c'], () => process.exit(0));
-  ['escape', '.'].concat(Array.from(kAllKeys)).forEach(
+  const fast_dirs = Array.from(kDirectionKeys).map(x => `S-${x}`);
+  screen.key(['S-a', 'C-c'], () => process.exit(0));
+  ['escape', '.'].concat(Array.from(kAllKeys)).concat(fast_dirs).forEach(
     x => screen.key([x], () => inputs.push(x)));
   return {fps, log, map, status, inputs, screen, state, timing: [], count: 0};
 };

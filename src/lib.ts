@@ -57,7 +57,7 @@ type Color = 'black' | `${Digit}${Digit}${Digit}`;
 
 const WideCharOffset = 0xff00 - 0x20;
 
-const Color = (text: string, fg: Color | null, bg: Color | null): string => {
+const Color = (text: string, fg?: Color | null, bg?: Color | null): string => {
   const index = (color: Color) => {
     if (color === 'black') return 0;
     const base = '0'.charCodeAt(0);
@@ -85,7 +85,7 @@ class Glyph {
     this.text = Glyph.getColoredText(this.ch, this.fg, this.bg);
   }
 
-  recolor(fg: Color | null, bg: Color | null): Glyph {
+  recolor(fg?: Color | null, bg?: Color | null): Glyph {
     return new Glyph(this.ch, fg, bg);
   }
 
@@ -93,8 +93,8 @@ class Glyph {
 
   private static getColoredText(
       ch: string, fg: Color | null, bg: Color | null): string {
-    if (ch === ' ')  return '  ';
-    if (ch === '\n') return '\n';
+    if (ch === ' ')  return Color('  ', fg, bg);
+    if (ch === '\n') return Color('\n', fg, bg);
     const wide = String.fromCodePoint(ch.codePointAt(0)! + WideCharOffset);
     return Color(wide, fg, bg);
   }
