@@ -628,8 +628,7 @@ const resolveTarget = (board: Board, base: Target, target: Point): Action => {
 
 const animateSummon = (state: State, summon: Summon): void => {
   const frame = summon.frame;
-  const length = Constants.SUMMON_ANIM + summon.path.length - 1;
-  summon.frame = int((frame + 1) % length);
+  summon.frame = int((frame + 1) % Constants.SUMMON_ANIM);
 };
 
 const initSummon = (state: State, index: int, range: int, target: Point): Summon => {
@@ -1006,14 +1005,14 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE:      int(49),
+  MAP_SIZE:      int(47),
   FOV_RADIUS:    int(24),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
-  SUMMON_ANIM:   int(15),
+  SUMMON_ANIM:   int(60),
   SUMMON_RANGE:  int(12),
   TRAINER_SPEED: 1/10,
 };
@@ -1096,9 +1095,18 @@ const processInput = (state: State, input: Input): void => {
     const lower = input.startsWith('S-') ? input.substr(2) : input;
     const direction = Direction.all[kDirectionKeys.indexOf(lower)];
     if (direction) {
+      let target = summon.target;
       const scale = input === lower ? 1 : 4;
-      const target = summon.target.add(direction.scale(scale));
-      updateSummonTarget(state, summon, target);
+      const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
+      for (let i = 0; i < scale; i++) {
+        const next_target = target.add(direction);
+        const delta = next_target.sub(player.pos);
+        if (Math.abs(delta.x) > limit || Math.abs(delta.y) > limit) break;
+        target = next_target;
+      }
+      if (!target.equal(summon.target)) {
+        updateSummonTarget(state, summon, target);
+      }
     } else if (input === '.' && summon.ok) {
       const {index, target} = summon;
       player.data.input = {type: AT.Summon, index, target};
@@ -1363,14 +1371,19 @@ const renderMap = (state: State): string => {
   });
 
   if (summon) {
+    const {path, target} = summon;
     const color: Color = summon.ok ? '440' : '400';
-    recolor(summon.target.x, summon.target.y, 'black', color);
-    const frame = summon.frame - Constants.SUMMON_ANIM;
-    if (0 <= frame) {
-      assert(frame < summon.path.length);
-      const [{x, y}, ok] = summon.path[frame]!;
-      const ch = ray_character(player.pos, summon.target);
-      show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
+    recolor(target.x, target.y, 'black', color);
+
+    const length = path.length - 1;
+    const midpoint = Math.floor((Constants.SUMMON_ANIM - length) / 2);
+    for (let i = -1; i < 1; i++) {
+      const index = summon.frame - midpoint + i;
+      if (0 <= index && index < length) {
+        const [{x, y}, ok] = summon.path[index]!;
+        const ch = ray_character(player.pos, summon.target);
+        show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
+      }
     }
   }
 
