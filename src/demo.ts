@@ -626,12 +626,37 @@ const resolveTarget = (board: Board, base: Target, target: Point): Action => {
   }
 };
 
-const checkSummon = (state: State, summon: Summon): boolean => {
+const animateSummon = (state: State, summon: Summon): void => {
+  const frame = summon.frame;
+  const length = Constants.SUMMON_ANIM + summon.path.length - 1;
+  summon.frame = int((frame + 1) % length);
+};
+
+const initSummon = (state: State, index: int, range: int, target: Point): Summon => {
+  const result = {frame: int(0), index, ok: true, path: [], range, target};
+  updateSummonTarget(state, result, target);
+  return result;
+};
+
+const updateSummonTarget = (state: State, summon: Summon, target: Point): void => {
+  const range = summon.range;
   const {board, player} = state;
-  const {range, target} = summon;
-  return board.getStatus(target) === Status.FREE &&
-         player.pos.distanceNethack(target) <= range &&
-         (board.getVision(player).getOrNull(target) ?? -1) >= 0;
+  const los = LOS(player.pos, target);
+  const start = los.length > 1 ? 1 : 0;
+
+  let ok = true;
+  summon.path.length = 0;
+  for (let i = start; i < los.length; i++) {
+    const point = los[i]!;
+    ok &&= board.getStatus(point) === Status.FREE &&
+           player.pos.distanceNethack(point) <= range &&
+           (board.getVision(player).getOrNull(point) ?? -1) >= 0;
+    summon.path.push([point, ok]);
+  }
+
+  summon.ok = ok;
+  summon.frame = 0;
+  summon.target = target;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -988,6 +1013,7 @@ const Constants = {
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
+  SUMMON_ANIM:   int(15),
   SUMMON_RANGE:  int(12),
   TRAINER_SPEED: 1/10,
 };
@@ -1050,7 +1076,14 @@ interface Option {
 
 type Options = Map<string, Option>;
 
-type Summon = {index: int, ok: boolean, range: int, target: Point};
+type Summon = {
+  frame: int
+  index: int,
+  ok: boolean,
+  path: [Point, boolean][],
+  range: int,
+  target: Point,
+};
 
 type Target =
   {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
@@ -1064,8 +1097,8 @@ const processInput = (state: State, input: Input): void => {
     const direction = Direction.all[kDirectionKeys.indexOf(lower)];
     if (direction) {
       const scale = input === lower ? 1 : 4;
-      summon.target = summon.target.add(direction.scale(scale));
-      summon.ok = checkSummon(state, summon);
+      const target = summon.target.add(direction.scale(scale));
+      updateSummonTarget(state, summon, target);
     } else if (input === '.' && summon.ok) {
       const {index, target} = summon;
       player.data.input = {type: AT.Summon, index, target};
@@ -1098,8 +1131,7 @@ const processInput = (state: State, input: Input): void => {
       state.target = targetsForAttack(board, pokemon, sample(attacks));
     } else {
       const range = Constants.SUMMON_RANGE;
-      state.summon = {index, ok: false, range, target: player.pos};
-      state.summon.ok = checkSummon(state, state.summon);
+      state.summon = initSummon(state, index, range, player.pos);
     }
   }
 
@@ -1230,6 +1262,7 @@ const updateState = (state: State, inputs: Input[]): void => {
          active === player && player.data.input === null) {
     processInput(state, nonnull(inputs.shift()));
   }
+  if (state.summon) return animateSummon(state, state.summon);
 
   while (!board.getEffect().length) {
     const entity = board.getActiveEntity();
@@ -1332,6 +1365,13 @@ const renderMap = (state: State): string => {
   if (summon) {
     const color: Color = summon.ok ? '440' : '400';
     recolor(summon.target.x, summon.target.y, 'black', color);
+    const frame = summon.frame - Constants.SUMMON_ANIM;
+    if (0 <= frame) {
+      assert(frame < summon.path.length);
+      const [{x, y}, ok] = summon.path[frame]!;
+      const ch = ray_character(player.pos, summon.target);
+      show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
+    }
   }
 
   // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
