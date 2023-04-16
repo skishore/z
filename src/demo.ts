@@ -413,7 +413,7 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
     if (!pos.equal(ep) && board.getEntity(pos)) return false;
     const dn = tp.distanceNethack(pos);
     if (dn > 2) return false;
-    const vn = vision.getOrNull(pos) || 0;
+    const vn = vision.getOrNull(pos) ?? -1;
     return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
   };
   if (ep.distanceNethack(tp) <= 3) {
@@ -545,8 +545,7 @@ const findOptionAtDirection =
   while (true) {
     const next = prev.add(dir);
     if (pos.distanceNethack(next) > range) return prev;
-    const sight = vision.getOrNull(next);
-    if (sight === null || sight < 0) return prev;
+    if ((vision.getOrNull(next) ?? -1) < 0) return prev;
     if (board.getTile(next).blocked) return blocked ? next : prev;
     prev = next;
   }
@@ -1088,6 +1087,12 @@ type Target =
   {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
   {type: TT.Summon, options: Options, index: int};
 
+const outsideMap = (state: State, point: Point): boolean => {
+  const delta = point.sub(state.player.pos);
+  const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
+  return Math.abs(delta.x) > limit || Math.abs(delta.y) > limit;
+};
+
 const processInput = (state: State, input: Input): void => {
   const {board, player, summon, target} = state;
 
@@ -1097,11 +1102,9 @@ const processInput = (state: State, input: Input): void => {
     if (direction) {
       let target = summon.target;
       const scale = input === lower ? 1 : 4;
-      const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
       for (let i = 0; i < scale; i++) {
         const next_target = target.add(direction);
-        const delta = next_target.sub(player.pos);
-        if (Math.abs(delta.x) > limit || Math.abs(delta.y) > limit) break;
+        if (outsideMap(state, next_target)) break;
         target = next_target;
       }
       if (!target.equal(summon.target)) {
@@ -1417,58 +1420,82 @@ const renderMap = (state: State): string => {
   return text.join('');
 };
 
+const renderEntityStatus = (state: State, entity: Entity, width: int): string[] => {
+  const result = [''];
+  const bar = (value: number, color: Color): string => {
+    const total = width - 6;
+    const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
+    return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
+  };
+
+  if (entity.type === ET.Pokemon) {
+    const self = entity.data.self;
+    result.push(self.species.name);
+    result.push(`HP: [${bar(self.cur_hp / self.max_hp, '020')}]`);
+    result.push(`PP: [${bar(1, '234')}]`);
+  } else {
+    const status = entity.data.pokemon.map(
+        x => x.self.cur_hp > 0 ? '*' : Color('*', 'gray'));
+    result.push(entity.data.player ? 'You' : entity.data.name);
+    result.push(`HP: [${bar(1, '020')}]`);
+    result.push(`     ${status.join(' ')}`);
+  }
+  result.push('');
+
+  return result;
+};
+
 const renderStatus = (state: State): string => {
+  const kNumColumns = 2;
+  const kColumnPadding = 2;
   const w = Constants.STATUS_SIZE;
   const h = Constants.MAP_SIZE + 2;
+  const width = int(Math.floor(w / kNumColumns) - 2 * kColumnPadding);
 
-  const kPadding = 2;
-  const kPokemonPerRow = 3;
-  const kRows = Math.ceil(kPokemonKeys.length / kPokemonPerRow);
-  const outer = Math.floor(w / kPokemonPerRow);
-  const width = outer - 2 * kPadding;
+  const player = state.player;
+  const vision = state.board.getVision(player);
 
-  const row_space = 3;
-  const row_total = (3 + row_space) * kRows - row_space
-  const top_space = Math.floor((h - row_total) / 2);
-  const lines: string[] = [];
-  for (let i = 0; i < kRows; i++) {
-    const space = i === 0 ? top_space : row_space;
-    ['\n'.repeat(space - 1), '', '', ''].forEach(x => lines.push(x));
-  }
-
-  const base = Math.floor((w - outer * kPokemonPerRow) / 2) + kPadding;
-  const append = (i: int, j: int, text: string) => {
-    const k = j + 4 * (kRows - Math.floor(i / kPokemonPerRow)) - 3;
-    const left = base + outer * (i % kPokemonPerRow);
-    const padding = left - lines[k]!.replace(/\x1b\[[\d;]*m/g, '').length;
-    if (padding > 0) lines[k] += ' '.repeat(padding);
-    lines[k] += text;
-  };
+  const lcol: string[] = [];
+  const rcol: string[] = [];
+  renderEntityStatus(state, state.player, width).forEach(x => lcol.push(x));
 
   Array.from(kPokemonKeys).forEach((key, ii) => {
     const i = int(ii);
-    const pokemon = state.player.data.pokemon[i] || null;
-    const entity = pokemon ? pokemon.entity : null;
-    const header = `${key}) ${pokemon ? pokemon.self.species.name : '---'}`;
-    const health = pokemon ? pokemon.self.cur_hp / pokemon.self.max_hp : 0;
-
-    const bar = (value: number, color: Color): string => {
-      const total = width - 6;
-      const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
-      return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
-    };
-
-    append(i, 0, header);
-    if (entity) {
-      append(i, 1, `HP: [${bar(health, '020')}]`);
-      append(i, 2, `PP: [${bar(1, '234')}]`);
-    } else if (pokemon) {
-      append(i, 1, `HP: [${bar(health, '555')}]`);
-      append(i, 2, `PP: [${bar(1, '555')}]`);
-    }
+    const e = player.data.pokemon[i]?.entity;
+    if (e) renderEntityStatus(state, e, width).forEach(x => lcol.push(x));
   });
 
-  return lines.join('\n');
+  const source = player.pos;
+  const pokemon: Pokemon[] = [];
+  state.board.getEntities().forEach(entity => {
+    if (entity.type !== ET.Pokemon) return;
+    if (entity.data.self.trainer === player) return;
+    if ((vision.getOrNull(entity.pos) ?? -1) < 0) return;
+    if (outsideMap(state, entity.pos)) return;
+    pokemon.push(entity);
+  });
+
+  pokemon.sort((entity_a, entity_b): number => {
+    const a = entity_a.pos, b = entity_b.pos;
+    const base = a.distanceSquared(source) - b.distanceSquared(source);
+    const xopt = a.x - b.x, yopt = a.y - b.y;
+    return base || xopt || yopt;
+  });
+  pokemon.slice(0, 32).forEach(
+      x => renderEntityStatus(state, x, width).forEach(y => rcol.push(y)));
+
+  const rows: string[] = [];
+  const space = ' '.repeat(kColumnPadding);
+  const nrows = Math.max(lcol.length, rcol.length);
+  const pad = (x: string | undefined): string => {
+    x = x || '';
+    const padding = width - x.replace(/\x1b\[[\d;]*m/g, '').length;
+    return `${space}${x}${' '.repeat(padding)}${space}`;
+  };
+  for (let i = 0; i < nrows; i++) {
+    rows.push(`${pad(lcol[i])}${pad(rcol[i])}`);
+  }
+  return rows.join('\n');
 };
 
 const initializeIO = (state: State): IO => {
@@ -1478,8 +1505,8 @@ const initializeIO = (state: State): IO => {
   const kSpacer = 1;
   const x = Constants.MAP_SIZE;
   const y = Constants.MAP_SIZE;
-  const h = x + 2 + kSpacer + Constants.LOG_SIZE;
   const w = 2 * x + 2 + kSpacer + Constants.STATUS_SIZE;
+  const h = y + 2 + kSpacer + Constants.LOG_SIZE;
 
   const [lw, lh, ll, lt] = [w - 4, Constants.LOG_SIZE, 2, 0];
   const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kSpacer];
