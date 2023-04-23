@@ -53,13 +53,14 @@ const weighted = <T>(xs: [int, T][]): T => {
 // Glyph helper to speed up blessed.js formatting.
 
 type Digit = ('0' | '1' | '2' | '3' | '4' | '5');
-type Color = 'black' | `${Digit}${Digit}${Digit}`;
+type Color = 'black' | 'gray' | `${Digit}${Digit}${Digit}`;
 
 const WideCharOffset = 0xff00 - 0x20;
 
 const Color = (text: string, fg?: Color | null, bg?: Color | null): string => {
   const index = (color: Color) => {
     if (color === 'black') return 0;
+    if (color === 'gray') return 16 + 216 + 4;
     const base = '0'.charCodeAt(0);
     const r = color.charCodeAt(0) - base;
     const g = color.charCodeAt(1) - base;

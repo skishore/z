@@ -1340,7 +1340,7 @@ const renderMap = (state: State): string => {
   const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
-  const show = (x: int, y: int, glyph: Glyph, force?: boolean) => {
+  const show = (x: int, y: int, glyph: Glyph, force: boolean) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
@@ -1354,20 +1354,23 @@ const renderMap = (state: State): string => {
     text[index] = text[index]!.recolor(fg, bg);
   };
 
+  const shade = (point: Point, glyph: Glyph, force: boolean) => {
+    const out_of_range = summon && point.distanceNethack(pos) > summon.range;
+    const shaded_glyph = out_of_range ? glyph.recolor('gray') : glyph;
+    show(point.x, point.y, shaded_glyph, force);
+  };
+
   const vision = board.getVision(player);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
       if ((vision.getOrNull(point) ?? -1) < 0) continue;
-      const glyph = board.getTile(point).glyph;
-      const out_of_range = summon && point.distanceNethack(pos) > summon.range;
-      const shaded_glyph = out_of_range ? glyph.recolor('111') : glyph;
-      show(point.x, point.y, shaded_glyph, true);
+      shade(point, board.getTile(point).glyph, true);
     }
   }
 
   board.getEntities().forEach(x => {
-    show(x.pos.x, x.pos.y, x.glyph, trainer(x) === player);
+    shade(x.pos, x.glyph, trainer(x) === player);
   });
 
   if (summon) {
@@ -1408,7 +1411,7 @@ const renderMap = (state: State): string => {
   const effect = board.getEffect();
   if (effect.length) {
     const frame = nonnull(effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
+    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph, false));
   }
 
   return text.join('');
