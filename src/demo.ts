@@ -117,8 +117,13 @@ class Board {
 
     if (entity.type === ET.Pokemon) {
       const trainer = entity.data.self.trainer;
-      if (trainer) trainer.data.pokemon.forEach(
-          x => { if (x.entity === entity) x.entity = null; });
+      if (trainer) {
+        const index = trainer.data.summons.indexOf(entity);
+        assert(0 <= index && index < trainer.data.summons.length);
+        trainer.data.summons.splice(index, 1);
+        trainer.data.pokemon.forEach(
+            x => { if (x.entity === entity) x.entity = null; });
+      }
     }
 
     entity.removed = true;
@@ -301,9 +306,10 @@ interface PokemonEdge {
 
 interface TrainerData {
   input: Action | null,
+  name: string,
   player: boolean,
   pokemon: PokemonEdge[],
-  name: string,
+  summons: Pokemon[],
 };
 
 interface EntityData {
@@ -355,7 +361,7 @@ const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
 const makeTrainer = (pos: Point, player: boolean): Trainer => {
   const glyph = new Glyph('@');
   const speed = Constants.TRAINER_SPEED;
-  const data = {input: null, player, pokemon: [], name: ''};
+  const data = {input: null, name: '', player, pokemon: [], summons: []};
   return {type: ET.Trainer, data, pos, glyph, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
@@ -532,10 +538,13 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (entity.type !== ET.Trainer) return kFailure;
       const pokemon = entity.data.pokemon[index];
       if (!pokemon || pokemon.entity || !pokemon.self.cur_hp) return kFailure;
+      if (entity.data.summons.length >= kSummonedKeys.length) return kFailure;
       if (board.getStatus(target) !== Status.FREE) return kFailure;
       const glyph = board.getTile(target).glyph;
-      pokemon.entity = makePokemon(target, pokemon.self);
-      board.addEntity(nonnull(pokemon.entity));
+      const summoned = makePokemon(target, pokemon.self);
+      entity.data.summons.push(summoned);
+      pokemon.entity = summoned;
+      board.addEntity(summoned);
       board.addEffect(SummonEffect(entity.pos, target, glyph));
       return kSuccess;
     }
@@ -1022,7 +1031,7 @@ const Constants = {
   FOV_RADIUS:    int(24),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
-  CHOICE_SIZE:   int(42),
+  CHOICE_SIZE:   int(48),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
@@ -1037,8 +1046,9 @@ interface Tile {
   readonly glyph: Glyph,
 };
 
-const kPartySize = 6;
-const kSummonedSize = 3;
+const kPlayerKey = 'a';
+const kSummonedKeys = 'sdf';
+const kPartyKeys = `${'a'}sdfgh`;
 const kDirectionKeys = 'kulnjbhy';
 const kAlphabetKeys = 'abcdefghijklmnopqrstuvwxyz';
 
@@ -1116,25 +1126,28 @@ const outsideMap = (state: State, point: Point): boolean => {
 
 const processInput = (state: State, input: Input): void => {
   const {board, player, choice, summon, target} = state;
+  const enter = input === 'enter' || input === '.';
 
   if (choice) {
     const count = player.data.pokemon.length;
     const direction = Direction.all[kDirectionKeys.indexOf(input)];
+    const chosen = enter ? choice.index : int(kPartyKeys.indexOf(input));
     if (direction && direction.x === 0) {
       choice.index = int(choice.index + direction.y);
       if (choice.index >= count) choice.index = 0;
       if (choice.index < 0) choice.index = int(Math.max(count - 1, 0));
-    } else if (input === 'enter' && choice.index < count) {
-      const pokemon = player.data.pokemon[choice.index]!;
-      const name = pokemon.self.species.name;
+    } else if (chosen >= 0) {
+      const pokemon = player.data.pokemon[chosen];
+      const name = pokemon?.self.species.name;
+      if (!pokemon) return;
       if (pokemon.entity) {
         state.board.logMenu(Color(`${name} is already out!`, '422'));
       } else if (!pokemon.self.cur_hp) {
         state.board.logMenu(Color(`${name} has no strength left!`, '422'));
       } else {
-        state.board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
         const range = Constants.SUMMON_RANGE;
-        state.summon = initSummon(state, choice.index, range, player.pos);
+        state.board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
+        state.summon = initSummon(state, chosen, range, player.pos);
         state.choice = null;
       }
     } else if (input === 'escape') {
@@ -1158,13 +1171,13 @@ const processInput = (state: State, input: Input): void => {
       if (!target.equal(summon.target)) {
         updateSummonTarget(state, summon, target);
       }
-    } else if (input === '.') {
+    } else if (enter) {
       if (summon.error.length > 0) {
         state.board.logMenu(Color(summon.error, '422'));
       } else {
         const {index, target} = summon;
-        const p = player.data.pokemon[index];
-        if (p) state.board.logMenu(Color(`Go! ${p.self.species.name}!`, '231'), true);
+        const name = player.data.pokemon[index]?.self.species.name;
+        state.board.logMenu(Color(`Go! ${name}!`, '231'), true);
         player.data.input = {type: AT.Summon, index, target};
         state.summon = null;
       }
@@ -1188,7 +1201,8 @@ const processInput = (state: State, input: Input): void => {
 
   if (player.data.input !== null) return;
 
-  if (input === 'r') {
+  const summoned = kSummonedKeys.indexOf(input);
+  if (summoned >= player.data.summons.length) {
     state.choice = {index: 0};
     state.board.logMenu(Color('Choose a Pokemon to send out with J/K:', '234'));
   }
@@ -1286,7 +1300,7 @@ const initializeState = (): State => {
   const player = makeTrainer(point, true);
   board.addEntity(player);
 
-  const n = Math.min(kPartySize, 5);
+  const n = Math.min(kPartyKeys.length, 5);
   kPokemon.slice(0, n).forEach(species => {
     const self = {species, trainer: player, cur_hp: int(100), max_hp: int(100)};
     player.data.pokemon.push({entity: null, self});
@@ -1480,31 +1494,48 @@ const renderBar = (width: int, value: number, color: Color | null): string => {
   return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
 };
 
-const renderPokemonStatus = (self: PokemonIndividualData, width: int): string[] => {
+const renderKey = (key?: string): string => {
+  return key ? `[${key}] ` : '';
+};
+
+const renderEmptyStatus = (width: int, key?: string): string[] => {
+  return ['', Color(`${renderKey(key)}---`, '111'), '', '', ''];
+};
+
+const renderPokemonStatus =
+    (self: PokemonIndividualData, width: int, key?: string): string[] => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
   const pp = 1;
 
   const result = [''];
-  result.push(self.species.name);
-  result.push(`HP: [${renderBar(width, hp, hp > 0 ? '020' : null)}]`);
-  result.push(`PP: [${renderBar(width, pp, hp > 0 ? '234' : null)}]`);
+  const prefix = renderKey(key);
+  const spacer = ' '.repeat(prefix.length);
+  const bar = int(width - prefix.length);
+  result.push(`${prefix}${self.species.name}`);
+  result.push(`${spacer}HP: [${renderBar(bar, hp, hp > 0 ? '020' : null)}]`);
+  result.push(`${spacer}PP: [${renderBar(bar, pp, hp > 0 ? '234' : null)}]`);
   result.push('');
 
-  return hp > 0 ? result : result.map(x => x.length ? Color(x, 'gray') : x);
+  return hp > 0 ? result : result.map(x => x.length ? Color(x, '111') : x);
 };
 
-const renderEntityStatus = (entity: Entity, width: int): string[] => {
+const renderEntityStatus =
+    (entity: Entity, width: int, key?: string): string[] => {
   if (entity.type === ET.Pokemon) {
-    return renderPokemonStatus(entity.data.self, width);
+    return renderPokemonStatus(entity.data.self, width, key);
   }
 
+  const name = entity.data.player ? 'You' : entity.data.name;
   const status = entity.data.pokemon.map(
       x => x.self.cur_hp > 0 ? '*' : Color('*', 'gray'));
 
   const result = [''];
-  result.push(entity.data.player ? 'You' : entity.data.name);
-  result.push(`HP: [${renderBar(width, 1, '020')}]`);
-  result.push(`     ${status.join(' ')}`);
+  const prefix = renderKey(key);
+  const spacer = ' '.repeat(prefix.length);
+  const bar = int(width - prefix.length);
+  result.push(`${renderKey(key)}${name}`);
+  result.push(`${spacer}HP: [${renderBar(bar, 1, '020')}]`);
+  result.push(`${spacer}     ${status.join(' ')}`);
   result.push('');
   return result;
 };
@@ -1521,10 +1552,12 @@ const renderChoice = (state: State): string => {
   const space = ' '.repeat(kColumnPadding + 1);
   const arrow = ' '.repeat(kColumnPadding) + '>';
 
-  for (let i = 0; i < kPartySize; i++) {
+  for (let i = 0; i < kPartyKeys.length; i++) {
+    const key = kPartyKeys[i]!;
     const pokemon = player.data.pokemon[i];
-    if (!pokemon) continue;
-    renderPokemonStatus(pokemon.self, width).forEach((line, j) => {
+    const status = pokemon ? renderPokemonStatus(pokemon.self, width, key)
+                           : renderEmptyStatus(width, key);
+    status.forEach((line, j) => {
       const selected = i === index;
       const use_arrow = selected && j === 1;
       result.push(`${use_arrow ? arrow : space}${selected ? ' ' : ''}${line}`);
@@ -1538,18 +1571,28 @@ const renderStatus = (state: State): string => {
   const kColumnPadding = 2;
   const w = Constants.STATUS_SIZE;
   const h = Constants.MAP_SIZE + 2;
-  const width = int(Math.floor(w / kNumColumns) - 2 * kColumnPadding);
+  const extra = renderKey('a').length;
+  const rwidth = int(Math.floor((w - extra) / kNumColumns) - 2 * kColumnPadding);
+  const lwidth = int(rwidth + extra);
 
   const player = state.player;
   const vision = state.board.getVision(player);
 
   const lcol: string[] = [];
   const rcol: string[] = [];
-  renderEntityStatus(state.player, width).forEach(x => lcol.push(x));
+  const key = kPlayerKey;
+  renderEntityStatus(state.player, lwidth, key).forEach(x => lcol.push(x));
 
-  for (let i = 0; i < kPartySize; i++) {
-    const entity = player.data.pokemon[i]?.entity;
-    if (entity) renderEntityStatus(entity, width).forEach(x => lcol.push(x));
+  let index = 0;
+  for (const pokemon of player.data.summons) {
+    const self = pokemon.data.self;
+    const key = kSummonedKeys[index++];
+    renderPokemonStatus(self, lwidth, key).forEach(x => lcol.push(x));
+  }
+
+  while (index < kSummonedKeys.length) {
+    const key = kSummonedKeys[index++]!;
+    renderEmptyStatus(lwidth, key).forEach(x => lcol.push(x));
   }
 
   const source = player.pos;
@@ -1569,18 +1612,18 @@ const renderStatus = (state: State): string => {
     return base || xopt || yopt;
   });
   pokemon.slice(0, 32).forEach(
-      entity => renderEntityStatus(entity, width).forEach(x => rcol.push(x)));
+      entity => renderEntityStatus(entity, rwidth).forEach(x => rcol.push(x)));
 
   const rows: string[] = [];
   const space = ' '.repeat(kColumnPadding);
   const nrows = Math.max(lcol.length, rcol.length);
-  const pad = (x: string | undefined): string => {
+  const pad = (x: string | undefined, w: int): string => {
     x = x || '';
-    const padding = width - x.replace(/\x1b\[[\d;]*m/g, '').length;
+    const padding = w - x.replace(/\x1b\[[\d;]*m/g, '').length;
     return `${space}${x}${' '.repeat(padding)}${space}`;
   };
   for (let i = 0; i < nrows; i++) {
-    rows.push(`${pad(lcol[i])}${pad(rcol[i])}`);
+    rows.push(`${pad(lcol[i], lwidth)}${pad(rcol[i], rwidth)}`);
   }
   return rows.join('\n');
 };
