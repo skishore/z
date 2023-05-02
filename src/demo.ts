@@ -1306,16 +1306,20 @@ interface Timing {
   end: number,
 };
 
-interface IO {
+interface UI {
   fps: Element,
   log: Element,
   map: Element,
   status: Element,
+  window: Element,
+};
+
+interface IO {
+  count: int,
   inputs: Input[],
-  screen: Element,
   state: State,
   timing: Timing[],
-  count: int,
+  ui: UI,
 };
 
 const kBreakGlyph = new Glyph('\n');
@@ -1500,7 +1504,7 @@ const renderStatus = (state: State): string => {
 
 const initializeIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
-  const screen = blessed.screen({fullUnicode: true});
+  const window = blessed.screen({fullUnicode: true});
 
   const kSpacer = 1;
   const x = Constants.MAP_SIZE;
@@ -1527,14 +1531,15 @@ const initializeIO = (state: State): IO => {
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
   const status = element(sw, sh, sl, st);
   const fps = blessed.box({align: 'right', top: '100%-1'});
-  [content, fps].map(x => screen.append(x));
+  [content, fps].map(x => window.append(x));
+  const ui: UI = {fps, log, map, status, window};
 
   const inputs: Input[] = [];
   const fast_dirs = Array.from(kDirectionKeys).map(x => `S-${x}`);
-  screen.key(['S-a', 'C-c'], () => process.exit(0));
+  window.key(['S-a', 'C-c'], () => process.exit(0));
   ['escape', '.'].concat(Array.from(kAllKeys)).concat(fast_dirs).forEach(
-    x => screen.key([x], () => inputs.push(x)));
-  return {fps, log, map, status, inputs, screen, state, timing: [], count: 0};
+    x => window.key([x], () => inputs.push(x)));
+  return {count: 0, inputs, state, timing: [], ui};
 };
 
 const update = (io: IO) => {
@@ -1542,7 +1547,7 @@ const update = (io: IO) => {
   io.timing.push({start, end: start});
   if (io.timing.length > Constants.FRAME_RATE) io.timing.shift();
   assert(io.timing.length <= Constants.FRAME_RATE);
-  io.count++;
+  io.count = int((io.count + 1) & 0xffff);
 
   updateState(io.state, io.inputs);
 };
@@ -1556,9 +1561,9 @@ const cachedSetContent = (element: Element, content: string): boolean => {
 
 const render = (io: IO) => {
   let refresh = io.count % 10 === 0;
-  refresh = cachedSetContent(io.log, renderLog(io.state)) || refresh;
-  refresh = cachedSetContent(io.map, renderMap(io.state)) || refresh;
-  refresh = cachedSetContent(io.status, renderStatus(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.log, renderLog(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
   if (!refresh) return;
 
   const last = nonnull(io.timing[io.timing.length - 1]);
@@ -1569,8 +1574,8 @@ const render = (io: IO) => {
   const cpu = 100 * (last.end - last.start + base) / total;
   const fps = 1000 * io.timing.length / total;
 
-  io.fps.setContent(renderFrameRate(cpu, fps));
-  io.screen.render();
+  io.ui.fps.setContent(renderFrameRate(cpu, fps));
+  io.ui.window.render();
 };
 
 const tick = (io: IO) => () => {
