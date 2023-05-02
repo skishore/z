@@ -4,6 +4,7 @@ import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
+interface Log { line: string, menu: boolean};
 interface Vision { dirty: boolean, blockers: Point[], value: Matrix<int> };
 
 class Board {
@@ -15,7 +16,7 @@ class Board {
   private entityIndex: int;
   private entityVision: Map<Entity, Vision>;
   private defaultTile: Tile;
-  private logs: string[];
+  private logs: Log[];
 
   constructor(size: Point, fov: int) {
     this.fov = new FOV(int(Math.max(fov, fov)));
@@ -32,7 +33,7 @@ class Board {
   // Reads
 
   getLog(): string[] {
-    return this.logs;
+    return this.logs.map(x => x.line);
   }
 
   getSize(): Point {
@@ -136,13 +137,21 @@ class Board {
     this.dirtyVision(be);
   }
 
-  log(line: string) {
-    this.logs.push(line);
+  log(line: string, menu?: boolean) {
+    if (menu && this.logs[this.logs.length - 1]?.menu) this.logs.pop();
+    this.logs.push({line, menu: !!menu});
     if (this.logs.length > Constants.LOG_SIZE) this.logs.shift();
   }
 
   logIfPlayer(entity: Entity, line: string) {
     if (entity.type === ET.Trainer && entity.data.player) this.log(line);
+  }
+
+  logMenu(line: string, done?: boolean) {
+    this.log(line, true);
+    if (done && this.logs.length > 0) {
+      this.logs[this.logs.length - 1]!.menu = false;
+    }
   }
 
   // Cached field-of-vision
@@ -579,8 +588,8 @@ const findOptions =
   points.sort((a, b) => a.distanceSquared(p) - b.distanceSquared(p));
 
   const used: Point[] = [];
-  for (let i = 0, j = 0; i < kAllKeys.length && j < points.length; i++) {
-    const key = nonnull(kAllKeys[i]);
+  for (let i = 0, j = 0; i < kAlphabetKeys.length && j < points.length; i++) {
+    const key = nonnull(kAlphabetKeys[i]);
     if (kDirectionKeys.includes(key)) continue;
     while (j < points.length) {
       const point = nonnull(points[j++]);
@@ -631,7 +640,7 @@ const animateSummon = (state: State, summon: Summon): void => {
 };
 
 const initSummon = (state: State, index: int, range: int, target: Point): Summon => {
-  const result = {frame: int(0), index, ok: true, path: [], range, target};
+  const result = {error: '', frame: int(0), index, path: [], range, target};
   updateSummonTarget(state, result, target);
   return result;
 };
@@ -642,17 +651,22 @@ const updateSummonTarget = (state: State, summon: Summon, target: Point): void =
   const los = LOS(player.pos, target);
   const start = los.length > 1 ? 1 : 0;
 
-  let ok = true;
+  summon.error = '';
   summon.path.length = 0;
   for (let i = start; i < los.length; i++) {
     const point = los[i]!;
-    ok &&= board.getStatus(point) === Status.FREE &&
-           player.pos.distanceNethack(point) <= range &&
-           (board.getVision(player).getOrNull(point) ?? -1) >= 0;
-    summon.path.push([point, ok]);
+    if (summon.error.length === 0) {
+      if (board.getStatus(point) !== Status.FREE) {
+        summon.error = 'That location is blocked.';
+      } else if (player.pos.distanceNethack(point) > range) {
+        summon.error = `You can't throw that far.`;
+      } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
+        summon.error = `You can't see a clear path there.`;
+      }
+    }
+    summon.path.push([point, summon.error.length === 0]);
   }
 
-  summon.ok = ok;
   summon.frame = 0;
   summon.target = target;
 };
@@ -1008,6 +1022,7 @@ const Constants = {
   FOV_RADIUS:    int(24),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
+  CHOICE_SIZE:   int(42),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
@@ -1022,9 +1037,10 @@ interface Tile {
   readonly glyph: Glyph,
 };
 
-const kPokemonKeys = 'sdfwer';
+const kPartySize = 6;
+const kSummonedSize = 3;
 const kDirectionKeys = 'kulnjbhy';
-const kAllKeys = 'abcdefghijklmnopqrstuvwxyz';
+const kAlphabetKeys = 'abcdefghijklmnopqrstuvwxyz';
 
 const kTiles: {[ch: string]: Tile} = {
   '.': {blocked: false, obscure: false, glyph: new Glyph('.')},
@@ -1063,6 +1079,7 @@ type Input = string;
 interface State {
   board: Board,
   player: Trainer,
+  choice: Choice | null,
   summon: Summon | null,
   target: Target | null,
 };
@@ -1074,10 +1091,14 @@ interface Option {
 
 type Options = Map<string, Option>;
 
+type Choice = {
+  index: int,
+};
+
 type Summon = {
+  error: string,
   frame: int
   index: int,
-  ok: boolean,
   path: [Point, boolean][],
   range: int,
   target: Point,
@@ -1094,7 +1115,34 @@ const outsideMap = (state: State, point: Point): boolean => {
 };
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player, summon, target} = state;
+  const {board, player, choice, summon, target} = state;
+
+  if (choice) {
+    const count = player.data.pokemon.length;
+    const direction = Direction.all[kDirectionKeys.indexOf(input)];
+    if (direction && direction.x === 0) {
+      choice.index = int(choice.index + direction.y);
+      if (choice.index >= count) choice.index = 0;
+      if (choice.index < 0) choice.index = int(Math.max(count - 1, 0));
+    } else if (input === 'enter' && choice.index < count) {
+      const pokemon = player.data.pokemon[choice.index]!;
+      const name = pokemon.self.species.name;
+      if (pokemon.entity) {
+        state.board.logMenu(Color(`${name} is already out!`, '422'));
+      } else if (!pokemon.self.cur_hp) {
+        state.board.logMenu(Color(`${name} has no strength left!`, '422'));
+      } else {
+        state.board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
+        const range = Constants.SUMMON_RANGE;
+        state.summon = initSummon(state, choice.index, range, player.pos);
+        state.choice = null;
+      }
+    } else if (input === 'escape') {
+      state.board.logMenu(Color('Canceled.', '234'));
+      state.choice = null;
+    }
+    return;
+  }
 
   if (summon) {
     const lower = input.startsWith('S-') ? input.substr(2) : input;
@@ -1110,11 +1158,18 @@ const processInput = (state: State, input: Input): void => {
       if (!target.equal(summon.target)) {
         updateSummonTarget(state, summon, target);
       }
-    } else if (input === '.' && summon.ok) {
-      const {index, target} = summon;
-      player.data.input = {type: AT.Summon, index, target};
-      state.summon = null;
+    } else if (input === '.') {
+      if (summon.error.length > 0) {
+        state.board.logMenu(Color(summon.error, '422'));
+      } else {
+        const {index, target} = summon;
+        const p = player.data.pokemon[index];
+        if (p) state.board.logMenu(Color(`Go! ${p.self.species.name}!`, '231'), true);
+        player.data.input = {type: AT.Summon, index, target};
+        state.summon = null;
+      }
     } else if (input === 'escape') {
+      state.board.logMenu(Color('Canceled.', '234'));
       state.summon = null;
     }
     return;
@@ -1133,17 +1188,9 @@ const processInput = (state: State, input: Input): void => {
 
   if (player.data.input !== null) return;
 
-  const index = int(kPokemonKeys.indexOf(input));
-  if (0 <= index && index < player.data.pokemon.length) {
-    const pokemon = nonnull(player.data.pokemon[index]).entity;
-    if (pokemon) {
-      const attacks = pokemon.data.self.species.attacks;
-      if (attacks.length === 0) return;
-      state.target = targetsForAttack(board, pokemon, sample(attacks));
-    } else {
-      const range = Constants.SUMMON_RANGE;
-      state.summon = initSummon(state, index, range, player.pos);
-    }
+  if (input === 'r') {
+    state.choice = {index: 0};
+    state.board.logMenu(Color('Choose a Pokemon to send out with J/K:', '234'));
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
@@ -1239,7 +1286,7 @@ const initializeState = (): State => {
   const player = makeTrainer(point, true);
   board.addEntity(player);
 
-  const n = Math.min(kPokemonKeys.length, 5);
+  const n = Math.min(kPartySize, 5);
   kPokemon.slice(0, n).forEach(species => {
     const self = {species, trainer: player, cur_hp: int(100), max_hp: int(100)};
     player.data.pokemon.push({entity: null, self});
@@ -1261,7 +1308,7 @@ const initializeState = (): State => {
     board.addEntity(makePokemon(pos, data));
   }
 
-  return {board, player, summon: null, target: null};
+  return {board, player, choice: null, summon: null, target: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1296,8 +1343,9 @@ declare const require: any;
 declare const setTimeout: (fn: () => void, delay: number) => void;
 
 interface Element {
-  render: () => void;
-  setContent: (x: string) => void;
+  hidden: boolean,
+  render: () => void,
+  setContent: (x: string) => void,
   cachedContent: string | null,
 };
 
@@ -1307,6 +1355,7 @@ interface Timing {
 };
 
 interface UI {
+  choice: Element,
   fps: Element,
   log: Element,
   map: Element,
@@ -1322,6 +1371,7 @@ interface IO {
   ui: UI,
 };
 
+const kHiddenFlag = '<hidden>';
 const kBreakGlyph = new Glyph('\n');
 const kEmptyGlyph = new Glyph(' ');
 
@@ -1382,7 +1432,7 @@ const renderMap = (state: State): string => {
 
   if (summon) {
     const {path, target} = summon;
-    const color: Color = summon.ok ? '440' : '400';
+    const color: Color = summon.error.length === 0 ? '440' : '400';
     recolor(target.x, target.y, 'black', color);
 
     const length = path.length - 1;
@@ -1424,29 +1474,63 @@ const renderMap = (state: State): string => {
   return text.join('');
 };
 
-const renderEntityStatus = (state: State, entity: Entity, width: int): string[] => {
-  const result = [''];
-  const bar = (value: number, color: Color): string => {
-    const total = width - 6;
-    const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
-    return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
-  };
+const renderBar = (width: int, value: number, color: Color | null): string => {
+  const total = width - 6;
+  const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
+  return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
+};
 
-  if (entity.type === ET.Pokemon) {
-    const self = entity.data.self;
-    result.push(self.species.name);
-    result.push(`HP: [${bar(self.cur_hp / self.max_hp, '020')}]`);
-    result.push(`PP: [${bar(1, '234')}]`);
-  } else {
-    const status = entity.data.pokemon.map(
-        x => x.self.cur_hp > 0 ? '*' : Color('*', 'gray'));
-    result.push(entity.data.player ? 'You' : entity.data.name);
-    result.push(`HP: [${bar(1, '020')}]`);
-    result.push(`     ${status.join(' ')}`);
-  }
+const renderPokemonStatus = (self: PokemonIndividualData, width: int): string[] => {
+  const hp = self.cur_hp / Math.max(self.max_hp, 1);
+  const pp = 1;
+
+  const result = [''];
+  result.push(self.species.name);
+  result.push(`HP: [${renderBar(width, hp, hp > 0 ? '020' : null)}]`);
+  result.push(`PP: [${renderBar(width, pp, hp > 0 ? '234' : null)}]`);
   result.push('');
 
+  return hp > 0 ? result : result.map(x => x.length ? Color(x, 'gray') : x);
+};
+
+const renderEntityStatus = (entity: Entity, width: int): string[] => {
+  if (entity.type === ET.Pokemon) {
+    return renderPokemonStatus(entity.data.self, width);
+  }
+
+  const status = entity.data.pokemon.map(
+      x => x.self.cur_hp > 0 ? '*' : Color('*', 'gray'));
+
+  const result = [''];
+  result.push(entity.data.player ? 'You' : entity.data.name);
+  result.push(`HP: [${renderBar(width, 1, '020')}]`);
+  result.push(`     ${status.join(' ')}`);
+  result.push('');
   return result;
+};
+
+const renderChoice = (state: State): string => {
+  if (!state.choice) return kHiddenFlag;
+
+  const kColumnPadding = 2;
+  const width = int(Constants.CHOICE_SIZE - 2 * kColumnPadding - 5);
+
+  const result: string[] = [];
+  const player = state.player;
+  const index = state.choice.index;
+  const space = ' '.repeat(kColumnPadding + 1);
+  const arrow = ' '.repeat(kColumnPadding) + '>';
+
+  for (let i = 0; i < kPartySize; i++) {
+    const pokemon = player.data.pokemon[i];
+    if (!pokemon) continue;
+    renderPokemonStatus(pokemon.self, width).forEach((line, j) => {
+      const selected = i === index;
+      const use_arrow = selected && j === 1;
+      result.push(`${use_arrow ? arrow : space}${selected ? ' ' : ''}${line}`);
+    });
+  }
+  return result.join('\n');
 };
 
 const renderStatus = (state: State): string => {
@@ -1461,13 +1545,12 @@ const renderStatus = (state: State): string => {
 
   const lcol: string[] = [];
   const rcol: string[] = [];
-  renderEntityStatus(state, state.player, width).forEach(x => lcol.push(x));
+  renderEntityStatus(state.player, width).forEach(x => lcol.push(x));
 
-  Array.from(kPokemonKeys).forEach((key, ii) => {
-    const i = int(ii);
-    const e = player.data.pokemon[i]?.entity;
-    if (e) renderEntityStatus(state, e, width).forEach(x => lcol.push(x));
-  });
+  for (let i = 0; i < kPartySize; i++) {
+    const entity = player.data.pokemon[i]?.entity;
+    if (entity) renderEntityStatus(entity, width).forEach(x => lcol.push(x));
+  }
 
   const source = player.pos;
   const pokemon: Pokemon[] = [];
@@ -1486,7 +1569,7 @@ const renderStatus = (state: State): string => {
     return base || xopt || yopt;
   });
   pokemon.slice(0, 32).forEach(
-      x => renderEntityStatus(state, x, width).forEach(y => rcol.push(y)));
+      entity => renderEntityStatus(entity, width).forEach(x => rcol.push(x)));
 
   const rows: string[] = [];
   const space = ' '.repeat(kColumnPadding);
@@ -1518,6 +1601,11 @@ const initializeIO = (state: State): IO => {
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
+  let [cw, ch] = [Constants.CHOICE_SIZE, 6 * 5 + 2];
+  let [cl, ct] = [int(Math.floor(w - cw) / 2), int(Math.floor(h - ch) / 2)];
+  if (ml % 2 === cl % 2) { cl -= 1; cw += 2; Constants.CHOICE_SIZE += 2; }
+  if (Constants.CHOICE_SIZE % 2 !== 0) { cw += 1; Constants.CHOICE_SIZE += 1; }
+
   const element = (width: number, height: number, left: number, top: number,
                    extra?: {[k: string]: unknown}): Element => {
     const data: {[k: string]: unknown} = {width, height, left, top, attr, wrap};
@@ -1530,15 +1618,18 @@ const initializeIO = (state: State): IO => {
   const log = element(lw, lh, ll, lt);
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
   const status = element(sw, sh, sl, st);
+  const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => window.append(x));
-  const ui: UI = {fps, log, map, status, window};
+  const ui: UI = {choice, fps, log, map, status, window};
 
   const inputs: Input[] = [];
-  const fast_dirs = Array.from(kDirectionKeys).map(x => `S-${x}`);
   window.key(['S-a', 'C-c'], () => process.exit(0));
-  ['escape', '.'].concat(Array.from(kAllKeys)).concat(fast_dirs).forEach(
-    x => window.key([x], () => inputs.push(x)));
+  const kFastDirectionKeys = Array.from(kDirectionKeys).map(x => `S-${x}`);
+  const kAllKeys = ['enter', 'escape', '.']
+    .concat(Array.from(kAlphabetKeys))
+    .concat(kFastDirectionKeys);
+  kAllKeys.forEach(x => window.key([x], () => inputs.push(x)));
   return {count: 0, inputs, state, timing: [], ui};
 };
 
@@ -1554,6 +1645,7 @@ const update = (io: IO) => {
 
 const cachedSetContent = (element: Element, content: string): boolean => {
   if (content === element.cachedContent) return false;
+  element.hidden = content === kHiddenFlag;
   element.cachedContent = content;
   element.setContent(content);
   return true;
@@ -1563,6 +1655,7 @@ const render = (io: IO) => {
   let refresh = io.count % 10 === 0;
   refresh = cachedSetContent(io.ui.log, renderLog(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
   if (!refresh) return;
 
