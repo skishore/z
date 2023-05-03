@@ -318,6 +318,7 @@ interface EntityData {
   removed: boolean,
   move_timer: int,
   turn_timer: int,
+  dir: Direction,
   pos: Point,
 };
 
@@ -354,7 +355,7 @@ const wait = (entity: Entity, moves: number, turns: number): void => {
 const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
   const {glyph, speed} = self.species;
   const data = {commands: [], self};
-  return {type: ET.Pokemon, data, pos, glyph, speed,
+  return {type: ET.Pokemon, data, dir: Direction.s, pos, glyph, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
@@ -362,7 +363,7 @@ const makeTrainer = (pos: Point, player: boolean): Trainer => {
   const glyph = new Glyph('@');
   const speed = Constants.TRAINER_SPEED;
   const data = {input: null, name: '', player, pokemon: [], summons: []};
-  return {type: ET.Trainer, data, pos, glyph, speed,
+  return {type: ET.Trainer, data, dir: Direction.s, pos, glyph, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
@@ -420,17 +421,26 @@ const followCommands =
   }
 };
 
+const checkFollowerSquare = (board: Board, leader: Entity, pos: Point,
+                             ignoreOccupant?: boolean): boolean => {
+  const status = board.getStatus(pos);
+  const free = status === Status.FREE ||
+               (ignoreOccupant && status === Status.OCCUPIED);
+  if (!free) return false;
+
+  const dn = leader.pos.distanceNethack(pos);
+  if (dn > 2) return false;
+
+  const vision = board.getVision(leader);
+  const max = vision.getOrNull(leader.pos);
+  const vn = vision.getOrNull(pos) ?? -1;
+  return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
+};
+
 const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   const [ep, tp] = [entity.pos, leader.pos];
-  const vision = board.getVision(leader);
-  const max = vision.getOrNull(tp);
-  const okay = (pos: Point): boolean => {
-    if (!pos.equal(ep) && board.getEntity(pos)) return false;
-    const dn = tp.distanceNethack(pos);
-    if (dn > 2) return false;
-    const vn = vision.getOrNull(pos) ?? -1;
-    return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
-  };
+  const okay = (p: Point) => checkFollowerSquare(board, leader, p, p.equal(ep));
+
   if (ep.distanceNethack(tp) <= 3) {
     const moves: [int, Direction][] =
       Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
@@ -520,9 +530,11 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
         if (trainer(other) !== entity) return kFailure;
         board.swapEntities(entity.pos, pos);
         board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
+        entity.dir = action.direction;
         return kSuccess;
       }
       board.moveEntity(entity.pos, pos);
+      entity.dir = action.direction;
       return kSuccess;
     }
     case AT.Shout: {
@@ -559,9 +571,32 @@ const animateSummon = (state: State, summon: Summon): void => {
   summon.frame = int((frame + 1) % Constants.SUMMON_ANIM);
 };
 
-const initSummon = (state: State, index: int, range: int, target: Point): Summon => {
+const initSummon = (state: State, index: int, range: int): Summon => {
+  const player = state.player;
+  const target = state.player.pos;
   const result = {error: '', frame: int(0), index, path: [], range, target};
-  updateSummonTarget(state, result, target);
+
+  const okay = (pos: Point) => {
+    if (!checkFollowerSquare(state.board, player, pos)) return false;
+    updateSummonTarget(state, result, pos);
+    return result.error.length === 0;
+  };
+
+  const options: Point[] = [];
+  const best = target.add(player.dir.scale(2));
+  const next = target.add(player.dir.scale(1));
+  if (okay(best)) return result;
+  if (okay(next)) return result;
+
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      const pos = new Point(int(target.x + dx), int(target.y + dy));
+      if (okay(pos)) options.push(pos);
+    }
+  }
+
+  options.sort((a, b) => best.distanceSquared(a) - best.distanceSquared(b));
+  updateSummonTarget(state, result, options[0] || target);
   return result;
 };
 
@@ -1046,7 +1081,7 @@ const processInput = (state: State, input: Input): void => {
       } else {
         const range = Constants.SUMMON_RANGE;
         state.board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
-        state.summon = initSummon(state, chosen, range, player.pos);
+        state.summon = initSummon(state, chosen, range);
         state.choice = null;
       }
     } else if (input === 'escape') {
