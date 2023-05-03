@@ -7,6 +7,8 @@ import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 interface Log { line: string, menu: boolean};
 interface Vision { dirty: boolean, blockers: Point[], value: Matrix<int> };
 
+const kVisionRadius = 3;
+
 class Board {
   private fov: FOV;
   private map: Matrix<Tile>;
@@ -193,7 +195,6 @@ class Board {
         // They're chosen so that, in a field of tall grass, we can only see
         // cells at a distanceNethack of <= kVisionRadius away.
         const visibility = ((): int => {
-          const kVisionRadius = 3;
           if (!parent) return int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
 
           tile = this.map.getOrNull(q);
@@ -371,10 +372,25 @@ const hasLineOfSight =
     (board: Board, source: Point, target: Point, range: int): boolean => {
   if (source.distanceNethack(target) > range) return false;
 
+  // See the calculation in getVision, and the constants in distanceNethack.
+  let vision = int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
+
   const line = LOS(source, target);
   const last = line.length - 1;
-  return line.every((x, i) => {
-    return i === 0 || i === last || board.getStatus(x) === Status.FREE;
+  return line.every((point, i) => {
+    if (i === 0) return true;
+    if (i === last && vision > 0) return true;
+
+    if (vision <= 0) return false;
+    if (board.getStatus(point) !== Status.FREE) return false;
+
+    // Run the vision attenuation calculation only along the line of sight.
+    const prev = line[i - 1]!;
+    const tile = board.getTile(point);
+    const diagonal = point.x !== prev.x && point.y !== prev.y;
+    const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
+    vision = int(vision - loss);
+    return true;
   });
 };
 
