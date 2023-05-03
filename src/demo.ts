@@ -554,95 +554,6 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-const findOptionAtDirection =
-    (board: Board, blocked: boolean, pos: Point, dir: Direction,
-     range: int, vision: Matrix<int>): Point => {
-  let prev = pos;
-  range = range > 0 ? range : int(255);
-
-  while (true) {
-    const next = prev.add(dir);
-    if (pos.distanceNethack(next) > range) return prev;
-    if ((vision.getOrNull(next) ?? -1) < 0) return prev;
-    if (board.getTile(next).blocked) return blocked ? next : prev;
-    prev = next;
-  }
-};
-
-const findOptions =
-    (board: Board, source: Entity, type: TT, range: int): Options => {
-  const summon = type === TT.Summon;
-  const options: Options = new Map();
-  const trainer = source.type === ET.Pokemon && source.data.self.trainer;
-  const entity = trainer || source;
-  const vision = board.getVision(entity);
-
-  const ep = entity.pos;
-  const sp = entity.pos;
-
-  Direction.all.forEach((dir, i) => {
-    const point = findOptionAtDirection(board, !summon, sp, dir, range, vision);
-    if (point.equal(sp)) return;
-    options.set(nonnull(kDirectionKeys[i]), {hidden: true, point});
-  });
-  if (summon) return options;
-
-  const kMinDistance = 4;
-  const kMinAngle = Math.PI / 12;
-
-  const p = entity.pos;
-  const rivals = findRivals(board, source);
-  const points = rivals.length === 0 ? board.getBlockers(entity).slice()
-                                     : rivals.map(x => x.pos);
-  points.sort((a, b) => a.distanceSquared(p) - b.distanceSquared(p));
-
-  const used: Point[] = [];
-  for (let i = 0, j = 0; i < kAlphabetKeys.length && j < points.length; i++) {
-    const key = nonnull(kAlphabetKeys[i]);
-    if (kDirectionKeys.includes(key)) continue;
-    while (j < points.length) {
-      const point = nonnull(points[j++]);
-      const found =
-        point.distanceNethack(ep) >= kMinDistance &&
-        used.every(x => point.distanceNethack(x) >= kMinDistance &&
-                        point.sub(ep).angle(x.sub(ep)) >= kMinAngle);
-      if (rivals.length === 0 && !found) continue;
-      options.set(key, {hidden: false, point});
-      used.push(point);
-      break;
-    }
-  }
-  return options;
-};
-
-const targetsForAttack =
-    (board: Board, source: Entity, attack: Attack): Target => {
-  const type = TT.Attack;
-  const options = findOptions(board, source, type, attack.range);
-  return {type, options, source, attack};
-};
-
-const targetsForSummon = (board: Board, source: Trainer, index: int): Target => {
-  const type = TT.Summon;
-  const options = findOptions(board, source, type, Constants.SUMMON_RANGE);
-  return {type, options, index};
-};
-
-const resolveTarget = (board: Board, base: Target, target: Point): Action => {
-  switch (base.type) {
-    case TT.Attack: {
-      const attack = base.attack;
-      if (base.source.type as ET === ET.Trainer) {
-        return {type: AT.Attack, attack, target};
-      }
-      const ent_or_pt = board.getEntity(target) || target;
-      const command = {type: CT.Attack, attack, target: ent_or_pt};
-      return {type: AT.Shout, command, entity: base.source};
-    }
-    case TT.Summon: return {type: AT.Summon, index: base.index, target};
-  }
-};
-
 const animateSummon = (state: State, summon: Summon): void => {
   const frame = summon.frame;
   summon.frame = int((frame + 1) % Constants.SUMMON_ANIM);
@@ -1091,15 +1002,7 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   summon: Summon | null,
-  target: Target | null,
 };
-
-interface Option {
-  hidden: boolean;
-  point: Point;
-};
-
-type Options = Map<string, Option>;
 
 type Choice = {
   index: int,
@@ -1114,10 +1017,6 @@ type Summon = {
   target: Point,
 };
 
-type Target =
-  {type: TT.Attack, options: Options, source: Entity, attack: Attack} |
-  {type: TT.Summon, options: Options, index: int};
-
 const outsideMap = (state: State, point: Point): boolean => {
   const delta = point.sub(state.player.pos);
   const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
@@ -1125,7 +1024,7 @@ const outsideMap = (state: State, point: Point): boolean => {
 };
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player, choice, summon, target} = state;
+  const {board, player, choice, summon} = state;
   const enter = input === 'enter' || input === '.';
 
   if (choice) {
@@ -1184,17 +1083,6 @@ const processInput = (state: State, input: Input): void => {
     } else if (input === 'escape') {
       state.board.logMenu(Color('Canceled.', '234'));
       state.summon = null;
-    }
-    return;
-  }
-
-  if (target) {
-    const option = target.options.get(input);
-    if (option) {
-      player.data.input = resolveTarget(state.board, target, option.point);
-      state.target = null;
-    } else if (input === 'escape') {
-      state.target = null;
     }
     return;
   }
@@ -1322,7 +1210,7 @@ const initializeState = (): State => {
     board.addEntity(makePokemon(pos, data));
   }
 
-  return {board, player, choice: null, summon: null, target: null};
+  return {board, player, choice: null, summon: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1398,7 +1286,7 @@ const renderLog = (state: State): string => {
 };
 
 const renderMap = (state: State): string => {
-  const {board, player, summon, target} = state;
+  const {board, player, summon} = state;
   const width  = Constants.MAP_SIZE;
   const height = Constants.MAP_SIZE;
   const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
@@ -1458,24 +1346,6 @@ const renderMap = (state: State): string => {
         const ch = ray_character(player.pos, summon.target);
         show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
       }
-    }
-  }
-
-  // TODO(kshaunak): Use a matching algorithm like the Hungarian algorithm to
-  // select label directions here. Precompute the match on action selection.
-  if (target) {
-    for (const [key, option] of target.options.entries()) {
-      assert(key.length === 1);
-      const {hidden, point: {x, y}} = option;
-      if (hidden) continue;
-      const label = key.toUpperCase();
-      const index = x + (width + 1) * y;
-      text[index] = `\x1b[41m${text[index]}\x1b[0m` as any as Glyph;
-      const dash = `\x1b[31m-\x1b[0m`;
-      const name = `\x1b[1;31m${label}\x1b[0m`;
-      const left = x === width - 1 || (0 < x && x < player.pos.x);
-      left ? show(int(x - 1), y, `${name}${dash}` as any as Glyph, true)
-           : show(int(x + 1), y, `${dash}${name}` as any as Glyph, true);
     }
   }
 
