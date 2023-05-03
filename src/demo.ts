@@ -1502,9 +1502,10 @@ const renderEmptyStatus = (width: int, key?: string): string[] => {
   return ['', Color(`${renderKey(key)}---`, '111'), '', '', ''];
 };
 
-const renderPokemonStatus =
-    (self: PokemonIndividualData, width: int, key?: string): string[] => {
+const renderPokemonStatus = (self: PokemonIndividualData, width: int,
+                             key?: string, color?: Color | null): string[] => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
+  color = color ? color : hp > 0 ? null : '111';
   const pp = 1;
 
   const result = [''];
@@ -1512,11 +1513,11 @@ const renderPokemonStatus =
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
   result.push(`${prefix}${self.species.name}`);
-  result.push(`${spacer}HP: [${renderBar(bar, hp, hp > 0 ? '020' : null)}]`);
-  result.push(`${spacer}PP: [${renderBar(bar, pp, hp > 0 ? '234' : null)}]`);
+  result.push(`${spacer}HP: [${renderBar(bar, hp, color ? null : '020')}]`);
+  result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '234')}]`);
   result.push('');
 
-  return hp > 0 ? result : result.map(x => x.length ? Color(x, '111') : x);
+  return color ? result.map(x => x.length ? Color(x, color) : x) : result;
 };
 
 const renderEntityStatus =
@@ -1527,7 +1528,7 @@ const renderEntityStatus =
 
   const name = entity.data.player ? 'You' : entity.data.name;
   const status = entity.data.pokemon.map(
-      x => x.self.cur_hp > 0 ? '*' : Color('*', 'gray'));
+      x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
 
   const result = [''];
   const prefix = renderKey(key);
@@ -1555,8 +1556,11 @@ const renderChoice = (state: State): string => {
   for (let i = 0; i < kPartyKeys.length; i++) {
     const key = kPartyKeys[i]!;
     const pokemon = player.data.pokemon[i];
-    const status = pokemon ? renderPokemonStatus(pokemon.self, width, key)
-                           : renderEmptyStatus(width, key);
+    const status = (() => {
+      if (!pokemon) return renderEmptyStatus(width, key);
+      const color = pokemon.entity ? '111' : null;
+      return renderPokemonStatus(pokemon.self, width, key, color)
+    })();
     status.forEach((line, j) => {
       const selected = i === index;
       const use_arrow = selected && j === 1;
