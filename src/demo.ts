@@ -280,15 +280,17 @@ interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
 interface AttackEffect { effect: Effect, hitFrame: int };
 
+type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
+
 interface PokemonSpeciesData {
   name: string,
   glyph: Glyph,
   hp: int,
   speed: number,
-  attacks: Attack[],
 };
 
 interface PokemonIndividualData {
+  attacks: Attack[],
   species: PokemonSpeciesData,
   trainer: Trainer | null,
   cur_hp: int,
@@ -484,13 +486,13 @@ const findRivals = (board: Board, entity: Entity): Entity[] => {
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
-      const {commands, self: {species, trainer}} = entity.data;
+      const {commands, self: {attacks, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
       const rivals = findRivals(board, entity);
-      if (rivals.length > 0 && species.attacks.length > 0) {
+      if (rivals.length > 0 && attacks.length > 0) {
         const target = sample(rivals).pos;
-        const attack = sample(species.attacks);
+        const attack = sample(attacks);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
@@ -1028,15 +1030,15 @@ const kAttacks: Attack[] = [
   {name: 'Tackle',   range: 4,  damage: int(40), effect: HeadbuttEffect},
 ];
 
-const species = (name: string, hp: int, speed: number,
-                 attack_names: string[], glyph: Glyph): PokemonSpeciesData => {
+const species = (name: string, hp: int, speed: number, attack_names: string[],
+                 glyph: Glyph): PokemonSpeciesWithAttacks => {
   attack_names = attack_names.slice();
   attack_names.push('Tackle');
   const attacks = attack_names.map(x=> only(kAttacks.filter(y => y.name === x)));
   return {name, glyph, hp, speed, attacks};
 };
 
-const kPokemon: PokemonSpeciesData[] = [
+const kPokemon: PokemonSpeciesWithAttacks[] = [
   species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', '020')),
   species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', '410')),
   species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
@@ -1239,9 +1241,16 @@ const initializeState = (): State => {
   const player = makeTrainer(point, true);
   board.addEntity(player);
 
+  const pokemon = (x: PokemonSpeciesWithAttacks,
+                   trainer: Trainer | null): PokemonIndividualData => {
+    const {attacks, glyph, hp, name, speed} = x;
+    const species = {name, glyph, hp, speed};
+    return {attacks, species, trainer, cur_hp: hp, max_hp: hp};
+  };
+
   const n = Math.min(kPartyKeys.length, 5);
   kPokemon.slice(0, n).forEach(species => {
-    const self = {species, trainer: player, cur_hp: int(100), max_hp: int(100)};
+    const self = pokemon(species, player);
     player.data.pokemon.push({entity: null, self});
   });
 
@@ -1256,9 +1265,8 @@ const initializeState = (): State => {
       return null;
     })();
     if (!pos) break;
-    const species = sample(kPokemon.slice(n));
-    const data = {species, trainer: null, cur_hp: int(50), max_hp: int(50)};
-    board.addEntity(makePokemon(pos, data));
+    const self = pokemon(sample(kPokemon.slice(n)), null);
+    board.addEntity(makePokemon(pos, self));
   }
 
   return {board, player, choice: null, summon: null};
