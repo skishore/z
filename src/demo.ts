@@ -248,17 +248,11 @@ const describe = (entity: Entity): string => {
   }
 };
 
-const shout = (trainer: Trainer, pokemon: Pokemon): string => {
-  const {name, player} = trainer.data;
-  const prefix = player ? 'You shout' : `${name} shouts`;
-  return `${prefix}: "${pokemon.data.self.species.name}, attack!"`;
-};
-
 //////////////////////////////////////////////////////////////////////////////
 
 // {Action,Command,Entity,Target}Type enums:
-enum AT { Attack, Idle, Move, Shout, Summon, WaitForInput };
-enum CT { Attack, };
+enum AT { Attack, Idle, Move, Shout, Summon, Withdraw, WaitForInput };
+enum CT { Attack, Return };
 enum ET { Pokemon, Trainer };
 enum TT { Attack, Summon };
 
@@ -266,15 +260,18 @@ type Action =
   {type: AT.Attack, attack: Attack, target: Point} |
   {type: AT.Idle} |
   {type: AT.Move, direction: Direction} |
-  {type: AT.Shout, command: Command, entity: Entity} |
+  {type: AT.Shout, command: Command, pokemon: Pokemon} |
   {type: AT.Summon, index: int, target: Point} |
+  {type: AT.Withdraw, pokemon: Pokemon} |
   {type: AT.WaitForInput};
 
 type GenEffect = (board: Board, source: Point, target: Point) => AttackEffect;
 
 interface Result { success: boolean, moves: number, turns: number };
 
-interface Command {type: CT.Attack, attack: Attack, target: Entity | Point};
+type Command =
+  {type: CT.Attack, attack: Attack, target: Entity | Point} |
+  {type: CT.Return};
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
@@ -398,43 +395,62 @@ const hasLineOfSight =
 
 const followCommands =
     (board: Board, entity: Entity, commands: Command[]): Action => {
+  const kBFSLimit = 6;
+  const source = entity.pos;
+
+  const path_to_target =
+      (range: int, target: Point, valid: (p: Point) => boolean): Action => {
+    const check = board.getStatus.bind(board);
+    const dirs = BFS(source, valid, kBFSLimit, check);
+    const options = dirs.map(x => source.add(x));
+    if (valid(source)) options.push(source);
+
+    if (options.length > 0) {
+      const scores = options.map(
+          x => Math.abs(x.distanceNethack(target) - range));
+      const best = Math.min.apply(null, scores);
+      const move = sample(options.filter((_, i) => scores[i] === best));
+      if (move.equal(source)) return {type: AT.Idle};
+      return {type: AT.Move, direction: Direction.assert(move.sub(source))};
+    }
+
+    const path = AStar(source, target, check);
+    const direction = path
+      ? Direction.assert(nonnull(path[0]).sub(source))
+      : sample(Direction.all);
+    return {type: AT.Move, direction};
+  };
+
   const command = nonnull(commands[0]);
   switch (command.type) {
     case CT.Attack: {
-      const [kRange, kLimit] = [command.attack.range, int(6)];
       const {attack, target: ent_or_pt} = command;
       if (!(ent_or_pt instanceof Point) && ent_or_pt.removed) {
         commands.shift();
         return plan(board, entity);
       }
 
-      const source = entity.pos;
+      // We can attack a target if we have line-of-sight to its position.
       const target = ent_or_pt instanceof Point ? ent_or_pt : ent_or_pt.pos;
-      if (move_ready(entity) && hasLineOfSight(board, source, target, kRange)) {
+      const range = attack.range;
+      const valid = (p: Point) => hasLineOfSight(board, p, target, range);
+      if (move_ready(entity) && hasLineOfSight(board, source, target, range)) {
         commands.shift();
         return {type: AT.Attack, attack, target};
       }
-
-      const check = board.getStatus.bind(board);
-      const found = (x: Point) => hasLineOfSight(board, x, target, kRange);
-      const dirs = BFS(source, found, kLimit, check);
-      const options = dirs.map(x => source.add(x));
-      if (found(source)) options.push(source);
-
-      if (options.length > 0) {
-        const scores = options.map(
-            x => Math.abs(x.distanceNethack(target) - kRange));
-        const best = Math.min.apply(null, scores);
-        const move = sample(options.filter((_, i) => scores[i] === best));
-        if (move.equal(source)) return {type: AT.Idle};
-        return {type: AT.Move, direction: Direction.assert(move.sub(source))};
+      return path_to_target(range, target, valid);
+    }
+    case CT.Return: {
+      const trainer = entity.type === ET.Pokemon ? entity.data.self.trainer : null;
+      if (!trainer || trainer.removed) {
+        commands.shift();
+        return plan(board, entity);
       }
 
-      const path = AStar(source, target, check);
-      const direction = path
-        ? Direction.assert(nonnull(path[0]).sub(source))
-        : sample(Direction.all);
-      return {type: AT.Move, direction};
+      // A trainer can withdraw us if they have line-of-sight to our position.
+      const range = Constants.SUMMON_RANGE;
+      const valid = (p: Point) => hasLineOfSight(board, trainer.pos, p, range);
+      return path_to_target(range, trainer.pos, valid);
     }
   }
 };
@@ -474,6 +490,27 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   return {type: AT.Move, direction};
 };
 
+const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
+  const result: Pokemon[] = [];
+  const source = trainer.pos;
+  const vision = board.getVision(trainer);
+
+  board.getEntities().forEach(entity => {
+    if (entity.type !== ET.Pokemon) return;
+    if (entity.data.self.trainer === trainer) return;
+    if ((vision.getOrNull(entity.pos) ?? -1) < 0) return;
+    result.push(entity);
+  });
+
+  result.sort((entity_a, entity_b): number => {
+    const a = entity_a.pos, b = entity_b.pos;
+    const base = a.distanceSquared(source) - b.distanceSquared(source);
+    const xopt = a.x - b.x, yopt = a.y - b.y;
+    return base || xopt || yopt;
+  });
+  return result.slice(0, 32);
+};
+
 const findRivals = (board: Board, entity: Entity): Entity[] => {
   const getTrainer = (entity: Entity) => {
     return entity.type === ET.Trainer ? entity : entity.data.self.trainer;
@@ -501,6 +538,14 @@ const plan = (board: Board, entity: Entity): Action => {
     }
     case ET.Trainer: {
       const {input, player} = entity.data;
+      for (const summon of entity.data.summons) {
+        const range = Constants.SUMMON_RANGE;
+        const withdraw = summon.data.commands[0]?.type === CT.Return;
+        if (withdraw && hasLineOfSight(board, entity.pos, summon.pos, range)) {
+          summon.data.commands.shift();
+          return {type: AT.Withdraw, pokemon: summon};
+        }
+      }
       if (!player) return {type: AT.Idle};
       if (!input) return {type: AT.WaitForInput};
       entity.data.input = null;
@@ -515,7 +560,9 @@ const kFailure: Result = {success: false, moves: 0, turns: 1};
 const act = (board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
+      const source = entity.pos;
       const {attack, target} = action;
+      if (!hasLineOfSight(board, source, target, attack.range)) return kFailure;
       const attack_effect = attack.effect(board, entity.pos, target);
       board.addEffect(ApplyAttack(board, attack_effect, target));
       const user = capitalize(describe(entity));
@@ -556,11 +603,9 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       return kSuccess;
     }
     case AT.Shout: {
-      const listener = action.entity;
-      if (listener.type !== ET.Pokemon) return kFailure;
-      if (trainer(listener) !== entity) return kFailure;
-      listener.data.commands.push(action.command);
-      board.log(shout(entity, listener));
+      const pokemon = action.pokemon;
+      if (trainer(pokemon) !== entity) return kFailure;
+      pokemon.data.commands.push(action.command);
       return kSuccess;
     }
     case AT.Summon: {
@@ -576,6 +621,16 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       pokemon.entity = summoned;
       board.addEntity(summoned);
       board.addEffect(SummonEffect(entity.pos, target, glyph));
+      return kSuccess;
+    }
+    case AT.Withdraw: {
+      const pokemon = action.pokemon;
+      const range = Constants.SUMMON_RANGE;
+      const [source, target] = [entity.pos, pokemon.pos];
+      if (trainer(pokemon) !== entity) return kFailure;
+      if (!hasLineOfSight(board, source, target, range)) return kFailure;
+      board.removeEntity(pokemon);
+      board.addEffect(WithdrawEffect(source, target, pokemon.glyph));
       return kSuccess;
     }
     case AT.WaitForInput: return kFailure;
@@ -1011,7 +1066,9 @@ interface Tile {
 };
 
 const kPlayerKey = 'a';
+const kReturnKey = 'r';
 const kSummonedKeys = 'sdf';
+const kAttackKeys = `${'a'}sdf`;
 const kPartyKeys = `${'a'}sdfgh`;
 const kDirectionKeys = 'kulnjbhy';
 const kAlphabetKeys = 'abcdefghijklmnopqrstuvwxyz';
@@ -1055,10 +1112,16 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   summon: Summon | null,
+  menu: Menu | null,
 };
 
 type Choice = {
   index: int,
+};
+
+type Menu = {
+  index: int,
+  summon: int,
 };
 
 type Summon = {
@@ -1077,8 +1140,9 @@ const outsideMap = (state: State, point: Point): boolean => {
 };
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player, choice, summon} = state;
+  const {board, player, choice, summon, menu} = state;
   const enter = input === 'enter' || input === '.';
+  const escape = input === 'escape';
 
   if (choice) {
     const count = player.data.pokemon.length;
@@ -1093,17 +1157,17 @@ const processInput = (state: State, input: Input): void => {
       const name = pokemon?.self.species.name;
       if (!pokemon) return;
       if (pokemon.entity) {
-        state.board.logMenu(Color(`${name} is already out!`, '422'));
+        board.logMenu(Color(`${name} is already out!`, '422'));
       } else if (!pokemon.self.cur_hp) {
-        state.board.logMenu(Color(`${name} has no strength left!`, '422'));
+        board.logMenu(Color(`${name} has no strength left!`, '422'));
       } else {
         const range = Constants.SUMMON_RANGE;
-        state.board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
+        board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
         state.summon = initSummon(state, chosen, range);
         state.choice = null;
       }
-    } else if (input === 'escape') {
-      state.board.logMenu(Color('Canceled.', '234'));
+    } else if (escape) {
+      board.logMenu(Color('Canceled.', '234'));
       state.choice = null;
     }
     return;
@@ -1125,32 +1189,84 @@ const processInput = (state: State, input: Input): void => {
       }
     } else if (enter) {
       if (summon.error.length > 0) {
-        state.board.logMenu(Color(summon.error, '422'));
+        board.logMenu(Color(summon.error, '422'));
       } else {
         const {index, target} = summon;
         const name = player.data.pokemon[index]?.self.species.name;
-        state.board.logMenu(Color(`Go! ${name}!`, '231'), true);
+        board.logMenu(Color(`Go! ${name}!`, '231'), true);
         player.data.input = {type: AT.Summon, index, target};
         state.summon = null;
       }
-    } else if (input === 'escape') {
-      state.board.logMenu(Color('Canceled.', '234'));
+    } else if (escape) {
+      board.logMenu(Color('Canceled.', '234'));
       state.summon = null;
+    }
+    return;
+  }
+
+  if (menu) {
+    assert(0 <= menu.summon);
+    assert(menu.summon < player.data.summons.length);
+
+    const summon = player.data.summons[menu.summon]!;
+    const name = summon.data.self.species.name;
+    const keys = kAttackKeys + kReturnKey;
+    const count = keys.length;
+
+    const valid = (index: int): boolean => {
+      return index === count - 1 || !!summon.data.self.attacks[index];
+    };
+
+    const direction = Direction.all[kDirectionKeys.indexOf(input)];
+    const chosen = enter ? menu.index : int(keys.indexOf(input));
+    if (direction && direction.x === 0) {
+      do {
+        menu.index = int(menu.index + direction.y);
+        if (menu.index >= count) menu.index = 0;
+        if (menu.index < 0) menu.index = int(Math.max(count - 1, 0));
+      } while (!valid(menu.index));
+    } else if (chosen >= 0) {
+      if (chosen === count - 1) {
+        board.logMenu(Color(`${name}, return!`, '231'), true);
+        summon.data.commands.push({type: CT.Return});
+        state.menu = null;
+      } else {
+        const attack = summon.data.self.attacks[chosen];
+        const rivals = findRivalPokemon(board, player);
+        if (!attack) {
+          board.logMenu(Color(`${name} does not have that attack.`, '422'));
+        } else if (rivals.length === 0) {
+          board.logMenu(Color(`There are no targets for ${name}'s ${attack.name}.`, '422'));
+        } else {
+          const target = rivals[0]!;
+          const target_name = target.data.self.species.name;
+          const command = {type: CT.Attack, attack, target};
+          board.logMenu(Color(`${name}, Attack ${target_name} with ${attack.name}!`, '231'), true);
+          player.data.input = {type: AT.Shout, command, pokemon: summon};
+          state.menu = null;
+        }
+      }
+    } else if (escape) {
+      board.logMenu(Color('Canceled.', '234'));
+      state.menu = null;
     }
     return;
   }
 
   if (player.data.input !== null) return;
 
-  const summoned = kSummonedKeys.indexOf(input);
+  const summoned = int(kSummonedKeys.indexOf(input));
   if (summoned >= player.data.summons.length) {
     state.choice = {index: 0};
-    state.board.logMenu(Color('Choose a Pokemon to send out with J/K:', '234'));
+    board.logMenu(Color('Choose a Pokemon to send out with J/K:', '234'));
+  } else if (summoned >= 0) {
+    state.menu = {index: 0, summon: summoned};
+    board.logMenu(Color('Choose a command with J/K:', '234'));
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
   if (direction) player.data.input = {type: AT.Move, direction};
-  if (input === '.') player.data.input = {type: AT.Idle};
+  if (input === '.') player.data.input = {type: AT.Idle}
 };
 
 const initializeBoard = (): Board => {
@@ -1269,7 +1385,7 @@ const initializeState = (): State => {
     board.addEntity(makePokemon(pos, self));
   }
 
-  return {board, player, choice: null, summon: null};
+  return {board, player, choice: null, summon: null, menu: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1290,7 +1406,7 @@ const updateState = (state: State, inputs: Input[]): void => {
       continue;
     }
     const result = act(board, entity, plan(board, entity));
-    if (entity === player && !result.success) return;
+    if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
 };
@@ -1432,7 +1548,8 @@ const renderEmptyStatus = (width: int, key?: string): string[] => {
 };
 
 const renderPokemonStatus = (self: PokemonIndividualData, width: int,
-                             key?: string, color?: Color | null): string[] => {
+                             key?: string, color?: Color | null,
+                             menu: int = -1): string[] => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
   color = color ? color : hp > 0 ? null : '111';
   const pp = 1;
@@ -1445,6 +1562,22 @@ const renderPokemonStatus = (self: PokemonIndividualData, width: int,
   result.push(`${spacer}HP: [${renderBar(bar, hp, color ? null : '020')}]`);
   result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '234')}]`);
   result.push('');
+
+  if (menu >= 0) {
+    const indent = `${spacer}  `;
+    const chosen = `${spacer} > `;
+    for (let i = 0; i < kAttackKeys.length; i++) {
+      const key = kAttackKeys[i];
+      const name = self.attacks[i]?.name || null;
+      const prefix = menu === i ? chosen : indent;
+      const line = name ? `${prefix}${renderKey(key)}${name}`
+                        : Color(`${prefix}${renderKey(key)}---`, '111');
+      [line, ''].forEach(x => result.push(x));
+    }
+    const prefix = menu === kAttackKeys.length ? chosen : indent;
+    const line = `${prefix}${renderKey('r')}Call back`;
+    [line, ''].forEach(x => result.push(x));
+  }
 
   return color ? result.map(x => x.length ? Color(x, color) : x) : result;
 };
@@ -1508,44 +1641,30 @@ const renderStatus = (state: State): string => {
   const rwidth = int(Math.floor((w - extra) / kNumColumns) - 2 * kColumnPadding);
   const lwidth = int(rwidth + extra);
 
-  const player = state.player;
-  const vision = state.board.getVision(player);
+  const {board, menu, player} = state;
+  const vision = board.getVision(player);
 
   const lcol: string[] = [];
   const rcol: string[] = [];
-  const key = kPlayerKey;
-  renderEntityStatus(state.player, lwidth, key).forEach(x => lcol.push(x));
+  const key = menu ? '-' : kPlayerKey;
+  renderEntityStatus(player, lwidth, key).forEach(x => lcol.push(x));
 
-  let index = 0;
-  for (const pokemon of player.data.summons) {
-    const self = pokemon.data.self;
-    const key = kSummonedKeys[index++];
-    renderPokemonStatus(self, lwidth, key).forEach(x => lcol.push(x));
+  let summon = 0;
+  while (summon < player.data.summons.length) {
+    const key = menu ? '-' : kSummonedKeys[summon];
+    const self = player.data.summons[summon]!.data.self;
+    const index = menu && menu.summon === summon ? menu.index : -1;
+    renderPokemonStatus(self, lwidth, key, null, index).forEach(x => lcol.push(x));
+    summon++;
   }
 
-  while (index < kSummonedKeys.length) {
-    const key = kSummonedKeys[index++]!;
+  while (summon < kSummonedKeys.length) {
+    const key = kSummonedKeys[summon++]!;
     renderEmptyStatus(lwidth, key).forEach(x => lcol.push(x));
   }
 
-  const source = player.pos;
-  const pokemon: Pokemon[] = [];
-  state.board.getEntities().forEach(entity => {
-    if (entity.type !== ET.Pokemon) return;
-    if (entity.data.self.trainer === player) return;
-    if ((vision.getOrNull(entity.pos) ?? -1) < 0) return;
-    if (outsideMap(state, entity.pos)) return;
-    pokemon.push(entity);
-  });
-
-  pokemon.sort((entity_a, entity_b): number => {
-    const a = entity_a.pos, b = entity_b.pos;
-    const base = a.distanceSquared(source) - b.distanceSquared(source);
-    const xopt = a.x - b.x, yopt = a.y - b.y;
-    return base || xopt || yopt;
-  });
-  pokemon.slice(0, 32).forEach(
-      entity => renderEntityStatus(entity, rwidth).forEach(x => rcol.push(x)));
+  const rivals = findRivalPokemon(board, player);
+  rivals.forEach(y => renderEntityStatus(y, rwidth).forEach(x => rcol.push(x)));
 
   const rows: string[] = [];
   const space = ' '.repeat(kColumnPadding);
