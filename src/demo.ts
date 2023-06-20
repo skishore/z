@@ -248,6 +248,29 @@ const describe = (entity: Entity): string => {
   }
 };
 
+const form = (command: Command, pokemon: Pokemon): string => {
+  const name = pokemon.data.self.species.name;
+  switch (command.type) {
+    case CT.Attack: {
+      const target = command.target;
+      if (target instanceof Point) {
+        return `${name}, use ${command.attack.name}!`;
+      }
+      const target_name = target.type === ET.Pokemon
+          ? target.data.self.species.name
+          : target.data.name;
+      return `${name}, attack ${target_name} with ${command.attack.name}!`;
+    }
+    case CT.Return: return `${name}, return!`;
+  }
+};
+
+const shout = (board: Board, trainer: Trainer, text: string): void => {
+  const {name, player} = trainer.data;
+  return player ? board.logMenu(Color(text, '231'), true)
+                : board.log(Color(`${name} shouts: "${text}"`, '234'));
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 // {Action,Command,Entity,Target}Type enums:
@@ -563,11 +586,13 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       const source = entity.pos;
       const {attack, target} = action;
       if (!hasLineOfSight(board, source, target, attack.range)) return kFailure;
+
+      // success
       const attack_effect = attack.effect(board, entity.pos, target);
       board.addEffect(ApplyAttack(board, attack_effect, target));
       const user = capitalize(describe(entity));
-
       const target_entity = board.getEntity(target);
+
       if (target_entity?.type !== ET.Pokemon) {
         board.log(`${user} used ${attack.name}!`);
       } else {
@@ -582,7 +607,6 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
         if (!data.cur_hp) board.removeEntity(target_entity);
       }
-
       return {success: true, moves: 1, turns: 1};
     }
     case AT.Idle: return kSuccess;
@@ -598,6 +622,8 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
         entity.dir = action.direction;
         return kSuccess;
       }
+
+      // success
       board.moveEntity(entity.pos, pos);
       entity.dir = action.direction;
       return kSuccess;
@@ -605,7 +631,18 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
     case AT.Shout: {
       const pokemon = action.pokemon;
       if (trainer(pokemon) !== entity) return kFailure;
-      pokemon.data.commands.push(action.command);
+
+      // success
+      const range = Constants.SUMMON_RANGE;
+      const [source, target] = [entity.pos, pokemon.pos];
+      if (action.command.type === CT.Return &&
+          hasLineOfSight(board, source, target, range)) {
+        board.removeEntity(pokemon);
+        board.addEffect(WithdrawEffect(source, target, pokemon.glyph));
+      } else {
+        pokemon.data.commands.push(action.command);
+      }
+      shout(board, entity, form(action.command, pokemon));
       return kSuccess;
     }
     case AT.Summon: {
@@ -615,12 +652,15 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (!pokemon || pokemon.entity || !pokemon.self.cur_hp) return kFailure;
       if (entity.data.summons.length >= kSummonedKeys.length) return kFailure;
       if (board.getStatus(target) !== Status.FREE) return kFailure;
+
+      // success
       const glyph = board.getTile(target).glyph;
       const summoned = makePokemon(target, pokemon.self);
       entity.data.summons.push(summoned);
       pokemon.entity = summoned;
       board.addEntity(summoned);
       board.addEffect(SummonEffect(entity.pos, target, glyph));
+      shout(board, entity, `Go! ${pokemon.self.species.name}!`);
       return kSuccess;
     }
     case AT.Withdraw: {
@@ -629,8 +669,15 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       const [source, target] = [entity.pos, pokemon.pos];
       if (trainer(pokemon) !== entity) return kFailure;
       if (!hasLineOfSight(board, source, target, range)) return kFailure;
+
+      // success
       board.removeEntity(pokemon);
       board.addEffect(WithdrawEffect(source, target, pokemon.glyph));
+      const name = pokemon.data.self.species.name;
+      const text = entity.data.player
+          ? `You withdraw ${name}.`
+          : `${entity.data.name} withdraws ${name}.`;
+      board.log(Color(text, '234'));
       return kSuccess;
     }
     case AT.WaitForInput: return kFailure;
@@ -1193,7 +1240,6 @@ const processInput = (state: State, input: Input): void => {
       } else {
         const {index, target} = summon;
         const name = player.data.pokemon[index]?.self.species.name;
-        board.logMenu(Color(`Go! ${name}!`, '231'), true);
         player.data.input = {type: AT.Summon, index, target};
         state.summon = null;
       }
@@ -1227,8 +1273,8 @@ const processInput = (state: State, input: Input): void => {
       } while (!valid(menu.index));
     } else if (chosen >= 0) {
       if (chosen === count - 1) {
-        board.logMenu(Color(`${name}, return!`, '231'), true);
-        summon.data.commands.push({type: CT.Return});
+        const command = {type: CT.Return as CT.Return};
+        player.data.input = {type: AT.Shout, command, pokemon: summon};
         state.menu = null;
       } else {
         const attack = summon.data.self.attacks[chosen];
@@ -1241,7 +1287,6 @@ const processInput = (state: State, input: Input): void => {
           const target = rivals[0]!;
           const target_name = target.data.self.species.name;
           const command = {type: CT.Attack, attack, target};
-          board.logMenu(Color(`${name}, Attack ${target_name} with ${attack.name}!`, '231'), true);
           player.data.input = {type: AT.Shout, command, pokemon: summon};
           state.menu = null;
         }
