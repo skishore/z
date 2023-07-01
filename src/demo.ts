@@ -494,10 +494,7 @@ const checkFollowerSquare = (board: Board, leader: Entity, pos: Point,
   return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
 };
 
-const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
-  const trainer = pokemon.data.self.trainer;
-  if (!trainer) return null;
-
+const defendSquare = (board: Board, start: Point, trainer: Trainer): Point | null => {
   const rivals = findRivalPokemon(board, trainer);
   if (rivals.length === 0) return null;
 
@@ -520,9 +517,9 @@ const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
     return last ? Direction.assert(last.sub(pos)) : Direction.none;
   });
 
-  const others = trainer.data.summons.filter(x => x != pokemon);
+  const others = trainer.data.summons.filter(x => !x.pos.equal(start));
   const count = int(Math.min(options.length, others.length + 1));
-  const defenders = [pokemon].concat(others);
+  const defenders = [start].concat(others.map(x => x.pos));
 
   const defensesRating = (points: Point[]): number => {
     const blocked = new Set<int>();
@@ -542,7 +539,7 @@ const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
     for (let i = 0; i < points.length; i++) {
       const point = nonnull(points[i]);
       const defender = nonnull(defenders[i]);
-      result += Math.sqrt(point.distanceSquared(defender.pos));
+      result += Math.sqrt(point.distanceSquared(defender));
     }
     return -0.25 * result;
   };
@@ -558,13 +555,19 @@ const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
       best_score = score;
     }
   }
-  if (best_permutation === null) return null;
+  return best_permutation ? nonnull(best_permutation[0]) : null;
+};
+
+const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
+  const trainer = pokemon.data.self.trainer;
+  if (!trainer) return null;
 
   const check = board.getStatus.bind(board);
-  const target = nonnull(best_permutation[0]);
-  if (target.equal(pokemon.pos)) return {type: AT.Idle};
+  const target = defendSquare(board, pokemon.pos, trainer);
+  if (!target) return null;
 
-  const path = AStar(pokemon.pos, nonnull(best_permutation[0]), check);
+  if (target.equal(pokemon.pos)) return {type: AT.Idle};
+  const path = AStar(pokemon.pos, target, check);
   if (!(path && path.length > 0)) return null;
 
   const direction = Direction.assert(nonnull(path[0]).sub(pokemon.pos));
@@ -780,6 +783,12 @@ const initSummon = (state: State, index: int, range: int): Summon => {
   const player = state.player;
   const target = state.player.pos;
   const result = {error: '', frame: int(0), index, path: [], range, target};
+
+  const defend = defendSquare(state.board, target, player);
+  if (defend) {
+    updateSummonTarget(state, result, defend);
+    if (result.error.length === 0) return result;
+  }
 
   const okay = (pos: Point) => {
     if (!checkFollowerSquare(state.board, player, pos)) return false;
