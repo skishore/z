@@ -1,5 +1,5 @@
 import {Color, Glyph} from './lib';
-import {assert, flatten, int, nonnull, only, range, sample, weighted} from './lib';
+import {assert, flatten, int, nonnull, only, permute, range, sample, weighted} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
@@ -494,6 +494,83 @@ const checkFollowerSquare = (board: Board, leader: Entity, pos: Point,
   return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
 };
 
+const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
+  const trainer = pokemon.data.self.trainer;
+  if (!trainer) return null;
+
+  const rivals = findRivalPokemon(board, trainer);
+  if (rivals.length === 0) return null;
+
+  const getTrainer = (entity: Entity) => {
+    return entity.type === ET.Trainer ? entity : entity.data.self.trainer;
+  };
+  const okay = (p: Point) => {
+    const other = board.getEntity(p);
+    if (other && getTrainer(other) === trainer) return true;
+    return !board.getTile(p).blocked;
+  };
+
+  const pos = trainer.pos;
+  const options = Direction.all.map(x => x.add(pos)).filter(okay);
+  if (options.length === 0) return null;
+
+  const blockers = rivals.map(x => {
+    const los = LOS(x.pos, pos);
+    const last = los[los.length - 2];
+    return last ? Direction.assert(last.sub(pos)) : Direction.none;
+  });
+
+  const others = trainer.data.summons.filter(x => x != pokemon);
+  const count = int(Math.min(options.length, others.length + 1));
+  const defenders = [pokemon].concat(others);
+
+  const defensesRating = (points: Point[]): number => {
+    const blocked = new Set<int>();
+    for (const point of points) {
+      blocked.add(point.sub(pos).key());
+    }
+    let result = 0;
+    for (const blocker of blockers) {
+      if (blocked.has(blocker.key())) result += 3;
+      if (blocked.has(Direction.rotateCW(blocker).key())) result += 1;
+      if (blocked.has(Direction.rotateCCW(blocker).key())) result += 1;
+    }
+    return result;
+  };
+  const movementRating = (points: Point[]): number => {
+    let result = 0;
+    for (let i = 0; i < points.length; i++) {
+      const point = nonnull(points[i]);
+      const defender = nonnull(defenders[i]);
+      result += Math.sqrt(point.distanceSquared(defender.pos));
+    }
+    return -0.25 * result;
+  };
+
+  let best_score = -Infinity;
+  let best_permutation: Point[] | null = null;
+  for (const permutation of permute(options, count)) {
+    const defenses = defensesRating(permutation);
+    const movement = movementRating(permutation);
+    const score = defenses + movement;
+    if (score > best_score) {
+      best_permutation = permutation;
+      best_score = score;
+    }
+  }
+  if (best_permutation === null) return null;
+
+  const check = board.getStatus.bind(board);
+  const target = nonnull(best_permutation[0]);
+  if (target.equal(pokemon.pos)) return {type: AT.Idle};
+
+  const path = AStar(pokemon.pos, nonnull(best_permutation[0]), check);
+  if (!(path && path.length > 0)) return null;
+
+  const direction = Direction.assert(nonnull(path[0]).sub(pokemon.pos));
+  return {type: AT.Move, direction};
+};
+
 const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
   const [ep, tp] = [entity.pos, leader.pos];
   const okay = (p: Point) => checkFollowerSquare(board, leader, p, p.equal(ep));
@@ -507,7 +584,7 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
 
   const check = board.getStatus.bind(board);
   const path = AStar(ep, tp, check);
-  const direction = path
+  const direction = path && path.length > 0
     ? Direction.assert(nonnull(path[0]).sub(ep))
     : sample(Direction.all);
   return {type: AT.Move, direction};
@@ -531,7 +608,7 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
     const xopt = a.x - b.x, yopt = a.y - b.y;
     return base || xopt || yopt;
   });
-  return result.slice(0, 32);
+  return result.slice(0, 16);
 };
 
 const findRivals = (board: Board, entity: Entity): Entity[] => {
@@ -549,6 +626,10 @@ const plan = (board: Board, entity: Entity): Action => {
       const {commands, self: {attacks, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
+      const ready = !move_ready(entity);
+      const defendEarly = ready ? defendLeader(board, entity) : null;
+      if (defendEarly) return defendEarly;
+
       const rivals = findRivals(board, entity);
       if (rivals.length > 0 && attacks.length > 0) {
         const target = sample(rivals).pos;
@@ -556,6 +637,10 @@ const plan = (board: Board, entity: Entity): Action => {
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
+
+      const defendLate = !ready ? defendLeader(board, entity) : null;
+      if (defendLate) return defendLate;
+
       if (trainer) return followLeader(board, entity, trainer);
       return {type: AT.Move, direction: sample(Direction.all)};
     }

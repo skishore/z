@@ -24,6 +24,26 @@ const only = <T>(xs: T[]): T => {
   return xs[0]!;
 };
 
+const permuteHelper = <T>(xs: T[], n: int, start: int, result: T[][]): T[][] => {
+  if (start === n) {
+    result.push(xs.slice(0, n));
+    return result;
+  }
+  for (let i = start; i < xs.length; i++) {
+    const tmp = xs[i]!;
+    xs[i] = xs[start]!;
+    xs[start] = tmp;
+    permuteHelper(xs, n, int(start + 1), result);
+    xs[start] = xs[i]!;
+    xs[i] = tmp;
+  }
+  return result;
+};
+
+const permute = <T>(xs: T[], n: int): T[][] => {
+  return n <= xs.length ? permuteHelper(xs, n, 0, []) : [];
+};
+
 const range = (n: int): int[] => {
   const result: int[] = [];
   for (let i = int(0); i < n; i++) {
@@ -104,4 +124,4 @@ class Glyph {
 //////////////////////////////////////////////////////////////////////////////
 
 export {Color, Glyph};
-export {assert, flatten, int, nonnull, only, range, sample, weighted};
+export {assert, flatten, int, nonnull, only, permute, range, sample, weighted};
