@@ -99,22 +99,6 @@ class Direction extends Point {
     if (point.equal(Direction.none)) return Direction.none;
     return nonnull(Direction.all.filter(x => x.equal(point))[0]);
   }
-
-  static rotateCW(direction: Direction): Direction {
-    let x = direction.x + direction.y;
-    if (x === 2 || x === -2) x = x >> 1;
-    let y = direction.y - direction.x;
-    if (y === 2 || y === -2) y = y >> 1;
-    return new Direction(int(x), int(y));
-  }
-
-  static rotateCCW(direction: Direction): Direction {
-    let x = direction.x - direction.y;
-    if (x === 2 || x === -2) x = x >> 1;
-    let y = direction.x + direction.y;
-    if (y === 2 || y === -2) y = y >> 1;
-    return new Direction(int(x), int(y));
-  }
 };
 
 class Matrix<T> {
