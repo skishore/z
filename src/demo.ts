@@ -485,13 +485,13 @@ const checkFollowerSquare = (board: Board, leader: Entity, pos: Point,
                (ignoreOccupant && status === Status.OCCUPIED);
   if (!free) return false;
 
-  const dn = leader.pos.distanceNethack(pos);
+  const source = leader.pos;
+  const dn = source.distanceNethack(pos);
   if (dn > 2) return false;
+  if (dn < 2) return true;
 
   const vision = board.getVision(leader);
-  const max = vision.getOrNull(leader.pos);
-  const vn = vision.getOrNull(pos) ?? -1;
-  return (dn <= 1 && vn > 0) || (dn === 2 && vn === max);
+  return vision.getOrNull(source) === vision.getOrNull(pos);
 };
 
 const defendSquare = (board: Board, start: Point, trainer: Trainer): Point | null => {
