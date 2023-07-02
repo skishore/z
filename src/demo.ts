@@ -108,6 +108,12 @@ class Board {
   }
 
   removeEntity(entity: Entity) {
+    if (entity.type === ET.Trainer && entity.data.player) {
+      entity.glyph = entity.glyph.recolor('400');
+      entity.removed = true;
+      return;
+    }
+
     const pos = entity.pos;
     assert(this.getEntity(pos) === entity);
     this.entityAtPos.delete(pos.key());
@@ -127,7 +133,6 @@ class Board {
             x => { if (x.entity === entity) x.entity = null; });
       }
     }
-
     entity.removed = true;
   }
 
@@ -333,6 +338,8 @@ interface TrainerData {
   player: boolean,
   pokemon: PokemonEdge[],
   summons: Pokemon[],
+  cur_hp: int,
+  max_hp: int,
 };
 
 interface EntityData {
@@ -385,7 +392,16 @@ const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
 const makeTrainer = (pos: Point, player: boolean): Trainer => {
   const glyph = new Glyph('@');
   const speed = Constants.TRAINER_SPEED;
-  const data = {input: null, name: '', player, pokemon: [], summons: []};
+  const hp = Constants.TRAINER_HP;
+  const data = {
+    input: null,
+    name: '',
+    player,
+    pokemon: [],
+    summons: [],
+    cur_hp: hp,
+    max_hp: hp,
+  };
   return {type: ET.Trainer, data, dir: Direction.s, pos, glyph, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
@@ -690,8 +706,18 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       const user = capitalize(describe(entity));
       const target_entity = board.getEntity(target);
 
-      if (target_entity?.type !== ET.Pokemon) {
+      if (target_entity === null) {
         board.log(`${user} used ${attack.name}!`);
+      } else if (target_entity.type === ET.Trainer) {
+        const data = target_entity.data;
+        data.cur_hp = int(Math.max(data.cur_hp - 1, 0));
+
+        const target_name = describe(target_entity);
+        const base = `${user} attacked ${target_name} with ${attack.name}!`;
+        const and_ = data.cur_hp ? '' : ` ${capitalize(target_name)} blacked out!`;
+        board.log(`${base}${and_}`);
+
+        if (!data.cur_hp) board.removeEntity(target_entity);
       } else {
         const data = target_entity.data.self;
         const damage = int(Math.random() * attack.damage);
@@ -1209,6 +1235,7 @@ const Constants = {
   TURN_TIMER:    int(120),
   SUMMON_ANIM:   int(60),
   SUMMON_RANGE:  int(12),
+  TRAINER_HP:    int(8),
   TRAINER_SPEED: 1/10,
 };
 
@@ -1544,13 +1571,13 @@ const updateState = (state: State, inputs: Input[]): void => {
   if (board.advanceEffect()) return;
 
   const active = board.getActiveEntity();
-  while (inputs.length && !board.getEffect().length &&
-         active === player && player.data.input === null) {
+  while (!player.removed && !board.getEffect().length &&
+         inputs.length && active === player && player.data.input === null) {
     processInput(state, nonnull(inputs.shift()));
   }
   if (state.summon) return animateSummon(state, state.summon);
 
-  while (!board.getEffect().length) {
+  while (!player.removed && !board.getEffect().length) {
     const entity = board.getActiveEntity();
     if (!turn_ready(entity)) {
       board.advanceEntity();
@@ -1739,16 +1766,17 @@ const renderEntityStatus =
     return renderPokemonStatus(entity.data.self, width, key);
   }
 
-  const name = entity.data.player ? 'You' : entity.data.name;
+  const name = capitalize(describe(entity));
   const status = entity.data.pokemon.map(
       x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
+  const hp = entity.data.cur_hp / Math.max(entity.data.max_hp, 1);
 
   const result = [''];
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
   result.push(`${renderKey(key)}${name}`);
-  result.push(`${spacer}HP: [${renderBar(bar, 1, '020')}]`);
+  result.push(`${spacer}HP: [${renderBar(bar, hp, '020')}]`);
   result.push(`${spacer}     ${status.join(' ')}`);
   result.push('');
   return result;
