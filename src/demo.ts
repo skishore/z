@@ -507,55 +507,64 @@ const defendSquare = (board: Board, start: Point, trainer: Trainer): Point | nul
     return !board.getTile(p).blocked;
   };
 
-  const pos = trainer.pos;
-  const options = Direction.all.map(x => x.add(pos)).filter(okay);
-  if (options.length === 0) return null;
+  const scores: Map<int, number> = new Map();
+  for (const rival of rivals) {
+    const marked: Set<int> = new Set();
+    const los = LOS(rival.pos, trainer.pos);
+    const diff = rival.pos.sub(trainer.pos);
 
-  const blockers = rivals.map(x => {
-    const los = LOS(x.pos, pos);
-    const last = los[los.length - 2];
-    return last ? Direction.assert(last.sub(pos)) : Direction.none;
-  });
+    const shift_a = Math.abs(diff.x) > Math.abs(diff.y)
+        ? new Point(0, int(Math.sign(diff.y) || 1))
+        : new Point(int(Math.sign(diff.x) || 1), 0);
+    const shift_b = Point.origin.sub(shift_a);
 
-  const others = trainer.data.summons.filter(x => !x.pos.equal(start));
-  const count = int(Math.min(options.length, others.length + 1));
-  const defenders = [start].concat(others.map(x => x.pos));
+    const shifts: [Point, number][] =
+        [[Point.origin, 64], [shift_a, 8], [shift_b, 1]];
+    for (const [shift, score] of shifts) {
+      let blocked = false;
+      for (const element of los) {
+        const point = element.add(shift);
+        const entity = point.equal(start) ? null : board.getEntity(point);
+        if (entity && entity !== rival && entity !== trainer &&
+            getTrainer(entity) === trainer) {
+          blocked = true;
+        }
+      }
+      if (!blocked) {
+        for (const element of los) {
+          const delta = element.add(shift).sub(trainer.pos);
+          if (Math.abs(delta.x) > 2 || Math.abs(delta.y) > 2) continue;
 
-  const defensesRating = (points: Point[]): number => {
-    const blocked = new Set<int>();
-    for (const point of points) {
-      blocked.add(point.sub(pos).key());
-    }
-    let result = 0;
-    for (const blocker of blockers) {
-      if (blocked.has(blocker.key())) result += 3;
-      if (blocked.has(Direction.rotateCW(blocker).key())) result += 1;
-      if (blocked.has(Direction.rotateCCW(blocker).key())) result += 1;
-    }
-    return result;
-  };
-  const movementRating = (points: Point[]): number => {
-    let result = 0;
-    for (let i = 0; i < points.length; i++) {
-      const point = nonnull(points[i]);
-      const defender = nonnull(defenders[i]);
-      result += Math.sqrt(point.distanceSquared(defender));
-    }
-    return -0.25 * result;
-  };
-
-  let best_score = -Infinity;
-  let best_permutation: Point[] | null = null;
-  for (const permutation of permute(options, count)) {
-    const defenses = defensesRating(permutation);
-    const movement = movementRating(permutation);
-    const score = defenses + movement;
-    if (score > best_score) {
-      best_permutation = permutation;
-      best_score = score;
+          const key = delta.key();
+          const size = marked.size;
+          marked.add(key);
+          if (marked.size === size) continue;
+          scores.set(key, (scores.get(key) ?? 0) + score);
+        }
+      }
     }
   }
-  return best_permutation ? nonnull(best_permutation[0]) : null;
+
+  let best_score = -Infinity;
+  let best_point: Point | null = null;
+  for (let x = -2; x <= 2; x++) {
+    for (let y = -2; y <= 2; y++) {
+      if (x === 0 && y === 0) continue;
+
+      const offset = new Point(int(x), int(y));
+      const point = trainer.pos.add(offset);
+      const ignore = point.equal(start);
+      if (!checkFollowerSquare(board, trainer, point, ignore)) continue;
+
+      let score = scores.get(offset.key()) ?? -Infinity;
+      score += 0.0625 * offset.distanceSquared(Point.origin);
+      if (score > best_score) {
+        best_score = score;
+        best_point = point;
+      }
+    }
+  }
+  return best_point;
 };
 
 const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
@@ -786,8 +795,11 @@ const initSummon = (state: State, index: int, range: int): Summon => {
 
   const defend = defendSquare(state.board, target, player);
   if (defend) {
-    updateSummonTarget(state, result, defend);
-    if (result.error.length === 0) return result;
+    const line = LOS(target, defend).slice(1).reverse();
+    for (const point of line) {
+      updateSummonTarget(state, result, point);
+      if (result.error.length === 0) return result;
+    }
   }
 
   const okay = (pos: Point) => {
