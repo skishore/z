@@ -1408,7 +1408,7 @@ const processInput = (state: State, input: Input): void => {
   if (input === '.') player.data.input = {type: AT.Idle}
 };
 
-const initializeBoard = (): Board => {
+const initBoard = (): Board => {
   const base = Constants.WORLD_SIZE;
   const size = new Point(base, base);
   const board = new Board(size, Constants.FOV_RADIUS);
@@ -1484,12 +1484,12 @@ const initializeBoard = (): Board => {
   return board;
 };
 
-const initializeState = (): State => {
+const initState = (): State => {
   const start = int(Math.floor((Constants.WORLD_SIZE + 1) / 2));
   const point = new Point(start, start);
   const board = (() => {
     while (true) {
-      const board = initializeBoard();
+      const board = initBoard();
       if (!board.getTile(point).blocked) return board;
     }
   })();
@@ -1819,7 +1819,7 @@ const renderStatus = (state: State): string => {
   return rows.join('\n');
 };
 
-const initializeIO = (state: State): IO => {
+const initIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const window = blessed.screen({fullUnicode: true});
 
@@ -1921,8 +1921,8 @@ const tick = (io: IO) => () => {
 };
 
 const main = () => {
-  const state = initializeState();
-  const io = initializeIO(state);
+  const state = initState();
+  const io = initIO(state);
   tick(io)();
 };
 
