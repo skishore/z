@@ -827,7 +827,7 @@ const updateSummonTarget = (state: State, summon: Summon, target: Point): void =
     if (summon.error.length === 0) {
       if (board.getStatus(point) !== Status.FREE) {
         summon.error = 'That location is blocked.';
-      } else if (player.pos.distanceNethack(point) > range) {
+      } else if (player.pos.distanceL2(point) > range - 0.5) {
         summon.error = `You can't throw that far.`;
       } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
         summon.error = `You can't see a clear path there.`;
@@ -1188,7 +1188,7 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 const Constants = {
   LOG_SIZE:      int(4),
   MAP_SIZE:      int(47),
-  FOV_RADIUS:    int(24),
+  FOV_RADIUS:    int(23),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(80),
   CHOICE_SIZE:   int(48),
@@ -1628,7 +1628,7 @@ const renderMap = (state: State): string => {
   };
 
   const shade = (point: Point, glyph: Glyph, force: boolean) => {
-    const out_of_range = summon && point.distanceNethack(pos) > summon.range;
+    const out_of_range = summon && point.distanceL2(pos) > summon.range - 0.5;
     const shaded_glyph = out_of_range ? glyph.recolor('gray') : glyph;
     show(point.x, point.y, shaded_glyph, force);
   };
