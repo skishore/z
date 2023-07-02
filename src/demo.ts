@@ -1725,12 +1725,13 @@ const renderEmptyStatus = (width: int, key?: string): string[] => {
   return ['', Color(`${renderKey(key)}---`, '111'), '', '', ''];
 };
 
-const renderPokemonStatus = (self: PokemonIndividualData, width: int,
-                             key?: string, color?: Color | null,
-                             menu: int = -1): string[] => {
+const renderPokemonStatus =
+    (self: PokemonIndividualData, width: int, key?: string, color?: Color | null,
+     entity?: Entity | null, menu: int = -1): string[] => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
   color = color ? color : hp > 0 ? null : '111';
-  const pp = 1;
+  const bp = (entity?.move_timer ?? 0) / Constants.MOVE_TIMER;
+  const pp = 1 - Math.max(0, Math.min(bp, 1));
 
   const result = [''];
   const prefix = renderKey(key);
@@ -1738,7 +1739,7 @@ const renderPokemonStatus = (self: PokemonIndividualData, width: int,
   const bar = int(width - prefix.length);
   result.push(`${prefix}${self.species.name}`);
   result.push(`${spacer}HP: [${renderBar(bar, hp, color ? null : '020')}]`);
-  result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '234')}]`);
+  result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '123')}]`);
   result.push('');
 
   if (menu >= 0) {
@@ -1763,7 +1764,7 @@ const renderPokemonStatus = (self: PokemonIndividualData, width: int,
 const renderEntityStatus =
     (entity: Entity, width: int, key?: string): string[] => {
   if (entity.type === ET.Pokemon) {
-    return renderPokemonStatus(entity.data.self, width, key);
+    return renderPokemonStatus(entity.data.self, width, key, null, entity);
   }
 
   const name = capitalize(describe(entity));
@@ -1799,8 +1800,9 @@ const renderChoice = (state: State): string => {
     const pokemon = player.data.pokemon[i];
     const status = (() => {
       if (!pokemon) return renderEmptyStatus(width, key);
-      const color = pokemon.entity ? '111' : null;
-      return renderPokemonStatus(pokemon.self, width, key, color)
+      const entity = pokemon.entity;
+      const color = entity ? '111' : null;
+      return renderPokemonStatus(pokemon.self, width, key, color, entity);
     })();
     status.forEach((line, j) => {
       const selected = i === index;
@@ -1830,10 +1832,11 @@ const renderStatus = (state: State): string => {
 
   let summon = 0;
   while (summon < player.data.summons.length) {
+    const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
-    const self = player.data.summons[summon]!.data.self;
     const index = menu && menu.summon === summon ? menu.index : -1;
-    renderPokemonStatus(self, lwidth, key, null, index).forEach(x => lcol.push(x));
+    renderPokemonStatus(pokemon.data.self, lwidth, key, null, pokemon, index)
+      .forEach(x => lcol.push(x));
     summon++;
   }
 
