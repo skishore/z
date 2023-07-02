@@ -1228,7 +1228,7 @@ const Constants = {
   MAP_SIZE:      int(47),
   FOV_RADIUS:    int(23),
   WORLD_SIZE:    int(100),
-  STATUS_SIZE:   int(80),
+  STATUS_SIZE:   int(36),
   CHOICE_SIZE:   int(48),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
@@ -1615,6 +1615,7 @@ interface UI {
   log: Element,
   map: Element,
   status: Element,
+  target: Element,
   window: Element,
 };
 
@@ -1814,51 +1815,39 @@ const renderChoice = (state: State): string => {
 };
 
 const renderStatus = (state: State): string => {
-  const kNumColumns = 2;
-  const kColumnPadding = 2;
-  const w = Constants.STATUS_SIZE;
-  const h = Constants.MAP_SIZE + 2;
-  const extra = renderKey('a').length;
-  const rwidth = int(Math.floor((w - extra) / kNumColumns) - 2 * kColumnPadding);
-  const lwidth = int(rwidth + extra);
-
+  const kl = renderKey('a').length;
+  const width = int(Constants.STATUS_SIZE + kl);
   const {board, menu, player} = state;
   const vision = board.getVision(player);
 
-  const lcol: string[] = [];
-  const rcol: string[] = [];
+  const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  renderEntityStatus(player, lwidth, key).forEach(x => lcol.push(x));
+  renderEntityStatus(player, width, key).forEach(x => rows.push(x));
 
   let summon = 0;
   while (summon < player.data.summons.length) {
     const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
     const index = menu && menu.summon === summon ? menu.index : -1;
-    renderPokemonStatus(pokemon.data.self, lwidth, key, null, pokemon, index)
-      .forEach(x => lcol.push(x));
+    renderPokemonStatus(pokemon.data.self, width, key, null, pokemon, index)
+      .forEach(x => rows.push(x));
     summon++;
   }
 
   while (summon < kSummonedKeys.length) {
     const key = kSummonedKeys[summon++]!;
-    renderEmptyStatus(lwidth, key).forEach(x => lcol.push(x));
+    renderEmptyStatus(width, key).forEach(x => rows.push(x));
   }
+  return rows.join('\n');
+};
 
-  const rivals = findRivalPokemon(board, player);
-  rivals.forEach(y => renderEntityStatus(y, rwidth).forEach(x => rcol.push(x)));
+const renderTarget = (state: State): string => {
+  const width = Constants.STATUS_SIZE;
+  const {board, menu, player} = state;
 
   const rows: string[] = [];
-  const space = ' '.repeat(kColumnPadding);
-  const nrows = Math.max(lcol.length, rcol.length);
-  const pad = (x: string | undefined, w: int): string => {
-    x = x || '';
-    const padding = w - x.replace(/\x1b\[[\d;]*m/g, '').length;
-    return `${space}${x}${' '.repeat(padding)}${space}`;
-  };
-  for (let i = 0; i < nrows; i++) {
-    rows.push(`${pad(lcol[i], lwidth)}${pad(rcol[i], rwidth)}`);
-  }
+  const rivals = findRivalPokemon(board, player);
+  rivals.forEach(y => renderEntityStatus(y, width).forEach(x => rows.push(x)));
   return rows.join('\n');
 };
 
@@ -1866,15 +1855,19 @@ const initIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const window = blessed.screen({fullUnicode: true});
 
-  const kSpacer = 1;
+  const kColSpace = 4;
+  const kRowSpace = 1;
   const x = Constants.MAP_SIZE;
   const y = Constants.MAP_SIZE;
-  const w = 2 * x + 2 + kSpacer + Constants.STATUS_SIZE;
-  const h = y + 2 + kSpacer + Constants.LOG_SIZE;
+  const ss = Constants.STATUS_SIZE;
+  const kl = renderKey('a').length;
+  const w = 2 * x + 2 + 2 * ss + kl + 3 * kColSpace;
+  const h = y + 2 + kRowSpace + Constants.LOG_SIZE;
 
   const [lw, lh, ll, lt] = [w - 4, Constants.LOG_SIZE, 2, 0];
-  const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kSpacer];
-  const [sw, sh, sl, st] = [Constants.STATUS_SIZE, mh, mw + kSpacer, mt];
+  const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kRowSpace];
+  const [sw, sh, sl, st] = [ss + kl, mh, mw + 1 * kColSpace, mt];
+  const [tw, th, tl, tt] = [ss, mh, sl + sw + 2 * kColSpace, mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
@@ -1895,10 +1888,11 @@ const initIO = (state: State): IO => {
   const log = element(lw, lh, ll, lt);
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
   const status = element(sw, sh, sl, st);
+  const target = element(tw, th, tl, tt);
   const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => window.append(x));
-  const ui: UI = {choice, fps, log, map, status, window};
+  const ui: UI = {choice, fps, log, map, status, target, window};
 
   const inputs: Input[] = [];
   window.key(['S-a', 'C-c'], () => process.exit(0));
@@ -1934,6 +1928,7 @@ const render = (io: IO) => {
   refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.target, renderTarget(io.state)) || refresh;
   if (!refresh) return;
 
   const last = nonnull(io.timing[io.timing.length - 1]);
