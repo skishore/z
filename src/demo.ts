@@ -1243,6 +1243,7 @@ interface Tile {
   readonly blocked: boolean,
   readonly obscure: boolean,
   readonly glyph: Glyph,
+  readonly description: string,
 };
 
 const kPlayerKey = 'a';
@@ -1254,9 +1255,9 @@ const kDirectionKeys = 'kulnjbhy';
 const kAlphabetKeys = 'abcdefghijklmnopqrstuvwxyz';
 
 const kTiles: {[ch: string]: Tile} = {
-  '.': {blocked: false, obscure: false, glyph: new Glyph('.')},
-  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', '231')},
-  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', '010')},
+  '.': {blocked: false, obscure: false, glyph: new Glyph('.'),        description: 'ground'},
+  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', '231'), description: 'tall grass'},
+  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', '010'), description: 'a tree'},
 };
 
 const kAttacks: Attack[] = [
@@ -1292,19 +1293,20 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   summon: Summon | null,
+  target: Pokemon | null,
   menu: Menu | null,
 };
 
-type Choice = {
+interface Choice {
   index: int,
 };
 
-type Menu = {
+interface Menu {
   index: int,
   summon: int,
 };
 
-type Summon = {
+interface Summon {
   error: string,
   frame: int
   index: int,
@@ -1323,6 +1325,19 @@ const processInput = (state: State, input: Input): void => {
   const {board, player, choice, summon, menu} = state;
   const enter = input === 'enter' || input === '.';
   const escape = input === 'escape';
+
+  if (input === 'tab' || input === 'S-tab') {
+    const rivals = findRivalPokemon(board, player);
+    if (rivals.length === 0) return;
+
+    const n = rivals.length;
+    const tab = input === 'tab';
+    const start = state.target ? rivals.indexOf(state.target) : -1;
+    const index = start >= 0 ? (start + n + (tab ? 1 : -1)) % n
+                             : tab ? 0 : n - 1;
+    state.target = rivals[index] || null;
+    return;
+  }
 
   if (choice) {
     const count = player.data.pokemon.length;
@@ -1563,7 +1578,7 @@ const initState = (): State => {
     board.addEntity(makePokemon(pos, self));
   }
 
-  return {board, player, choice: null, summon: null, menu: null};
+  return {board, player, choice: null, summon: null, target: null, menu: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1587,6 +1602,8 @@ const updateState = (state: State, inputs: Input[]): void => {
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
+
+  if (state.target?.removed) state.target = null;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1614,6 +1631,7 @@ interface UI {
   fps: Element,
   log: Element,
   map: Element,
+  rivals: Element,
   status: Element,
   target: Element,
   window: Element,
@@ -1683,7 +1701,8 @@ const renderMap = (state: State): string => {
   }
 
   board.getEntities().forEach(x => {
-    shade(x.pos, x.glyph, trainer(x) === player);
+    const glyph = x === state.target ? x.glyph.recolor('black', '440') : x.glyph;
+    shade(x.pos, glyph, trainer(x) === player);
   });
 
   if (summon) {
@@ -1718,7 +1737,7 @@ const renderBar = (width: int, value: number, color: Color | null): string => {
   return Color('='.repeat(chars), color) + ' '.repeat(total - chars);
 };
 
-const renderKey = (key?: string): string => {
+const renderKey = (key?: string | null): string => {
   return key ? `[${key}] ` : '';
 };
 
@@ -1727,8 +1746,8 @@ const renderEmptyStatus = (width: int, key?: string): string[] => {
 };
 
 const renderPokemonStatus =
-    (self: PokemonIndividualData, width: int, key?: string, color?: Color | null,
-     entity?: Entity | null, menu: int = -1): string[] => {
+    (self: PokemonIndividualData, width: int, key?: string | null,
+     color?: Color | null, entity?: Entity | null, menu: int = -1): string[] => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
   color = color ? color : hp > 0 ? null : '111';
   const bp = (entity?.move_timer ?? 0) / Constants.MOVE_TIMER;
@@ -1814,6 +1833,16 @@ const renderChoice = (state: State): string => {
   return result.join('\n');
 };
 
+const renderRivals = (state: State): string => {
+  const width = Constants.STATUS_SIZE;
+  const {board, menu, player, target} = state;
+
+  const rows: string[] = [];
+  const rivals = findRivalPokemon(board, player).filter(x => x !== target);
+  rivals.forEach(y => renderEntityStatus(y, width).forEach(x => rows.push(x)));
+  return rows.join('\n');
+};
+
 const renderStatus = (state: State): string => {
   const kl = renderKey('a').length;
   const width = int(Constants.STATUS_SIZE + kl);
@@ -1843,11 +1872,21 @@ const renderStatus = (state: State): string => {
 
 const renderTarget = (state: State): string => {
   const width = Constants.STATUS_SIZE;
-  const {board, menu, player} = state;
+  const target = state.target;
 
-  const rows: string[] = [];
-  const rivals = findRivalPokemon(board, player);
-  rivals.forEach(y => renderEntityStatus(y, width).forEach(x => rows.push(x)));
+  if (target === null) {
+    const rows = [
+      '',
+      'No target selected.',
+      '',
+      '[Tab] cycle through targets',
+    ];
+    return rows.join('\n');
+  }
+
+  const tile = state.board.getTile(target.pos);
+  const rows = renderPokemonStatus(target.data.self, width, null, null, target);
+  rows.push(`Standing on: ${tile.glyph.toShortString()} (${tile.description})`);
   return rows.join('\n');
 };
 
@@ -1855,19 +1894,23 @@ const initIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const window = blessed.screen({fullUnicode: true});
 
+  const [th, tp] = [10, 2];
+  const padding = {left: tp, right: tp, top: 0, bottom: 0};
+
   const kColSpace = 4;
   const kRowSpace = 1;
   const x = Constants.MAP_SIZE;
   const y = Constants.MAP_SIZE;
   const ss = Constants.STATUS_SIZE;
   const kl = renderKey('a').length;
-  const w = 2 * x + 2 + 2 * ss + kl + 3 * kColSpace;
+  const w = 2 * x + 2 + 2 * ss + kl + 3 * kColSpace + tp + 1;
   const h = y + 2 + kRowSpace + Constants.LOG_SIZE;
 
   const [lw, lh, ll, lt] = [w - 4, Constants.LOG_SIZE, 2, 0];
   const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kRowSpace];
   const [sw, sh, sl, st] = [ss + kl, mh, mw + 1 * kColSpace, mt];
-  const [tw, th, tl, tt] = [ss, mh, sl + sw + 2 * kColSpace, mt];
+  const [rw, rh, rl, rt] = [ss, mh - th, sl + sw + 2 * kColSpace, mt + th];
+  const [tw, __, tl, tt] = [rw + 2 * (tp + 1), th, rl - (tp + 1), mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
@@ -1887,17 +1930,18 @@ const initIO = (state: State): IO => {
 
   const log = element(lw, lh, ll, lt);
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
+  const rivals = element(rw, rh, rl, rt);
   const status = element(sw, sh, sl, st);
-  const target = element(tw, th, tl, tt);
+  const target = element(tw, th, tl, tt, {border: {type: 'line'}, padding});
   const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => window.append(x));
-  const ui: UI = {choice, fps, log, map, status, target, window};
+  const ui: UI = {choice, fps, log, map, rivals, status, target, window};
 
   const inputs: Input[] = [];
   window.key(['S-a', 'C-c'], () => process.exit(0));
   const kFastDirectionKeys = Array.from(kDirectionKeys).map(x => `S-${x}`);
-  const kAllKeys = ['enter', 'escape', '.']
+  const kAllKeys = ['enter', 'escape', 'tab', 'S-tab', '.']
     .concat(Array.from(kAlphabetKeys))
     .concat(kFastDirectionKeys);
   kAllKeys.forEach(x => window.key([x], () => inputs.push(x)));
@@ -1927,6 +1971,7 @@ const render = (io: IO) => {
   refresh = cachedSetContent(io.ui.log, renderLog(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
+  refresh = cachedSetContent(io.ui.rivals, renderRivals(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.target, renderTarget(io.state)) || refresh;
   if (!refresh) return;

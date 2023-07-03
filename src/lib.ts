@@ -110,6 +110,8 @@ class Glyph {
     return new Glyph(this.ch, fg, bg);
   }
 
+  toShortString(): string { return Color(this.ch, this.fg, this.bg); }
+
   toString(): string { return this.text; }
 
   private static getColoredText(
