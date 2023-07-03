@@ -78,6 +78,7 @@ type Color = 'black' | 'gray' | `${Digit}${Digit}${Digit}`;
 const WideCharOffset = 0xff00 - 0x20;
 
 const Color = (text: string, fg?: Color | null, bg?: Color | null): string => {
+  if (!text.length) return text;
   const index = (color: Color) => {
     if (color === 'black') return 0;
     if (color === 'gray') return 16 + 216 + 5;

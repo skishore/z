@@ -1293,7 +1293,7 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   summon: Summon | null,
-  target: Pokemon | null,
+  target: Target | null,
   menu: Menu | null,
 };
 
@@ -1315,6 +1315,33 @@ interface Summon {
   target: Point,
 };
 
+interface PokemonPublicState {
+  species: PokemonSpeciesData,
+  hp: number,
+  pp: number,
+  pos: Point | null,
+};
+
+interface Target {
+  known: PokemonPublicState,
+  pokemon: Pokemon,
+  stale: boolean,
+};
+
+const getPartyPokemonPublicState =
+    (self: PokemonIndividualData): PokemonPublicState => {
+  const hp = self.cur_hp / Math.max(self.max_hp, 1);
+  return {species: self.species, hp, pp: 1, pos: null};
+};
+
+const getPokemonPublicState = (pokemon: Pokemon): PokemonPublicState => {
+  const result = getPartyPokemonPublicState(pokemon.data.self);
+  const bp = (pokemon.move_timer ?? 0) / Constants.MOVE_TIMER;
+  result.pp = 1 - Math.max(0, Math.min(bp, 1));
+  result.pos = pokemon.pos;
+  return result;
+};
+
 const outsideMap = (state: State, point: Point): boolean => {
   const delta = point.sub(state.player.pos);
   const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
@@ -1332,10 +1359,12 @@ const processInput = (state: State, input: Input): void => {
 
     const n = rivals.length;
     const tab = input === 'tab';
-    const start = state.target ? rivals.indexOf(state.target) : -1;
+    const start = state.target ? rivals.indexOf(state.target.pokemon) : -1;
     const index = start >= 0 ? (start + n + (tab ? 1 : -1)) % n
                              : tab ? 0 : n - 1;
-    state.target = rivals[index] || null;
+    const pokemon = nonnull(rivals[index]);
+    const known = getPokemonPublicState(pokemon);
+    state.target = {known, pokemon, stale: false};
     return;
   }
 
@@ -1581,6 +1610,19 @@ const initState = (): State => {
   return {board, player, choice: null, summon: null, target: null, menu: null};
 };
 
+const updatePlayerTarget = (state: State): void => {
+  const {board, player, target} = state;
+  if (!target) return;
+
+  if (target.pokemon.removed) {
+    state.target = null;
+  } else {
+    const vision = board.getVision(player);
+    target.stale = (vision.getOrNull(target.pokemon.pos) ?? -1) < 0;
+    if (!target.stale) target.known = getPokemonPublicState(target.pokemon);
+  }
+}
+
 const updateState = (state: State, inputs: Input[]): void => {
   const {board, player} = state;
   if (board.advanceEffect()) return;
@@ -1603,7 +1645,7 @@ const updateState = (state: State, inputs: Input[]): void => {
     wait(entity, result.moves, result.turns);
   }
 
-  if (state.target?.removed) state.target = null;
+  updatePlayerTarget(state);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1670,6 +1712,7 @@ const renderMap = (state: State): string => {
   const offset_x = int(pos.x - (width - 1) / 2);
   const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
+  const target = state.target?.pokemon;
 
   const show = (x: int, y: int, glyph: Glyph, force: boolean) => {
     x -= offset_x; y -= offset_y;
@@ -1701,7 +1744,7 @@ const renderMap = (state: State): string => {
   }
 
   board.getEntities().forEach(x => {
-    const glyph = x === state.target ? x.glyph.recolor('black', '440') : x.glyph;
+    const glyph = x === target ? x.glyph.recolor('black', '440') : x.glyph;
     shade(x.pos, glyph, trainer(x) === player);
   });
 
@@ -1745,57 +1788,77 @@ const renderEmptyStatus = (width: int, key?: string): string[] => {
   return ['', Color(`${renderKey(key)}---`, '111'), '', '', ''];
 };
 
-const renderPokemonStatus =
-    (self: PokemonIndividualData, width: int, key?: string | null,
-     color?: Color | null, entity?: Entity | null, menu: int = -1): string[] => {
-  const hp = self.cur_hp / Math.max(self.max_hp, 1);
-  color = color ? color : hp > 0 ? null : '111';
-  const bp = (entity?.move_timer ?? 0) / Constants.MOVE_TIMER;
-  const pp = 1 - Math.max(0, Math.min(bp, 1));
+const renderBasicPokemonStatus =
+    (known: PokemonPublicState, width: int,
+     key?: string | null, color?: Color | null): string[] => {
+  const {species, hp, pp} = known;
+  color = color ? color : known.hp > 0 ? null : '111';
 
   const result = [''];
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
-  result.push(`${prefix}${self.species.name}`);
+
+  result.push(`${prefix}${known.species.name}`);
   result.push(`${spacer}HP: [${renderBar(bar, hp, color ? null : '020')}]`);
   result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '123')}]`);
   result.push('');
 
+  return color ? result.map(x => Color(x, color)) : result;
+};
+
+const renderFriendlyPokemonStatus =
+    (pokemon: Pokemon, width: int, key?: string | null,
+     color?: Color | null, menu: int = -1): string[] => {
+  const known = getPokemonPublicState(pokemon);
+  color = color ? color : known.hp > 0 ? null : '111';
+
+  const prefix = renderKey(key);
+  const spacer = ' '.repeat(prefix.length);
+  const result = renderBasicPokemonStatus(known, width, key, color);
+
   if (menu >= 0) {
     const indent = `${spacer}  `;
     const chosen = `${spacer} > `;
+    const attacks = pokemon.data.self.attacks;
     for (let i = 0; i < kAttackKeys.length; i++) {
       const key = kAttackKeys[i];
-      const name = self.attacks[i]?.name || null;
+      const name = attacks[i]?.name || null;
       const prefix = menu === i ? chosen : indent;
       const line = name ? `${prefix}${renderKey(key)}${name}`
                         : Color(`${prefix}${renderKey(key)}---`, '111');
-      [line, ''].forEach(x => result.push(x));
+      [Color(line, color), ''].forEach(x => result.push(x));
     }
     const prefix = menu === kAttackKeys.length ? chosen : indent;
     const line = `${prefix}${renderKey('r')}Call back`;
-    [line, ''].forEach(x => result.push(x));
+    [Color(line, color), ''].forEach(x => result.push(x));
   }
-
-  return color ? result.map(x => x.length ? Color(x, color) : x) : result;
+  return result;
 };
 
-const renderEntityStatus =
-    (entity: Entity, width: int, key?: string): string[] => {
-  if (entity.type === ET.Pokemon) {
-    return renderPokemonStatus(entity.data.self, width, key, null, entity);
-  }
+const renderPartyPokemonStatus =
+    (pokemon: PokemonIndividualData, width: int, key: string): string[] => {
+  const known = getPartyPokemonPublicState(pokemon);
+  return renderBasicPokemonStatus(known, width, key);
+};
 
-  const name = capitalize(describe(entity));
-  const status = entity.data.pokemon.map(
+const renderRivalPokemonStatus = (pokemon: Pokemon, width: int): string[] => {
+  const known = getPokemonPublicState(pokemon);
+  return renderBasicPokemonStatus(known, width);
+};
+
+const renderTrainerStatus =
+    (trainer: Trainer, width: int, key?: string): string[] => {
+  const name = capitalize(describe(trainer));
+  const status = trainer.data.pokemon.map(
       x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
-  const hp = entity.data.cur_hp / Math.max(entity.data.max_hp, 1);
+  const hp = trainer.data.cur_hp / Math.max(trainer.data.max_hp, 1);
 
   const result = [''];
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
+
   result.push(`${renderKey(key)}${name}`);
   result.push(`${spacer}HP: [${renderBar(bar, hp, '020')}]`);
   result.push(`${spacer}     ${status.join(' ')}`);
@@ -1821,8 +1884,8 @@ const renderChoice = (state: State): string => {
     const status = (() => {
       if (!pokemon) return renderEmptyStatus(width, key);
       const entity = pokemon.entity;
-      const color = entity ? '111' : null;
-      return renderPokemonStatus(pokemon.self, width, key, color, entity);
+      return entity ? renderFriendlyPokemonStatus(entity, width, key, '111')
+                    : renderPartyPokemonStatus(pokemon.self, width, key);
     })();
     status.forEach((line, j) => {
       const selected = i === index;
@@ -1835,11 +1898,12 @@ const renderChoice = (state: State): string => {
 
 const renderRivals = (state: State): string => {
   const width = Constants.STATUS_SIZE;
-  const {board, menu, player, target} = state;
+  const {board, menu, player} = state;
+  const target = state.target?.pokemon;
 
   const rows: string[] = [];
   const rivals = findRivalPokemon(board, player).filter(x => x !== target);
-  rivals.forEach(y => renderEntityStatus(y, width).forEach(x => rows.push(x)));
+  rivals.forEach(y => renderRivalPokemonStatus(y, width).forEach(x => rows.push(x)));
   return rows.join('\n');
 };
 
@@ -1851,15 +1915,15 @@ const renderStatus = (state: State): string => {
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  renderEntityStatus(player, width, key).forEach(x => rows.push(x));
+  renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
 
   let summon = 0;
   while (summon < player.data.summons.length) {
     const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
     const index = menu && menu.summon === summon ? menu.index : -1;
-    renderPokemonStatus(pokemon.data.self, width, key, null, pokemon, index)
-      .forEach(x => rows.push(x));
+    renderFriendlyPokemonStatus(pokemon, width, key, null, index)
+        .forEach(x => rows.push(x));
     summon++;
   }
 
@@ -1884,9 +1948,16 @@ const renderTarget = (state: State): string => {
     return rows.join('\n');
   }
 
-  const tile = state.board.getTile(target.pos);
-  const rows = renderPokemonStatus(target.data.self, width, null, null, target);
-  rows.push(`Standing on: ${tile.glyph.toShortString()} (${tile.description})`);
+  const known = target.known;
+  const color = known.hp > 0 && !target.stale ? null : '111';
+  const rows = renderBasicPokemonStatus(known, width, null, color);
+
+  if (known.pos) {
+    const tile = state.board.getTile(known.pos);
+    const edit = color ? tile.glyph.recolor() : tile.glyph;
+    const text = `Standing on: ${edit.toShortString()} (${tile.description})`;
+    rows.push(Color(text, color));
+  }
   return rows.join('\n');
 };
 
