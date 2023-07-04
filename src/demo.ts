@@ -864,7 +864,7 @@ const updateSummonTarget = (state: State, summon: Summon, target: Point): void =
     const point = los[i]!;
     if (summon.error.length === 0) {
       if (board.getStatus(point) !== Status.FREE) {
-        summon.error = 'That location is blocked.';
+        summon.error = `There's something in the way.`;
       } else if (player.pos.distanceL2(point) > range - 0.5) {
         summon.error = `You can't throw that far.`;
       } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
@@ -1229,8 +1229,8 @@ const Constants = {
   MAP_SIZE_Y:    int(43),
   FOV_RADIUS:    int(21),
   WORLD_SIZE:    int(100),
-  STATUS_SIZE:   int(28),
-  CHOICE_SIZE:   int(40),
+  STATUS_SIZE:   int(30),
+  CHOICE_SIZE:   int(42),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
@@ -1904,14 +1904,36 @@ const renderStatus = (state: State): string => {
 };
 
 const renderTarget = (state: State): string => {
-  const width = Constants.STATUS_SIZE;
+  const rows: string[] = [];
 
-  const rows = [
-    '',
-    'No target selected.',
-    '',
-    '[x] examine your surroundings',
-  ];
+  if (state.summon !== null) {
+    const vision = state.board.getVision(state.player);
+    const pokemon = nonnull(state.player.data.pokemon[state.summon.index]);
+    const name = pokemon.self.species.name;
+    const seen = (vision.getOrNull(state.summon.target) ?? -1) >= 0;
+    const tile = seen ? state.board.getTile(state.summon.target) : null;
+
+    rows.push('');
+    rows.push(`Sending out ${name}...`);
+    rows.push('');
+    if (tile) {
+      rows.push(`You see: ${tile.glyph} (${tile.description})`);
+    } else {
+      rows.push(`You see: (unseen location)`);
+    }
+    rows.push('');
+    if (state.summon.error) {
+      rows.push(Color(state.summon.error, '422'));
+    } else {
+      rows.push(Color('Use [.] or [Enter] to accept.', '234'));
+    }
+    return rows.join('\n');
+  }
+
+  rows.push('');
+  rows.push('No target selected.');
+  rows.push('');
+  rows.push('[x] examine your surroundings');
   return rows.join('\n');
 };
 
