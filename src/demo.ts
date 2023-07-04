@@ -1294,7 +1294,6 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   summon: Summon | null,
-  target: Target | null,
   menu: Menu | null,
 };
 
@@ -1323,12 +1322,6 @@ interface PokemonPublicState {
   pos: Point | null,
 };
 
-interface Target {
-  known: PokemonPublicState,
-  pokemon: Pokemon,
-  stale: boolean,
-};
-
 const getPartyPokemonPublicState =
     (self: PokemonIndividualData): PokemonPublicState => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
@@ -1354,21 +1347,6 @@ const processInput = (state: State, input: Input): void => {
   const {board, player, choice, summon, menu} = state;
   const enter = input === 'enter' || input === '.';
   const escape = input === 'escape';
-
-  if (input === 'tab' || input === 'S-tab') {
-    const rivals = findRivalPokemon(board, player);
-    if (rivals.length === 0) return;
-
-    const n = rivals.length;
-    const tab = input === 'tab';
-    const start = state.target ? rivals.indexOf(state.target.pokemon) : -1;
-    const index = start >= 0 ? (start + n + (tab ? 1 : -1)) % n
-                             : tab ? 0 : n - 1;
-    const pokemon = nonnull(rivals[index]);
-    const known = getPokemonPublicState(pokemon);
-    state.target = {known, pokemon, stale: false};
-    return;
-  }
 
   if (choice) {
     const count = player.data.pokemon.length;
@@ -1609,21 +1587,8 @@ const initState = (): State => {
     board.addEntity(makePokemon(pos, self));
   }
 
-  return {board, player, choice: null, summon: null, target: null, menu: null};
+  return {board, player, choice: null, summon: null, menu: null};
 };
-
-const updatePlayerTarget = (state: State): void => {
-  const {board, player, target} = state;
-  if (!target) return;
-
-  if (target.pokemon.removed) {
-    state.target = null;
-  } else {
-    const vision = board.getVision(player);
-    target.stale = (vision.getOrNull(target.pokemon.pos) ?? -1) < 0;
-    if (!target.stale) target.known = getPokemonPublicState(target.pokemon);
-  }
-}
 
 const updateState = (state: State, inputs: Input[]): void => {
   const {board, player} = state;
@@ -1646,8 +1611,6 @@ const updateState = (state: State, inputs: Input[]): void => {
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
-
-  updatePlayerTarget(state);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1714,7 +1677,6 @@ const renderMap = (state: State): string => {
   const offset_x = int(pos.x - (width - 1) / 2);
   const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
-  const target = state.target?.pokemon;
 
   const show = (x: int, y: int, glyph: Glyph, force: boolean) => {
     x -= offset_x; y -= offset_y;
@@ -1746,8 +1708,7 @@ const renderMap = (state: State): string => {
   }
 
   board.getEntities().forEach(x => {
-    const glyph = x === target ? x.glyph.recolor('black', '440') : x.glyph;
-    shade(x.pos, glyph, trainer(x) === player);
+    shade(x.pos, x.glyph, trainer(x) === player);
   });
 
   if (summon) {
@@ -1791,7 +1752,7 @@ const renderKey = (key?: string | null): string => {
 };
 
 const renderEmptyStatus = (width: int, key?: string): string[] => {
-  return ['', Color(`${renderKey(key)}---`, '111'), '', '', ''];
+  return ['', `${renderKey(key)}---`, '', '', ''];
 };
 
 const renderBasicPokemonStatus =
@@ -1908,10 +1869,9 @@ const renderChoice = (state: State): string => {
 const renderRivals = (state: State): string => {
   const width = Constants.STATUS_SIZE;
   const {board, menu, player} = state;
-  const target = state.target?.pokemon;
 
   const rows: string[] = [];
-  const rivals = findRivalPokemon(board, player).filter(x => x !== target);
+  const rivals = findRivalPokemon(board, player);
   rivals.forEach(y => renderRivalPokemonStatus(y, width).forEach(x => rows.push(x)));
   return rows.join('\n');
 };
@@ -1945,28 +1905,13 @@ const renderStatus = (state: State): string => {
 
 const renderTarget = (state: State): string => {
   const width = Constants.STATUS_SIZE;
-  const target = state.target;
 
-  if (target === null) {
-    const rows = [
-      '',
-      'No target selected.',
-      '',
-      '[Tab] cycle through targets',
-    ];
-    return rows.join('\n');
-  }
-
-  const known = target.known;
-  const color = known.hp > 0 && !target.stale ? null : '111';
-  const rows = renderBasicPokemonStatus(known, width, null, color);
-
-  if (known.pos) {
-    const tile = state.board.getTile(known.pos);
-    const edit = color ? tile.glyph.recolor() : tile.glyph;
-    const text = `Standing on: ${edit.toShortString()} (${tile.description})`;
-    rows.push(Color(text, color));
-  }
+  const rows = [
+    '',
+    'No target selected.',
+    '',
+    '[x] examine your surroundings',
+  ];
   return rows.join('\n');
 };
 
