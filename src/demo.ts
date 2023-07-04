@@ -1225,9 +1225,9 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(65),
-  MAP_SIZE_Y:    int(37),
-  FOV_RADIUS:    int(16),
+  MAP_SIZE_X:    int(43),
+  MAP_SIZE_Y:    int(43),
+  FOV_RADIUS:    int(21),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(28),
   CHOICE_SIZE:   int(40),
@@ -1676,7 +1676,7 @@ interface UI {
   log: Element,
   map: Element,
   rivals: Element,
-  status: Element[],
+  status: Element,
   target: Element,
   window: Element,
 };
@@ -1776,6 +1776,10 @@ const renderMap = (state: State): string => {
   return text.join('');
 };
 
+const getHPColor = (hp: number): Color => {
+  return hp <= 0.25 ? '300' : hp <= 0.50 ? '330' : '020';
+};
+
 const renderBar = (width: int, value: number, color: Color | null): string => {
   const total = width - 6;
   const chars = value > 0 ? Math.max(1, Math.round(value * total)) : 0;
@@ -1800,10 +1804,12 @@ const renderBasicPokemonStatus =
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
+  const hp_color = color ? null : getHPColor(hp);
+  const pp_color = color ? null : '123';
 
   result.push(`${prefix}${known.species.name}`);
-  result.push(`${spacer}HP: [${renderBar(bar, hp, color ? null : '020')}]`);
-  result.push(`${spacer}PP: [${renderBar(bar, pp, color ? null : '123')}]`);
+  result.push(`${spacer}HP: [${renderBar(bar, hp, hp_color)}]`);
+  result.push(`${spacer}PP: [${renderBar(bar, pp, pp_color)}]`);
   result.push('');
 
   return color ? result.map(x => Color(x, color)) : result;
@@ -1860,9 +1866,10 @@ const renderTrainerStatus =
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
+  const hp_color = getHPColor(hp);
 
   result.push(`${renderKey(key)}${name}`);
-  result.push(`${spacer}HP: [${renderBar(bar, hp, '020')}]`);
+  result.push(`${spacer}HP: [${renderBar(bar, hp, hp_color)}]`);
   result.push(`${spacer}     ${status.join(' ')}`);
   result.push('');
   return result;
@@ -1909,7 +1916,7 @@ const renderRivals = (state: State): string => {
   return rows.join('\n');
 };
 
-const renderStatus = (state: State, i: int): string => {
+const renderStatus = (state: State): string => {
   const kl = renderKey('a').length;
   const width = int(Constants.STATUS_SIZE + kl);
   const {board, menu, player} = state;
@@ -1917,27 +1924,21 @@ const renderStatus = (state: State, i: int): string => {
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  if (i === 0) {
-    renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
-  }
+  renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
 
   let summon = 0;
   while (summon < player.data.summons.length) {
     const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
     const index = menu && menu.summon === summon ? menu.index : -1;
-    if (i === summon + 1) {
-      renderFriendlyPokemonStatus(pokemon, width, key, null, index)
-          .forEach(x => rows.push(x));
-    }
+    renderFriendlyPokemonStatus(pokemon, width, key, null, index)
+        .forEach(x => rows.push(x));
     summon++;
   }
 
   while (summon < kSummonedKeys.length) {
     const key = kSummonedKeys[summon++]!;
-    if (i === summon) {
-      renderEmptyStatus(width, key).forEach(x => rows.push(x));
-    }
+    renderEmptyStatus(width, key).forEach(x => rows.push(x));
   }
   return rows.join('\n');
 };
@@ -1976,23 +1977,25 @@ const initIO = (state: State): IO => {
   const [th, tp] = [10, 2];
   const padding = {left: tp, right: tp, top: 0, bottom: 0};
 
-  const kStatusHeight = 24;
-
-  const kColSpace = 4;
+  const kColSpace = 2;
   const kRowSpace = 1;
   const x = Constants.MAP_SIZE_X;
   const y = Constants.MAP_SIZE_Y;
   const ss = Constants.STATUS_SIZE;
   const kl = renderKey('a').length;
-  const w = 2 * x + 2 + 2 * ss + kl + 3 * kColSpace + tp + 1;
-  const h = y + 2 + kRowSpace + Constants.LOG_SIZE + kStatusHeight;
+  const w = 2 * x + 2 + 2 * ss + kl + 2 * kColSpace + 2 * tp + 1;
+  const h = y + 2 + kRowSpace + Constants.LOG_SIZE;
 
-  const [lw, lh, ll, lt] = [w, Constants.LOG_SIZE, 0, 0];
-  const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kRowSpace];
-  const [rw, rh, rl, rt] = [ss, mh - th, ml + mw + kColSpace, mt + th];
+  const [sw, sh, sl, st] = [ss + kl, y + 2, 0, 0];
+  const [mw, mh, ml, mt] = [2 * x + 2, sh, sl + sw + kColSpace, st];
+  const [lw, lh, ll, lt] = [w, 4, 0, mt + mh + kRowSpace];
+  const [rw, rh, rl, rt] = [ss, mh - th, ml + mw + kColSpace + 2, mt + th];
   const [tw, __, tl, tt] = [rw + 2 * (tp + 1), th, rl - (tp + 1), mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
+
+  assert(tl + tw === w, () => `${tl + tw} === ${w}`);
+  assert(lt + lh === h, () => `${lt + lh} === ${h}`);
 
   let [cw, ch] = [Constants.CHOICE_SIZE, 6 * 5 + 2];
   let [cl, ct] = [int(Math.floor(w - cw) / 2), int(Math.floor(h - ch) / 2)];
@@ -2011,10 +2014,7 @@ const initIO = (state: State): IO => {
   const log = element(lw, lh, ll, lt);
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
   const rivals = element(rw, rh, rl, rt);
-  const status: Element[] = [];
-  for (let i = 0; i < 4; i++) {
-    status.push(element(ss + kl, kStatusHeight, i * (ss + kl + kColSpace), mh + mt));
-  }
+  const status = element(sw, sh, sl, st);
   const target = element(tw, th, tl, tt, {border: {type: 'line'}, padding});
   const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
@@ -2055,9 +2055,7 @@ const render = (io: IO) => {
   refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.rivals, renderRivals(io.state)) || refresh;
-  for (let i = int(0); i < io.ui.status.length; i++) {
-    refresh = cachedSetContent(io.ui.status[i]!, renderStatus(io.state, i)) || refresh;
-  }
+  refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.target, renderTarget(io.state)) || refresh;
   if (!refresh) return;
 
