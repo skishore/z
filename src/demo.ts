@@ -1974,28 +1974,26 @@ const initIO = (state: State): IO => {
   const blessed = require('../extern/blessed');
   const window = blessed.screen({fullUnicode: true});
 
-  const [th, tp] = [10, 2];
-  const padding = {left: tp, right: tp, top: 0, bottom: 0};
-
   const kColSpace = 2;
   const kRowSpace = 1;
   const x = Constants.MAP_SIZE_X;
   const y = Constants.MAP_SIZE_Y;
   const ss = Constants.STATUS_SIZE;
   const kl = renderKey('a').length;
-  const w = 2 * x + 2 + 2 * ss + kl + 2 * kColSpace + 2 * tp + 1;
-  const h = y + 2 + kRowSpace + Constants.LOG_SIZE;
+  const w = 2 * x + 2 + 2 * (ss + kl + 2 * kColSpace);
+  const h = y + 2 + kRowSpace + Constants.LOG_SIZE + kRowSpace + 1;
 
-  const [sw, sh, sl, st] = [ss + kl, y + 2, 0, 0];
-  const [mw, mh, ml, mt] = [2 * x + 2, sh, sl + sw + kColSpace, st];
+  const [sw, sh, sl, st] = [ss + kl, y - kRowSpace, kColSpace, kRowSpace + 1];
+  const [mw, mh, ml, mt] = [2 * x + 2, y + 2, sl + sw + kColSpace, 0];
+  const [tw, th, tl, tt] = [ss + kl, 7, ml + mw + kColSpace, st];
+  const wt = tt + th + 2 * kRowSpace + 1;
+  const [rw, rh, rl, rt] = [ss + kl, mh - wt - kRowSpace - 1, tl, wt];
   const [lw, lh, ll, lt] = [w, 4, 0, mt + mh + kRowSpace];
-  const [rw, rh, rl, rt] = [ss, mh - th, ml + mw + kColSpace + 2, mt + th];
-  const [tw, __, tl, tt] = [rw + 2 * (tp + 1), th, rl - (tp + 1), mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
 
-  assert(tl + tw === w, () => `${tl + tw} === ${w}`);
-  assert(lt + lh === h, () => `${lt + lh} === ${h}`);
+  assert(tl + tw + kColSpace === w, () => `${tl + tw + kColSpace} === ${w}`);
+  assert(lt + lh + kRowSpace + 1 === h, () => `${lt + lh + kRowSpace + 1} === ${h}`);
 
   let [cw, ch] = [Constants.CHOICE_SIZE, 6 * 5 + 2];
   let [cl, ct] = [int(Math.floor(w - cw) / 2), int(Math.floor(h - ch) / 2)];
@@ -2011,12 +2009,29 @@ const initIO = (state: State): IO => {
     return result;
   };
 
+  const divider = (width: number, left: number, top: number, text: string) => {
+    const length = text.length;
+    const result: Element = blessed.box({width, height: 1, left, top});
+    const label = length ? `--${text}${'-'.repeat(width - length - 2)}`
+                         : '-'.repeat(width)
+    result.setContent(Color(label, '430'));
+    content.append(result);
+  };
+
+  const color = 178;
+  divider(ml, 0, 0, 'Party');
+  divider(ml, ml + mw, 0, 'Target');
+  divider(ml, ml + mw, tt + th + kRowSpace, 'Wild Pokemon');
+  divider(ml, 0, mh - 1, 'Log');
+  divider(ml, ml + mw, mh - 1, '');
+  divider(w, 0, h - 1, '');
+
   const log = element(lw, lh, ll, lt);
-  const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
+  const map = element(mw, mh, ml, mt, {border: {type: 'line', fg: color}});
   const rivals = element(rw, rh, rl, rt);
   const status = element(sw, sh, sl, st);
-  const target = element(tw, th, tl, tt, {border: {type: 'line'}, padding});
-  const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
+  const target = element(tw, th, tl, tt);
+  const choice = element(cw, ch, cl, ct, {border: {type: 'line', fg: color}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
   [content, fps].map(x => window.append(x));
   const ui: UI = {choice, fps, log, map, rivals, status, target, window};
