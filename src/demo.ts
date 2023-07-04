@@ -1225,11 +1225,12 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE:      int(47),
-  FOV_RADIUS:    int(23),
+  MAP_SIZE_X:    int(65),
+  MAP_SIZE_Y:    int(37),
+  FOV_RADIUS:    int(16),
   WORLD_SIZE:    int(100),
-  STATUS_SIZE:   int(36),
-  CHOICE_SIZE:   int(48),
+  STATUS_SIZE:   int(28),
+  CHOICE_SIZE:   int(40),
   FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
@@ -1344,8 +1345,9 @@ const getPokemonPublicState = (pokemon: Pokemon): PokemonPublicState => {
 
 const outsideMap = (state: State, point: Point): boolean => {
   const delta = point.sub(state.player.pos);
-  const limit = Math.floor((Constants.MAP_SIZE - 1) / 2);
-  return Math.abs(delta.x) > limit || Math.abs(delta.y) > limit;
+  const limit_x = Math.floor((Constants.MAP_SIZE_X - 1) / 2);
+  const limit_y = Math.floor((Constants.MAP_SIZE_Y - 1) / 2);
+  return Math.abs(delta.x) > limit_x || Math.abs(delta.y) > limit_y;
 };
 
 const processInput = (state: State, input: Input): void => {
@@ -1674,7 +1676,7 @@ interface UI {
   log: Element,
   map: Element,
   rivals: Element,
-  status: Element,
+  status: Element[],
   target: Element,
   window: Element,
 };
@@ -1701,8 +1703,8 @@ const renderLog = (state: State): string => {
 
 const renderMap = (state: State): string => {
   const {board, player, summon} = state;
-  const width  = Constants.MAP_SIZE;
-  const height = Constants.MAP_SIZE;
+  const width  = Constants.MAP_SIZE_X;
+  const height = Constants.MAP_SIZE_Y;
   const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
   for (let i = 0; i < height; i++) {
     text[width + (width + 1) * i] = kBreakGlyph;
@@ -1907,7 +1909,7 @@ const renderRivals = (state: State): string => {
   return rows.join('\n');
 };
 
-const renderStatus = (state: State): string => {
+const renderStatus = (state: State, i: int): string => {
   const kl = renderKey('a').length;
   const width = int(Constants.STATUS_SIZE + kl);
   const {board, menu, player} = state;
@@ -1915,21 +1917,27 @@ const renderStatus = (state: State): string => {
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
+  if (i === 0) {
+    renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
+  }
 
   let summon = 0;
   while (summon < player.data.summons.length) {
     const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
     const index = menu && menu.summon === summon ? menu.index : -1;
-    renderFriendlyPokemonStatus(pokemon, width, key, null, index)
-        .forEach(x => rows.push(x));
+    if (i === summon + 1) {
+      renderFriendlyPokemonStatus(pokemon, width, key, null, index)
+          .forEach(x => rows.push(x));
+    }
     summon++;
   }
 
   while (summon < kSummonedKeys.length) {
     const key = kSummonedKeys[summon++]!;
-    renderEmptyStatus(width, key).forEach(x => rows.push(x));
+    if (i === summon) {
+      renderEmptyStatus(width, key).forEach(x => rows.push(x));
+    }
   }
   return rows.join('\n');
 };
@@ -1968,19 +1976,20 @@ const initIO = (state: State): IO => {
   const [th, tp] = [10, 2];
   const padding = {left: tp, right: tp, top: 0, bottom: 0};
 
+  const kStatusHeight = 24;
+
   const kColSpace = 4;
   const kRowSpace = 1;
-  const x = Constants.MAP_SIZE;
-  const y = Constants.MAP_SIZE;
+  const x = Constants.MAP_SIZE_X;
+  const y = Constants.MAP_SIZE_Y;
   const ss = Constants.STATUS_SIZE;
   const kl = renderKey('a').length;
   const w = 2 * x + 2 + 2 * ss + kl + 3 * kColSpace + tp + 1;
-  const h = y + 2 + kRowSpace + Constants.LOG_SIZE;
+  const h = y + 2 + kRowSpace + Constants.LOG_SIZE + kStatusHeight;
 
-  const [lw, lh, ll, lt] = [w - 4, Constants.LOG_SIZE, 2, 0];
+  const [lw, lh, ll, lt] = [w, Constants.LOG_SIZE, 0, 0];
   const [mw, mh, ml, mt] = [2 * x + 2, y + 2, 0, lh + lt + kRowSpace];
-  const [sw, sh, sl, st] = [ss + kl, mh, mw + 1 * kColSpace, mt];
-  const [rw, rh, rl, rt] = [ss, mh - th, sl + sw + 2 * kColSpace, mt + th];
+  const [rw, rh, rl, rt] = [ss, mh - th, ml + mw + kColSpace, mt + th];
   const [tw, __, tl, tt] = [rw + 2 * (tp + 1), th, rl - (tp + 1), mt];
   const [left, top, attr, wrap] = ['center', 'center', false, false];
   const content = blessed.box({width: w, height: h, left, top, attr, wrap});
@@ -2002,7 +2011,10 @@ const initIO = (state: State): IO => {
   const log = element(lw, lh, ll, lt);
   const map = element(mw, mh, ml, mt, {border: {type: 'line'}});
   const rivals = element(rw, rh, rl, rt);
-  const status = element(sw, sh, sl, st);
+  const status: Element[] = [];
+  for (let i = 0; i < 4; i++) {
+    status.push(element(ss + kl, kStatusHeight, i * (ss + kl + kColSpace), mh + mt));
+  }
   const target = element(tw, th, tl, tt, {border: {type: 'line'}, padding});
   const choice = element(cw, ch, cl, ct, {border: {type: 'line'}});
   const fps = blessed.box({align: 'right', top: '100%-1'});
@@ -2043,7 +2055,9 @@ const render = (io: IO) => {
   refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
   refresh = cachedSetContent(io.ui.rivals, renderRivals(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
+  for (let i = int(0); i < io.ui.status.length; i++) {
+    refresh = cachedSetContent(io.ui.status[i]!, renderStatus(io.state, i)) || refresh;
+  }
   refresh = cachedSetContent(io.ui.target, renderTarget(io.state)) || refresh;
   if (!refresh) return;
 
