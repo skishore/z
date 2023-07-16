@@ -91,15 +91,14 @@ class Board {
   }
 
   advanceEntity() {
-    charge(nonnull(this.entity[this.entityIndex]));
+    charge(this.getActiveEntity());
     this.entityIndex = int((this.entityIndex + 1) % this.entity.length);
   }
 
-  moveEntity(from: Point, to: Point) {
-    const key = from.key();
-    const entity = nonnull(this.entityAtPos.get(key));
+  moveEntity(entity: Entity, to: Point) {
+    const key = entity.pos.key();
     assert(this.getEntity(to) === null);
-    assert(entity.pos.equal(from));
+    assert(this.entityAtPos.get(key) === entity);
 
     this.entityAtPos.delete(key);
     this.entityAtPos.set(to.key(), entity);
@@ -161,9 +160,8 @@ class Board {
 
   logMenu(line: string, done?: boolean) {
     this.log(line, true);
-    if (done && this.logs.length > 0) {
-      this.logs[this.logs.length - 1]!.menu = false;
-    }
+    const last = this.logs[this.logs.length - 1];
+    if (done && last) last.menu = false;
   }
 
   // Cached field-of-vision
@@ -423,7 +421,7 @@ const hasLineOfSight =
     if (board.getStatus(point) !== Status.FREE) return false;
 
     // Run the vision attenuation calculation only along the line of sight.
-    const prev = line[i - 1]!;
+    const prev = nonnull(line[i - 1]);
     const tile = board.getTile(point);
     const diagonal = point.x !== prev.x && point.y !== prev.y;
     const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
@@ -741,7 +739,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       }
 
       // success
-      board.moveEntity(entity.pos, pos);
+      board.moveEntity(entity, pos);
       entity.dir = action.direction;
       return kSuccess;
     }
@@ -1241,7 +1239,7 @@ const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect =>
 //////////////////////////////////////////////////////////////////////////////
 
 const Constants = {
-  LOG_SIZE:      int(8),
+  LOG_SIZE:      int(4),
   MAP_SIZE_X:    int(43),
   MAP_SIZE_Y:    int(43),
   FOV_RADIUS:    int(21),
@@ -2129,14 +2127,16 @@ const cachedSetContent = (element: Element, content: string): boolean => {
 };
 
 const render = (io: IO) => {
-  let refresh = io.count % 10 === 0;
-  refresh = cachedSetContent(io.ui.log, renderLog(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.map, renderMap(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.choice, renderChoice(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.rivals, renderRivals(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.status, renderStatus(io.state)) || refresh;
-  refresh = cachedSetContent(io.ui.target, renderTarget(io.state)) || refresh;
-  if (!refresh) return;
+  const refresh = [
+    cachedSetContent(io.ui.log, renderLog(io.state)),
+    cachedSetContent(io.ui.map, renderMap(io.state)),
+    cachedSetContent(io.ui.choice, renderChoice(io.state)),
+    cachedSetContent(io.ui.rivals, renderRivals(io.state)),
+    cachedSetContent(io.ui.status, renderStatus(io.state)),
+    cachedSetContent(io.ui.target, renderTarget(io.state)),
+    io.count % 10 === 0,
+  ];
+  if (!refresh.some(x => x)) return;
 
   const last = nonnull(io.timing[io.timing.length - 1]);
   const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
