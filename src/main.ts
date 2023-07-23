@@ -90,26 +90,28 @@ class Board {
   }
 
   advanceEffect(): boolean {
-    const {events, frames} = this.effect;
     const result = !!this.effect.frames.shift();
+    if (!result) return false;
+
     this.effect.events.forEach(x => x.frame--);
     this.executeEffectCallbacks();
-    return result;
+    return true;
   }
 
   private executeEffectCallbacks(): void {
+    while (this.executeOneEffectCallback()) {}
+  }
+
+  private executeOneEffectCallback(): boolean {
     const {events, frames} = this.effect;
+    if (events.length === 0) return false;
 
-    if (frames.length === 0) {
-      events.forEach(x => { if (x.type === FT.Callback) x.callback(); });
-      events.length = 0;
-      return;
-    }
+    const event = nonnull(events[0]);
+    if (frames.length > 0 && event.frame > 0) return false;
 
-    while (events[0]?.frame === 0) {
-      const event = nonnull(events.shift());
-      if (event.type === FT.Callback) event.callback();
-    }
+    events.shift();
+    if (event.type === FT.Callback) event.callback();
+    return true;
   }
 
   addEntity(entity: Entity): void {
@@ -284,6 +286,12 @@ const describe = (entity: Entity): string => {
     const {name, player} = trainer.data;
     return player ? species : `${name}'s ${species}`;
   }
+};
+
+const cur_hp_fraction = (entity: Entity): number => {
+  return entity.type === ET.Trainer
+      ? entity.data.cur_hp / Math.max(entity.data.max_hp, 1)
+      : entity.data.self.cur_hp / Math.max(entity.data.self.max_hp, 1);
 };
 
 const form = (command: Command, pokemon: Pokemon): string => {
@@ -718,7 +726,7 @@ const plan = (board: Board, entity: Entity): Action => {
 const kSuccess: Result = {success: true,  moves: 0, turns: 1};
 const kFailure: Result = {success: false, moves: 0, turns: 1};
 
-const act = (board: Board, entity: Entity, action: Action): Result => {
+const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result => {
   switch (action.type) {
     case AT.Attack: {
       const source = entity.pos;
@@ -738,11 +746,14 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
         callback = () => {
           const data = target_entity.data;
+          animateDamage(anim, target_entity);
           data.cur_hp = int(Math.max(data.cur_hp - 1, 0));
-          if (data.cur_hp) return;
 
-          board.logAppend(`${capitalize(target_name)} blacked out!`);
-          board.removeEntity(target_entity);
+          board.addEffect(ApplyDamage(board, target, () => {
+            if (data.cur_hp) return;
+            board.logAppend(`${capitalize(target_name)} blacked out!`);
+            board.removeEntity(target_entity);
+          }));
         };
       } else {
         const target_name = describe(target_entity);
@@ -751,11 +762,14 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
         callback = () => {
           const data = target_entity.data.self;
           const damage = int(Math.random() * attack.damage);
+          animateDamage(anim, target_entity);
           data.cur_hp = int(Math.max(data.cur_hp - damage, 0));
-          if (data.cur_hp) return;
 
-          board.logAppend(`${capitalize(target_name)} fainted!`);
-          board.removeEntity(target_entity);
+          board.addEffect(ApplyDamage(board, target, () => {
+            if (data.cur_hp) return;
+            board.logAppend(`${capitalize(target_name)} fainted!`);
+            board.removeEntity(target_entity);
+          }));
         };
       }
 
@@ -835,6 +849,32 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       return kSuccess;
     }
     case AT.WaitForInput: return kFailure;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+const animateDamage = (anim: Anim, entity: Entity): void => {
+  const hp = getAnimatedHP(anim, entity);
+  anim.damage.set(entity, {hp, frame: 0});
+};
+
+const getAnimatedHP = (anim: Anim, entity: Entity): number => {
+  const target = cur_hp_fraction(entity);
+  const entry = anim.damage.get(entity);
+  if (!entry) return target;
+
+  const source = entry.hp;
+  const f = (entry.frame + 1) / (Constants.DAMAGE_FRAMES + 2);
+  const g = 1 - (1 - f) * (1 - f) * (1 - f);
+  return target * g + source * (1 - g);
+};
+
+const updateAnimation = (anim: Anim): void => {
+  const entries = Array.from(anim.damage.entries());
+  for (const [entity, frame] of entries) {
+    const done = (++frame.frame) >= Constants.DAMAGE_FRAMES;
+    if (done) anim.damage.delete(entity);
   }
 };
 
@@ -936,17 +976,25 @@ const updateTargetedPoint = (state: State, target: Target, point: Point): void =
 
 const ApplyAttack = (board: Board, effect: Effect, target: Point,
                      callback: () => void): Effect => {
-  const entity = board.getEntity(target);
   const hit = effect.events.filter(x => x.type === FT.Hit)[0];
-  if (!entity || !hit) return effect;
-
-  const particle = {point: target, glyph: entity.glyph.recolor('black', '400')};
-  const damage = Effect.Constant(particle, Constants.DAMAGE_FRAMES);
-  const result = damage.delay(hit.frame).and(effect);
+  if (!hit) return effect;
 
   const event: Event = {frame: hit.frame, type: FT.Callback, callback};
-  result.events = effect.events.map(x => x === hit ? event : x);
-  return result;
+  effect.mutAddEvent(event);
+  return effect;
+};
+
+const ApplyDamage = (board: Board, target: Point, callback: () => void): Effect => {
+  const entity = board.getEntity(target);
+  if (!entity) return new Effect();
+
+  const particle = {point: target, glyph: entity.glyph.recolor('black', '400')};
+  const effect = Effect.Constant(particle, Constants.DAMAGE_FRAMES);
+
+  const frame = int(effect.frames.length);
+  const event: Event = {frame, type: FT.Callback, callback};
+  effect.mutAddEvent(event);
+  return effect;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1020,7 +1068,12 @@ const kPokemon: PokemonSpeciesWithAttacks[] = [
 
 type Input = string;
 
+interface Anim {
+  damage: Map<Entity, {hp: number, frame: int}>;
+};
+
 interface State {
+  anim: Anim,
   board: Board,
   player: Trainer,
   choice: Choice | null,
@@ -1059,6 +1112,7 @@ interface Target {
 };
 
 interface PokemonPublicState {
+  damaged: boolean,
   species: PokemonSpeciesData,
   hp: number,
   pp: number,
@@ -1068,12 +1122,15 @@ interface PokemonPublicState {
 const getPartyPokemonPublicState =
     (self: PokemonIndividualData): PokemonPublicState => {
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
-  return {species: self.species, hp, pp: 1, pos: null};
+  return {damaged: false, species: self.species, hp, pp: 1, pos: null};
 };
 
-const getPokemonPublicState = (pokemon: Pokemon): PokemonPublicState => {
+const getPokemonPublicState =
+    (anim: Anim, pokemon: Pokemon): PokemonPublicState => {
   const result = getPartyPokemonPublicState(pokemon.data.self);
   const bp = (pokemon.move_timer ?? 0) / Constants.MOVE_TIMER;
+  result.damaged = anim.damage.has(pokemon);
+  result.hp = getAnimatedHP(anim, pokemon);
   result.pp = 1 - Math.max(0, Math.min(bp, 1));
   result.pos = pokemon.pos;
   return result;
@@ -1367,11 +1424,14 @@ const initState = (): State => {
     board.addEntity(makePokemon(pos, self));
   }
 
-  return {board, player, choice: null, summon: null, target: null, menu: null};
+  const anim = {damage: new Map()};
+  const [choice, summon, target, menu] = [null, null, null, null];
+  return {anim, board, player, choice, summon, target, menu};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
-  const {board, player} = state;
+  const {anim, board, player} = state;
+  updateAnimation(anim);
   if (board.advanceEffect()) return;
 
   const active = board.getActiveEntity();
@@ -1388,7 +1448,7 @@ const updateState = (state: State, inputs: Input[]): void => {
       board.advanceEntity();
       continue;
     }
-    const result = act(board, entity, plan(board, entity));
+    const result = act(anim, board, entity, plan(board, entity));
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
@@ -1537,8 +1597,8 @@ const renderEmptyStatus =
 const renderBasicPokemonStatus =
     (known: PokemonPublicState, width: int,
      key?: string | null, color?: Color | null): string[] => {
-  const {species, hp, pp} = known;
-  color = color ? color : known.hp > 0 ? null : '111';
+  const {damaged, species, hp, pp} = known;
+  color = color ? color : damaged ? getHPColor(0) : known.hp > 0 ? null : '111';
 
   const result = [''];
   const prefix = renderKey(key);
@@ -1556,9 +1616,9 @@ const renderBasicPokemonStatus =
 };
 
 const renderFriendlyPokemonStatus =
-    (pokemon: Pokemon, width: int, key?: string | null,
+    (anim: Anim, pokemon: Pokemon, width: int, key?: string | null,
      color?: Color | null, menu: int = -1): string[] => {
-  const known = getPokemonPublicState(pokemon);
+  const known = getPokemonPublicState(anim, pokemon);
   color = color ? color : known.hp > 0 ? null : '111';
 
   const prefix = renderKey(key);
@@ -1590,29 +1650,34 @@ const renderPartyPokemonStatus =
   return renderBasicPokemonStatus(known, width, key);
 };
 
-const renderRivalPokemonStatus = (pokemon: Pokemon, width: int): string[] => {
-  const known = getPokemonPublicState(pokemon);
+const renderRivalPokemonStatus =
+    (anim: Anim, pokemon: Pokemon, width: int): string[] => {
+  const known = getPokemonPublicState(anim, pokemon);
   return renderBasicPokemonStatus(known, width);
 };
 
 const renderTrainerStatus =
-    (trainer: Trainer, width: int, key?: string): string[] => {
+    (anim: Anim, trainer: Trainer, width: int, key?: string): string[] => {
+  const damaged = anim.damage.has(trainer);
+  const color = damaged ? getHPColor(0) : null;
+
   const name = capitalize(describe(trainer));
   const status = trainer.data.pokemon.map(
       x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
-  const hp = trainer.data.cur_hp / Math.max(trainer.data.max_hp, 1);
+  const hp = getAnimatedHP(anim, trainer);
 
   const result = [''];
   const prefix = renderKey(key);
   const spacer = ' '.repeat(prefix.length);
   const bar = int(width - prefix.length);
-  const hp_color = getHPColor(hp);
+  const hp_color = color ? null : getHPColor(hp);
 
   result.push(`${renderKey(key)}${name}`);
   result.push(`${spacer}HP: [${renderBar(bar, hp, hp_color)}]`);
   result.push(`${spacer}     ${status.join(' ')}`);
   result.push('');
-  return result;
+
+  return color ? result.map(x => Color(x, color)) : result;
 };
 
 const renderChoice = (state: State): string => {
@@ -1620,9 +1685,9 @@ const renderChoice = (state: State): string => {
 
   const kColumnPadding = 2;
   const width = int(Constants.CHOICE_SIZE - 2 * kColumnPadding - 5);
+  const {anim, player} = state;
 
   const result: string[] = [];
-  const player = state.player;
   const index = state.choice.index;
   const space = ' '.repeat(kColumnPadding + 1);
   const arrow = ' '.repeat(kColumnPadding) + '>';
@@ -1633,7 +1698,7 @@ const renderChoice = (state: State): string => {
     const status = (() => {
       if (!pokemon) return renderEmptyStatus(width, key, '111');
       const entity = pokemon.entity;
-      return entity ? renderFriendlyPokemonStatus(entity, width, key, '111')
+      return entity ? renderFriendlyPokemonStatus(anim, entity, width, key, '111')
                     : renderPartyPokemonStatus(pokemon.self, width, key);
     })();
     status.forEach((line, j) => {
@@ -1647,30 +1712,31 @@ const renderChoice = (state: State): string => {
 
 const renderRivals = (state: State): string => {
   const width = Constants.STATUS_SIZE;
-  const {board, menu, player} = state;
+  const {anim, board, menu, player} = state;
 
   const rows: string[] = [];
   const rivals = findRivalPokemon(board, player);
-  rivals.forEach(y => renderRivalPokemonStatus(y, width).forEach(x => rows.push(x)));
+  rivals.forEach(y => renderRivalPokemonStatus(anim, y, width)
+                          .forEach(x => rows.push(x)));
   return rows.join('\n');
 };
 
 const renderStatus = (state: State): string => {
   const kl = renderKey('a').length;
   const width = int(Constants.STATUS_SIZE + kl);
-  const {board, menu, player} = state;
+  const {anim, board, menu, player} = state;
   const vision = board.getVision(player);
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  renderTrainerStatus(player, width, key).forEach(x => rows.push(x));
+  renderTrainerStatus(anim, player, width, key).forEach(x => rows.push(x));
 
   let summon = 0;
   while (summon < player.data.summons.length) {
     const pokemon = player.data.summons[summon]!;
     const key = menu ? '-' : kSummonedKeys[summon];
     const index = menu && menu.summon === summon ? menu.index : -1;
-    renderFriendlyPokemonStatus(pokemon, width, key, null, index)
+    renderFriendlyPokemonStatus(anim, pokemon, width, key, null, index)
         .forEach(x => rows.push(x));
     summon++;
   }
@@ -1683,7 +1749,7 @@ const renderStatus = (state: State): string => {
 };
 
 const renderTarget = (state: State): string => {
-  const {board, player, summon, target} = state;
+  const {anim, board, player, summon, target} = state;
   const width = Constants.STATUS_SIZE;
   const rows: string[] = [];
 
@@ -1721,9 +1787,9 @@ const renderTarget = (state: State): string => {
     rows.push(`Using ${name}'s ${target.attack.name}...`);
     if (entity) {
       if (entity.type === ET.Trainer) {
-        renderTrainerStatus(entity, width).forEach(x => rows.push(x));
+        renderTrainerStatus(anim, entity, width).forEach(x => rows.push(x));
       } else {
-        const known = getPokemonPublicState(entity);
+        const known = getPokemonPublicState(anim, entity);
         renderBasicPokemonStatus(known, width).forEach(x => rows.push(x));
       }
     } else {
