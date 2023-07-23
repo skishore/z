@@ -1,5 +1,5 @@
 import {Color, Glyph} from './lib';
-import {Effect, Effects, Frame, FT, ray_character} from './effect';
+import {Effect, Effects, Event, Frame, FT, ray_character} from './effect';
 import {assert, flatten, int, nonnull, only, permute, range, sample, weighted} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
@@ -79,32 +79,52 @@ class Board {
 
   // Writes
 
-  setTile(pos: Point, tile: Tile) {
+  setTile(pos: Point, tile: Tile): void {
     this.map.set(pos, tile);
     this.entity.forEach(x => this.dirtyVision(x));
   }
 
-  addEffect(effect: Effect) {
+  addEffect(effect: Effect): void {
     this.effect = Effect.Parallel([this.effect, effect]);
+    this.executeEffectCallbacks();
   }
 
   advanceEffect(): boolean {
-    return !!this.effect.frames.shift();
+    const {events, frames} = this.effect;
+    const result = !!this.effect.frames.shift();
+    this.effect.events.forEach(x => x.frame--);
+    this.executeEffectCallbacks();
+    return result;
   }
 
-  addEntity(entity: Entity) {
+  private executeEffectCallbacks(): void {
+    const {events, frames} = this.effect;
+
+    if (frames.length === 0) {
+      events.forEach(x => { if (x.type === FT.Callback) x.callback(); });
+      events.length = 0;
+      return;
+    }
+
+    while (events[0]?.frame === 0) {
+      const event = nonnull(events.shift());
+      if (event.type === FT.Callback) event.callback();
+    }
+  }
+
+  addEntity(entity: Entity): void {
     const pos = entity.pos;
     assert(this.getEntity(pos) === null);
     this.entityAtPos.set(pos.key(), entity);
     this.entity.push(entity);
   }
 
-  advanceEntity() {
+  advanceEntity(): void {
     charge(this.getActiveEntity());
     this.entityIndex = int((this.entityIndex + 1) % this.entity.length);
   }
 
-  moveEntity(entity: Entity, to: Point) {
+  moveEntity(entity: Entity, to: Point): void {
     const key = entity.pos.key();
     assert(this.getEntity(to) === null);
     assert(this.entityAtPos.get(key) === entity);
@@ -115,7 +135,7 @@ class Board {
     this.dirtyVision(entity);
   }
 
-  removeEntity(entity: Entity) {
+  removeEntity(entity: Entity): void {
     if (entity.type === ET.Trainer && entity.data.player) {
       entity.glyph = entity.glyph.recolor('400');
       entity.removed = true;
@@ -144,7 +164,7 @@ class Board {
     entity.removed = true;
   }
 
-  swapEntities(a: Point, b: Point) {
+  swapEntities(a: Point, b: Point): void {
     const ak = a.key();
     const bk = b.key();
     const ae = nonnull(this.entityAtPos.get(ak));
@@ -157,17 +177,23 @@ class Board {
     this.dirtyVision(be);
   }
 
-  log(line: string, menu?: boolean) {
+  log(line: string, menu?: boolean): void {
     if (menu && this.logs[this.logs.length - 1]?.menu) this.logs.pop();
     this.logs.push({line, menu: !!menu});
     if (this.logs.length > Constants.LOG_SIZE) this.logs.shift();
   }
 
-  logIfPlayer(entity: Entity, line: string) {
+  logAppend(line: string): void {
+    const last = this.logs[this.logs.length - 1];
+    if (!last) return this.log(line);
+    last.line = `${last.line} ${line}`;
+  }
+
+  logIfPlayer(entity: Entity, line: string): void {
     if (entity.type === ET.Trainer && entity.data.player) this.log(line);
   }
 
-  logMenu(line: string, done?: boolean) {
+  logMenu(line: string, done?: boolean): void {
     this.log(line, true);
     const last = this.logs[this.logs.length - 1];
     if (done && last) last.menu = false;
@@ -700,35 +726,41 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (!hasLineOfSight(board, source, target, attack.range)) return kFailure;
 
       // success
-      const attack_effect = attack.effect(board, entity.pos, target);
-      board.addEffect(ApplyAttack(board, attack_effect, target));
       const user = capitalize(describe(entity));
       const target_entity = board.getEntity(target);
+      let callback: () => void = () => {};
 
       if (target_entity === null) {
         board.log(`${user} used ${attack.name}!`);
       } else if (target_entity.type === ET.Trainer) {
-        const data = target_entity.data;
-        data.cur_hp = int(Math.max(data.cur_hp - 1, 0));
-
         const target_name = describe(target_entity);
-        const base = `${user} attacked ${target_name} with ${attack.name}!`;
-        const and_ = data.cur_hp ? '' : ` ${capitalize(target_name)} blacked out!`;
-        board.log(`${base}${and_}`);
+        board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
-        if (!data.cur_hp) board.removeEntity(target_entity);
+        callback = () => {
+          const data = target_entity.data;
+          data.cur_hp = int(Math.max(data.cur_hp - 1, 0));
+          if (data.cur_hp) return;
+
+          board.logAppend(`${capitalize(target_name)} blacked out!`);
+          board.removeEntity(target_entity);
+        };
       } else {
-        const data = target_entity.data.self;
-        const damage = int(Math.random() * attack.damage);
-        data.cur_hp = int(Math.max(data.cur_hp - damage, 0));
-
         const target_name = describe(target_entity);
-        const base = `${user} attacked ${target_name} with ${attack.name}!`;
-        const and_ = data.cur_hp ? '' : ` ${capitalize(target_name)} fainted!`;
-        board.log(`${base}${and_}`);
+        board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
-        if (!data.cur_hp) board.removeEntity(target_entity);
+        callback = () => {
+          const data = target_entity.data.self;
+          const damage = int(Math.random() * attack.damage);
+          data.cur_hp = int(Math.max(data.cur_hp - damage, 0));
+          if (data.cur_hp) return;
+
+          board.logAppend(`${capitalize(target_name)} fainted!`);
+          board.removeEntity(target_entity);
+        };
       }
+
+      const effect = attack.effect(board, entity.pos, target);
+      board.addEffect(ApplyAttack(board, effect, target, callback));
       return {success: true, moves: 1, turns: 1};
     }
     case AT.Idle: return kSuccess;
@@ -902,24 +934,19 @@ const updateTargetedPoint = (state: State, target: Target, point: Point): void =
 
 //////////////////////////////////////////////////////////////////////////////
 
-const ApplyAttack = (board: Board, effect: Effect, target: Point): Effect => {
+const ApplyAttack = (board: Board, effect: Effect, target: Point,
+                     callback: () => void): Effect => {
   const entity = board.getEntity(target);
-  const frame = ((): int => {
-    for (const event of effect.events) {
-      if (event.type === FT.Hit) return event.frame;
-    }
-    return -1;
-  })();
-  if (frame < 0 || entity === null) return effect;
+  const hit = effect.events.filter(x => x.type === FT.Hit)[0];
+  if (!entity || !hit) return effect;
 
-  const source = {point: target, glyph: entity.glyph}
-  const damage = {point: target, glyph: entity.glyph.recolor('black', '400')};
-  effect = Effect.Parallel([
-    Effect.Constant(source, frame),
-    Effect.Constant(damage, Constants.DAMAGE_FRAMES).delay(frame),
-    effect,
-  ]);
-  return effect;
+  const particle = {point: target, glyph: entity.glyph.recolor('black', '400')};
+  const damage = Effect.Constant(particle, Constants.DAMAGE_FRAMES);
+  const result = damage.delay(hit.frame).and(effect);
+
+  const event: Event = {frame: hit.frame, type: FT.Callback, callback};
+  result.events = effect.events.map(x => x === hit ? event : x);
+  return result;
 };
 
 //////////////////////////////////////////////////////////////////////////////

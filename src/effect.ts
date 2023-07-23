@@ -11,9 +11,11 @@ interface Board {
 
 //////////////////////////////////////////////////////////////////////////////
 
-enum FT { Fire, Ice, Hit, Summon, Withdraw };
+enum FT { Callback, Fire, Ice, Hit, Summon, Withdraw };
 
-interface Event { type: FT, point: Point, frame: int };
+type Event =
+  {frame: int, type: FT.Callback, callback: () => void} |
+  {frame: int, type: Exclude<FT, FT.Callback>, point: Point};
 
 interface Particle {point: Point, glyph: Glyph};
 
@@ -408,4 +410,4 @@ const Effects = {
   Withdraw: WithdrawEffect,
 };
 
-export {Effect, Effects, Frame, FT, ray_character};
+export {Effect, Effects, Event, Frame, FT, ray_character};
