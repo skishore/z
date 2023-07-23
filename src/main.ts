@@ -1,6 +1,5 @@
 import {Color, Glyph} from './lib';
-import {AttackEffect, Attacks, Combinators, ray_character} from './effect';
-import {Effect, SummonEffect, WithdrawEffect} from './effect';
+import {Effect, Effects, Frame, FT, ray_character} from './effect';
 import {assert, flatten, int, nonnull, only, permute, range, sample, weighted} from './lib';
 import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 
@@ -25,7 +24,7 @@ class Board {
   constructor(size: Point, fov: int) {
     this.fov = new FOV(int(Math.max(fov, fov)));
     this.map = new Matrix(size, nonnull(kTiles['.']));
-    this.effect = [];
+    this.effect = new Effect();
     this.entity = [];
     this.entityAtPos = new Map();
     this.entityIndex = 0;
@@ -48,8 +47,8 @@ class Board {
     return this.map.getOrNull(pos) || this.defaultTile;
   }
 
-  getEffect(): Effect {
-    return this.effect;
+  getCurrentFrame(): Frame | null {
+    return this.effect.frames[0] ?? null;
   }
 
   getEntity(pos: Point): Entity | null {
@@ -86,11 +85,11 @@ class Board {
   }
 
   addEffect(effect: Effect) {
-    this.effect = Combinators.Parallel([this.effect, effect]);
+    this.effect = Effect.Parallel([this.effect, effect]);
   }
 
   advanceEffect(): boolean {
-    return !!this.effect.shift();
+    return !!this.effect.frames.shift();
   }
 
   addEntity(entity: Entity) {
@@ -301,7 +300,7 @@ type Action =
   {type: AT.Withdraw, pokemon: Pokemon} |
   {type: AT.WaitForInput};
 
-type GenEffect = (board: Board, source: Point, target: Point) => AttackEffect;
+type GenEffect = (board: Board, source: Point, target: Point) => Effect;
 
 interface Result { success: boolean, moves: number, turns: number };
 
@@ -761,7 +760,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       if (action.command.type === CT.Return &&
           hasLineOfSight(board, source, target, range)) {
         board.removeEntity(pokemon);
-        board.addEffect(WithdrawEffect(source, target, pokemon.glyph));
+        board.addEffect(Effects.Withdraw(source, target, pokemon.glyph));
       } else {
         pokemon.data.commands.push(action.command);
       }
@@ -782,7 +781,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
       entity.data.summons.push(summoned);
       pokemon.entity = summoned;
       board.addEntity(summoned);
-      board.addEffect(SummonEffect(entity.pos, target, glyph));
+      board.addEffect(Effects.Summon(entity.pos, target, glyph));
       shout(board, entity, `Go! ${pokemon.self.species.name}!`);
       return kSuccess;
     }
@@ -795,7 +794,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
       // success
       board.removeEntity(pokemon);
-      board.addEffect(WithdrawEffect(source, target, pokemon.glyph));
+      board.addEffect(Effects.Withdraw(source, target, pokemon.glyph));
       const name = pokemon.data.self.species.name;
       const text = entity.data.player
           ? `You withdraw ${name}.`
@@ -811,7 +810,7 @@ const act = (board: Board, entity: Entity, action: Action): Result => {
 
 const animateSummon = (state: State, summon: Summon): void => {
   const frame = summon.frame;
-  summon.frame = int((frame + 1) % Constants.SUMMON_ANIM);
+  summon.frame = int((frame + 1) % Constants.SUMMON_FRAMES);
 };
 
 const initSummon = (state: State, index: int, range: int): Summon => {
@@ -883,7 +882,7 @@ const updateSummonTarget = (state: State, summon: Summon, target: Point): void =
 
 const animateTarget = (state: State, target: Target): void => {
   const frame = target.frame;
-  target.frame = int((frame + 1) % Constants.SUMMON_ANIM);
+  target.frame = int((frame + 1) % Constants.SUMMON_FRAMES);
 };
 
 const updateTargetedPoint = (state: State, target: Target, point: Point): void => {
@@ -903,19 +902,23 @@ const updateTargetedPoint = (state: State, target: Target, point: Point): void =
 
 //////////////////////////////////////////////////////////////////////////////
 
-const ApplyAttack = (board: Board, init: AttackEffect, target: Point): Effect => {
-  let effect = init.effect;
-  const frame = init.hitFrame;
+const ApplyAttack = (board: Board, effect: Effect, target: Point): Effect => {
   const entity = board.getEntity(target);
-  if (entity !== null) {
-    const source = {point: target, glyph: entity.glyph}
-    const damage = {point: target, glyph: entity.glyph.recolor('black', '400')};
-    effect = Combinators.Parallel([
-      Combinators.Constant(source, frame),
-      Combinators.Serial([Combinators.Pause(frame), Combinators.Constant(damage, 8)]),
-      effect,
-    ]);
-  }
+  const frame = ((): int => {
+    for (const event of effect.events) {
+      if (event.type === FT.Hit) return event.frame;
+    }
+    return -1;
+  })();
+  if (frame < 0 || entity === null) return effect;
+
+  const source = {point: target, glyph: entity.glyph}
+  const damage = {point: target, glyph: entity.glyph.recolor('black', '400')};
+  effect = Effect.Parallel([
+    Effect.Constant(source, frame),
+    Effect.Constant(damage, Constants.DAMAGE_FRAMES).delay(frame),
+    effect,
+  ]);
   return effect;
 };
 
@@ -929,13 +932,16 @@ const Constants = {
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(30),
   CHOICE_SIZE:   int(42),
-  FRAME_RATE:    int(60),
   MOVE_TIMER:    int(960),
   TURN_TIMER:    int(120),
-  SUMMON_ANIM:   int(20),
   SUMMON_RANGE:  int(12),
   TRAINER_HP:    int(8),
   TRAINER_SPEED: 1/10,
+
+  // Animation frame rates:
+  FRAME_RATE:    int(60),
+  SUMMON_FRAMES: int(20),
+  DAMAGE_FRAMES: int(8),
 };
 
 interface Tile {
@@ -960,11 +966,11 @@ const kTiles: {[ch: string]: Tile} = {
 };
 
 const kAttacks: Attack[] = [
-  {name: 'Ember',    range: 12, damage: int(40), effect: Attacks.Ember},
-  {name: 'Ice Beam', range: 12, damage: int(60), effect: Attacks.IceBeam},
-  {name: 'Blizzard', range: 12, damage: int(80), effect: Attacks.Blizzard},
-  {name: 'Headbutt', range: 8,  damage: int(80), effect: Attacks.Headbutt},
-  {name: 'Tackle',   range: 4,  damage: int(40), effect: Attacks.Headbutt},
+  {name: 'Ember',    range: 12, damage: int(40), effect: Effects.Ember},
+  {name: 'Ice Beam', range: 12, damage: int(60), effect: Effects.IceBeam},
+  {name: 'Blizzard', range: 12, damage: int(80), effect: Effects.Blizzard},
+  {name: 'Headbutt', range: 8,  damage: int(80), effect: Effects.Headbutt},
+  {name: 'Tackle',   range: 4,  damage: int(40), effect: Effects.Headbutt},
 ];
 
 const species = (name: string, hp: int, speed: number, attack_names: string[],
@@ -1342,14 +1348,14 @@ const updateState = (state: State, inputs: Input[]): void => {
   if (board.advanceEffect()) return;
 
   const active = board.getActiveEntity();
-  while (!player.removed && !board.getEffect().length &&
+  while (!player.removed && !board.getCurrentFrame() &&
          inputs.length && active === player && player.data.input === null) {
     processInput(state, nonnull(inputs.shift()));
   }
   if (state.summon) return animateSummon(state, state.summon);
   if (state.target) return animateTarget(state, state.target);
 
-  while (!player.removed && !board.getEffect().length) {
+  while (!player.removed && !board.getCurrentFrame()) {
     const entity = board.getActiveEntity();
     if (!turnReady(entity)) {
       board.advanceEntity();
@@ -1465,7 +1471,7 @@ const renderMap = (state: State): string => {
     const color: Color = error.length === 0 ? '440' : '400';
     recolor(target.x, target.y, 'black', color);
 
-    const count = Constants.SUMMON_ANIM >> 1;
+    const count = Constants.SUMMON_FRAMES >> 1;
     const frame = summon_or_target.frame >> 1;
     const ch = ray_character(source, target);
     for (let i = 0; i < path.length - 1; i++) {
@@ -1476,11 +1482,8 @@ const renderMap = (state: State): string => {
     }
   }
 
-  const effect = board.getEffect();
-  if (effect.length) {
-    const frame = nonnull(effect[0]);
-    frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph, false));
-  }
+  const frame = board.getCurrentFrame();
+  if (frame) frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph, false));
 
   return text.join('');
 };

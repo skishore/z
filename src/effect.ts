@@ -4,11 +4,6 @@ import {Point, Direction, LOS} from './geo';
 
 //////////////////////////////////////////////////////////////////////////////
 
-interface AttackEffect {
-  effect: Effect,
-  hitFrame: int,
-};
-
 interface Board {
   getGlyphAt: (pos: Point) => Glyph,
   getUnderlyingGlyphAt: (pos: Point) => Glyph,
@@ -16,16 +11,101 @@ interface Board {
 
 //////////////////////////////////////////////////////////////////////////////
 
+enum FT { Fire, Ice, Hit, Summon, Withdraw };
+
+interface Event { type: FT, point: Point, frame: int };
+
 interface Particle {point: Point, glyph: Glyph};
+
 interface Frame extends Array<Particle> {};
-interface Effect extends Array<Frame> {};
+
+class Effect {
+  events: Event[];
+  frames: Frame[];
+
+  constructor(frames?: Frame[]) {
+    this.events = [];
+    this.frames = frames ?? [];
+  }
+
+  and(other: Effect): Effect {
+    return Effect.Parallel([this, other]);
+  }
+
+  then(other: Effect): Effect {
+    return Effect.Serial([this, other]);
+  }
+
+  delay(n: int): Effect {
+    return Effect.Pause(n).then(this);
+  }
+
+  scale(s: number): Effect {
+    const result = new Effect();
+    const {events, frames} = result;
+
+    const source = this.frames.length;
+    const target = int(s * source);
+
+    this.events.forEach(x => events.push({...x, frame: int(s * x.frame)}));
+
+    for (let i = 0; i < source; i++) {
+      const start = int(s * (i + 0));
+      const limit = int(s * (i + 1));
+      const frame = nonnull(this.frames[i]);
+      for (let j = start; j < limit; j++) frames.push(frame);
+    }
+    return result;
+  }
+
+  mutAddEvent(event: Event): void {
+    this.events.push(event);
+    this.events.sort((a, b) => a.frame - b.frame);
+  }
+
+  mutAddParticle(frame: int, particle: Particle): void {
+    while (frame >= this.frames.length) this.frames.push([]);
+    nonnull(this.frames[frame]).push(particle);
+  }
+
+  static Constant(particle: Particle, n: int): Effect {
+    return new Effect(Array(n).fill([particle]));
+  }
+
+  static Pause(n: int): Effect {
+    return new Effect(Array(n).fill([]));
+  }
+
+  static Parallel(effects: Effect[]): Effect {
+    const result = new Effect();
+    const {events, frames} = result;
+    for (const effect of effects) {
+      effect.events.forEach(x => events.push(x));
+      effect.frames.forEach((x, i) => {
+        if (i >= frames.length) frames.push([]);
+        x.forEach(y => nonnull(frames[i]).push(y));
+      });
+    }
+    events.sort((a, b) => a.frame - b.frame);
+    return result;
+  };
+
+  static Serial(effects: Effect[]): Effect {
+    let offset: int = 0;
+    const result = new Effect();
+    const {events, frames} = result;
+    for (const effect of effects) {
+      effect.events.forEach(x => events.push({...x, frame: int(x.frame + offset)}));
+      effect.frames.forEach(x => frames.push(x));
+      offset += int(effect.frames.length);
+    }
+    return result;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
 
 type Sparkle = [int, string, Color?][];
-
-const add_particle = (effect: Effect, frame: int, particle: Particle): void => {
-  while (frame >= effect.length) effect.push([]);
-  nonnull(effect[frame]).push(particle);
-};
 
 const add_sparkle =
     (effect: Effect, sparkle: Sparkle, frame: int, point: Point): int => {
@@ -34,7 +114,7 @@ const add_sparkle =
     for (let i = 0; i < delay; i++, frame++) {
       const index = Math.floor(Math.random() * chars.length);
       const glyph = new Glyph(nonnull(chars[index]), color);
-      add_particle(effect, frame, {glyph, point});
+      effect.mutAddParticle(frame, {glyph, point});
     }
   });
   return frame;
@@ -55,41 +135,14 @@ const ray_character = (source: Point, target: Point): string => {
   return ((dx > 0) === (dy > 0)) ? '\\' : '/';
 };
 
-const ConstantEffect = (particle: Particle, n: int): Effect => {
-  return Array(n).fill([particle]);
-};
-
-const PauseEffect = (n: int): Effect => {
-  return Array(n).fill([]);
-};
-
 const OverlayEffect = (effect: Effect, particle: Particle): Effect => {
-  const constant = ConstantEffect(particle, int(effect.length));
-  return ParallelEffect([effect, constant]);
+  const constant = Effect.Constant(particle, int(effect.frames.length));
+  return Effect.Parallel([effect, constant]);
 };
 
 const UnderlayEffect = (effect: Effect, particle: Particle): Effect => {
-  const constant = ConstantEffect(particle, int(effect.length));
-  return ParallelEffect([constant, effect]);
-};
-
-const ExtendEffect = (effect: Effect, n: int): Effect => {
-  const result: Effect = [];
-  effect.forEach(frame => range(n).forEach(_ => result.push(frame)));
-  return result;
-};
-
-const ParallelEffect = (effects: Effect[]): Effect => {
-  const result: Effect = [];
-  effects.forEach(effect => effect.forEach((frame, i) => {
-    if (i >= result.length) result.push([]);
-    frame.forEach(x => nonnull(result[i]).push(x));
-  }));
-  return result;
-};
-
-const SerialEffect = (effects: Effect[]): Effect => {
-  return flatten(effects);
+  const constant = Effect.Constant(particle, int(effect.frames.length));
+  return Effect.Parallel([constant, effect]);
 };
 
 const ExplosionEffect = (point: Point): Effect => {
@@ -114,7 +167,7 @@ const ExplosionEffect = (point: Point): Effect => {
       {point: point.add(Direction.se), glyph: new Glyph('/', color)},
     ],
   ];
-  return ExtendEffect(base, 4);
+  return (new Effect(base)).scale(4);
 };
 
 const ImplosionEffect = (point: Point): Effect => {
@@ -137,14 +190,14 @@ const ImplosionEffect = (point: Point): Effect => {
     [{point, glyph: new Glyph('*', color)}],
     [{point, glyph: new Glyph('#', color)}],
   ];
-  return ExtendEffect(base, 3);
+  return (new Effect(base)).scale(3);
 };
 
 const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   const color = '400';
-  const result: Effect = [];
+  const result: Frame[] = [];
   const line = LOS(source, target);
-  if (line.length <= 2) return result;
+  if (line.length <= 2) return new Effect(result);
 
   const beam = new Glyph(ray_character(source, target), color);
   const mod = int((line.length - 2 + speed) % speed);
@@ -152,45 +205,45 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   for (let i = start; i < line.length - 1; i = int(i + speed)) {
     result.push(range(i).map(j => ({point: nonnull(line[j + 1]), glyph: beam})));
   }
-  return result;
+  return new Effect(result);
 };
 
 const SummonEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   const color = '400';
-  const base: Effect = [];
+  const base: Frame[] = [];
   const line = LOS(source, target);
   const ball = new Glyph('*', color);
   for (let i = 1; i < line.length - 1; i++) {
     base.push([{point: nonnull(line[i]), glyph: ball}]);
   }
-  const masked = UnderlayEffect(base, {point: target, glyph});
-  return SerialEffect([masked, ExplosionEffect(target)]);
+  const masked = UnderlayEffect(new Effect(base), {point: target, glyph});
+  return Effect.Serial([masked, ExplosionEffect(target)]);
 };
 
 const WithdrawEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
   const base = RayEffect(source, target, 4);
   const hide = {point: target, glyph};
   const impl = UnderlayEffect(ImplosionEffect(target), hide);
-  const full = base[base.length - 1];
+  const full = base.frames[base.frames.length - 1];
   if (!full) return impl;
 
-  return SerialEffect([
+  return Effect.Serial([
     base,
-    ParallelEffect([ExtendEffect([full], int(impl.length)), impl]),
-    UnderlayEffect(base.slice().reverse(), hide),
+    Effect.Parallel([(new Effect([full])).scale(int(impl.frames.length)), impl]),
+    UnderlayEffect(new Effect(base.frames.slice().reverse()), hide),
   ]);
 };
 
 const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
-  return SerialEffect([
+  return Effect.Serial([
     WithdrawEffect(source, target, glyph),
-    ConstantEffect({point: target, glyph}, 4),
+    Effect.Constant({point: target, glyph}, 4),
     SummonEffect(source, target, glyph),
   ]);
 };
 
-const EmberEffect = (board: Board, source: Point, target: Point): AttackEffect => {
-  const effect: Effect = [];
+const EmberEffect = (board: Board, source: Point, target: Point): Effect => {
+  const effect = new Effect();
   const line = LOS(source, target);
 
   const trail = (): Sparkle => [
@@ -219,11 +272,12 @@ const EmberEffect = (board: Board, source: Point, target: Point): AttackEffect =
     const finish = add_sparkle(effect, flame(), frame, target.add(direction));
     if (norm === 0) hitFrame = finish;
   }
-  return {effect, hitFrame};
+  effect.mutAddEvent({type: FT.Hit, point: target, frame: hitFrame});
+  return effect;
 };
 
-const IceBeamEffect = (board: Board, source: Point, target: Point): AttackEffect => {
-  const effect: Effect = [];
+const IceBeamEffect = (board: Board, source: Point, target: Point): Effect => {
+  const effect = new Effect();
   const line = LOS(source, target);
   const ch = ray_character(source, target);
 
@@ -247,16 +301,17 @@ const IceBeamEffect = (board: Board, source: Point, target: Point): AttackEffect
   }
   const frame = int(Math.floor((line.length - 1) / 2));
   const hitFrame = add_sparkle(effect, flame, frame, target);
-  return {effect, hitFrame};
+  effect.mutAddEvent({type: FT.Hit, point: target, frame: hitFrame});
+  return effect;
 };
 
-const BlizzardEffect = (board: Board, source: Point, target: Point): AttackEffect => {
-  const effect: Effect = [];
+const BlizzardEffect = (board: Board, source: Point, target: Point): Effect => {
+  const effect = new Effect();
   const ch = ray_character(source, target);
 
   const points = [target];
   const used = new Set<int>();
-  while (points.length < 4) {
+  while (points.length < 3) {
     const alt = target.add(sample(Direction.all));
     const key = alt.key();
     if (used.has(key)) continue;
@@ -270,17 +325,17 @@ const BlizzardEffect = (board: Board, source: Point, target: Point): AttackEffec
     [1, ch, '004'],
   ];
   const flame: Sparkle = [
-    [2, '*', '555'],
-    [2, '*', '044'],
-    [2, '*', '004'],
-    [2, '*', '555'],
-    [2, '*', '044'],
-    [2, '*', '004'],
+    [1, '*', '555'],
+    [1, '*', '044'],
+    [1, '*', '004'],
+    [1, '*', '555'],
+    [1, '*', '044'],
+    [1, '*', '004'],
   ];
 
   let hitFrame: int = 0;
   for (let p = 0; p < points.length; p++) {
-    const d = 12 * p;
+    const d = 9 * p;
     const next = nonnull(points[p]);
     const line = LOS(source, next);
     for (let i = 1; i < line.length; i++) {
@@ -289,11 +344,11 @@ const BlizzardEffect = (board: Board, source: Point, target: Point): AttackEffec
     const finish = add_sparkle(effect, flame, int(d + line.length - 1), next);
     if (p === 0) hitFrame = finish;
   }
-  hitFrame = int(hitFrame - Math.ceil(hitFrame / 3));
-  return {effect: effect.filter((_, i) => i % 3), hitFrame};
+  effect.mutAddEvent({type: FT.Hit, point: target, frame: hitFrame});
+  return effect.scale(2 / 3);
 };
 
-const HeadbuttEffect = (board: Board, source: Point, target: Point): AttackEffect => {
+const HeadbuttEffect = (board: Board, source: Point, target: Point): Effect => {
   const glyph = board.getGlyphAt(source);
   const underlying = board.getUnderlyingGlyphAt(source);
   const ch = ray_character(source, target);
@@ -308,55 +363,49 @@ const HeadbuttEffect = (board: Board, source: Point, target: Point): AttackEffec
   const line = LOS(source, target);
 
   const move_along_line = (line: Point[]) => {
-    const effect: Effect = [];
+    const effect = new Effect();
     for (let i = 1; i < line.length - 1; i++) {
       const point = nonnull(line[i]);
-      add_particle(effect, int(i - 1), {point, glyph});
+      effect.mutAddParticle(int(i - 1), {point, glyph});
       add_sparkle(effect, trail(), int(i), point);
     }
     return effect;
   };
 
   const move_length = int(line.length - 2);
-  const hold_pause = PauseEffect(move_length);
   const hold_point = line[move_length] || source;
-  const hold_effect = ConstantEffect({point: hold_point, glyph}, int(32));
-  let hitFrame = int(Math.max(move_length, 0));
+  const hold_effect = Effect.Constant({point: hold_point, glyph}, int(32));
+  const hitFrame = int(Math.max(move_length, 0));
 
-  const towards = move_along_line(line);
-  const hold    = SerialEffect([hold_pause, hold_effect]);
-  const away    = move_along_line(line.reverse());
+  const to   = move_along_line(line);
+  const hold = hold_effect.delay(move_length);
+  const from = move_along_line(line.reverse());
 
-  const back_length = int(hold.length + hitFrame);
-  const back_pause = PauseEffect(back_length);
-  const back_effect = ConstantEffect({point: source, glyph}, int(away.length - hitFrame));
-  const back = SerialEffect([back_pause, back_effect]);
+  const back_length = int(hold.frames.length + hitFrame);
+  const back_effect = Effect.Constant({point: source, glyph},
+                                      int(from.frames.length - hitFrame));
+  const back = back_effect.delay(back_length);
 
-  const result = UnderlayEffect(
-      ParallelEffect([SerialEffect([ParallelEffect([towards, hold]), away]), back]),
-      {point: source, glyph: underlying});
+  const effect = UnderlayEffect(to.and(hold).then(from).and(back),
+                                {point: source, glyph: underlying});
 
-  hitFrame = int(hitFrame - Math.ceil(hitFrame / 2));
-  return {effect: result.filter((_, i) => i % 2), hitFrame};
+  effect.mutAddEvent({type: FT.Hit, point: target, frame: hitFrame});
+  return effect.scale(1 / 2);
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-const Attacks = {
+const Effects = {
+  // Attacks:
   Blizzard: BlizzardEffect,
   Ember:    EmberEffect,
   Headbutt: HeadbuttEffect,
   IceBeam:  IceBeamEffect,
+
+  // Non-attacks:
+  Summon:   SummonEffect,
+  Switch:   SwitchEffect,
+  Withdraw: WithdrawEffect,
 };
 
-const Combinators = {
-  Constant: ConstantEffect,
-  Parallel: ParallelEffect,
-  Pause:    PauseEffect,
-  Serial:   SerialEffect,
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
-export {AttackEffect, Attacks, Combinators, ray_character};
-export {Effect, SummonEffect, WithdrawEffect};
+export {Effect, Effects, Frame, FT, ray_character};
