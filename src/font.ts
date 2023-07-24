@@ -59,15 +59,46 @@ const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string =
   const sy = int(scale * config.height);
 
   const {x: cx, y: cy} = nonnull(config.chars[codepoint]);
-  const lines = range(sy).map(y => {
-    const bits = range(sx).map(x => {
+  const bits = range(sy).map(y => {
+    return range(sx).map(x => {
       const px = cx * config.width + Math.floor(x / scale);
       const py = cy * config.height + Math.floor(y / scale);
       return data.data[data.channels * (data.width * py + px)] === 0xff;
-    })
+    });
+  });
+
+  // Center wide characters; do not center narrow characters.
+  const [xoff, yoff] = ((): [int, int] => {
+    if (!wide) return [0, 0];
+    let [xmin, xmax] = [sx, 0];
+    let [ymin, ymax] = [sy, 0];
+    for (let y = 0; y < sy; y++) {
+      for (let x = 0; x < sx; x++) {
+        if (!bits[y]![x]!) continue;
+        xmin = int(Math.min(xmin, x));
+        xmax = int(Math.max(xmax, x));
+        ymin = int(Math.min(ymin, y));
+        ymax = int(Math.max(ymax, y));
+      }
+    }
+    if (xmin > xmax || ymin > ymax) return [0, 0];
+    const xoff = int(((sx - (xmax - xmin + 1)) >> 1) - xmin);
+    const yoff = int(((sy - (ymax - ymin + 1)) >> 1) - ymin);
+    return [xoff, yoff];
+  })();
+
+  // Retrieve a bit taking centering into account.
+  const bit = (x: int, y: int): boolean => {
+    x -= xoff;
+    y -= yoff;
+    const in_bounds = 0 <= x && x < sx && 0 <= y && y < sy;
+    return in_bounds ? bits[y]![x]! : false;
+  };
+
+  const lines = range(sy).map(y => {
     const bytes = range(int(Math.floor((sx + 7) / 8))).map(i => {
       const byte = range(8).reduce(
-        (acc, j) => int(acc | (bits[8 * i + j] ? (1 << (7 - j)) : 0)), 0);
+        (acc, j) => int(acc | (bit(int(8 * i + j), y) ? (1 << (7 - j)) : 0)), 0);
       assert(0 <= byte && byte <= 0xff);
       return `${hex[Math.floor(byte / 16)]}${hex[byte % 16]}`;
     });
