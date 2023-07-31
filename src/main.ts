@@ -1556,6 +1556,7 @@ const renderMap = (state: State): string => {
   if (summon_or_target) {
     const {error, path, source, target} = summon_or_target;
     const color: Color = error.length === 0 ? '440' : '400';
+    recolor(source.x, source.y, 'black', '222');
     recolor(target.x, target.y, 'black', color);
 
     const count = Constants.SUMMON_FRAMES >> 1;
@@ -1599,6 +1600,7 @@ const renderBasicPokemonStatus =
      key?: string | null, color?: Color | null): string[] => {
   const {damaged, species, hp, pp} = known;
   color = color ? color : damaged ? getHPColor(0) : known.hp > 0 ? null : '111';
+  const bold = damaged;
 
   const result = [''];
   const prefix = renderKey(key);
@@ -1612,7 +1614,7 @@ const renderBasicPokemonStatus =
   result.push(`${spacer}PP: [${renderBar(bar, pp, pp_color)}]`);
   result.push('');
 
-  return color ? result.map(x => Color(x, color)) : result;
+  return color ? result.map(x => Color(x, color, null, bold)) : result;
 };
 
 const renderFriendlyPokemonStatus =
@@ -1660,6 +1662,7 @@ const renderTrainerStatus =
     (anim: Anim, trainer: Trainer, width: int, key?: string): string[] => {
   const damaged = anim.damage.has(trainer);
   const color = damaged ? getHPColor(0) : null;
+  const bold = damaged;
 
   const name = capitalize(describe(trainer));
   const status = trainer.data.pokemon.map(
@@ -1677,7 +1680,7 @@ const renderTrainerStatus =
   result.push(`${spacer}     ${status.join(' ')}`);
   result.push('');
 
-  return color ? result.map(x => Color(x, color)) : result;
+  return color ? result.map(x => Color(x, color, null, bold)) : result;
 };
 
 const renderChoice = (state: State): string => {

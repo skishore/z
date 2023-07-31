@@ -77,7 +77,7 @@ type Color = 'black' | 'gray' | `${Digit}${Digit}${Digit}`;
 
 const WideCharOffset = 0xff00 - 0x20;
 
-const Color = (text: string, fg?: Color | null, bg?: Color | null): string => {
+const Color = (text: string, fg?: Color | null, bg?: Color | null, bold?: boolean): string => {
   if (!text.length) return text;
   const index = (color: Color) => {
     if (color === 'black') return 0;
@@ -90,6 +90,7 @@ const Color = (text: string, fg?: Color | null, bg?: Color | null): string => {
   };
   if (fg) text = `\x1b[38;5;${index(fg)}m${text}\x1b[39m`;
   if (bg) text = `\x1b[48;5;${index(bg)}m${text}\x1b[49m`;
+  if (bold) text = `\x1b[1m${text}\x1b[0m`;
   return text;
 }
 

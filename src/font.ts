@@ -51,7 +51,7 @@ interface Font {
   data: ImageData,
 };
 
-const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string => {
+const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean, bold?: boolean): string => {
   const {config, data} = font;
   const hex = '0123456789ABCDEF';
   assert(hex.length === 16);
@@ -87,6 +87,18 @@ const glyph = (font: Font, codepoint: int, scale: int, wide?: boolean): string =
     return [xoff, yoff];
   })();
 
+  // Create a bold variant if requested.
+  if (bold) {
+    const bolded = bits.map(x => x.slice());
+    for (let x = 0; x < sx; x++) {
+      for (let y = 0; y < sy; y++) {
+        const bx = x + 1;
+        if (0 <= bx && bx < sx && bits[y]![bx]) bolded[y]![x] = true;
+      }
+    }
+    bolded.forEach((x, i) => bits[i] = x);
+  }
+
   // Retrieve a bit taking centering into account.
   const bit = (x: int, y: int): boolean => {
     x -= xoff;
@@ -121,7 +133,7 @@ BITMAP
   return parts.map(x => x.trim()).join('\n');
 };
 
-const bdf = (font: Font, wide?: Font): string => {
+const bdf = (font: Font, wide?: Font, bold?: boolean): string => {
   const {config} = font;
   const foundry = 'Misc';
   const weight = 'Medium';
@@ -147,7 +159,7 @@ FONTBOUNDINGBOX ${width} ${height} 0 0
 STARTPROPERTIES 20
 FONTNAME_REGISTRY ""
 FOUNDRY "${foundry}"
-FAMILY_NAME "${name}"
+FAMILY_NAME "${name}${bold ? 'Bold' : ''}"
 WEIGHT_NAME "${weight}"
 SLANT "${slant}"
 SETWIDTH_NAME "${set_width}"
@@ -169,15 +181,15 @@ CHARS ${codepoints.length + wide_chars.length + (last ? 1 : 0)}
   `;
   const parts = [header];
   const scale = wide ? int(config.height / wide.config.height) : 1;
-  codepoints.forEach(x => parts.push(glyph(font, x, 1)));
-  wide_chars.forEach(x => parts.push(glyph(nonnull(wide), x, scale, true)));
+  codepoints.forEach(x => parts.push(glyph(font, x, 1, false, bold)));
+  wide_chars.forEach(x => parts.push(glyph(nonnull(wide), x, scale, true, bold)));
 
   // There's some bug in font rendering on both Mac OS X Terminal.app and on
   // Alacritty, where the last character of a font is not rendered correctly.
   //
   // Work around this bug by appending a dummy character at the end.
   if (last) {
-    const part = glyph(nonnull(wide), last, scale, true);
+    const part = glyph(nonnull(wide), last, scale, true, bold);
     const code = last + 0xff00 - 0x20;
     parts.push(part.replace(new RegExp(`${code}`, 'g'), `${code + 1}`));
   }
@@ -212,7 +224,7 @@ const main = (font: Font, wide?: Font) => {
       show(font, int(message.charCodeAt(i)));
     }
   }
-  console.log(bdf(font, wide));
+  console.log(bdf(font, wide, /*bold=*/false));
 };
 
 //////////////////////////////////////////////////////////////////////////////
