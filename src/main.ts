@@ -1705,9 +1705,25 @@ const renderPartyPokemonStatus =
 };
 
 const renderRivalPokemonStatus =
-    (anim: Anim, pokemon: Pokemon, width: int): string[] => {
-  const known = getPokemonPublicState(anim, pokemon);
-  return renderBasicPokemonStatus(known, width);
+    (state: State, pokemon: Pokemon, width: int): string[] => {
+  const damaged = state.anim.damage.has(pokemon);
+  const targeted = state.target && state.target.target.equal(pokemon.pos);
+
+  const color = targeted ? null : damaged ? getHPColor(0) : null;
+  const known = getPokemonPublicState(state.anim, pokemon);
+  const bold = damaged && !targeted;
+
+  const hp = `${Math.max(Math.floor(100 * known.hp), 1)}%`;
+  const spacer = ' '.repeat(16 - known.species.name.length - hp.length);
+  const health = targeted || color ? hp : Color(hp, getHPColor(known.hp));
+  const result = `${known.species.glyph} ${known.species.name}${spacer}${health}`;
+
+  if (targeted) {
+    const width = Constants.STATUS_SIZE;
+    const padded = `${result}${' '.repeat(Math.max(width - result.length, 0))}`;
+    return ['', Color(padded, null, 'gray')];
+  }
+  return ['', Color(result, color, null, bold)];
 };
 
 const renderTrainerStatus =
@@ -1771,7 +1787,7 @@ const renderRivals = (state: State): string => {
 
   const rows: string[] = [];
   const rivals = findRivalPokemon(board, player);
-  rivals.forEach(y => renderRivalPokemonStatus(anim, y, width)
+  rivals.forEach(y => renderRivalPokemonStatus(state, y, width)
                           .forEach(x => rows.push(x)));
   return rows.join('\n');
 };
