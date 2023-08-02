@@ -323,7 +323,7 @@ const shout = (board: Board, trainer: Trainer, text: string): void => {
 enum AT { Attack, Idle, Move, Shout, Summon, Withdraw, WaitForInput };
 enum CT { Attack, Return };
 enum ET { Pokemon, Trainer };
-enum TT { Attack, Summon };
+enum TT { Attack, Summon, FarLook };
 
 type Action =
   {type: AT.Attack, attack: Attack, target: Point} |
@@ -919,6 +919,24 @@ const initSummonTarget =
   return result;
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
+const updateAttackTarget =
+    (state: State, target: AttackTarget, update: Point): void => {
+  const {board, player} = state;
+  const vision = board.getVision(player);
+  const unseen = (vision.getOrNull(update) ?? -1) < 0;
+  const entity = unseen ? null : board.getEntity(update);
+  const okay = !unseen && !(entity && getTrainer(entity) === player);
+  const los = LOS(target.source, update);
+
+  target.error = okay ? '' : unseen ? `You can't see a clear path there.`
+                                    : `That target is friendly.`;
+  target.frame = 0;
+  target.path = los.slice(1).map(x => [x, okay] as [Point, boolean]);
+  target.target = update;
+};
+
 const updateSummonTarget =
     (state: State, target: SummonTarget, update: Point): void => {
   const {board, player} = state;
@@ -933,7 +951,7 @@ const updateSummonTarget =
     if (target.error.length === 0) {
       if (board.getStatus(point) !== Status.FREE) {
         target.error = `There's something in the way.`;
-      } else if (player.pos.distanceL2(point) > range - 0.5) {
+      } else if (range !== null && player.pos.distanceL2(point) > range - 0.5) {
         target.error = `You can't throw that far.`;
       } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
         target.error = `You can't see a clear path there.`;
@@ -944,6 +962,27 @@ const updateSummonTarget =
 
   target.frame = 0;
   target.target = update;
+};
+
+const updateFarLookTarget =
+    (state: State, target: FarLookTarget, update: Point): void => {
+  const {board, player} = state;
+  const vision = board.getVision(player);
+  const okay = (x: Point) => (vision.getOrNull(x) ?? -1) >= 0;
+  const los = LOS(target.source, update);
+
+  target.error = okay(update) ? '' : `You can't see a clear path there.`;
+  target.frame = 0;
+  target.path = los.slice(1).map(x => [x, okay(x)] as [Point, boolean]);
+  target.target = update;
+
+  let last_okay_point = -1;
+  for (let i = 0; i < target.path.length; i++) {
+    if (target.path[i]![1]) last_okay_point = i;
+  }
+  for (let i = 0; i < last_okay_point; i++) {
+    target.path[i]![1] = true;
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -957,20 +996,33 @@ const initTarget = <T extends TargetData>
   return {data, error: '', frame: 0, path: [], source, target};
 };
 
-const updateAttackTarget =
-    (state: State, target: AttackTarget, update: Point): void => {
-  const {board, player} = state;
-  const vision = board.getVision(player);
-  const unseen = (vision.getOrNull(update) ?? -1) < 0;
-  const entity = unseen ? null : board.getEntity(update);
-  const okay = !unseen && !(entity && getTrainer(entity) === player);
-  const los = LOS(target.data.summon.pos, update);
+const updateTarget = (state: State, target: Target, update: Point): void => {
+  switch (target.data.type) {
+    case TT.Attack:  return updateAttackTarget(state,  target as AttackTarget,  update);
+    case TT.Summon:  return updateSummonTarget(state,  target as SummonTarget,  update);
+    case TT.FarLook: return updateFarLookTarget(state, target as FarLookTarget, update);
+  }
+};
 
-  target.error = okay ? '' : unseen ? `You can't see a clear path there.`
-                                    : `That target is friendly.`;
-  target.frame = 0;
-  target.path = los.slice(1).map(x => [x, okay] as [Point, boolean]);
-  target.target = update;
+const selectValidTarget = (state: State, selected: Target): null => {
+  switch (selected.data.type) {
+    case TT.Summon: {
+      const {data: {pokemon}, target} = selected;
+      state.player.data.input = {type: AT.Summon, pokemon, target};
+      return null;
+    }
+    case TT.Attack: {
+      const {attack, summon: pokemon} = selected.data;
+      const entity = state.board.getEntity(selected.target);
+      const target = entity ? entity : selected.target;
+      const command = {type: CT.Attack, attack, target};
+      state.player.data.input = {type: AT.Shout, command, pokemon};
+      return null;
+    }
+    case TT.FarLook: {
+      return null;
+    }
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1103,12 +1155,18 @@ interface SummonTargetData {
   range: int,
 };
 
-type TargetData = AttackTargetData | SummonTargetData;
-type AttackTarget = Target & {data: AttackTargetData};
-type SummonTarget = Target & {data: SummonTargetData};
+interface FarLookTargetData {
+  type: TT.FarLook,
+};
 
-const isAttackTarget = (x: Target): x is AttackTarget => x.data.type === TT.Attack;
-const isSummonTarget = (x: Target): x is SummonTarget => x.data.type === TT.Summon;
+type TargetData = AttackTargetData | SummonTargetData | FarLookTargetData;
+type AttackTarget  = Target & {data: AttackTargetData};
+type SummonTarget  = Target & {data: SummonTargetData};
+type FarLookTarget = Target & {data: FarLookTargetData};
+
+const isAttackTarget  = (x: Target): x is AttackTarget => x.data.type === TT.Attack;
+const isSummonTarget  = (x: Target): x is SummonTarget => x.data.type === TT.Summon;
+const isFarLookTarget = (x: Target): x is SummonTarget => x.data.type === TT.FarLook;
 
 interface Target {
   data: TargetData,
@@ -1185,7 +1243,21 @@ const processInput = (state: State, input: Input): void => {
     return;
   }
 
-  const updateTarget = (target: Point): Point | null => {
+  const getUpdatedTarget = (target: Point): Point | null => {
+    if (input === 'tab' || input === 'S-tab') {
+      const rivals = findRivalPokemon(board, player);
+      if (rivals.length === 0) return null;
+
+      const current = board.getEntity(target);
+      const pokemon = current && current.type === ET.Pokemon ? current : null;
+      const start = pokemon ? rivals.indexOf(pokemon) : -1;
+
+      const n = rivals.length;
+      const t = input === 'tab';
+      const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
+      return nonnull(rivals[index]).pos;
+    }
+
     const lower = input.startsWith('S-') ? input.substr(2) : input;
     const direction = Direction.all[kDirectionKeys.indexOf(lower)];
     if (!direction) return null;
@@ -1199,52 +1271,15 @@ const processInput = (state: State, input: Input): void => {
     return target;
   };
 
-  if (target && isSummonTarget(target)) {
-    const update = updateTarget(target.target);
+  if (target) {
+    const update = getUpdatedTarget(target.target);
     if (update && !update.equal(target.target)) {
-      updateSummonTarget(state, target, update);
+      updateTarget(state, target, update);
     } else if (enter) {
       if (target.error.length > 0) {
         board.logMenu(Color(target.error, '422'));
       } else {
-        const pokemon = target.data.pokemon;
-        player.data.input = {type: AT.Summon, pokemon, target: target.target};
-        state.target = null;
-      }
-    } else if (escape) {
-      board.logMenu(Color('Canceled.', '234'));
-      state.target = null;
-    }
-    return;
-  }
-
-  if (target && isAttackTarget(target)) {
-    const update = updateTarget(target.target);
-    if (update && !update.equal(target.target)) {
-      updateAttackTarget(state, target, update);
-    } else if (input === 'tab' || input === 'S-tab') {
-      const rivals = findRivalPokemon(board, player);
-      if (rivals.length === 0) return;
-
-      const current = board.getEntity(target.target);
-      const pokemon = current && current.type === ET.Pokemon ? current : null;
-      const start = pokemon ? rivals.indexOf(pokemon) : -1;
-
-      const n = rivals.length;
-      const t = input === 'tab';
-      const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
-      const rival = nonnull(rivals[index]);
-      updateAttackTarget(state, target, rival.pos);
-    } else if (enter) {
-      if (target.error.length > 0) {
-        board.logMenu(Color(target.error, '422'));
-      } else {
-        const {attack, summon: pokemon} = target.data;
-        const current = board.getEntity(target.target);
-        const targets = current ? current : target.target;
-        const command = {type: CT.Attack, attack, target: targets};
-        player.data.input = {type: AT.Shout, command, pokemon};
-        state.target = null;
+        state.target = selectValidTarget(state, target);
       }
     } else if (escape) {
       board.logMenu(Color('Canceled.', '234'));
@@ -1281,12 +1316,11 @@ const processInput = (state: State, input: Input): void => {
         state.menu = null;
       } else {
         const attack = summon.data.self.attacks[chosen];
-        const rivals = findRivalPokemon(board, player);
         if (!attack) {
           board.logMenu(Color(`${name} does not have that attack.`, '422'));
         } else {
           const source = summon.pos;
-          const target = rivals[0]?.pos || source;
+          const target = findRivalPokemon(board, player)[0]?.pos || source;
           const data: AttackTargetData = {type: TT.Attack, attack, summon};
           const init = state.target = initTarget(data, source, target);
           updateAttackTarget(state, init, target);
@@ -1301,6 +1335,16 @@ const processInput = (state: State, input: Input): void => {
   }
 
   if (player.data.input !== null) return;
+
+  if (input === 'x') {
+    const source = player.pos;
+    const target = findRivalPokemon(board, player)[0]?.pos || source;
+    const data: FarLookTargetData = {type: TT.FarLook};
+    const init = state.target = initTarget(data, source, target);
+    updateFarLookTarget(state, init, target);
+    board.logMenu(Color(`Use the movement keys to examine a location:`, '234'));
+    return;
+  }
 
   const summoned = int(kSummonedKeys.indexOf(input));
   if (summoned >= player.data.summons.length) {
@@ -1775,6 +1819,7 @@ const renderTarget = (state: State): string => {
           const name = target.data.pokemon.self.species.name;
           return `Sending out ${name}...`;
         }
+        case TT.FarLook: return `Examining...`;
       }
     })();
 
