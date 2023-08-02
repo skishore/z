@@ -879,24 +879,26 @@ const updateAnimation = (anim: Anim): void => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-const initSummon = (state: State, pokemon: PokemonEdge, range: int): Summon => {
+const initSummonTarget =
+    (state: State, pokemon: PokemonEdge, range: int): SummonTarget => {
   const player = state.player;
   const source = state.player.pos;
-  const result = {pokemon, range, ui: initTargetingUI(source, source)};
+  const data: SummonTargetData = {type: TT.Summon, pokemon, range};
+  const result = initTarget(data, source, source);
 
   const defend = defendSquare(state.board, source, player);
   if (defend) {
     const line = LOS(source, defend).slice(1).reverse();
     for (const point of line) {
       updateSummonTarget(state, result, point);
-      if (result.ui.error.length === 0) return result;
+      if (result.error.length === 0) return result;
     }
   }
 
   const okay = (pos: Point) => {
     if (!checkFollowerSquare(state.board, player, pos)) return false;
     updateSummonTarget(state, result, pos);
-    return result.ui.error.length === 0;
+    return result.error.length === 0;
   };
 
   const options: Point[] = [];
@@ -917,56 +919,58 @@ const initSummon = (state: State, pokemon: PokemonEdge, range: int): Summon => {
   return result;
 };
 
-const updateSummonTarget = (state: State, summon: Summon, target: Point): void => {
-  const {range, ui} = summon;
+const updateSummonTarget =
+    (state: State, target: SummonTarget, update: Point): void => {
   const {board, player} = state;
-  const los = LOS(player.pos, target);
+  const los = LOS(player.pos, update);
   const start = los.length > 1 ? 1 : 0;
+  const range = target.data.range;
 
-  ui.error = '';
-  ui.path.length = 0;
+  target.error = '';
+  target.path.length = 0;
   for (let i = start; i < los.length; i++) {
     const point = los[i]!;
-    if (ui.error.length === 0) {
+    if (target.error.length === 0) {
       if (board.getStatus(point) !== Status.FREE) {
-        ui.error = `There's something in the way.`;
+        target.error = `There's something in the way.`;
       } else if (player.pos.distanceL2(point) > range - 0.5) {
-        ui.error = `You can't throw that far.`;
+        target.error = `You can't throw that far.`;
       } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
-        ui.error = `You can't see a clear path there.`;
+        target.error = `You can't see a clear path there.`;
       }
     }
-    ui.path.push([point, ui.error.length === 0]);
+    target.path.push([point, target.error.length === 0]);
   }
 
-  ui.frame = 0;
-  ui.target = target;
+  target.frame = 0;
+  target.target = update;
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-const animateTargetingUI = (state: State, ui: TargetingUI): void => {
-  ui.frame = int((ui.frame + 1) % Constants.TARGET_FRAMES);
+const animateTarget = (state: State, target: Target): void => {
+  target.frame = int((target.frame + 1) % Constants.TARGET_FRAMES);
 };
 
-const initTargetingUI = (source: Point, target: Point): TargetingUI => {
-  return {error: '', frame: 0, path: [], source, target};
+const initTarget = <T extends TargetData>
+    (data: T, source: Point, target: Point): Target & {data: T} => {
+  return {data, error: '', frame: 0, path: [], source, target};
 };
 
-const updateTargetedPoint = (state: State, target: Target, point: Point): void => {
+const updateAttackTarget =
+    (state: State, target: AttackTarget, update: Point): void => {
   const {board, player} = state;
   const vision = board.getVision(player);
-  const unseen = (vision.getOrNull(point) ?? -1) < 0;
-  const entity = unseen ? null : board.getEntity(point);
+  const unseen = (vision.getOrNull(update) ?? -1) < 0;
+  const entity = unseen ? null : board.getEntity(update);
   const okay = !unseen && !(entity && getTrainer(entity) === player);
-  const los = LOS(target.summon.pos, point);
-  const ui = target.ui;
+  const los = LOS(target.data.summon.pos, update);
 
-  ui.error = okay ? '' : unseen ? `You can't see a clear path there.`
-                                : `That target is friendly.`;
-  ui.frame = 0;
-  ui.path = los.slice(1).map(x => [x, okay] as [Point, boolean]);
-  ui.target = point;
+  target.error = okay ? '' : unseen ? `You can't see a clear path there.`
+                                    : `That target is friendly.`;
+  target.frame = 0;
+  target.path = los.slice(1).map(x => [x, okay] as [Point, boolean]);
+  target.target = update;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1074,7 +1078,6 @@ interface State {
   board: Board,
   player: Trainer,
   choice: Choice | null,
-  summon: Summon | null,
   target: Target | null,
   menu: Menu | null,
 };
@@ -1088,19 +1091,27 @@ interface Menu {
   summon: int,
 };
 
-interface Summon {
-  pokemon: PokemonEdge,
-  range: int,
-  ui: TargetingUI,
-};
-
-interface Target {
+interface AttackTargetData {
+  type: TT.Attack,
   attack: Attack,
   summon: Pokemon,
-  ui: TargetingUI,
 };
 
-interface TargetingUI {
+interface SummonTargetData {
+  type: TT.Summon,
+  pokemon: PokemonEdge,
+  range: int,
+};
+
+type TargetData = AttackTargetData | SummonTargetData;
+type AttackTarget = Target & {data: AttackTargetData};
+type SummonTarget = Target & {data: SummonTargetData};
+
+const isAttackTarget = (x: Target): x is AttackTarget => x.data.type === TT.Attack;
+const isSummonTarget = (x: Target): x is SummonTarget => x.data.type === TT.Summon;
+
+interface Target {
+  data: TargetData,
   error: string,
   frame: int,
   path: [Point, boolean][],
@@ -1141,7 +1152,7 @@ const outsideMap = (state: State, point: Point): boolean => {
 };
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player, choice, summon, target, menu} = state;
+  const {board, player, choice, target, menu} = state;
   const enter = input === 'enter' || input === '.';
   const escape = input === 'escape';
 
@@ -1164,7 +1175,7 @@ const processInput = (state: State, input: Input): void => {
       } else {
         const range = Constants.SUMMON_RANGE;
         board.logMenu(Color(`Choose where to send out ${name}:`, '234'));
-        state.summon = initSummon(state, pokemon, range);
+        state.target = initSummonTarget(state, pokemon, range);
         state.choice = null;
       }
     } else if (escape) {
@@ -1188,34 +1199,34 @@ const processInput = (state: State, input: Input): void => {
     return target;
   };
 
-  if (summon) {
-    const target = updateTarget(summon.ui.target);
-    if (target && !target.equal(summon.ui.target)) {
-      updateSummonTarget(state, summon, target);
+  if (target && isSummonTarget(target)) {
+    const update = updateTarget(target.target);
+    if (update && !update.equal(target.target)) {
+      updateSummonTarget(state, target, update);
     } else if (enter) {
-      if (summon.ui.error.length > 0) {
-        board.logMenu(Color(summon.ui.error, '422'));
+      if (target.error.length > 0) {
+        board.logMenu(Color(target.error, '422'));
       } else {
-        const {pokemon, ui: {target}} = summon;
-        player.data.input = {type: AT.Summon, pokemon, target};
-        state.summon = null;
+        const pokemon = target.data.pokemon;
+        player.data.input = {type: AT.Summon, pokemon, target: target.target};
+        state.target = null;
       }
     } else if (escape) {
       board.logMenu(Color('Canceled.', '234'));
-      state.summon = null;
+      state.target = null;
     }
     return;
   }
 
-  if (target) {
-    const point = updateTarget(target.ui.target);
-    if (point && !point.equal(target.ui.target)) {
-      updateTargetedPoint(state, target, point);
+  if (target && isAttackTarget(target)) {
+    const update = updateTarget(target.target);
+    if (update && !update.equal(target.target)) {
+      updateAttackTarget(state, target, update);
     } else if (input === 'tab' || input === 'S-tab') {
       const rivals = findRivalPokemon(board, player);
       if (rivals.length === 0) return;
 
-      const current = board.getEntity(target.ui.target);
+      const current = board.getEntity(target.target);
       const pokemon = current && current.type === ET.Pokemon ? current : null;
       const start = pokemon ? rivals.indexOf(pokemon) : -1;
 
@@ -1223,15 +1234,16 @@ const processInput = (state: State, input: Input): void => {
       const t = input === 'tab';
       const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
       const rival = nonnull(rivals[index]);
-      updateTargetedPoint(state, target, rival.pos);
+      updateAttackTarget(state, target, rival.pos);
     } else if (enter) {
-      if (target.ui.error.length > 0) {
-        board.logMenu(Color(target.ui.error, '422'));
+      if (target.error.length > 0) {
+        board.logMenu(Color(target.error, '422'));
       } else {
-        const current = board.getEntity(target.ui.target);
-        const targets = current ? current : target.ui.target;
-        const command = {type: CT.Attack, attack: target.attack, target: targets};
-        player.data.input = {type: AT.Shout, command, pokemon: target.summon};
+        const {attack, summon: pokemon} = target.data;
+        const current = board.getEntity(target.target);
+        const targets = current ? current : target.target;
+        const command = {type: CT.Attack, attack, target: targets};
+        player.data.input = {type: AT.Shout, command, pokemon};
         state.target = null;
       }
     } else if (escape) {
@@ -1275,8 +1287,9 @@ const processInput = (state: State, input: Input): void => {
         } else {
           const source = summon.pos;
           const target = rivals[0]?.pos || source;
-          state.target = {attack, summon, ui: initTargetingUI(source, target)};
-          updateTargetedPoint(state, state.target, target);
+          const data: AttackTargetData = {type: TT.Attack, attack, summon};
+          const init = state.target = initTarget(data, source, target);
+          updateAttackTarget(state, init, target);
           state.menu = null;
         }
       }
@@ -1420,8 +1433,8 @@ const initState = (): State => {
   }
 
   const anim = {damage: new Map()};
-  const [choice, summon, target, menu] = [null, null, null, null];
-  return {anim, board, player, choice, summon, target, menu};
+  const [choice, target, menu] = [null, null, null];
+  return {anim, board, player, choice: null, target: null, menu: null};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1434,9 +1447,7 @@ const updateState = (state: State, inputs: Input[]): void => {
          inputs.length && active === player && player.data.input === null) {
     processInput(state, nonnull(inputs.shift()));
   }
-
-  const ui = state.summon?.ui || state.target?.ui;
-  if (ui) return animateTargetingUI(state, ui);
+  if (state.target) return animateTarget(state, state.target);
 
   while (!player.removed && !board.getCurrentFrame()) {
     const entity = board.getActiveEntity();
@@ -1502,7 +1513,7 @@ const renderLog = (state: State): string => {
 };
 
 const renderMap = (state: State): string => {
-  const {board, player, summon, target} = state;
+  const {board, player, target} = state;
   const width  = Constants.MAP_SIZE_X;
   const height = Constants.MAP_SIZE_Y;
   const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
@@ -1529,8 +1540,9 @@ const renderMap = (state: State): string => {
     text[index] = text[index]!.recolor(fg, bg);
   };
 
+  const range = target?.data.type === TT.Summon ? target.data.range : null;
   const shade = (point: Point, glyph: Glyph, force: boolean) => {
-    const out_of_range = summon && point.distanceL2(pos) > summon.range - 0.5;
+    const out_of_range = range !== null && point.distanceL2(pos) > range - 0.5;
     const shaded_glyph = out_of_range ? glyph.recolor('gray') : glyph;
     show(point.x, point.y, shaded_glyph, force);
   };
@@ -1548,15 +1560,15 @@ const renderMap = (state: State): string => {
     shade(x.pos, x.glyph, getTrainer(x) === player);
   });
 
-  const targeting = summon?.ui || target?.ui;
-  if (targeting) {
-    const {error, path, source, target} = targeting;
+  if (state.target) {
+    const frame = state.target.frame >> 1;
+    const {error, path, source, target} = state.target;
     const color: Color = error.length === 0 ? '440' : '400';
+
     recolor(source.x, source.y, 'black', '222');
     recolor(target.x, target.y, 'black', color);
 
     const count = Constants.TARGET_FRAMES >> 1;
-    const frame = targeting.frame >> 1;
     const ch = ray_character(source, target);
     for (let i = 0; i < path.length - 1; i++) {
       if ((i + count - frame) % count < 2) {
@@ -1748,27 +1760,28 @@ const renderStatus = (state: State): string => {
 };
 
 const renderTarget = (state: State): string => {
-  const {anim, board, player, summon, target} = state;
-  const ui = summon?.ui || target?.ui;
+  const {anim, board, player, target} = state;
   const width = Constants.STATUS_SIZE;
   const rows: string[] = [];
 
-  if (ui) {
+  if (target) {
     const explanation = (() => {
-      if (summon) {
-        const name = summon.pokemon.self.species.name;
-        return `Sending out ${name}...`;
-      } else if (target) {
-        const name = target.summon.data.self.species.name;
-        return `Using ${name}'s ${target.attack.name}...`;
+      switch (target.data.type) {
+        case TT.Attack: {
+          const name = target.data.summon.data.self.species.name;
+          return `Using ${name}'s ${target.data.attack.name}...`;
+        }
+        case TT.Summon: {
+          const name = target.data.pokemon.self.species.name;
+          return `Sending out ${name}...`;
+        }
       }
-      return `Examining...`;
     })();
 
     const vision = board.getVision(state.player);
-    const seen = (vision.getOrNull(ui.target) ?? -1) >= 0;
-    const tile = seen ? state.board.getTile(ui.target) : null;
-    const entity = seen ? board.getEntity(ui.target) : null;
+    const seen = (vision.getOrNull(target.target) ?? -1) >= 0;
+    const tile = seen ? state.board.getTile(target.target) : null;
+    const entity = seen ? board.getEntity(target.target) : null;
 
     rows.push('');
     rows.push(explanation);
