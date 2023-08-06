@@ -854,25 +854,27 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
 //////////////////////////////////////////////////////////////////////////////
 
 const animateDamage = (anim: Anim, entity: Entity): void => {
-  const hp = getAnimatedHP(anim, entity);
-  anim.damage.set(entity, {hp, frame: 0});
+  const animation = getAnimatedHP(anim, entity);
+  anim.damage.set(entity, {hp: animation.hp, frame: 0});
 };
 
-const getAnimatedHP = (anim: Anim, entity: Entity): number => {
+const getAnimatedHP = (anim: Anim, entity: Entity): {hp: number, flash: boolean} => {
   const target = cur_hp_fraction(entity);
   const entry = anim.damage.get(entity);
-  if (!entry) return target;
+  if (!entry) return {hp: target, flash: false};
 
   const source = entry.hp;
-  const f = (entry.frame + 1) / (Constants.DAMAGE_FRAMES + 2);
+  const frame = Math.max(entry.frame - Constants.DAMAGE_TICKS, -1);
+  const f = (frame + 1) / (Constants.DAMAGE_FLASH + 2);
   const g = 1 - (1 - f) * (1 - f) * (1 - f);
-  return target * g + source * (1 - g);
+  return {hp: target * g + source * (1 - g), flash: frame < 0};
 };
 
 const updateAnimation = (anim: Anim): void => {
   const entries = Array.from(anim.damage.entries());
   for (const [entity, frame] of entries) {
-    const done = (++frame.frame) >= Constants.DAMAGE_FRAMES;
+    const total = Constants.DAMAGE_FLASH + Constants.DAMAGE_TICKS;
+    const done = (++frame.frame) >= total;
     if (done) anim.damage.delete(entity);
   }
 };
@@ -1037,7 +1039,10 @@ const ApplyDamage = (board: Board, target: Point, cb: CB): Effect => {
   if (!entity) return new Effect();
 
   const particle = {point: target, glyph: entity.glyph.recolor('black', '400')};
-  const effect = Effect.Constant(particle, Constants.DAMAGE_FRAMES);
+  const effect = Effect.Serial([
+    Effect.Constant(particle, Constants.DAMAGE_FLASH),
+    Effect.Pause(Constants.DAMAGE_TICKS),
+  ]);
   effect.mutAddEvent(CallbackEvent(int(effect.frames.length), cb));
   return effect;
 };
@@ -1073,7 +1078,8 @@ const Constants = {
   // Animation frame rates:
   FRAME_RATE:    int(60),
   TARGET_FRAMES: int(20),
-  DAMAGE_FRAMES: int(8),
+  DAMAGE_FLASH: int(6),
+  DAMAGE_TICKS: int(6),
 };
 
 interface Tile {
@@ -1199,8 +1205,9 @@ const getPokemonPublicState =
     (anim: Anim, pokemon: Pokemon): PokemonPublicState => {
   const result = getPartyPokemonPublicState(pokemon.data.self);
   const bp = (pokemon.move_timer ?? 0) / Constants.MOVE_TIMER;
-  result.damaged = anim.damage.has(pokemon);
-  result.hp = getAnimatedHP(anim, pokemon);
+  const {hp, flash} = getAnimatedHP(anim, pokemon);
+  result.damaged = flash;
+  result.hp = hp;
   result.pp = 1 - Math.max(0, Math.min(bp, 1));
   result.pos = pokemon.pos;
   return result;
@@ -1710,12 +1717,10 @@ const renderPartyPokemonStatus =
 
 const renderRivalPokemonStatus =
     (state: State, pokemon: Pokemon, width: int): string[] => {
-  const damaged = state.anim.damage.has(pokemon);
   const targeted = state.target && state.target.target.equal(pokemon.pos);
-
-  const color = targeted ? null : damaged ? getHPColor(0) : null;
   const known = getPokemonPublicState(state.anim, pokemon);
-  const bold = damaged && !targeted;
+  const color = targeted ? null : known.damaged ? getHPColor(0) : null;
+  const bold = known.damaged && !targeted;
 
   const hp = `${Math.max(Math.floor(100 * known.hp), 1)}%`;
   const spacer = ' '.repeat(16 - known.species.name.length - hp.length);
@@ -1732,14 +1737,12 @@ const renderRivalPokemonStatus =
 
 const renderTrainerStatus =
     (anim: Anim, trainer: Trainer, width: int, key?: string): string[] => {
-  const damaged = anim.damage.has(trainer);
+  const {hp, flash: damaged} = getAnimatedHP(anim, trainer);
   const color = damaged ? getHPColor(0) : null;
   const bold = damaged;
-
   const name = capitalize(describe(trainer));
   const status = trainer.data.pokemon.map(
       x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
-  const hp = getAnimatedHP(anim, trainer);
 
   const result = [''];
   const prefix = renderKey(key);
