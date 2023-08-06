@@ -210,37 +210,40 @@ const RayEffect = (source: Point, target: Point, speed: int): Effect => {
   return new Effect(result);
 };
 
-const SummonEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
+const SummonEffect = (source: Point, target: Point): Effect => {
   const color = '400';
-  const base: Frame[] = [];
+  const effect = new Effect();
   const line = LOS(source, target);
   const ball = new Glyph('*', color);
   for (let i = 1; i < line.length - 1; i++) {
-    base.push([{point: nonnull(line[i]), glyph: ball}]);
+    effect.frames.push([{point: nonnull(line[i]), glyph: ball}]);
   }
-  const masked = UnderlayEffect(new Effect(base), {point: target, glyph});
-  return Effect.Serial([masked, ExplosionEffect(target)]);
+  const frame = int(effect.frames.length + 8);
+  effect.mutAddEvent({type: FT.Summon, point: target, frame});
+  return Effect.Serial([effect, ExplosionEffect(target)]);
 };
 
-const WithdrawEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
+const WithdrawEffect = (source: Point, target: Point): Effect => {
   const base = RayEffect(source, target, 4);
-  const hide = {point: target, glyph};
-  const impl = UnderlayEffect(ImplosionEffect(target), hide);
-  const full = base.frames[base.frames.length - 1];
-  if (!full) return impl;
+  const impl = ImplosionEffect(target);
+  const frame = int(Math.max(impl.frames.length - 6, 0));
+  impl.mutAddEvent({type: FT.Withdraw, point: target, frame: frame});
+
+  const last = base.frames[base.frames.length - 1];
+  if (!last) return impl;
 
   return Effect.Serial([
     base,
-    Effect.Parallel([(new Effect([full])).scale(int(impl.frames.length)), impl]),
-    UnderlayEffect(new Effect(base.frames.slice().reverse()), hide),
+    Effect.Parallel([(new Effect([last])).scale(int(impl.frames.length)), impl]),
+    new Effect(base.frames.slice().reverse()),
   ]);
 };
 
-const SwitchEffect = (source: Point, target: Point, glyph: Glyph): Effect => {
+const SwitchEffect = (source: Point, target: Point): Effect => {
   return Effect.Serial([
-    WithdrawEffect(source, target, glyph),
-    Effect.Constant({point: target, glyph}, 4),
-    SummonEffect(source, target, glyph),
+    WithdrawEffect(source, target),
+    Effect.Pause(4),
+    SummonEffect(source, target),
   ]);
 };
 

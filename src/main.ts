@@ -774,7 +774,7 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
       }
 
       const effect = attack.effect(board, entity.pos, target);
-      board.addEffect(ApplyAttack(board, effect, target, callback));
+      board.addEffect(ApplyEffect(effect, FT.Hit, callback));
       return {success: true, moves: 1, turns: 1};
     }
     case AT.Idle: return kSuccess;
@@ -805,8 +805,8 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
       const [source, target] = [entity.pos, pokemon.pos];
       if (action.command.type === CT.Return &&
           hasLineOfSight(board, source, target, range)) {
-        board.removeEntity(pokemon);
-        board.addEffect(Effects.Withdraw(source, target, pokemon.glyph));
+        board.addEffect(ApplyWithdraw(
+            source, target, () => board.removeEntity(pokemon)));
       } else {
         pokemon.data.commands.push(action.command);
       }
@@ -821,13 +821,13 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
       if (board.getStatus(target) !== Status.FREE) return kFailure;
 
       // success
-      const glyph = board.getTile(target).glyph;
-      const summoned = makePokemon(target, pokemon.self);
-      entity.data.summons.push(summoned);
-      pokemon.entity = summoned;
-      board.addEntity(summoned);
-      board.addEffect(Effects.Summon(entity.pos, target, glyph));
       shout(board, entity, `Go! ${pokemon.self.species.name}!`);
+      board.addEffect(ApplySummon(entity.pos, target, () => {
+        const summoned = makePokemon(target, pokemon.self);
+        entity.data.summons.push(summoned);
+        pokemon.entity = summoned;
+        board.addEntity(summoned);
+      }));
       return kSuccess;
     }
     case AT.Withdraw: {
@@ -838,8 +838,8 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
       if (!hasLineOfSight(board, source, target, range)) return kFailure;
 
       // success
-      board.removeEntity(pokemon);
-      board.addEffect(Effects.Withdraw(source, target, pokemon.glyph));
+      board.addEffect(ApplyWithdraw(
+          source, target, () => board.removeEntity(pokemon)));
       const name = pokemon.data.self.species.name;
       const text = entity.data.player
           ? `You withdraw ${name}.`
@@ -1027,28 +1027,32 @@ const selectValidTarget = (state: State, selected: Target): null => {
 
 //////////////////////////////////////////////////////////////////////////////
 
-const ApplyAttack = (board: Board, effect: Effect, target: Point,
-                     callback: () => void): Effect => {
-  const hit = effect.events.filter(x => x.type === FT.Hit)[0];
-  if (!hit) return effect;
+type CB = () => void;
 
-  const event: Event = {frame: hit.frame, type: FT.Callback, callback};
-  effect.mutAddEvent(event);
-  return effect;
-};
+const CallbackEvent = (frame: int, cb: CB): Event =>
+    ({frame, type: FT.Callback, callback: cb});
 
-const ApplyDamage = (board: Board, target: Point, callback: () => void): Effect => {
+const ApplyDamage = (board: Board, target: Point, cb: CB): Effect => {
   const entity = board.getEntity(target);
   if (!entity) return new Effect();
 
   const particle = {point: target, glyph: entity.glyph.recolor('black', '400')};
   const effect = Effect.Constant(particle, Constants.DAMAGE_FRAMES);
-
-  const frame = int(effect.frames.length);
-  const event: Event = {frame, type: FT.Callback, callback};
-  effect.mutAddEvent(event);
+  effect.mutAddEvent(CallbackEvent(int(effect.frames.length), cb));
   return effect;
 };
+
+const ApplyEffect = (effect: Effect, type: FT, cb: CB): Effect => {
+  const old = effect.events.filter(x => x.type === type)[0];
+  if (old) effect.mutAddEvent(CallbackEvent(old.frame, cb));
+  return effect;
+};
+
+const ApplySummon = (source: Point, target: Point, cb: CB): Effect =>
+    ApplyEffect(Effects.Summon(source, target), FT.Summon, cb);
+
+const ApplyWithdraw = (source: Point, target: Point, cb: CB): Effect =>
+    ApplyEffect(Effects.Withdraw(source, target), FT.Withdraw, cb);
 
 //////////////////////////////////////////////////////////////////////////////
 
