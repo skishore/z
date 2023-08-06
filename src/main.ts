@@ -203,6 +203,18 @@ class Board {
 
   // Cached field-of-vision
 
+  canSee(vision: Matrix<int>, point: Point): boolean {
+    return (vision.getOrNull(point) ?? -1) >= 0;
+  }
+
+  entityCanSee(entity: Entity, point: Point): boolean {
+    return this.entityVisionAt(entity, point) >= 0;
+  }
+
+  entityVisionAt(entity: Entity, point: Point): int {
+    return this.getVision(entity).getOrNull(point) ?? -1;
+  }
+
   getBlockers(entity: Entity): Point[] {
     return this.getCachedVision(entity).blockers;
   }
@@ -533,20 +545,20 @@ const followCommands =
   }
 };
 
-const checkFollowerSquare = (board: Board, leader: Entity, pos: Point,
+const checkFollowerSquare = (board: Board, leader: Entity, target: Point,
                              ignoreOccupant?: boolean): boolean => {
-  const status = board.getStatus(pos);
+  const status = board.getStatus(target);
   const free = status === Status.FREE ||
                (ignoreOccupant && status === Status.OCCUPIED);
   if (!free) return false;
 
   const source = leader.pos;
-  const dn = source.distanceNethack(pos);
+  const dn = source.distanceNethack(target);
   if (dn > 2) return false;
   if (dn < 2) return true;
 
-  const vision = board.getVision(leader);
-  return vision.getOrNull(source) === vision.getOrNull(pos);
+  return board.entityVisionAt(leader, source) ===
+         board.entityVisionAt(leader, target);
 };
 
 const defendSquare = (board: Board, start: Point, trainer: Trainer): Point | null => {
@@ -657,12 +669,11 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
 const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
   const result: Pokemon[] = [];
   const source = trainer.pos;
-  const vision = board.getVision(trainer);
 
   board.getEntities().forEach(entity => {
     if (entity.type !== ET.Pokemon) return;
     if (entity.data.self.trainer === trainer) return;
-    if ((vision.getOrNull(entity.pos) ?? -1) < 0) return;
+    if (!board.entityCanSee(trainer, entity.pos)) return;
     result.push(entity);
   });
 
@@ -926,8 +937,7 @@ const initSummonTarget =
 const updateAttackTarget =
     (state: State, target: AttackTarget, update: Point): void => {
   const {board, player} = state;
-  const vision = board.getVision(player);
-  const unseen = (vision.getOrNull(update) ?? -1) < 0;
+  const unseen = !board.entityCanSee(player, update);
   const entity = unseen ? null : board.getEntity(update);
   const okay = !unseen && !(entity && getTrainer(entity) === player);
   const los = LOS(target.source, update);
@@ -955,7 +965,7 @@ const updateSummonTarget =
         target.error = `There's something in the way.`;
       } else if (range !== null && player.pos.distanceL2(point) > range - 0.5) {
         target.error = `You can't throw that far.`;
-      } else if ((board.getVision(player).getOrNull(point) ?? -1) < 0) {
+      } else if (!board.entityCanSee(player, point)) {
         target.error = `You can't see a clear path there.`;
       }
     }
@@ -969,8 +979,7 @@ const updateSummonTarget =
 const updateFarLookTarget =
     (state: State, target: FarLookTarget, update: Point): void => {
   const {board, player} = state;
-  const vision = board.getVision(player);
-  const okay = (x: Point) => (vision.getOrNull(x) ?? -1) >= 0;
+  const okay = (x: Point) => board.entityCanSee(player, x);
   const los = LOS(target.source, update);
 
   target.error = okay(update) ? '' : `You can't see a clear path there.`;
@@ -1606,7 +1615,7 @@ const renderMap = (state: State): string => {
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      if ((vision.getOrNull(point) ?? -1) < 0) continue;
+      if (!board.canSee(vision, point)) continue;
       shade(point, board.getTile(point).glyph, true);
     }
   }
@@ -1803,7 +1812,6 @@ const renderStatus = (state: State): string => {
   const kl = renderKey('a').length;
   const width = int(Constants.STATUS_SIZE + kl);
   const {anim, board, menu, player} = state;
-  const vision = board.getVision(player);
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
@@ -1846,8 +1854,7 @@ const renderTarget = (state: State): string => {
       }
     })();
 
-    const vision = board.getVision(state.player);
-    const seen = (vision.getOrNull(target.target) ?? -1) >= 0;
+    const seen = board.entityCanSee(player, target.target);
     const tile = seen ? state.board.getTile(target.target) : null;
     const entity = seen ? board.getEntity(target.target) : null;
 
