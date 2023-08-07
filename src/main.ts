@@ -137,7 +137,12 @@ class Board {
     this.dirtyVision(entity);
   }
 
-  removeEntity(entity: Entity): void {
+  removeEntity(entity: Entity, state: State): void {
+    if (state.focus && state.focus.entity === entity &&
+        this.entityCanSee(state.player, entity.pos)) {
+      state.focus = null;
+    }
+
     if (entity.type === ET.Trainer && entity.data.player) {
       entity.glyph = entity.glyph.recolor('400');
       entity.removed = true;
@@ -514,21 +519,21 @@ const followCommands =
   const command = nonnull(commands[0]);
   switch (command.type) {
     case CT.Attack: {
-      const {attack, target: ent_or_pt} = command;
-      if (!(ent_or_pt instanceof Point) && ent_or_pt.removed) {
+      const {attack, target} = command;
+      if (!(target instanceof Point) && target.removed) {
         commands.shift();
         return plan(board, entity);
       }
 
       // We can attack a target if we have line-of-sight to its position.
-      const target = ent_or_pt instanceof Point ? ent_or_pt : ent_or_pt.pos;
+      const point = target instanceof Point ? target : target.pos;
       const range = attack.range;
-      const valid = (p: Point) => hasLineOfSight(board, p, target, range);
-      if (moveReady(entity) && hasLineOfSight(board, source, target, range)) {
+      const valid = (p: Point) => hasLineOfSight(board, p, point, range);
+      if (moveReady(entity) && hasLineOfSight(board, source, point, range)) {
         commands.shift();
-        return {type: AT.Attack, attack, target};
+        return {type: AT.Attack, attack, target: point};
       }
-      return path_to_target(range, target, valid);
+      return path_to_target(range, point, valid);
     }
     case CT.Return: {
       const trainer = entity.type === ET.Pokemon ? entity.data.self.trainer : null;
@@ -737,7 +742,8 @@ const plan = (board: Board, entity: Entity): Action => {
 const kSuccess: Result = {success: true,  moves: 0, turns: 1};
 const kFailure: Result = {success: false, moves: 0, turns: 1};
 
-const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result => {
+const act = (state: State, entity: Entity, action: Action): Result => {
+  const {anim, board} = state;
   switch (action.type) {
     case AT.Attack: {
       const source = entity.pos;
@@ -763,7 +769,7 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return;
             board.logAppend(`${capitalize(target_name)} blacked out!`);
-            board.removeEntity(target_entity);
+            board.removeEntity(target_entity, state);
           }));
         };
       } else {
@@ -779,7 +785,7 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return;
             board.logAppend(`${capitalize(target_name)} fainted!`);
-            board.removeEntity(target_entity);
+            board.removeEntity(target_entity, state);
           }));
         };
       }
@@ -817,7 +823,7 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
       if (action.command.type === CT.Return &&
           hasLineOfSight(board, source, target, range)) {
         board.addEffect(ApplyWithdraw(
-            source, target, () => board.removeEntity(pokemon)));
+            source, target, () => board.removeEntity(pokemon, state)));
       } else {
         pokemon.data.commands.push(action.command);
       }
@@ -850,7 +856,7 @@ const act = (anim: Anim, board: Board, entity: Entity, action: Action): Result =
 
       // success
       board.addEffect(ApplyWithdraw(
-          source, target, () => board.removeEntity(pokemon)));
+          source, target, () => board.removeEntity(pokemon, state)));
       const name = pokemon.data.self.species.name;
       const text = entity.data.player
           ? `You withdraw ${name}.`
@@ -998,6 +1004,30 @@ const updateFarLookTarget =
 
 //////////////////////////////////////////////////////////////////////////////
 
+const initFocus = (state: State, point: Point): Focus | null => {
+  const entity = state.board.getEntity(point);
+  if (!entity || getTrainer(entity) === state.player) return null;
+
+  const target = entity ? entity.pos : point;
+  const result = {last_seen: null, last_tile: null, seen: false, entity, target};
+  updateFocus(state, result);
+  return result;
+};
+
+const updateFocus = (state: State, focus: Focus): void => {
+  const {anim, board, player} = state;
+  const target = focus.entity ? focus.entity.pos : focus.target;
+  focus.target = target;
+  focus.seen = !focus.entity?.removed && board.entityCanSee(player, target);
+  if (!focus.seen) return;
+
+  const entity = board.getEntity(target);
+  focus.last_seen = entity ? getEntityPublicState(anim, entity) : null;
+  focus.last_tile = board.getTile(target);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 const animateTarget = (state: State, target: Target): void => {
   target.frame = int((target.frame + 1) % Constants.TARGET_FRAMES);
 };
@@ -1015,24 +1045,25 @@ const updateTarget = (state: State, target: Target, update: Point): void => {
   }
 };
 
-const selectValidTarget = (state: State, selected: Target): null => {
+const selectValidTarget = (state: State, selected: Target): Focus | null => {
+  const point = selected.target;
+  const entity = state.board.getEntity(point);
+  const target = entity ? entity : point;
+  const result = initFocus(state, point);
+
   switch (selected.data.type) {
     case TT.Summon: {
       const {data: {pokemon}, target} = selected;
       state.player.data.input = {type: AT.Summon, pokemon, target};
-      return null;
+      return state.focus;
     }
     case TT.Attack: {
       const {attack, summon: pokemon} = selected.data;
-      const entity = state.board.getEntity(selected.target);
-      const target = entity ? entity : selected.target;
       const command = {type: CT.Attack, attack, target};
       state.player.data.input = {type: AT.Shout, command, pokemon};
-      return null;
+      return result;
     }
-    case TT.FarLook: {
-      return null;
-    }
+    case TT.FarLook: return result;
   }
 };
 
@@ -1150,11 +1181,20 @@ interface State {
   player: Trainer,
   choice: Choice | null,
   target: Target | null,
+  focus: Focus | null,
   menu: Menu | null,
 };
 
 interface Choice {
   index: int,
+};
+
+interface Focus {
+  last_seen: EntityPublicState | null,
+  last_tile: Tile | null,
+  seen: boolean,
+  entity: Entity | null,
+  target: Point,
 };
 
 interface Menu {
@@ -1196,7 +1236,10 @@ interface Target {
   target: Point,
 };
 
+type EntityPublicState = PokemonPublicState | TrainerPublicState;
+
 interface PokemonPublicState {
+  type: ET.Pokemon,
   damaged: boolean,
   species: PokemonSpeciesData,
   hp: number,
@@ -1204,10 +1247,24 @@ interface PokemonPublicState {
   pos: Point | null,
 };
 
+interface TrainerPublicState {
+  type: ET.Trainer,
+  damaged: boolean,
+  description: string,
+  hp: number,
+  pokemon: PokemonPublicState[],
+  pos: Point,
+};
+
+const getEntityPublicState = (anim: Anim, entity: Entity): EntityPublicState =>
+    entity.type === ET.Pokemon ? getPokemonPublicState(anim, entity)
+                               : getTrainerPublicState(anim, entity);
+
 const getPartyPokemonPublicState =
     (self: PokemonIndividualData): PokemonPublicState => {
+  const damaged = false;
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
-  return {damaged: false, species: self.species, hp, pp: 1, pos: null};
+  return {type: ET.Pokemon, damaged, species: self.species, hp, pp: 1, pos: null};
 };
 
 const getPokemonPublicState =
@@ -1222,6 +1279,16 @@ const getPokemonPublicState =
   return result;
 };
 
+const getTrainerPublicState =
+    (anim: Anim, trainer: Trainer): TrainerPublicState => {
+  const {hp, flash: damaged} = getAnimatedHP(anim, trainer);
+  const description = describe(trainer);
+  const pokemon = trainer.data.pokemon.map(
+      x => x.entity ? getPokemonPublicState(anim, x.entity)
+                    : getPartyPokemonPublicState(x.self));
+  return {type: ET.Trainer, damaged, description, hp, pokemon, pos: trainer.pos};
+};
+
 const outsideMap = (state: State, point: Point): boolean => {
   const delta = point.sub(state.player.pos);
   const limit_x = Math.floor((Constants.MAP_SIZE_X - 1) / 2);
@@ -1230,7 +1297,7 @@ const outsideMap = (state: State, point: Point): boolean => {
 };
 
 const processInput = (state: State, input: Input): void => {
-  const {board, player, choice, target, menu} = state;
+  const {board, focus, player, choice, target, menu} = state;
   const enter = input === 'enter' || input === '.';
   const escape = input === 'escape';
 
@@ -1245,8 +1312,10 @@ const processInput = (state: State, input: Input): void => {
     } else if (chosen >= 0) {
       const pokemon = player.data.pokemon[chosen];
       const name = pokemon?.self.species.name;
-      if (!pokemon) return;
-      if (pokemon.entity) {
+      if (!pokemon) {
+        const count = player.data.pokemon.length;
+        board.logMenu(Color(`You are only carrying ${count} Pokemon!`, '422'));
+      } else if (pokemon.entity) {
         board.logMenu(Color(`${name} is already out!`, '422'));
       } else if (!pokemon.self.cur_hp) {
         board.logMenu(Color(`${name} has no strength left!`, '422'));
@@ -1263,20 +1332,22 @@ const processInput = (state: State, input: Input): void => {
     return;
   }
 
+  const getTabbedTarget = (target: Point | null): Point | null => {
+    const rivals = findRivalPokemon(board, player);
+    if (rivals.length === 0) return null;
+
+    const current = target && board.getEntity(target);
+    const pokemon = current && current.type === ET.Pokemon ? current : null;
+    const start = pokemon ? rivals.indexOf(pokemon) : -1;
+
+    const t = input === 'tab';
+    const n = int(rivals.length);
+    const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
+    return nonnull(rivals[index]).pos;
+  };
+
   const getUpdatedTarget = (target: Point): Point | null => {
-    if (input === 'tab' || input === 'S-tab') {
-      const rivals = findRivalPokemon(board, player);
-      if (rivals.length === 0) return null;
-
-      const current = board.getEntity(target);
-      const pokemon = current && current.type === ET.Pokemon ? current : null;
-      const start = pokemon ? rivals.indexOf(pokemon) : -1;
-
-      const n = rivals.length;
-      const t = input === 'tab';
-      const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
-      return nonnull(rivals[index]).pos;
-    }
+    if (input === 'tab' || input === 'S-tab') return getTabbedTarget(target);
 
     const lower = input.startsWith('S-') ? input.substr(2) : input;
     const direction = Direction.all[kDirectionKeys.indexOf(lower)];
@@ -1299,14 +1370,25 @@ const processInput = (state: State, input: Input): void => {
       if (target.error.length > 0) {
         board.logMenu(Color(target.error, '422'));
       } else {
-        state.target = selectValidTarget(state, target);
+        state.focus = selectValidTarget(state, target);
+        state.target = null;
       }
     } else if (escape) {
+      state.focus = (() => {
+        if (target.data.type !== TT.FarLook) return state.focus;
+        if (target.error.length > 0) return null;
+        return selectValidTarget(state, target);
+      })();
       board.logMenu(Color('Canceled.', '234'));
       state.target = null;
     }
     return;
   }
+
+  const getInitialTarget = (source: Point): Point => {
+    if (focus && focus.seen) return focus.target;
+    return findRivalPokemon(board, player)[0]?.pos || source;
+  };
 
   if (menu) {
     assert(0 <= menu.summon);
@@ -1340,7 +1422,7 @@ const processInput = (state: State, input: Input): void => {
           board.logMenu(Color(`${name} does not have that attack.`, '422'));
         } else {
           const source = summon.pos;
-          const target = findRivalPokemon(board, player)[0]?.pos || source;
+          const target = getInitialTarget(source);
           const data: AttackTargetData = {type: TT.Attack, attack, summon};
           const init = state.target = initTarget(data, source, target);
           updateAttackTarget(state, init, target);
@@ -1356,9 +1438,16 @@ const processInput = (state: State, input: Input): void => {
 
   if (player.data.input !== null) return;
 
+  if (focus && input === 'escape') {
+    state.focus = null;
+  } else if (input === 'tab' || input === 'S-tab') {
+    const target = getTabbedTarget(focus?.seen ? focus?.target ?? null : null);
+    state.focus = target ? initFocus(state, target) : null;
+  }
+
   if (input === 'x') {
     const source = player.pos;
-    const target = findRivalPokemon(board, player)[0]?.pos || source;
+    const target = getInitialTarget(source);
     const data: FarLookTargetData = {type: TT.FarLook};
     const init = state.target = initTarget(data, source, target);
     updateFarLookTarget(state, init, target);
@@ -1497,8 +1586,8 @@ const initState = (): State => {
   }
 
   const anim = {damage: new Map()};
-  const [choice, target, menu] = [null, null, null];
-  return {anim, board, player, choice: null, target: null, menu: null};
+  const [choice, target, focus, menu] = [null, null, null, null];
+  return {anim, board, player, choice, target, focus, menu};
 };
 
 const updateState = (state: State, inputs: Input[]): void => {
@@ -1519,7 +1608,7 @@ const updateState = (state: State, inputs: Input[]): void => {
       board.advanceEntity();
       continue;
     }
-    const result = act(anim, board, entity, plan(board, entity));
+    const result = act(state, entity, plan(board, entity));
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
@@ -1577,7 +1666,7 @@ const renderLog = (state: State): string => {
 };
 
 const renderMap = (state: State): string => {
-  const {board, player, target} = state;
+  const {board, focus, player, target} = state;
   const width  = Constants.MAP_SIZE_X;
   const height = Constants.MAP_SIZE_Y;
   const text: Glyph[] = Array((width + 1) * height).fill(kEmptyGlyph);
@@ -1590,18 +1679,21 @@ const renderMap = (state: State): string => {
   const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
-  const show = (x: int, y: int, glyph: Glyph, force: boolean) => {
+  const show = (x: int, y: int, glyph: Glyph, force: boolean = false) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
   };
 
-  const recolor = (x: int, y: int, fg?: Color | null, bg?: Color | null) => {
+  const recolor = (x: int, y: int, fg: Color | null,
+                   bg: Color | null, force: boolean = false) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    text[index] = text[index]!.recolor(fg, bg);
+    const glyph = text[index];
+    const apply = glyph && (force || glyph !== kEmptyGlyph);
+    if (apply) text[index] = glyph.recolor(fg, bg);
   };
 
   const range = target?.data.type === TT.Summon ? target.data.range : null;
@@ -1629,8 +1721,8 @@ const renderMap = (state: State): string => {
     const {error, path, source, target} = state.target;
     const color: Color = error.length === 0 ? '440' : '400';
 
-    recolor(source.x, source.y, 'black', '222');
-    recolor(target.x, target.y, 'black', color);
+    recolor(source.x, source.y, 'black', '222', true);
+    recolor(target.x, target.y, 'black', color, true);
 
     const count = Constants.TARGET_FRAMES >> 1;
     const ch = ray_character(source, target);
@@ -1640,10 +1732,12 @@ const renderMap = (state: State): string => {
         show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
       }
     }
+  } else if (focus && focus.seen) {
+    recolor(focus.target.x, focus.target.y, 'black', '222');
   }
 
   const frame = board.getCurrentFrame();
-  if (frame) frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph, false));
+  if (frame) frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
 
   return text.join('');
 };
@@ -1726,7 +1820,11 @@ const renderPartyPokemonStatus =
 
 const renderRivalPokemonStatus =
     (state: State, pokemon: Pokemon, width: int): string[] => {
-  const targeted = state.target && state.target.target.equal(pokemon.pos);
+  const targeted = (() => {
+    if (state.target) return state.target.target.equal(pokemon.pos);
+    if (!(state.focus && state.focus.seen)) return false;
+    return state.focus.target.equal(pokemon.pos);
+  })();
   const known = getPokemonPublicState(state.anim, pokemon);
   const color = targeted ? null : known.damaged ? getHPColor(0) : null;
   const bold = known.damaged && !targeted;
@@ -1745,13 +1843,14 @@ const renderRivalPokemonStatus =
 };
 
 const renderTrainerStatus =
-    (anim: Anim, trainer: Trainer, width: int, key?: string): string[] => {
-  const {hp, flash: damaged} = getAnimatedHP(anim, trainer);
-  const color = damaged ? getHPColor(0) : null;
+    (known: TrainerPublicState, width: int, key?: string | null,
+     color?: Color | null): string[] => {
+  const {damaged, description, hp, pokemon} = known;
+  color = damaged ? getHPColor(0) : null;
   const bold = damaged;
-  const name = capitalize(describe(trainer));
-  const status = trainer.data.pokemon.map(
-      x => x.self.cur_hp > 0 ? '*' : Color('*', '111'));
+  const name = capitalize(description);
+  const status = pokemon.map(
+      x => x.hp > 0 ? '*' : Color('*', '111'));
 
   const result = [''];
   const prefix = renderKey(key);
@@ -1815,7 +1914,8 @@ const renderStatus = (state: State): string => {
 
   const rows: string[] = [];
   const key = menu ? '-' : kPlayerKey;
-  renderTrainerStatus(anim, player, width, key).forEach(x => rows.push(x));
+  const known = getTrainerPublicState(anim, player);
+  renderTrainerStatus(known, width, key).forEach(x => rows.push(x));
 
   let summon = 0;
   while (summon < player.data.summons.length) {
@@ -1829,18 +1929,19 @@ const renderStatus = (state: State): string => {
 
   while (summon < kSummonedKeys.length) {
     const key = kSummonedKeys[summon++]!;
-    renderEmptyStatus(width, key).forEach(x => rows.push(x));
+    renderEmptyStatus(width, key, '111').forEach(x => rows.push(x));
   }
   return rows.join('\n');
 };
 
 const renderTarget = (state: State): string => {
-  const {anim, board, player, target} = state;
+  const {anim, board, player, target, focus} = state;
   const width = Constants.STATUS_SIZE;
   const rows: string[] = [];
 
-  if (target) {
+  if (target || focus) {
     const explanation = (() => {
+      if (!target) return `Last target:${focus?.seen ? '' : ' (remembered)'}`;
       switch (target.data.type) {
         case TT.Attack: {
           const name = target.data.summon.data.self.species.name;
@@ -1854,28 +1955,37 @@ const renderTarget = (state: State): string => {
       }
     })();
 
-    const seen = board.entityCanSee(player, target.target);
-    const tile = seen ? state.board.getTile(target.target) : null;
-    const entity = seen ? board.getEntity(target.target) : null;
+    const color = !target && !focus?.seen ? '111' : null;
+    const seen = target ? board.entityCanSee(player, target.target)
+                        : focus?.seen;
+    const tile = target ? seen ? state.board.getTile(target.target) : null
+                        : focus?.last_tile;
+
+    const entity = ((): EntityPublicState | null => {
+      if (!target) return focus?.last_seen ?? null;
+      const entity = seen ? board.getEntity(target.target) : null;
+      return entity ? getEntityPublicState(anim, entity) : null;
+    })();
+
+    const tile_text = ((): string => {
+      if (!tile) return `You ${seen ? 'see' : 'saw'}: (unseen location)`;
+      const glyph = color ? tile.glyph.recolor() : tile.glyph;
+      const prefix = seen ? entity ? 'Standing on' : 'You see' :
+                            entity ? 'Stood on'    : 'You saw';
+      return `${prefix}: ${glyph} (${tile.description})`;
+    })();
 
     rows.push('');
-    rows.push(explanation);
+    rows.push(Color(explanation, color));
     if (entity) {
-      if (entity.type === ET.Trainer) {
-        renderTrainerStatus(anim, entity, width).forEach(x => rows.push(x));
-      } else {
-        const known = getPokemonPublicState(anim, entity);
-        renderBasicPokemonStatus(known, width).forEach(x => rows.push(x));
-      }
+      const text = entity.type === ET.Pokemon
+          ? renderBasicPokemonStatus(entity, width, null, color)
+          : renderTrainerStatus(entity, width, null, color);
+      text.forEach(x => rows.push(x));
     } else {
       rows.push('');
     }
-    if (tile) {
-      const prefix = entity ? 'Standing on' : 'You see';
-      rows.push(`${prefix}: ${tile.glyph} (${tile.description})`);
-    } else {
-      rows.push(`You see: (unseen location)`);
-    }
+    rows.push(Color(tile_text, color));
     return rows.join('\n');
   }
 
@@ -1883,7 +1993,8 @@ const renderTarget = (state: State): string => {
   rows.push('No target selected.');
   rows.push('');
   rows.push('[x] examine your surroundings');
-  return rows.join('\n');
+
+  return rows.map(x => Color(x, '111')).join('\n');
 };
 
 const initIO = (state: State): IO => {
@@ -1953,7 +2064,7 @@ const initIO = (state: State): IO => {
   const ui: UI = {choice, fps, log, map, rivals, status, target, window};
 
   const inputs: Input[] = [];
-  window.key(['S-a', 'C-c'], () => process.exit(0));
+  window.key(['S-q', 'C-c'], () => process.exit(0));
   const kFastDirectionKeys = Array.from(kDirectionKeys).map(x => `S-${x}`);
   const kAllKeys = ['enter', 'escape', 'tab', 'S-tab', '.']
     .concat(Array.from(kAlphabetKeys))
@@ -1970,6 +2081,7 @@ const update = (io: IO) => {
   io.count = int((io.count + 1) & 0xffff);
 
   updateState(io.state, io.inputs);
+  if (io.state.focus) updateFocus(io.state, io.state.focus);
 };
 
 const cachedSetContent = (element: Element, content: string): boolean => {
