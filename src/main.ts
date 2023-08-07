@@ -743,7 +743,7 @@ const kSuccess: Result = {success: true,  moves: 0, turns: 1};
 const kFailure: Result = {success: false, moves: 0, turns: 1};
 
 const act = (state: State, entity: Entity, action: Action): Result => {
-  const {anim, board} = state;
+  const {anim, board, player} = state;
   switch (action.type) {
     case AT.Attack: {
       const source = entity.pos;
@@ -751,15 +751,20 @@ const act = (state: State, entity: Entity, action: Action): Result => {
       if (!hasLineOfSight(board, source, target, attack.range)) return kFailure;
 
       // success
-      const user = capitalize(describe(entity));
       const target_entity = board.getEntity(target);
+      const see_source = board.entityCanSee(player, source) ||
+                         getTrainer(entity) === player;
+      const see_target = board.entityCanSee(player, target) ||
+                         (target_entity && getTrainer(target_entity) === player);
+      const user = capitalize(see_source ? describe(entity) : 'something');
+      const seen = see_source || see_target;
       let callback: () => void = () => {};
 
       if (target_entity === null) {
         board.log(`${user} used ${attack.name}!`);
       } else if (target_entity.type === ET.Trainer) {
-        const target_name = describe(target_entity);
-        board.log(`${user} attacked ${target_name} with ${attack.name}!`);
+        const target_name = see_target ? describe(target_entity) : 'something';
+        if (seen) board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
         callback = () => {
           const data = target_entity.data;
@@ -768,13 +773,13 @@ const act = (state: State, entity: Entity, action: Action): Result => {
 
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return;
-            board.logAppend(`${capitalize(target_name)} blacked out!`);
+            if (see_target) board.logAppend(`${capitalize(target_name)} blacked out!`);
             board.removeEntity(target_entity, state);
           }));
         };
       } else {
-        const target_name = describe(target_entity);
-        board.log(`${user} attacked ${target_name} with ${attack.name}!`);
+        const target_name = see_target ? describe(target_entity) : 'something';
+        if (seen) board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
         callback = () => {
           const data = target_entity.data.self;
@@ -784,7 +789,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
 
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return;
-            board.logAppend(`${capitalize(target_name)} fainted!`);
+            if (see_target) board.logAppend(`${capitalize(target_name)} fainted!`);
             board.removeEntity(target_entity, state);
           }));
         };
