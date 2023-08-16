@@ -324,7 +324,9 @@ const form = (command: Command, pokemon: Pokemon): string => {
           : target.data.name;
       return `${name}, attack ${target_name} with ${command.attack.name}!`;
     }
+    case CT.MoveTo: return `${name}, move!`;
     case CT.Return: return `${name}, return!`;
+    case CT.WaitAt: return `${name}, wait there!`;
   }
 };
 
@@ -338,7 +340,7 @@ const shout = (board: Board, trainer: Trainer, text: string): void => {
 
 // {Action,Command,Entity,Target}Type enums:
 enum AT { Attack, Idle, Move, Shout, Summon, Withdraw, WaitForInput };
-enum CT { Attack, Return };
+enum CT { Attack, MoveTo, Return, WaitAt };
 enum ET { Pokemon, Trainer };
 enum TT { Attack, Summon, FarLook };
 
@@ -357,6 +359,8 @@ interface Result { success: boolean, moves: number, turns: number };
 
 type Command =
   {type: CT.Attack, attack: Attack, target: Entity | Point} |
+  {type: CT.MoveTo, target: Point, timeout: int} |
+  {type: CT.WaitAt, timeout: int} |
   {type: CT.Return};
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
@@ -510,7 +514,7 @@ const followCommands =
     }
 
     const path = AStar(source, target, check);
-    const direction = path
+    const direction = path?.length
       ? Direction.assert(nonnull(path[0]).sub(source))
       : sample(Direction.all);
     return {type: AT.Move, direction};
@@ -535,6 +539,16 @@ const followCommands =
       }
       return path_to_target(range, point, valid);
     }
+    case CT.MoveTo: {
+      if ((--command.timeout) < 0) commands.shift();
+      const {target} = command;
+      const check = board.getStatus.bind(board);
+      const path = AStar(source, target, check);
+      const direction = path?.length
+        ? Direction.assert(nonnull(path[0]).sub(source))
+        : sample(Direction.all);
+      return {type: AT.Move, direction};
+    }
     case CT.Return: {
       const trainer = entity.type === ET.Pokemon ? entity.data.self.trainer : null;
       if (!trainer || trainer.removed) {
@@ -546,6 +560,10 @@ const followCommands =
       const range = Constants.SUMMON_RANGE;
       const valid = (p: Point) => hasLineOfSight(board, trainer.pos, p, range);
       return path_to_target(range, trainer.pos, valid);
+    }
+    case CT.WaitAt: {
+      if ((--command.timeout) < 0) commands.shift();
+      return {type: AT.Idle};
     }
   }
 };
@@ -702,6 +720,24 @@ const plan = (board: Board, entity: Entity): Action => {
     case ET.Pokemon: {
       const {commands, self: {attacks, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
+
+      if (!trainer) {
+        if (Math.random() < 0.5) {
+            const timeout = int(Math.random() * 16);
+            commands.push({type: CT.WaitAt, timeout});
+            return followCommands(board, entity, commands);
+        }
+        for (let i = 0; i < 100; i++) {
+          const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
+          const y = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
+          const pos = new Point(x, y);
+          if (board.getStatus(pos) === Status.FREE) {
+            const timeout = int(Math.random() * 16);
+            commands.push({type: CT.MoveTo, target: pos, timeout});
+            return followCommands(board, entity, commands);
+          }
+        }
+      }
 
       const ready = !moveReady(entity);
       const defendEarly = ready ? defendLeader(board, entity) : null;
@@ -1064,7 +1100,7 @@ const selectValidTarget = (state: State, selected: Target): Focus | null => {
     }
     case TT.Attack: {
       const {attack, summon: pokemon} = selected.data;
-      const command = {type: CT.Attack, attack, target};
+      const command = {type: CT.Attack as CT.Attack, attack, target};
       state.player.data.input = {type: AT.Shout, command, pokemon};
       return result;
     }
@@ -1542,7 +1578,7 @@ const initBoard = (): Board => {
       if (walls.get(point)) {
         board.setTile(point, wt);
       } else if (grass.get(point)) {
-        board.setTile(point, gt);
+        //board.setTile(point, gt);
       }
     }
   }
@@ -1575,7 +1611,7 @@ const initState = (): State => {
     player.data.pokemon.push({entity: null, self});
   });
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 5; i++) {
     const pos = (() => {
       for (let i = 0; i < 100; i++) {
         const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
