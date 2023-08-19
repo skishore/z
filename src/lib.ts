@@ -95,9 +95,9 @@ const Color = (text: string, fg?: Color | null, bg?: Color | null, bold?: boolea
 }
 
 class Glyph {
-  private readonly ch: string;
-  private readonly fg: Color | null;
-  private readonly bg: Color | null;
+  readonly ch: string;
+  readonly fg: Color | null;
+  readonly bg: Color | null;
   private readonly text: string;
 
   constructor(ch: string, fg?: Color | null, bg?: Color | null) {

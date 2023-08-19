@@ -272,6 +272,7 @@ class Board {
 
       value.fill(-1);
       seen.length = 0;
+      seen.push(entity.pos);
       this.fov.fieldOfVision(blocked);
       vision.dirty = false;
     }
@@ -347,7 +348,7 @@ enum TT { Attack, Summon, FarLook };
 type Action =
   {type: AT.Attack, attack: Attack, target: Point} |
   {type: AT.Idle} |
-  {type: AT.Move, direction: Direction} |
+  {type: AT.Move, direction: Direction, turns: number} |
   {type: AT.Shout, command: Command, pokemon: Pokemon} |
   {type: AT.Summon, pokemon: PokemonEdge, target: Point} |
   {type: AT.Withdraw, pokemon: Pokemon} |
@@ -495,6 +496,10 @@ const hasLineOfSight =
   });
 };
 
+const moveAction = (direction: Direction, turns: number = 1): Action => {
+  return {type: AT.Move, direction, turns};
+};
+
 const followCommands =
     (board: Board, entity: Entity, commands: Command[]): Action => {
   const kBFSLimit = 6;
@@ -513,14 +518,14 @@ const followCommands =
       const best = Math.min.apply(null, scores);
       const move = sample(options.filter((_, i) => scores[i] === best));
       if (move.equal(source)) return {type: AT.Idle};
-      return {type: AT.Move, direction: Direction.assert(move.sub(source))};
+      return moveAction(Direction.assert(move.sub(source)));
     }
 
     const path = AStar(source, target, check);
     const direction = path?.length
       ? Direction.assert(nonnull(path[0]).sub(source))
       : sample(Direction.all);
-    return {type: AT.Move, direction};
+    return moveAction(direction);
   };
 
   const command = nonnull(commands[0]);
@@ -550,7 +555,7 @@ const followCommands =
       const direction = path?.length
         ? Direction.assert(nonnull(path[0]).sub(source))
         : sample(Direction.all);
-      return {type: AT.Move, direction};
+      return moveAction(direction);
     }
     case CT.Return: {
       const trainer = entity.type === ET.Pokemon ? entity.data.self.trainer : null;
@@ -669,8 +674,7 @@ const defendLeader = (board: Board, pokemon: Pokemon): Action | null => {
   const path = AStar(pokemon.pos, target, check);
   if (!(path && path.length > 0)) return null;
 
-  const direction = Direction.assert(nonnull(path[0]).sub(pokemon.pos));
-  return {type: AT.Move, direction};
+  return moveAction(Direction.assert(nonnull(path[0]).sub(pokemon.pos)));
 };
 
 const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
@@ -681,15 +685,15 @@ const followLeader = (board: Board, entity: Entity, leader: Entity): Action => {
     const moves: [int, Direction][] =
       Direction.all.filter(x => okay(ep.add(x))).map(x => [1, x]);
     if (okay(ep)) moves.push([16, Direction.none]);
-    if (moves.length) return {type: AT.Move, direction: weighted(moves)};
+    if (moves.length) return moveAction(weighted(moves));
   }
 
   const check = board.getStatus.bind(board);
   const path = AStar(ep, tp, check);
-  const direction = path && path.length > 0
+  const direction = path?.length
     ? Direction.assert(nonnull(path[0]).sub(ep))
     : sample(Direction.all);
-  return {type: AT.Move, direction};
+  return moveAction(direction);
 };
 
 const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
@@ -719,13 +723,17 @@ const findRivals = (board: Board, entity: Entity): Entity[] => {
 };
 
 const inVisionCone = (delta: Point, facing: Point): boolean => {
+  const kVisionCosine = 0.5;
+  const kVisionRadius = 12;
+
   const {x: dx, y: dy} = delta;
   const {x: fx, y: fy} = facing;
   if (dx === 0 && dy === 0) return true;
   if (fx === 0 && fy === 0) return true;
+  if ((dx * dx + dy * dy) > (kVisionRadius * kVisionRadius)) return false;
   const dot = dx *  fx + dy * fy;
   const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
-  return dot / l2Product > 0.5;
+  return dot / l2Product > kVisionCosine;
 };
 
 const plan = (board: Board, entity: Entity): Action => {
@@ -737,7 +745,8 @@ const plan = (board: Board, entity: Entity): Action => {
       if (pathing && !trainer) {
         if ((--pathing.time) <= 0) {
           pathing.wait = !pathing.wait;
-          pathing.time = int(Math.random() * (pathing.wait ? 16 : 32));
+          const multiplier = pathing.wait ? Constants.WANDER_TURNS : 1;
+          pathing.time = int(Math.random() * multiplier * 32);
         }
         if (pathing.wait) return {type: AT.Idle};
 
@@ -749,7 +758,6 @@ const plan = (board: Board, entity: Entity): Action => {
           new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
         }
         for (const point of board.getSeen(entity)) {
-          //if (!inVisionCone(point.sub(pos), last_direction)) continue;
           seen.set(point.key(), kMaxMemory);
         }
         if ((1 === 1)) {
@@ -761,7 +769,7 @@ const plan = (board: Board, entity: Entity): Action => {
           const dirs = BFS(pos, valid, board.getSize().x, check);
           if (dirs.length === 0) return {type: AT.Idle};
           const direction = pathing.direction = sample(dirs);
-          return {type: AT.Move, direction};
+          return moveAction(direction, Constants.WANDER_TURNS);
         }
       }
 
@@ -781,7 +789,7 @@ const plan = (board: Board, entity: Entity): Action => {
       if (defendLate) return defendLate;
 
       if (trainer) return followLeader(board, entity, trainer);
-      return {type: AT.Move, direction: sample(Direction.all)};
+      return moveAction(sample(Direction.all), Constants.WANDER_TURNS);
     }
     case ET.Trainer: {
       const {input, player} = entity.data;
@@ -863,7 +871,8 @@ const act = (state: State, entity: Entity, action: Action): Result => {
     }
     case AT.Idle: return kSuccess;
     case AT.Move: {
-      const pos = entity.pos.add(action.direction);
+      const {direction, turns} = action;
+      const pos = entity.pos.add(direction);
       if (pos.equal(entity.pos)) return kSuccess;
       if (board.getTile(pos).blocked) return kFailure;
       const other = board.getEntity(pos);
@@ -872,13 +881,13 @@ const act = (state: State, entity: Entity, action: Action): Result => {
         board.swapEntities(entity.pos, pos);
         board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
         entity.dir = action.direction;
-        return kSuccess;
+        return {success: true, moves: 0, turns};
       }
 
       // success
       board.moveEntity(entity, pos);
-      entity.dir = action.direction;
-      return kSuccess;
+      entity.dir = direction;
+      return {success: true, moves: 0, turns};
     }
     case AT.Shout: {
       const pokemon = action.pokemon;
@@ -1170,9 +1179,9 @@ const ApplyWithdraw = (source: Point, target: Point, cb: CB): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(100),
-  MAP_SIZE_Y:    int(100),
-  FOV_RADIUS:    int(21),
+  MAP_SIZE_X:    int(63),
+  MAP_SIZE_Y:    int(63),
+  FOV_RADIUS:    int(31),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(30),
   CHOICE_SIZE:   int(42),
@@ -1180,7 +1189,8 @@ const Constants = {
   TURN_TIMER:    int(120),
   SUMMON_RANGE:  int(12),
   TRAINER_HP:    int(8),
-  TRAINER_SPEED: 1/3,
+  TRAINER_SPEED: 1/10,
+  WANDER_TURNS:  int(3),
 
   // Animation frame rates:
   FRAME_RATE:    int(60),
@@ -1232,7 +1242,7 @@ const kPokemon: PokemonSpeciesWithAttacks[] = [
   species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
   species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', '420')),
   species('Pikachu',    int(60), 1/4, [],           new Glyph('P', '440')),
-  species('Rattata',    int(60), 1/3, ['Headbutt'], new Glyph('R')),
+  species('Rattata',    int(60), 1/4, ['Headbutt'], new Glyph('R')),
   species('Pidgey',     int(30), 1/3, [],           new Glyph('P')),
 ];
 
@@ -1532,7 +1542,7 @@ const processInput = (state: State, input: Input): void => {
   }
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
-  if (direction) player.data.input = {type: AT.Move, direction};
+  if (direction) player.data.input = moveAction(direction);
   if (input === '.') player.data.input = {type: AT.Idle}
 };
 
@@ -1642,7 +1652,7 @@ const initState = (): State => {
     player.data.pokemon.push({entity: null, self});
   });
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 20; i++) {
     const pos = (() => {
       for (let i = 0; i < 100; i++) {
         const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
@@ -1747,8 +1757,8 @@ const renderMap = (state: State): string => {
   }
 
   const pos = player.pos;
-  const offset_x = 0;
-  const offset_y = 0;
+  const offset_x = int(pos.x - (width - 1) / 2);
+  const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
   const show = (x: int, y: int, glyph: Glyph, force: boolean = false) => {
@@ -1758,14 +1768,21 @@ const renderMap = (state: State): string => {
     if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
   };
 
+  const kRecolorIfSeen = 0;
+  const kRecolorForced = 1;
+  const kRecolorLowPri = 2;
   const recolor = (x: int, y: int, fg: Color | null,
-                   bg: Color | null, force: boolean = false) => {
+                   bg: Color | null, mode: int = kRecolorIfSeen) => {
     x -= offset_x; y -= offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     const glyph = text[index];
-    const apply = glyph && (force || glyph !== kEmptyGlyph);
-    if (apply) text[index] = glyph.recolor(fg, bg);
+    const apply = glyph && (mode === kRecolorForced || glyph !== kEmptyGlyph);
+    if (!apply) return;
+
+    fg = mode === kRecolorLowPri ? glyph.fg : fg;
+    bg = mode === kRecolorLowPri && glyph.bg ? glyph.bg : bg;
+    text[index] = glyph.recolor(fg, bg);
   };
 
   const range = target?.data.type === TT.Summon ? target.data.range : null;
@@ -1775,25 +1792,17 @@ const renderMap = (state: State): string => {
     show(point.x, point.y, shaded_glyph, force);
   };
 
-  const pokemon = nonnull(board.getEntities()[1]);
-  if (pokemon.type !== ET.Pokemon) throw Error();
-  const vision = board.getVision(pokemon);
-  const {direction, seen} = nonnull(pokemon.data.self.pathing);
+  const vision = board.getVision(player);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      const sees_now = inVisionCone(point.sub(pokemon.pos), direction) &&
-                       board.canSee(vision, point);
-      const has_seen = !!seen.get(point.key())
-      if (!sees_now && !has_seen) continue;
-      const glyph = board.getTile(point).glyph;
-      const color = sees_now ? glyph : glyph.recolor('gray');
-      shade(point, color, true);
+      if (!board.canSee(vision, point)) continue;
+      shade(point, board.getTile(point).glyph, true);
     }
   }
 
   board.getEntities().forEach(x => {
-    shade(x.pos, x.glyph, true);
+    shade(x.pos, x.glyph, getTrainer(x) === player);
   });
 
   if (state.target) {
@@ -1801,8 +1810,8 @@ const renderMap = (state: State): string => {
     const {error, path, source, target} = state.target;
     const color: Color = error.length === 0 ? '440' : '400';
 
-    recolor(source.x, source.y, 'black', '222', true);
-    recolor(target.x, target.y, 'black', color, true);
+    recolor(source.x, source.y, 'black', '222', kRecolorForced);
+    recolor(target.x, target.y, 'black', color, kRecolorForced);
 
     const count = Constants.TARGET_FRAMES >> 1;
     const ch = ray_character(source, target);
@@ -1818,6 +1827,27 @@ const renderMap = (state: State): string => {
 
   const frame = board.getCurrentFrame();
   if (frame) frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
+
+  const highlightSeen = (entity: Entity, phase: int) => {
+    if (entity.type !== ET.Pokemon) return;
+
+    const direction = entity.data.self.pathing?.direction;
+    if (!direction) return;
+
+    const pos = entity.pos;
+    const canSeePlayer = inVisionCone(player.pos.sub(pos), direction) &&
+                         board.entityCanSee(entity, player.pos);
+    if (phase !== (canSeePlayer ? 1 : 0)) return;
+
+    const color = canSeePlayer ? '100' : '000';
+    for (const point of board.getSeen(entity)) {
+      if (!board.canSee(vision, point)) continue;
+      if (!inVisionCone(point.sub(pos), direction)) continue;
+      recolor(point.x, point.y, null, color, kRecolorLowPri);
+    }
+  };
+  findRivalPokemon(board, player).forEach(x => highlightSeen(x, 1));
+  findRivalPokemon(board, player).forEach(x => highlightSeen(x, 0));
 
   return text.join('');
 };
