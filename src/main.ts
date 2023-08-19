@@ -1787,7 +1787,7 @@ const renderMap = (state: State): string => {
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     const glyph = text[index];
-    const force = mode === kRecolorForced;
+    const force = mode === kRecolorForced || mode === kRecolorLowPri;
     const apply = glyph && (force || board.canSee(vision, point));
     if (!apply) return;
 
@@ -1845,7 +1845,7 @@ const renderMap = (state: State): string => {
   const frame = board.getCurrentFrame();
   if (frame) frame.forEach(({point, glyph}) => show(point, glyph));
 
-  const highlightSeen = (entity: Entity, phase: int) => {
+  const highlightSeen = (entity: Entity) => {
     if (entity.type !== ET.Pokemon) return;
 
     const direction = entity.data.self.pathing?.direction;
@@ -1854,17 +1854,22 @@ const renderMap = (state: State): string => {
     const pos = entity.pos;
     const canSeePlayer = inVisionCone(player.pos.sub(pos), direction) &&
                          board.entityCanSee(entity, player.pos);
-    if (phase !== (canSeePlayer ? 1 : 0)) return;
-
     const color = canSeePlayer ? '100' : '000';
+
     for (const point of board.getSeen(entity)) {
-      if (!board.canSee(vision, point)) continue;
       if (!inVisionCone(point.sub(pos), direction)) continue;
+      const sees_now = board.canSee(vision, point);
+      const has_seen = seen && seen.getOrNull(point);
+      if (!sees_now && !has_seen) continue;
       recolor(point, null, color, kRecolorLowPri);
     }
   };
-  findRivalPokemon(board, player).forEach(x => highlightSeen(x, 1));
-  findRivalPokemon(board, player).forEach(x => highlightSeen(x, 0));
+  const focused = (() => {
+    if (state.target) return board.getEntity(state.target.target);
+    return focus && focus.seen ? focus.entity : null;
+  })();
+  if (focused) highlightSeen(focused);
+  //findRivalPokemon(board, player).forEach(x => highlightSeen(x, 1));
 
   return text.join('');
 };
