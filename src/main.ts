@@ -6,7 +6,7 @@ import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 //////////////////////////////////////////////////////////////////////////////
 
 interface Log { line: string, menu: boolean};
-interface Vision { dirty: boolean, blockers: Point[], value: Matrix<int> };
+interface Vision { dirty: boolean, seen: Point[], value: Matrix<int> };
 
 const kVisionRadius = 3;
 
@@ -220,8 +220,8 @@ class Board {
     return this.getVision(entity).getOrNull(point) ?? -1;
   }
 
-  getBlockers(entity: Entity): Point[] {
-    return this.getCachedVision(entity).blockers;
+  getSeen(entity: Entity): Point[] {
+    return this.getCachedVision(entity).seen;
   }
 
   getVision(entity: Entity): Matrix<int> {
@@ -233,14 +233,14 @@ class Board {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
       const value = new Matrix<int>(this.map.size, -1);
-      const result = {dirty: true, blockers: [], value};
+      const result = {dirty: true, seen: [], value};
       this.entityVision.set(entity, result);
       return result;
     })();
 
     if (vision.dirty) {
       const pos = entity.pos;
-      const {blockers, value} = vision;
+      const {seen, value} = vision;
 
       const blocked = (p: Point, parent: Point | null) => {
         const q = p.add(pos);
@@ -265,13 +265,13 @@ class Board {
 
         if (visibility > cached) {
           value.set(q, visibility);
-          if (tile && tile.blocked) blockers.push(q);
+          if ((cached ?? -1) < 0 && tile !== null) seen.push(q);
         }
         return visibility <= 0;
       };
 
       value.fill(-1);
-      blockers.length = 0;
+      seen.length = 0;
       this.fov.fieldOfVision(blocked);
       vision.dirty = false;
     }
@@ -365,6 +365,8 @@ type Command =
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
+interface Pathing { direction: Direction, seen: Map<int, int>, time: int, wait: boolean };
+
 type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
 
 interface PokemonSpeciesData {
@@ -377,6 +379,7 @@ interface PokemonSpeciesData {
 interface PokemonIndividualData {
   attacks: Attack[],
   species: PokemonSpeciesData,
+  pathing: Pathing | null,
   trainer: Trainer | null,
   cur_hp: int,
   max_hp: int,
@@ -715,27 +718,50 @@ const findRivals = (board: Board, entity: Entity): Entity[] => {
   return all.filter(x => hasLineOfSight(board, entity.pos, x.pos, 12));
 };
 
+const inVisionCone = (delta: Point, facing: Point): boolean => {
+  const {x: dx, y: dy} = delta;
+  const {x: fx, y: fy} = facing;
+  if (dx === 0 && dy === 0) return true;
+  if (fx === 0 && fy === 0) return true;
+  const dot = dx *  fx + dy * fy;
+  const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
+  return dot / l2Product > 0.5;
+};
+
 const plan = (board: Board, entity: Entity): Action => {
   switch (entity.type) {
     case ET.Pokemon: {
-      const {commands, self: {attacks, trainer}} = entity.data;
+      const {commands, self: {attacks, pathing, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
-      if (!trainer) {
-        if (Math.random() < 0.5) {
-            const timeout = int(Math.random() * 16);
-            commands.push({type: CT.WaitAt, timeout});
-            return followCommands(board, entity, commands);
+      if (pathing && !trainer) {
+        if ((--pathing.time) <= 0) {
+          pathing.wait = !pathing.wait;
+          pathing.time = int(Math.random() * (pathing.wait ? 16 : 32));
         }
-        for (let i = 0; i < 100; i++) {
-          const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
-          const y = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
-          const pos = new Point(x, y);
-          if (board.getStatus(pos) === Status.FREE) {
-            const timeout = int(Math.random() * 16);
-            commands.push({type: CT.MoveTo, target: pos, timeout});
-            return followCommands(board, entity, commands);
-          }
+        if (pathing.wait) return {type: AT.Idle};
+
+        const pos = entity.pos;
+        const {direction: last_direction, seen} = pathing;
+        const kMaxMemory = int(64);
+        for (const [key, val] of Array.from(seen.entries())) {
+          const new_val = int(val - 1);
+          new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
+        }
+        for (const point of board.getSeen(entity)) {
+          //if (!inVisionCone(point.sub(pos), last_direction)) continue;
+          seen.set(point.key(), kMaxMemory);
+        }
+        if ((1 === 1)) {
+          const check = board.getStatus.bind(board);
+          const valid = (x: Point) => {
+            return !!seen.get(x.key()) &&
+                   Direction.all.some(y => !seen.get(x.add(y).key()));
+          };
+          const dirs = BFS(pos, valid, board.getSize().x, check);
+          if (dirs.length === 0) return {type: AT.Idle};
+          const direction = pathing.direction = sample(dirs);
+          return {type: AT.Move, direction};
         }
       }
 
@@ -744,7 +770,7 @@ const plan = (board: Board, entity: Entity): Action => {
       if (defendEarly) return defendEarly;
 
       const rivals = findRivals(board, entity);
-      if (rivals.length > 0 && attacks.length > 0) {
+      if (rivals.length > 0 && attacks.length > 0 && !(1 === 1)) {
         const target = sample(rivals).pos;
         const attack = sample(attacks);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
@@ -1144,8 +1170,8 @@ const ApplyWithdraw = (source: Point, target: Point, cb: CB): Effect =>
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(43),
-  MAP_SIZE_Y:    int(43),
+  MAP_SIZE_X:    int(100),
+  MAP_SIZE_Y:    int(100),
   FOV_RADIUS:    int(21),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(30),
@@ -1154,7 +1180,7 @@ const Constants = {
   TURN_TIMER:    int(120),
   SUMMON_RANGE:  int(12),
   TRAINER_HP:    int(8),
-  TRAINER_SPEED: 1/10,
+  TRAINER_SPEED: 1/3,
 
   // Animation frame rates:
   FRAME_RATE:    int(60),
@@ -1206,7 +1232,7 @@ const kPokemon: PokemonSpeciesWithAttacks[] = [
   species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
   species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', '420')),
   species('Pikachu',    int(60), 1/4, [],           new Glyph('P', '440')),
-  species('Rattata',    int(60), 1/4, ['Headbutt'], new Glyph('R')),
+  species('Rattata',    int(60), 1/3, ['Headbutt'], new Glyph('R')),
   species('Pidgey',     int(30), 1/3, [],           new Glyph('P')),
 ];
 
@@ -1578,7 +1604,7 @@ const initBoard = (): Board => {
       if (walls.get(point)) {
         board.setTile(point, wt);
       } else if (grass.get(point)) {
-        //board.setTile(point, gt);
+        board.setTile(point, gt);
       }
     }
   }
@@ -1602,7 +1628,12 @@ const initState = (): State => {
                    trainer: Trainer | null): PokemonIndividualData => {
     const {attacks, glyph, hp, name, speed} = x;
     const species = {name, glyph, hp, speed};
-    return {attacks, species, trainer, cur_hp: hp, max_hp: hp};
+    const pathing = (() => {
+      if (trainer) return null;
+      const direction = sample(Direction.all);
+      return {direction, seen: new Map(), time: int(0), wait: false};
+    })();
+    return {attacks, species, trainer, cur_hp: hp, max_hp: hp, pathing};
   };
 
   const n = Math.min(kPartyKeys.length, 5);
@@ -1611,7 +1642,7 @@ const initState = (): State => {
     player.data.pokemon.push({entity: null, self});
   });
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 100; i++) {
     const pos = (() => {
       for (let i = 0; i < 100; i++) {
         const x = int(Math.floor(Math.random() * Constants.WORLD_SIZE));
@@ -1716,8 +1747,8 @@ const renderMap = (state: State): string => {
   }
 
   const pos = player.pos;
-  const offset_x = int(pos.x - (width - 1) / 2);
-  const offset_y = int(pos.y - (height - 1) / 2);
+  const offset_x = 0;
+  const offset_y = 0;
   const offset = new Point(offset_x, offset_y);
 
   const show = (x: int, y: int, glyph: Glyph, force: boolean = false) => {
@@ -1744,17 +1775,25 @@ const renderMap = (state: State): string => {
     show(point.x, point.y, shaded_glyph, force);
   };
 
-  const vision = board.getVision(player);
+  const pokemon = nonnull(board.getEntities()[1]);
+  if (pokemon.type !== ET.Pokemon) throw Error();
+  const vision = board.getVision(pokemon);
+  const {direction, seen} = nonnull(pokemon.data.self.pathing);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      if (!board.canSee(vision, point)) continue;
-      shade(point, board.getTile(point).glyph, true);
+      const sees_now = inVisionCone(point.sub(pokemon.pos), direction) &&
+                       board.canSee(vision, point);
+      const has_seen = !!seen.get(point.key())
+      if (!sees_now && !has_seen) continue;
+      const glyph = board.getTile(point).glyph;
+      const color = sees_now ? glyph : glyph.recolor('gray');
+      shade(point, color, true);
     }
   }
 
   board.getEntities().forEach(x => {
-    shade(x.pos, x.glyph, getTrainer(x) === player);
+    shade(x.pos, x.glyph, true);
   });
 
   if (state.target) {
