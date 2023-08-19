@@ -399,6 +399,7 @@ interface PokemonEdge {
 interface TrainerData {
   input: Action | null,
   name: string,
+  seen: Matrix<boolean> | null,
   player: boolean,
   pokemon: PokemonEdge[],
   summons: Pokemon[],
@@ -453,13 +454,15 @@ const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
-const makeTrainer = (pos: Point, player: boolean): Trainer => {
+const makeTrainer = (pos: Point, player: boolean, size: Point): Trainer => {
   const glyph = new Glyph('@');
   const speed = Constants.TRAINER_SPEED;
   const hp = Constants.TRAINER_HP;
+  const seen = player ? new Matrix(size, false) : null;
   const data = {
     input: null,
     name: '',
+    seen,
     player,
     pokemon: [],
     summons: [],
@@ -1102,6 +1105,13 @@ const updateFocus = (state: State, focus: Focus): void => {
   focus.last_tile = board.getTile(target);
 };
 
+const updatePlayerKnowledge = (state: State): void => {
+  const {board, focus, player} = state;
+  if (focus) updateFocus(state, focus);
+  const seen = player.data.seen;
+  if (seen) for (const point of board.getSeen(player)) seen.set(point, true);
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 const animateTarget = (state: State, target: Target): void => {
@@ -1631,7 +1641,7 @@ const initState = (): State => {
       if (!board.getTile(point).blocked) return board;
     }
   })();
-  const player = makeTrainer(point, true);
+  const player = makeTrainer(point, true, board.getSize());
   board.addEntity(player);
 
   const pokemon = (x: PokemonSpeciesWithAttacks,
@@ -1761,23 +1771,24 @@ const renderMap = (state: State): string => {
   const offset_y = int(pos.y - (height - 1) / 2);
   const offset = new Point(offset_x, offset_y);
 
-  const show = (x: int, y: int, glyph: Glyph, force: boolean = false) => {
-    x -= offset_x; y -= offset_y;
+  const show = (point: Point, glyph: Glyph, force: boolean = false) => {
+    const x = point.x - offset_x, y = point.y - offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    if (force || text[index] !== kEmptyGlyph) text[index] = glyph;
+    if (force || board.canSee(vision, point)) text[index] = glyph;
   };
 
   const kRecolorIfSeen = 0;
   const kRecolorForced = 1;
   const kRecolorLowPri = 2;
-  const recolor = (x: int, y: int, fg: Color | null,
-                   bg: Color | null, mode: int = kRecolorIfSeen) => {
-    x -= offset_x; y -= offset_y;
+  const recolor = (point: Point, fg: Color | null, bg: Color | null,
+                   mode: int = kRecolorIfSeen) => {
+    const x = point.x - offset_x, y = point.y - offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
     const glyph = text[index];
-    const apply = glyph && (mode === kRecolorForced || glyph !== kEmptyGlyph);
+    const force = mode === kRecolorForced;
+    const apply = glyph && (force || board.canSee(vision, point));
     if (!apply) return;
 
     fg = mode === kRecolorLowPri ? glyph.fg : fg;
@@ -1789,15 +1800,21 @@ const renderMap = (state: State): string => {
   const shade = (point: Point, glyph: Glyph, force: boolean) => {
     const out_of_range = range !== null && point.distanceL2(pos) > range - 0.5;
     const shaded_glyph = out_of_range ? glyph.recolor('gray') : glyph;
-    show(point.x, point.y, shaded_glyph, force);
+    show(point, shaded_glyph, force);
   };
 
+  const seen = player.data.seen;
   const vision = board.getVision(player);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      if (!board.canSee(vision, point)) continue;
-      shade(point, board.getTile(point).glyph, true);
+      const sees_now = board.canSee(vision, point);
+      const has_seen = seen && seen.getOrNull(point);
+      if (!sees_now && !has_seen) continue;
+
+      const glyph = board.getTile(point).glyph;
+      const color = sees_now ? glyph : glyph.recolor('gray');
+      shade(point, color, true);
     }
   }
 
@@ -1810,23 +1827,23 @@ const renderMap = (state: State): string => {
     const {error, path, source, target} = state.target;
     const color: Color = error.length === 0 ? '440' : '400';
 
-    recolor(source.x, source.y, 'black', '222', kRecolorForced);
-    recolor(target.x, target.y, 'black', color, kRecolorForced);
+    recolor(source, 'black', '222', kRecolorForced);
+    recolor(target, 'black', color, kRecolorForced);
 
     const count = Constants.TARGET_FRAMES >> 1;
     const ch = ray_character(source, target);
     for (let i = 0; i < path.length - 1; i++) {
       if ((i + count - frame) % count < 2) {
-        const [{x, y}, ok] = path[i]!;
-        show(x, y, new Glyph(ch, ok ? '440' : '400'), true);
+        const [point, ok] = path[i]!;
+        show(point, new Glyph(ch, ok ? '440' : '400'), true);
       }
     }
   } else if (focus && focus.seen) {
-    recolor(focus.target.x, focus.target.y, 'black', '222');
+    recolor(focus.target, 'black', '222');
   }
 
   const frame = board.getCurrentFrame();
-  if (frame) frame.forEach(({point: {x, y}, glyph}) => show(x, y, glyph));
+  if (frame) frame.forEach(({point, glyph}) => show(point, glyph));
 
   const highlightSeen = (entity: Entity, phase: int) => {
     if (entity.type !== ET.Pokemon) return;
@@ -1843,7 +1860,7 @@ const renderMap = (state: State): string => {
     for (const point of board.getSeen(entity)) {
       if (!board.canSee(vision, point)) continue;
       if (!inVisionCone(point.sub(pos), direction)) continue;
-      recolor(point.x, point.y, null, color, kRecolorLowPri);
+      recolor(point, null, color, kRecolorLowPri);
     }
   };
   findRivalPokemon(board, player).forEach(x => highlightSeen(x, 1));
@@ -2191,7 +2208,7 @@ const update = (io: IO) => {
   io.count = int((io.count + 1) & 0xffff);
 
   updateState(io.state, io.inputs);
-  if (io.state.focus) updateFocus(io.state, io.state.focus);
+  updatePlayerKnowledge(io.state);
 };
 
 const cachedSetContent = (element: Element, content: string): boolean => {
