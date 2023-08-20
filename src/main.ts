@@ -1397,7 +1397,8 @@ const outsideMap = (state: State, point: Point): boolean => {
 
 const processInput = (state: State, input: Input): void => {
   const {board, focus, player, choice, target, menu} = state;
-  const enter = input === 'enter' || input === '.';
+  const tab    = input === 'tab' || input === 'S-tab';
+  const enter  = input === 'enter' || input === '.';
   const escape = input === 'escape';
 
   if (choice) {
@@ -1431,22 +1432,23 @@ const processInput = (state: State, input: Input): void => {
     return;
   }
 
-  const getTabbedTarget = (target: Point | null): Point | null => {
+  const getTabbedTarget =
+      (target: Point | null, tab_off: boolean): Point | null => {
     const rivals = findRivalPokemon(board, player);
     if (rivals.length === 0) return null;
 
+    const t = input === 'tab';
+    const n = int(rivals.length + (tab_off ? 1 : 0));
+
     const current = target && board.getEntity(target);
     const pokemon = current && current.type === ET.Pokemon ? current : null;
-    const start = pokemon ? rivals.indexOf(pokemon) : -1;
-
-    const t = input === 'tab';
-    const n = int(rivals.length);
+    const start = pokemon ? rivals.indexOf(pokemon) : tab_off ? n - 1 : -1;
     const index = start >= 0 ? (start + n + (t ? 1 : -1)) % n : t ? 0 : n - 1;
-    return nonnull(rivals[index]).pos;
+    return rivals[index]?.pos ?? null;
   };
 
   const getUpdatedTarget = (target: Point): Point | null => {
-    if (input === 'tab' || input === 'S-tab') return getTabbedTarget(target);
+    if (tab) return getTabbedTarget(target, false);
 
     const lower = input.startsWith('S-') ? input.substr(2) : input;
     const direction = Direction.all[kDirectionKeys.indexOf(lower)];
@@ -1537,11 +1539,12 @@ const processInput = (state: State, input: Input): void => {
 
   if (player.data.input !== null) return;
 
-  if (focus && input === 'escape') {
+  if (focus && escape) {
     state.focus = null;
-  } else if (input === 'tab' || input === 'S-tab') {
-    const target = getTabbedTarget(focus?.seen ? focus?.target ?? null : null);
-    state.focus = target ? initFocus(state, target) : null;
+  } else if (tab) {
+    const old_target = focus?.seen ? focus?.target ?? null : null;
+    const new_target = getTabbedTarget(old_target, true);
+    state.focus = new_target ? initFocus(state, new_target) : null;
   }
 
   if (input === 'x') {
