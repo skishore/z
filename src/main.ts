@@ -366,7 +366,7 @@ type Command =
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
-interface Pathing { direction: Direction, seen: Map<int, int>, time: int, wait: boolean };
+interface Pathing { facing: Point, seen: Map<int, int>, time: int, wait: boolean };
 
 type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
 
@@ -719,24 +719,56 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
   return result.slice(0, 16);
 };
 
-const findRivals = (board: Board, entity: Entity): Entity[] => {
+const findRivals =
+    (board: Board, entity: Entity, pathing: Pathing | null): Entity[] => {
+  const pos = entity.pos;
   const trainer = getTrainer(entity);
-  const all = board.getEntities().filter(x => getTrainer(x) !== trainer);
-  return all.filter(x => hasLineOfSight(board, entity.pos, x.pos, 12));
+  return board.getEntities().filter(other => {
+    return getTrainer(other) !== trainer &&
+           hasLineOfSight(board, pos, other.pos, Constants.VISION_RANGE) &&
+           !(pathing && !inVisionCone(other.pos.sub(pos), pathing.facing));
+  });
 };
 
 const inVisionCone = (delta: Point, facing: Point): boolean => {
-  const kVisionCosine = 0.5;
-  const kVisionRadius = 12;
+  const distance = delta.distanceNethack(Point.origin);
+  if (distance > Constants.VISION_RANGE) return false;
 
   const {x: dx, y: dy} = delta;
   const {x: fx, y: fy} = facing;
   if (dx === 0 && dy === 0) return true;
   if (fx === 0 && fy === 0) return true;
-  if ((dx * dx + dy * dy) > (kVisionRadius * kVisionRadius)) return false;
   const dot = dx *  fx + dy * fy;
   const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
-  return dot / l2Product > kVisionCosine;
+  return dot / l2Product > Math.cos(0.5 * Constants.VISION_ANGLE);
+};
+
+const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
+  if ((--pathing.time) <= 0) {
+    pathing.wait = !pathing.wait;
+    const multiplier = pathing.wait ? Constants.WANDER_TURNS : 1;
+    pathing.time = int(Math.random() * multiplier * 16);
+  }
+  if (pathing.wait) return {type: AT.Idle};
+
+  const pos = entity.pos;
+  const {facing, seen} = pathing;
+  const kMaxMemory = int(64);
+  for (const [key, val] of Array.from(seen.entries())) {
+    const new_val = int(val - 1);
+    new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
+  }
+  for (const point of board.getSeen(entity)) {
+    seen.set(point.key(), kMaxMemory);
+  }
+  const check = board.getStatus.bind(board);
+  const valid = (x: Point) => {
+    return !!seen.get(x.key()) &&
+           Direction.all.some(y => !seen.get(x.add(y).key()));
+  };
+  const dirs = BFS(pos, valid, board.getSize().x, check);
+  const dir = pathing.facing = sample(dirs.length ? dirs : Direction.all);
+  return moveAction(dir, Constants.WANDER_TURNS);
 };
 
 const plan = (board: Board, entity: Entity): Action => {
@@ -745,45 +777,15 @@ const plan = (board: Board, entity: Entity): Action => {
       const {commands, self: {attacks, pathing, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
-      if (pathing && !trainer) {
-        if ((--pathing.time) <= 0) {
-          pathing.wait = !pathing.wait;
-          const multiplier = pathing.wait ? Constants.WANDER_TURNS : 1;
-          pathing.time = int(Math.random() * multiplier * 32);
-        }
-        if (pathing.wait) return {type: AT.Idle};
-
-        const pos = entity.pos;
-        const {direction: last_direction, seen} = pathing;
-        const kMaxMemory = int(64);
-        for (const [key, val] of Array.from(seen.entries())) {
-          const new_val = int(val - 1);
-          new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
-        }
-        for (const point of board.getSeen(entity)) {
-          seen.set(point.key(), kMaxMemory);
-        }
-        if ((1 === 1)) {
-          const check = board.getStatus.bind(board);
-          const valid = (x: Point) => {
-            return !!seen.get(x.key()) &&
-                   Direction.all.some(y => !seen.get(x.add(y).key()));
-          };
-          const dirs = BFS(pos, valid, board.getSize().x, check);
-          if (dirs.length === 0) return {type: AT.Idle};
-          const direction = pathing.direction = sample(dirs);
-          return moveAction(direction, Constants.WANDER_TURNS);
-        }
-      }
-
       const ready = !moveReady(entity);
       const defendEarly = ready ? defendLeader(board, entity) : null;
       if (defendEarly) return defendEarly;
 
-      const rivals = findRivals(board, entity);
-      if (rivals.length > 0 && attacks.length > 0 && !(1 === 1)) {
-        const target = sample(rivals).pos;
+      const rivals = findRivals(board, entity, pathing);
+      if (rivals.length > 0 && attacks.length > 0) {
+        const target = sample(rivals);
         const attack = sample(attacks);
+        if (pathing) pathing.facing = target.pos.sub(entity.pos);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
@@ -792,7 +794,8 @@ const plan = (board: Board, entity: Entity): Action => {
       if (defendLate) return defendLate;
 
       if (trainer) return followLeader(board, entity, trainer);
-      return moveAction(sample(Direction.all), Constants.WANDER_TURNS);
+      if (pathing) return wander(board, entity, pathing);
+      return moveAction(sample(Direction.all));
     }
     case ET.Trainer: {
       const {input, player} = entity.data;
@@ -854,6 +857,11 @@ const act = (state: State, entity: Entity, action: Action): Result => {
         const target_name = see_target ? describe(target_entity) : 'something';
         if (seen) board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
+        const setAwareness = () => {
+          const pathing = target_entity.data.self.pathing;
+          if (pathing) pathing.facing = entity.pos.sub(target_entity.pos);
+        };
+
         callback = () => {
           const data = target_entity.data.self;
           const damage = int(Math.random() * attack.damage);
@@ -861,7 +869,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
           data.cur_hp = int(Math.max(data.cur_hp - damage, 0));
 
           board.addEffect(ApplyDamage(board, target, () => {
-            if (data.cur_hp) return;
+            if (data.cur_hp) return setAwareness();
             if (see_target) board.logAppend(`${capitalize(target_name)} fainted!`);
             board.removeEntity(target_entity, state);
           }));
@@ -1187,11 +1195,15 @@ const ApplyWithdraw = (source: Point, target: Point, cb: CB): Effect =>
 
 //////////////////////////////////////////////////////////////////////////////
 
+const TAU = 2 * Math.PI;
+
 const Constants = {
   LOG_SIZE:      int(4),
   MAP_SIZE_X:    int(63),
   MAP_SIZE_Y:    int(63),
   FOV_RADIUS:    int(31),
+  VISION_ANGLE:  TAU / 3,
+  VISION_RANGE:  int(12),
   WORLD_SIZE:    int(100),
   STATUS_SIZE:   int(30),
   CHOICE_SIZE:   int(42),
@@ -1650,8 +1662,8 @@ const initState = (): State => {
     const species = {name, glyph, hp, speed};
     const pathing = (() => {
       if (trainer) return null;
-      const direction = sample(Direction.all);
-      return {direction, seen: new Map(), time: int(0), wait: false};
+      const facing = sample(Direction.all);
+      return {facing, seen: new Map(), time: int(0), wait: false};
     })();
     return {attacks, species, trainer, cur_hp: hp, max_hp: hp, pathing};
   };
@@ -1848,16 +1860,16 @@ const renderMap = (state: State): string => {
   const highlightSeen = (entity: Entity) => {
     if (entity.type !== ET.Pokemon) return;
 
-    const direction = entity.data.self.pathing?.direction;
-    if (!direction) return;
+    const facing = entity.data.self.pathing?.facing;
+    if (!facing) return;
 
     const pos = entity.pos;
-    const canSeePlayer = inVisionCone(player.pos.sub(pos), direction) &&
+    const canSeePlayer = inVisionCone(player.pos.sub(pos), facing) &&
                          board.entityCanSee(entity, player.pos);
     const color = canSeePlayer ? '100' : '000';
 
     for (const point of board.getSeen(entity)) {
-      if (!inVisionCone(point.sub(pos), direction)) continue;
+      if (!inVisionCone(point.sub(pos), facing)) continue;
       const sees_now = board.canSee(vision, point);
       const has_seen = seen && seen.getOrNull(point);
       if (!sees_now && !has_seen) continue;
