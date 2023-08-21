@@ -447,8 +447,13 @@ const AStar = (source: Point, target: Point, check: (p: Point) => Status,
 //////////////////////////////////////////////////////////////////////////////
 // Breadth-first search, for finding the closest point matching a predicate.
 
+interface BFSResult {
+  directions: Direction[],
+  targets: Point[],
+};
+
 const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
-             check: (p: Point) => Status, record?: Point[]): Direction[] => {
+             check: (p: Point) => Status, record?: Point[]): BFSResult | null => {
   assert(0 <= limit);
   assert(limit === (limit | 0));
   const kUnknown = -1;
@@ -490,7 +495,10 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
     next.length = 0;
   }
 
-  if (!targets.length) return [];
+  if (!targets.length) return null;
+
+  const result: BFSResult = {directions: [], targets: []};
+  result.targets = targets.map(x => x.sub(initial).add(source));
   prev = targets;
   next.length = 0;
   i--;
@@ -511,7 +519,8 @@ const BFS = (source: Point, target: (p: Point) => boolean, limit: int,
   }
 
   assert(prev.length > 0);
-  return prev.map(x => Direction.assert(x.sub(initial)));
+  result.directions = prev.map(x => Direction.assert(x.sub(initial)));
+  return result;
 };
 
 //////////////////////////////////////////////////////////////////////////////

@@ -159,7 +159,8 @@ const runBFSTestCase = (input: string) => {
   };
 
   const seen: Point[] = [];
-  const dirs = BFS(test.source, target, limit, test.check, seen) || [];
+  const result = BFS(test.source, target, limit, test.check, seen);
+  const dirs = result?.directions ?? [];
   seen.forEach(x => set(x, '?'));
   dirs.forEach(x => set(x.add(test.source), '*'));
 

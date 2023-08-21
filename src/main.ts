@@ -366,7 +366,13 @@ type Command =
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
-interface Pathing { facing: Point, seen: Map<int, int>, time: int, wait: boolean };
+interface Pathing {
+  facing: Point,
+  seen: Map<int, int>,
+  targets: Point[],
+  time: int,
+  wait: boolean,
+};
 
 type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
 
@@ -511,7 +517,7 @@ const followCommands =
   const path_to_target =
       (range: int, target: Point, valid: (p: Point) => boolean): Action => {
     const check = board.getStatus.bind(board);
-    const dirs = BFS(source, valid, kBFSLimit, check);
+    const dirs = BFS(source, valid, kBFSLimit, check)?.directions ?? [];
     const options = dirs.map(x => source.add(x));
     if (valid(source)) options.push(source);
 
@@ -746,12 +752,12 @@ const inVisionCone = (delta: Point, facing: Point): boolean => {
 const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
   if ((--pathing.time) <= 0) {
     pathing.wait = !pathing.wait;
-    const multiplier = pathing.wait ? Constants.WANDER_TURNS : 1;
+    const multiplier = pathing.wait ? 0 : 1;
     pathing.time = int(Math.random() * multiplier * 16);
   }
   if (pathing.wait) return {type: AT.Idle};
 
-  const pos = entity.pos;
+  const source = entity.pos;
   const {facing, seen} = pathing;
   const kMaxMemory = int(64);
   for (const [key, val] of Array.from(seen.entries())) {
@@ -759,15 +765,29 @@ const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
     new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
   }
   for (const point of board.getSeen(entity)) {
+    if (!inVisionCone(point.sub(source), facing)) continue;
     seen.set(point.key(), kMaxMemory);
   }
   const check = board.getStatus.bind(board);
   const valid = (x: Point) => {
-    return !!seen.get(x.key()) &&
-           Direction.all.some(y => !seen.get(x.add(y).key()));
+    return !seen.get(x.key()) &&
+           Direction.all.some(y => seen.get(x.add(y).key()));
   };
-  const dirs = BFS(pos, valid, board.getSize().x, check);
-  const dir = pathing.facing = sample(dirs.length ? dirs : Direction.all);
+  const kBFSLimit = int(64);
+  const result = BFS(source, valid, kBFSLimit, check);
+  pathing.targets.length = 0;
+  const dir = (() => {
+    if (!result) return sample(Direction.all);
+    const {directions, targets} = result;
+    if (!directions.length || !targets.length) return sample(Direction.all);
+    const target = sample(targets);
+    pathing.targets = targets;
+    const path = AStar(source, target, check);
+    if (!path?.length) return sample(directions);
+    pathing.targets = [target].concat(targets.filter(x => !x.equal(target)));
+    return Direction.assert(nonnull(path[0]).sub(source));
+  })();
+  pathing.facing = dir;
   return moveAction(dir, Constants.WANDER_TURNS);
 };
 
@@ -776,6 +796,8 @@ const plan = (board: Board, entity: Entity): Action => {
     case ET.Pokemon: {
       const {commands, self: {attacks, pathing, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
+
+      if (pathing && 1 === 1) return wander(board, entity, pathing);
 
       const ready = !moveReady(entity);
       const defendEarly = ready ? defendLeader(board, entity) : null;
@@ -1199,8 +1221,8 @@ const TAU = 2 * Math.PI;
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(63),
-  MAP_SIZE_Y:    int(63),
+  MAP_SIZE_X:    int(100),
+  MAP_SIZE_Y:    int(100),
   FOV_RADIUS:    int(31),
   VISION_ANGLE:  TAU / 3,
   VISION_RANGE:  int(12),
@@ -1666,7 +1688,7 @@ const initState = (): State => {
     const pathing = (() => {
       if (trainer) return null;
       const facing = sample(Direction.all);
-      return {facing, seen: new Map(), time: int(0), wait: false};
+      return {facing, seen: new Map(), targets: [], time: int(0), wait: false};
     })();
     return {attacks, species, trainer, cur_hp: hp, max_hp: hp, pathing};
   };
@@ -1782,8 +1804,8 @@ const renderMap = (state: State): string => {
   }
 
   const pos = player.pos;
-  const offset_x = int(pos.x - (width - 1) / 2);
-  const offset_y = int(pos.y - (height - 1) / 2);
+  const offset_x = 0;
+  const offset_y = 0;
   const offset = new Point(offset_x, offset_y);
 
   const show = (point: Point, glyph: Glyph, force: boolean = false) => {
@@ -1818,13 +1840,16 @@ const renderMap = (state: State): string => {
     show(point, shaded_glyph, force);
   };
 
-  const seen = player.data.seen;
-  const vision = board.getVision(player);
+  const entity = nonnull(board.getEntities()[1]);
+  if (entity.type !== ET.Pokemon) throw Error();
+  const {facing, seen, targets} = nonnull(entity.data.self.pathing);
+  const vision = board.getVision(entity);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      const sees_now = board.canSee(vision, point);
-      const has_seen = seen && seen.getOrNull(point);
+      const sees_now = board.canSee(vision, point) &&
+                       inVisionCone(point.sub(entity.pos), facing);
+      const has_seen = seen && seen.get(point.key());
       if (!sees_now && !has_seen) continue;
 
       const glyph = board.getTile(point).glyph;
@@ -1832,9 +1857,12 @@ const renderMap = (state: State): string => {
       shade(point, color, true);
     }
   }
+  targets.forEach((target, i) => {
+    show(target, new Glyph(' ', 'black', i ? '440' : '400'), true);
+  });
 
   board.getEntities().forEach(x => {
-    shade(x.pos, x.glyph, getTrainer(x) === player);
+    shade(x.pos, x.glyph, true);
   });
 
   if (state.target) {
@@ -1874,7 +1902,7 @@ const renderMap = (state: State): string => {
     for (const point of board.getSeen(entity)) {
       if (!inVisionCone(point.sub(pos), facing)) continue;
       const sees_now = board.canSee(vision, point);
-      const has_seen = seen && seen.getOrNull(point);
+      const has_seen = seen && seen.get(point.key());
       if (!sees_now && !has_seen) continue;
       recolor(point, null, color, kRecolorLowPri);
     }
