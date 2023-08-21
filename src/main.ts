@@ -119,6 +119,7 @@ class Board {
     assert(this.getEntity(pos) === null);
     this.entityAtPos.set(pos.key(), entity);
     this.entity.push(entity);
+    entity.known.update(this, entity);
   }
 
   advanceEntity(): void {
@@ -229,6 +230,9 @@ class Board {
   }
 
   private getCachedVision(entity: Entity): Vision {
+    const facing = entity.facing;
+    const player = entity.type === ET.Trainer && entity.data.player;
+
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
@@ -243,6 +247,8 @@ class Board {
       const {seen, value} = vision;
 
       const blocked = (p: Point, parent: Point | null) => {
+        if (!player && !this.inVisionCone(p, facing)) return true;
+
         const q = p.add(pos);
         const cached = value.getOrNull(q);
         if (cached === null) return true;
@@ -280,9 +286,85 @@ class Board {
     return vision;
   }
 
-  private dirtyVision(entity: Entity) {
+  private dirtyVision(entity: Entity): void {
     const vision = this.entityVision.get(entity);
     if (vision) vision.dirty = true;
+  }
+
+  private inVisionCone(delta: Point, facing: Point): boolean {
+    const distance = delta.distanceNethack(Point.origin);
+    if (distance > Constants.VISION_RANGE) return false;
+
+    const {x: dx, y: dy} = delta;
+    const {x: fx, y: fy} = facing;
+    if (dx === 0 && dy === 0) return true;
+    if (fx === 0 && fy === 0) return true;
+    const dot = dx *  fx + dy * fy;
+    const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
+    return dot / l2Product > Math.cos(0.5 * Constants.VISION_ANGLE);
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+interface EntityKnowledge {
+  rival: boolean;
+  state: EntityPublicState;
+  seen: boolean;
+};
+
+class Knowledge {
+  private seen: Map<int, int>;
+  private entities: Map<Entity, EntityKnowledge>;
+  private visible: Set<int>;
+
+  constructor() {
+    this.seen = new Map();
+    this.entities = new Map();
+    this.visible = new Set();
+  }
+
+  // Reads
+
+  canSeeNow(point: Point): boolean { return this.visible.has(point.key()); }
+
+  remembers(point: Point): boolean { return this.seen.has(point.key()); }
+
+  getEntities(): EntityKnowledge[] { return Array.from(this.entities.values()); }
+
+  // Writes
+
+  update(board: Board, entity: Entity): void {
+    const removed: int[] = [];
+    for (const [key, old_value] of this.seen.entries()) {
+      const new_value = int(old_value - 1);
+      new_value < 0 ? removed.push(key) : this.seen.set(key, new_value);
+    }
+    for (const key of removed) this.seen.delete(key);
+
+    const kMaxMemory = int(256);
+    this.visible.clear();
+    for (const value of this.entities.values()) {
+      value.seen = false;
+    }
+
+    for (const point of board.getSeen(entity)) {
+      const key = point.key();
+      this.seen.set(key, kMaxMemory);
+      this.visible.add(key);
+      const other = board.getEntity(point);
+      if (other === null || other === entity) continue;
+
+      const state = getEntityPublicState(null, other);
+      const value = this.entities.get(other);
+      if (value) {
+        value.seen = true;
+        value.state = state;
+      } else {
+        const rival = getTrainer(other) !== getTrainer(other);
+        this.entities.set(other, {seen: true, rival, state});
+      }
+    }
   }
 };
 
@@ -325,9 +407,7 @@ const form = (command: Command, pokemon: Pokemon): string => {
           : target.data.name;
       return `${name}, attack ${target_name} with ${command.attack.name}!`;
     }
-    case CT.MoveTo: return `${name}, move!`;
     case CT.Return: return `${name}, return!`;
-    case CT.WaitAt: return `${name}, wait there!`;
   }
 };
 
@@ -341,7 +421,7 @@ const shout = (board: Board, trainer: Trainer, text: string): void => {
 
 // {Action,Command,Entity,Target}Type enums:
 enum AT { Attack, Idle, Move, Shout, Summon, Withdraw, WaitForInput };
-enum CT { Attack, MoveTo, Return, WaitAt };
+enum CT { Attack, Return };
 enum ET { Pokemon, Trainer };
 enum TT { Attack, Summon, FarLook };
 
@@ -360,19 +440,11 @@ interface Result { success: boolean, moves: number, turns: number };
 
 type Command =
   {type: CT.Attack, attack: Attack, target: Entity | Point} |
-  {type: CT.MoveTo, target: Point, timeout: int} |
-  {type: CT.WaitAt, timeout: int} |
   {type: CT.Return};
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
-interface Pathing {
-  facing: Point,
-  seen: Map<int, int>,
-  targets: Point[],
-  time: int,
-  wait: boolean,
-};
+interface Pathing { targets: Point[], time: int, wait: boolean };
 
 type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
 
@@ -416,10 +488,11 @@ interface TrainerData {
 interface EntityData {
   glyph: Glyph,
   speed: number,
+  known: Knowledge,
   removed: boolean,
   move_timer: int,
   turn_timer: int,
-  dir: Direction,
+  facing: Point,
   pos: Point,
 };
 
@@ -456,13 +529,17 @@ const wait = (entity: Entity, moves: number, turns: number): void => {
 const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
   const {glyph, speed} = self.species;
   const data = {commands: [], self};
-  return {type: ET.Pokemon, data, dir: Direction.s, pos, glyph, speed,
+  const known = new Knowledge();
+  const facing = sample(Direction.all);
+  return {type: ET.Pokemon, data, facing, pos, glyph, known, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
 const makeTrainer = (pos: Point, player: boolean, size: Point): Trainer => {
   const glyph = new Glyph('@');
+  const known = new Knowledge();
   const speed = Constants.TRAINER_SPEED;
+  const facing = Direction.s;
   const hp = Constants.TRAINER_HP;
   const seen = player ? new Matrix(size, false) : null;
   const data = {
@@ -475,7 +552,7 @@ const makeTrainer = (pos: Point, player: boolean, size: Point): Trainer => {
     cur_hp: hp,
     max_hp: hp,
   };
-  return {type: ET.Trainer, data, dir: Direction.s, pos, glyph, speed,
+  return {type: ET.Trainer, data, facing, pos, glyph, known, speed,
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
@@ -556,16 +633,6 @@ const followCommands =
       }
       return path_to_target(range, point, valid);
     }
-    case CT.MoveTo: {
-      if ((--command.timeout) < 0) commands.shift();
-      const {target} = command;
-      const check = board.getStatus.bind(board);
-      const path = AStar(source, target, check);
-      const direction = path?.length
-        ? Direction.assert(nonnull(path[0]).sub(source))
-        : sample(Direction.all);
-      return moveAction(direction);
-    }
     case CT.Return: {
       const trainer = entity.type === ET.Pokemon ? entity.data.self.trainer : null;
       if (!trainer || trainer.removed) {
@@ -577,10 +644,6 @@ const followCommands =
       const range = Constants.SUMMON_RANGE;
       const valid = (p: Point) => hasLineOfSight(board, trainer.pos, p, range);
       return path_to_target(range, trainer.pos, valid);
-    }
-    case CT.WaitAt: {
-      if ((--command.timeout) < 0) commands.shift();
-      return {type: AT.Idle};
     }
   }
 };
@@ -727,13 +790,15 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
 
 const findRivals =
     (board: Board, entity: Entity, pathing: Pathing | null): Entity[] => {
-  const pos = entity.pos;
-  const trainer = getTrainer(entity);
-  return board.getEntities().filter(other => {
-    return getTrainer(other) !== trainer &&
-           hasLineOfSight(board, pos, other.pos, Constants.VISION_RANGE) &&
-           !(pathing && !inVisionCone(other.pos.sub(pos), pathing.facing));
-  });
+  return [];
+  // TODO(skishore): Use the entity's Knowledge to fill this code in.
+  //const pos = entity.pos;
+  //const trainer = getTrainer(entity);
+  //return board.getEntities().filter(other => {
+  //  return getTrainer(other) !== trainer &&
+  //         hasLineOfSight(board, pos, other.pos, Constants.VISION_RANGE) &&
+  //         !(pathing && !inVisionCone(other.pos.sub(pos), pathing.facing));
+  //});
 };
 
 const inVisionCone = (delta: Point, facing: Point): boolean => {
@@ -757,21 +822,11 @@ const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
   }
   if (pathing.wait) return {type: AT.Idle};
 
-  const source = entity.pos;
-  const {facing, seen} = pathing;
-  const kMaxMemory = int(64);
-  for (const [key, val] of Array.from(seen.entries())) {
-    const new_val = int(val - 1);
-    new_val <= 0 ? seen.delete(key) : seen.set(key, new_val);
-  }
-  for (const point of board.getSeen(entity)) {
-    if (!inVisionCone(point.sub(source), facing)) continue;
-    seen.set(point.key(), kMaxMemory);
-  }
+  const {facing, known, pos: source} = entity;
   const check = board.getStatus.bind(board);
   const valid = (x: Point) => {
-    return !seen.get(x.key()) &&
-           Direction.all.some(y => seen.get(x.add(y).key()));
+    return !entity.known.remembers(x) &&
+           Direction.all.some(y => entity.known.remembers(x.add(y)));
   };
   const kBFSLimit = int(64);
   const result = BFS(source, valid, kBFSLimit, check);
@@ -787,7 +842,7 @@ const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
     pathing.targets = [target].concat(targets.filter(x => !x.equal(target)));
     return Direction.assert(nonnull(path[0]).sub(source));
   })();
-  pathing.facing = dir;
+  entity.facing = dir;
   return moveAction(dir, Constants.WANDER_TURNS);
 };
 
@@ -807,7 +862,7 @@ const plan = (board: Board, entity: Entity): Action => {
       if (rivals.length > 0 && attacks.length > 0) {
         const target = sample(rivals);
         const attack = sample(attacks);
-        if (pathing) pathing.facing = target.pos.sub(entity.pos);
+        entity.facing = target.pos.sub(entity.pos);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
@@ -879,9 +934,9 @@ const act = (state: State, entity: Entity, action: Action): Result => {
         const target_name = see_target ? describe(target_entity) : 'something';
         if (seen) board.log(`${user} attacked ${target_name} with ${attack.name}!`);
 
+        // TODO(skishore): Use a new method on the target's Knowledge here.
         const setAwareness = () => {
-          const pathing = target_entity.data.self.pathing;
-          if (pathing) pathing.facing = entity.pos.sub(target_entity.pos);
+          target_entity.facing = entity.pos.sub(target_entity.pos);
         };
 
         callback = () => {
@@ -906,6 +961,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
     case AT.Move: {
       const {direction, turns} = action;
       const pos = entity.pos.add(direction);
+      const player = entity.type === ET.Trainer && entity.data.player;
       if (pos.equal(entity.pos)) return kSuccess;
       if (board.getTile(pos).blocked) return kFailure;
       const other = board.getEntity(pos);
@@ -913,13 +969,13 @@ const act = (state: State, entity: Entity, action: Action): Result => {
         if (getTrainer(other) !== entity) return kFailure;
         board.swapEntities(entity.pos, pos);
         board.logIfPlayer(entity, `You swap places with ${describe(other)}.`);
-        entity.dir = action.direction;
+        if (player) entity.facing = action.direction;
         return {success: true, moves: 0, turns};
       }
 
       // success
       board.moveEntity(entity, pos);
-      entity.dir = direction;
+      if (player) entity.facing = direction;
       return {success: true, moves: 0, turns};
     }
     case AT.Shout: {
@@ -984,9 +1040,10 @@ const animateDamage = (anim: Anim, entity: Entity): void => {
   anim.damage.set(entity, {hp: animation.hp, frame: 0});
 };
 
-const getAnimatedHP = (anim: Anim, entity: Entity): {hp: number, flash: boolean} => {
+const getAnimatedHP =
+    (anim: Anim | null, entity: Entity): {hp: number, flash: boolean} => {
   const target = cur_hp_fraction(entity);
-  const entry = anim.damage.get(entity);
+  const entry = anim ? anim.damage.get(entity) : null;
   if (!entry) return {hp: target, flash: false};
 
   const source = entry.hp;
@@ -1030,8 +1087,8 @@ const initSummonTarget =
   };
 
   const options: Point[] = [];
-  const best = source.add(player.dir.scale(2));
-  const next = source.add(player.dir.scale(1));
+  const best = source.add(player.facing.scale(2));
+  const next = source.add(player.facing.scale(1));
   if (okay(best)) return result;
   if (okay(next)) return result;
 
@@ -1366,6 +1423,7 @@ interface PokemonPublicState {
   hp: number,
   pp: number,
   pos: Point | null,
+  glyph: Glyph,
 };
 
 interface TrainerPublicState {
@@ -1375,21 +1433,30 @@ interface TrainerPublicState {
   hp: number,
   pokemon: PokemonPublicState[],
   pos: Point,
+  glyph: Glyph,
 };
 
-const getEntityPublicState = (anim: Anim, entity: Entity): EntityPublicState =>
-    entity.type === ET.Pokemon ? getPokemonPublicState(anim, entity)
-                               : getTrainerPublicState(anim, entity);
+const createAnimation = (): Anim => {
+  return {damage: new Map()};
+};
+
+const getEntityPublicState =
+    (anim: Anim | null, entity: Entity): EntityPublicState => {
+  return entity.type === ET.Pokemon ? getPokemonPublicState(anim, entity)
+                                    : getTrainerPublicState(anim, entity);
+};
 
 const getPartyPokemonPublicState =
     (self: PokemonIndividualData): PokemonPublicState => {
+  const pos = null;
   const damaged = false;
+  const glyph = self.species.glyph;
   const hp = self.cur_hp / Math.max(self.max_hp, 1);
-  return {type: ET.Pokemon, damaged, species: self.species, hp, pp: 1, pos: null};
+  return {type: ET.Pokemon, damaged, species: self.species, hp, pp: 1, pos, glyph};
 };
 
 const getPokemonPublicState =
-    (anim: Anim, pokemon: Pokemon): PokemonPublicState => {
+    (anim: Anim | null, pokemon: Pokemon): PokemonPublicState => {
   const result = getPartyPokemonPublicState(pokemon.data.self);
   const bp = (pokemon.move_timer ?? 0) / Constants.MOVE_TIMER;
   const {hp, flash} = getAnimatedHP(anim, pokemon);
@@ -1401,13 +1468,14 @@ const getPokemonPublicState =
 };
 
 const getTrainerPublicState =
-    (anim: Anim, trainer: Trainer): TrainerPublicState => {
+    (anim: Anim | null, trainer: Trainer): TrainerPublicState => {
   const {hp, flash: damaged} = getAnimatedHP(anim, trainer);
   const description = describe(trainer);
+  const {pos, glyph} = trainer;
   const pokemon = trainer.data.pokemon.map(
       x => x.entity ? getPokemonPublicState(anim, x.entity)
                     : getPartyPokemonPublicState(x.self));
-  return {type: ET.Trainer, damaged, description, hp, pokemon, pos: trainer.pos};
+  return {type: ET.Trainer, damaged, description, hp, pokemon, pos, glyph};
 };
 
 const outsideMap = (state: State, point: Point): boolean => {
@@ -1590,7 +1658,7 @@ const processInput = (state: State, input: Input): void => {
 
   const direction = Direction.all[kDirectionKeys.indexOf(input)];
   if (direction) player.data.input = moveAction(direction);
-  if (input === '.') player.data.input = {type: AT.Idle}
+  if (input === '.') player.data.input = {type: AT.Idle};
 };
 
 const initBoard = (): Board => {
@@ -1714,7 +1782,7 @@ const initState = (): State => {
     board.addEntity(makePokemon(pos, self));
   }
 
-  const anim = {damage: new Map()};
+  const anim = createAnimation();
   const [choice, target, focus, menu] = [null, null, null, null];
   return {anim, board, player, choice, target, focus, menu};
 };
@@ -1737,7 +1805,9 @@ const updateState = (state: State, inputs: Input[]): void => {
       board.advanceEntity();
       continue;
     }
-    const result = act(state, entity, plan(board, entity));
+    entity.known.update(board, entity);
+    const action = plan(board, entity);
+    const result = act(state, entity, action);
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
   }
@@ -1841,15 +1911,15 @@ const renderMap = (state: State): string => {
   };
 
   const entity = nonnull(board.getEntities()[1]);
+  const {facing, known} = entity;
   if (entity.type !== ET.Pokemon) throw Error();
-  const {facing, seen, targets} = nonnull(entity.data.self.pathing);
+  const {targets} = nonnull(entity.data.self.pathing);
   const vision = board.getVision(entity);
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      const sees_now = board.canSee(vision, point) &&
-                       inVisionCone(point.sub(entity.pos), facing);
-      const has_seen = seen && seen.get(point.key());
+      const sees_now = known.canSeeNow(point);
+      const has_seen = known.remembers(point);
       if (!sees_now && !has_seen) continue;
 
       const glyph = board.getTile(point).glyph;
@@ -1863,6 +1933,10 @@ const renderMap = (state: State): string => {
 
   board.getEntities().forEach(x => {
     shade(x.pos, x.glyph, true);
+  });
+  known.getEntities().forEach(x => {
+    if (!x.state.pos) return;
+    show(x.state.pos, x.state.glyph.recolor('black', x.seen ? '440' : '400'), true);
   });
 
   if (state.target) {
@@ -1889,20 +1963,15 @@ const renderMap = (state: State): string => {
   if (frame) frame.forEach(({point, glyph}) => show(point, glyph));
 
   const highlightSeen = (entity: Entity) => {
-    if (entity.type !== ET.Pokemon) return;
-
-    const facing = entity.data.self.pathing?.facing;
-    if (!facing) return;
+    if (getTrainer(entity) === player) return;
 
     const pos = entity.pos;
-    const canSeePlayer = inVisionCone(player.pos.sub(pos), facing) &&
-                         board.entityCanSee(entity, player.pos);
+    const canSeePlayer = entity.known.canSeeNow(player.pos);
     const color = canSeePlayer ? '100' : '000';
 
     for (const point of board.getSeen(entity)) {
-      if (!inVisionCone(point.sub(pos), facing)) continue;
-      const sees_now = board.canSee(vision, point);
-      const has_seen = seen && seen.get(point.key());
+      const sees_now = player.known.canSeeNow(point);
+      const has_seen = player.known.remembers(point);
       if (!sees_now && !has_seen) continue;
       recolor(point, null, color, kRecolorLowPri);
     }
