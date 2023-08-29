@@ -6,7 +6,7 @@ import {Point, Direction, Matrix, LOS, FOV, AStar, BFS, Status} from './geo';
 //////////////////////////////////////////////////////////////////////////////
 
 interface Log { line: string, menu: boolean};
-interface Vision { dirty: boolean, seen: Point[], value: Matrix<int> };
+interface Vision { dirty: boolean, facing: Point, seen: Point[], value: Matrix<int> };
 
 const kVisionRadius = 3;
 
@@ -230,19 +230,19 @@ class Board {
   }
 
   private getCachedVision(entity: Entity): Vision {
-    const facing = entity.facing;
     const player = entity.type === ET.Trainer && entity.data.player;
+    const facing = player ? Point.origin : entity.facing;
 
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
       const value = new Matrix<int>(this.map.size, -1);
-      const result = {dirty: true, seen: [], value};
+      const result = {dirty: true, facing, seen: [], value};
       this.entityVision.set(entity, result);
       return result;
     })();
 
-    if (vision.dirty) {
+    if (vision.dirty || !vision.facing.equal(facing)) {
       const pos = entity.pos;
       const {seen, value} = vision;
 
@@ -281,6 +281,7 @@ class Board {
       seen.push(entity.pos);
       this.fov.fieldOfVision(blocked);
       vision.dirty = false;
+      vision.facing = facing;
     }
 
     return vision;
@@ -307,6 +308,13 @@ class Board {
 
 //////////////////////////////////////////////////////////////////////////////
 
+interface CellKnowledge {
+  entity: EntityKnowledge | null,
+  memory: int;
+  seen: boolean;
+  tile: Tile;
+};
+
 interface EntityKnowledge {
   rival: boolean;
   state: EntityPublicState;
@@ -314,56 +322,102 @@ interface EntityKnowledge {
 };
 
 class Knowledge {
-  private seen: Map<int, int>;
+  private map: Map<int, CellKnowledge>;
   private entities: Map<Entity, EntityKnowledge>;
-  private visible: Set<int>;
 
   constructor() {
-    this.seen = new Map();
+    this.map = new Map();
     this.entities = new Map();
-    this.visible = new Set();
   }
 
   // Reads
 
-  canSeeNow(point: Point): boolean { return this.visible.has(point.key()); }
+  canSeeNow(point: Point): boolean { return this.getCell(point)?.seen ?? false; }
 
-  remembers(point: Point): boolean { return this.seen.has(point.key()); }
+  remembers(point: Point): boolean { return this.map.has(point.key()); }
 
   getEntities(): EntityKnowledge[] { return Array.from(this.entities.values()); }
+
+  getEntityAt(point: Point): EntityKnowledge | null {
+    return this.getCell(point)?.entity ?? null;
+  }
+
+  getTile(point: Point): Tile | null {
+    return this.getCell(point)?.tile ?? null;
+  }
+
+  getStatus(point: Point): Status | null {
+    const cell = this.getCell(point);
+    if (!cell) return null;
+    if (cell.tile.blocked) return Status.BLOCKED;
+    if (cell.entity) return Status.OCCUPIED;
+    return Status.FREE;
+  }
+
+  getCell(point: Point): CellKnowledge | null {
+    return this.map.get(point.key()) ?? null;
+  }
 
   // Writes
 
   update(board: Board, entity: Entity): void {
     const removed: int[] = [];
-    for (const [key, old_value] of this.seen.entries()) {
-      const new_value = int(old_value - 1);
-      new_value < 0 ? removed.push(key) : this.seen.set(key, new_value);
+    for (const [key, cell] of this.map.entries()) {
+      const memory = int(cell.memory  - 1);
+      memory < 0 ? removed.push(key) : cell.memory = memory;
+      cell.seen = false;
     }
-    for (const key of removed) this.seen.delete(key);
+    for (const key of removed) this.map.delete(key);
 
-    const kMaxMemory = int(256);
-    this.visible.clear();
     for (const value of this.entities.values()) {
       value.seen = false;
     }
 
+    const kMaxMemory = int(256);
     for (const point of board.getSeen(entity)) {
-      const key = point.key();
-      this.seen.set(key, kMaxMemory);
-      this.visible.add(key);
+      const tile = board.getTile(point);
+      const cell = (() => {
+        const key = point.key();
+        const old_value = this.map.get(key);
+        if (!old_value) {
+          const value = {entity: null, memory: kMaxMemory, seen: true, tile};
+          this.map.set(key, value);
+          return value;
+        }
+
+        if (old_value.entity) {
+          old_value.entity.state.pos = null;
+          old_value.entity = null;
+        }
+        old_value.memory = kMaxMemory;
+        old_value.seen = true;
+        old_value.tile = tile;
+        return old_value;
+      })();
+
       const other = board.getEntity(point);
       if (other === null || other === entity) continue;
 
       const state = getEntityPublicState(null, other);
-      const value = this.entities.get(other);
-      if (value) {
-        value.seen = true;
-        value.state = state;
-      } else {
-        const rival = getTrainer(other) !== getTrainer(other);
-        this.entities.set(other, {seen: true, rival, state});
-      }
+      const value = (() => {
+        const old_value = this.entities.get(other);
+        if (!old_value) {
+          const rival = getTrainer(other) !== getTrainer(other);
+          const value = {seen: true, rival, state};
+          this.entities.set(other, value);
+          return value;
+        }
+
+        const pos = old_value.state.pos;
+        const cell = pos ? this.map.get(pos.key()) ?? null : null;
+        if (cell) cell.entity = null;
+        old_value.seen = true;
+        old_value.state = state;
+        return old_value;
+      })();
+
+      value.state.pos = point;
+      cell.entity = value;
     }
   }
 };
@@ -814,7 +868,7 @@ const inVisionCone = (delta: Point, facing: Point): boolean => {
   return dot / l2Product > Math.cos(0.5 * Constants.VISION_ANGLE);
 };
 
-const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
+const wander = (entity: Entity, pathing: Pathing): Action => {
   if ((--pathing.time) <= 0) {
     pathing.wait = !pathing.wait;
     const multiplier = pathing.wait ? 0 : 1;
@@ -823,13 +877,19 @@ const wander = (board: Board, entity: Entity, pathing: Pathing): Action => {
   if (pathing.wait) return {type: AT.Idle};
 
   const {facing, known, pos: source} = entity;
-  const check = board.getStatus.bind(board);
-  const valid = (x: Point) => {
+  const check = (x: Point) => known.getStatus(x) ?? Status.FREE;
+  const valid0 = (x: Point) => {
+    return !entity.known.remembers(x) &&
+           Direction.all.some(y => entity.known.remembers(x.add(y))) &&
+           Direction.all.every(y => !entity.known.getTile(x.add(y))?.blocked);
+  };
+  const valid1 = (x: Point) => {
     return !entity.known.remembers(x) &&
            Direction.all.some(y => entity.known.remembers(x.add(y)));
   };
   const kBFSLimit = int(64);
-  const result = BFS(source, valid, kBFSLimit, check);
+  const result = BFS(source, valid0, kBFSLimit, check) ??
+                 BFS(source, valid1, kBFSLimit, check);
   pathing.targets.length = 0;
   const dir = (() => {
     if (!result) return sample(Direction.all);
@@ -852,7 +912,7 @@ const plan = (board: Board, entity: Entity): Action => {
       const {commands, self: {attacks, pathing, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
-      if (pathing && 1 === 1) return wander(board, entity, pathing);
+      if (pathing && 1 === 1) return wander(entity, pathing);
 
       const ready = !moveReady(entity);
       const defendEarly = ready ? defendLeader(board, entity) : null;
@@ -871,7 +931,7 @@ const plan = (board: Board, entity: Entity): Action => {
       if (defendLate) return defendLate;
 
       if (trainer) return followLeader(board, entity, trainer);
-      if (pathing) return wander(board, entity, pathing);
+      if (pathing) return wander(entity, pathing);
       return moveAction(sample(Direction.all));
     }
     case ET.Trainer: {
@@ -1918,12 +1978,11 @@ const renderMap = (state: State): string => {
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
-      const sees_now = known.canSeeNow(point);
-      const has_seen = known.remembers(point);
-      if (!sees_now && !has_seen) continue;
+      const cell = known.getCell(point);
+      if (!cell) continue;
 
-      const glyph = board.getTile(point).glyph;
-      const color = sees_now ? glyph : glyph.recolor('gray');
+      const glyph = cell.tile.glyph;
+      const color = cell.seen ? glyph : glyph.recolor('gray');
       shade(point, color, true);
     }
   }
