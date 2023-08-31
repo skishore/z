@@ -231,24 +231,24 @@ class Board {
 
   getUncachedVision(known: Knowledge, entity: Entity): Vision {
     const ft = nonnull(kTiles['.']);
-    const vision = this.constructVision(entity.facing);
+    const vision = this.constructVision();
     this.refreshVision((x: Point) => known.getTile(x) ?? ft, entity, vision);
     return vision;
   }
 
-  private constructVision(facing: Point): Vision {
+  private constructVision(): Vision {
     const value = new Matrix<int>(this.map.size, -1);
-    return {dirty: true, facing, seen: [], value};
+    return {dirty: true, facing: Point.origin, seen: [], value};
   }
 
   private getCachedVision(entity: Entity): Vision {
-    const player = entity.type === ET.Trainer && entity.data.player;
-    const facing = player ? Point.origin : entity.facing;
+    const omni = getTrainer(entity) !== null;
+    const facing = omni ? Point.origin : entity.facing;
 
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
-      const result = this.constructVision(facing);
+      const result = this.constructVision();
       this.entityVision.set(entity, result);
       return result;
     })();
@@ -265,9 +265,6 @@ class Board {
   }
 
   private inVisionCone(delta: Point, facing: Point): boolean {
-    const distance = delta.distanceNethack(Point.origin);
-    if (distance > Constants.VISION_RANGE) return false;
-
     const {x: dx, y: dy} = delta;
     const {x: fx, y: fy} = facing;
     if (dx === 0 && dy === 0) return true;
@@ -282,11 +279,14 @@ class Board {
     const pos = entity.pos;
     const {seen, value} = vision;
 
+    const max = Constants.VISION_RANGE;
+    const omni = getTrainer(entity) !== null;
+    const facing = omni ? Point.origin : entity.facing;
     const player = entity.type === ET.Trainer && entity.data.player;
-    const facing = player ? Point.origin : entity.facing;
 
     const blocked = (p: Point, parent: Point | null) => {
-      if (!player && !this.inVisionCone(p, facing)) return true;
+      if (!player && p.distanceNethack(Point.origin) > max) return true;
+      if (!omni && !this.inVisionCone(p, facing)) return true;
 
       const q = p.add(pos);
       const cached = value.getOrNull(q);
@@ -636,29 +636,16 @@ const makeTrainer = (pos: Point, player: boolean, size: Point): Trainer => {
           removed: false, move_timer: 0, turn_timer: 0};
 };
 
-const hasLineOfSight =
-    (board: Board, source: Point, target: Point, range: int): boolean => {
+const hasLineOfSight = (entity: Entity, target: Point, range: int): boolean => {
+  const {known, pos: source} = entity;
   if (source.distanceNethack(target) > range) return false;
-
-  // See the calculation in getVision, and the constants in distanceNethack.
-  let vision = int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
+  if (!known.canSeeNow(target)) return false;
 
   const line = LOS(source, target);
   const last = line.length - 1;
   return line.every((point, i) => {
-    if (i === 0) return true;
-    if (i === last && vision > 0) return true;
-
-    if (vision <= 0) return false;
-    if (board.getStatus(point) !== Status.FREE) return false;
-
-    // Run the vision attenuation calculation only along the line of sight.
-    const prev = nonnull(line[i - 1]);
-    const tile = board.getTile(point);
-    const diagonal = point.x !== prev.x && point.y !== prev.y;
-    const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
-    vision = int(vision - loss);
-    return true;
+    if (i === 0 || i === last) return true;
+    return known.getStatus(point) === Status.FREE;
   });
 };
 
@@ -669,10 +656,9 @@ const moveAction = (direction: Direction, turns: number = 1): Action => {
 const followCommands =
     (board: Board, entity: Entity, commands: Command[]): Action => {
   const kBFSLimit = 6;
-  const source = entity.pos;
-
   const path_to_target =
       (range: int, target: Point, valid: (p: Point) => boolean): Action => {
+    const source = entity.pos;
     const check = board.getStatus.bind(board);
     const dirs = BFS(source, valid, kBFSLimit, check)?.directions ?? [];
     const options = dirs.map(x => source.add(x));
@@ -706,11 +692,11 @@ const followCommands =
       // We can attack a target if we have line-of-sight to its position.
       const point = target instanceof Point ? target : target.pos;
       const range = attack.range;
-      const valid = (p: Point) => hasLineOfSight(board, p, point, range);
-      if (moveReady(entity) && hasLineOfSight(board, source, point, range)) {
+      if (moveReady(entity) && hasLineOfSight(entity, point, range)) {
         commands.shift();
         return {type: AT.Attack, attack, target: point};
       }
+      const valid = (p: Point) => hasLineOfSight(entity, point, range);
       return path_to_target(range, point, valid);
     }
     case CT.Return: {
@@ -722,7 +708,7 @@ const followCommands =
 
       // A trainer can withdraw us if they have line-of-sight to our position.
       const range = Constants.SUMMON_RANGE;
-      const valid = (p: Point) => hasLineOfSight(board, trainer.pos, p, range);
+      const valid = (p: Point) => hasLineOfSight(trainer, p, range);
       return path_to_target(range, trainer.pos, valid);
     }
   }
@@ -868,19 +854,6 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
   return result.slice(0, 16);
 };
 
-const inVisionCone = (delta: Point, facing: Point): boolean => {
-  const distance = delta.distanceNethack(Point.origin);
-  if (distance > Constants.VISION_RANGE) return false;
-
-  const {x: dx, y: dy} = delta;
-  const {x: fx, y: fy} = facing;
-  if (dx === 0 && dy === 0) return true;
-  if (fx === 0 && fy === 0) return true;
-  const dot = dx *  fx + dy * fy;
-  const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
-  return dot / l2Product > Math.cos(0.5 * Constants.VISION_ANGLE);
-};
-
 const wander = (entity: Entity, pathing: Pathing): Action => {
   if ((--pathing.time) <= 0) {
     pathing.wait = !pathing.wait;
@@ -954,7 +927,7 @@ const plan = (board: Board, entity: Entity): Action => {
       for (const summon of entity.data.summons) {
         const range = Constants.SUMMON_RANGE;
         const withdraw = summon.data.commands[0]?.type === CT.Return;
-        if (withdraw && hasLineOfSight(board, entity.pos, summon.pos, range)) {
+        if (withdraw && hasLineOfSight(entity, summon.pos, range)) {
           summon.data.commands.shift();
           return {type: AT.Withdraw, pokemon: summon};
         }
@@ -976,7 +949,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
     case AT.Attack: {
       const source = entity.pos;
       const {attack, target} = action;
-      if (!hasLineOfSight(board, source, target, attack.range)) return kFailure;
+      if (!hasLineOfSight(entity, target, attack.range)) return kFailure;
 
       // success
       const target_entity = board.getEntity(target);
@@ -1061,7 +1034,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
       const range = Constants.SUMMON_RANGE;
       const [source, target] = [entity.pos, pokemon.pos];
       if (action.command.type === CT.Return &&
-          hasLineOfSight(board, source, target, range)) {
+          hasLineOfSight(entity, target, range)) {
         board.addEffect(ApplyWithdraw(
             source, target, () => board.removeEntity(pokemon, state)));
       } else {
@@ -1092,7 +1065,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
       const range = Constants.SUMMON_RANGE;
       const [source, target] = [entity.pos, pokemon.pos];
       if (getTrainer(pokemon) !== entity) return kFailure;
-      if (!hasLineOfSight(board, source, target, range)) return kFailure;
+      if (!hasLineOfSight(entity, target, range)) return kFailure;
 
       // success
       board.addEffect(ApplyWithdraw(
