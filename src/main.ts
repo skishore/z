@@ -229,6 +229,18 @@ class Board {
     return this.getCachedVision(entity).value;
   }
 
+  getUncachedVision(known: Knowledge, entity: Entity): Vision {
+    const ft = nonnull(kTiles['.']);
+    const vision = this.constructVision(entity.facing);
+    this.refreshVision((x: Point) => known.getTile(x) ?? ft, entity, vision);
+    return vision;
+  }
+
+  private constructVision(facing: Point): Vision {
+    const value = new Matrix<int>(this.map.size, -1);
+    return {dirty: true, facing, seen: [], value};
+  }
+
   private getCachedVision(entity: Entity): Vision {
     const player = entity.type === ET.Trainer && entity.data.player;
     const facing = player ? Point.origin : entity.facing;
@@ -236,54 +248,14 @@ class Board {
     const vision = (() => {
       const cached = this.entityVision.get(entity);
       if (cached) return cached;
-      const value = new Matrix<int>(this.map.size, -1);
-      const result = {dirty: true, facing, seen: [], value};
+      const result = this.constructVision(facing);
       this.entityVision.set(entity, result);
       return result;
     })();
 
     if (vision.dirty || !vision.facing.equal(facing)) {
-      const pos = entity.pos;
-      const {seen, value} = vision;
-
-      const blocked = (p: Point, parent: Point | null) => {
-        if (!player && !this.inVisionCone(p, facing)) return true;
-
-        const q = p.add(pos);
-        const cached = value.getOrNull(q);
-        if (cached === null) return true;
-        let tile: Tile | null = null;
-
-        // The constants in these expressions come from Point.distanceNethack.
-        // They're chosen so that, in a field of tall grass, we can only see
-        // cells at a distanceNethack of <= kVisionRadius away.
-        const visibility = ((): int => {
-          if (!parent) return int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
-
-          tile = this.map.getOrNull(q);
-          if (!tile || tile.blocked) return 0;
-
-          const diagonal = p.x !== parent.x && p.y !== parent.y;
-          const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
-          const prev = value.get(parent.add(pos));
-          return int(Math.max(prev - loss, 0));
-        })();
-
-        if (visibility > cached) {
-          value.set(q, visibility);
-          if ((cached ?? -1) < 0 && tile !== null) seen.push(q);
-        }
-        return visibility <= 0;
-      };
-
-      value.fill(-1);
-      seen.length = 0;
-      seen.push(entity.pos);
-      this.fov.fieldOfVision(blocked);
-      vision.dirty = false;
-      vision.facing = facing;
+      this.refreshVision(this.map.getOrNull.bind(this.map), entity, vision);
     }
-
     return vision;
   }
 
@@ -303,6 +275,52 @@ class Board {
     const dot = dx *  fx + dy * fy;
     const l2Product = Math.sqrt((dx * dx + dy * dy) * (fx * fx + fy * fy));
     return dot / l2Product > Math.cos(0.5 * Constants.VISION_ANGLE);
+  }
+
+  private refreshVision(
+      map: (x: Point) => Tile | null, entity: Entity, vision: Vision): void {
+    const pos = entity.pos;
+    const {seen, value} = vision;
+
+    const player = entity.type === ET.Trainer && entity.data.player;
+    const facing = player ? Point.origin : entity.facing;
+
+    const blocked = (p: Point, parent: Point | null) => {
+      if (!player && !this.inVisionCone(p, facing)) return true;
+
+      const q = p.add(pos);
+      const cached = value.getOrNull(q);
+      if (cached === null) return true;
+      let tile: Tile | null = null;
+
+      // The constants in these expressions come from Point.distanceNethack.
+      // They're chosen so that, in a field of tall grass, we can only see
+      // cells at a distanceNethack of <= kVisionRadius away.
+      const visibility = ((): int => {
+        if (!parent) return int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
+
+        tile = map(q);
+        if (!tile || tile.blocked) return 0;
+
+        const diagonal = p.x !== parent.x && p.y !== parent.y;
+        const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
+        const prev = value.get(parent.add(pos));
+        return int(Math.max(prev - loss, 0));
+      })();
+
+      if (visibility > cached) {
+        value.set(q, visibility);
+        if ((cached ?? -1) < 0 && tile !== null) seen.push(q);
+      }
+      return visibility <= 0;
+    };
+
+    value.fill(-1);
+    seen.length = 0;
+    seen.push(entity.pos);
+    this.fov.fieldOfVision(blocked);
+    vision.dirty = false;
+    vision.facing = facing;
   }
 };
 
@@ -361,17 +379,9 @@ class Knowledge {
   // Writes
 
   update(board: Board, entity: Entity): void {
-    const removed: int[] = [];
-    for (const [key, cell] of this.map.entries()) {
-      const memory = int(cell.memory  - 1);
-      memory < 0 ? removed.push(key) : cell.memory = memory;
-      cell.seen = false;
-    }
-    for (const key of removed) this.map.delete(key);
-
-    for (const value of this.entities.values()) {
-      value.seen = false;
-    }
+    const trainer = getTrainer(entity);
+    const player = entity.type === ET.Trainer && entity.data.player;
+    this.forget(player);
 
     const kMaxMemory = int(256);
     for (const point of board.getSeen(entity)) {
@@ -402,7 +412,7 @@ class Knowledge {
       const value = (() => {
         const old_value = this.entities.get(other);
         if (!old_value) {
-          const rival = getTrainer(other) !== getTrainer(other);
+          const rival = getTrainer(other) !== trainer;
           const value = {seen: true, rival, state};
           this.entities.set(other, value);
           return value;
@@ -419,6 +429,23 @@ class Knowledge {
       value.state.pos = point;
       cell.entity = value;
     }
+  }
+
+  private forget(player: boolean): void {
+    if (player) {
+      for (const cell of this.map.values()) cell.seen = false;
+      for (const value of this.entities.values()) value.seen = false;
+      return;
+    }
+
+    const removed: int[] = [];
+    for (const [key, cell] of this.map.entries()) {
+      const memory = int(cell.memory  - 1);
+      memory < 0 ? removed.push(key) : cell.memory = memory;
+      cell.seen = false;
+    }
+    for (const key of removed) this.map.delete(key);
+    for (const value of this.entities.values()) value.seen = false;
   }
 };
 
@@ -531,7 +558,6 @@ interface PokemonEdge {
 interface TrainerData {
   input: Action | null,
   name: string,
-  seen: Matrix<boolean> | null,
   player: boolean,
   pokemon: PokemonEdge[],
   summons: Pokemon[],
@@ -842,19 +868,6 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
   return result.slice(0, 16);
 };
 
-const findRivals =
-    (board: Board, entity: Entity, pathing: Pathing | null): Entity[] => {
-  return [];
-  // TODO(skishore): Use the entity's Knowledge to fill this code in.
-  //const pos = entity.pos;
-  //const trainer = getTrainer(entity);
-  //return board.getEntities().filter(other => {
-  //  return getTrainer(other) !== trainer &&
-  //         hasLineOfSight(board, pos, other.pos, Constants.VISION_RANGE) &&
-  //         !(pathing && !inVisionCone(other.pos.sub(pos), pathing.facing));
-  //});
-};
-
 const inVisionCone = (delta: Point, facing: Point): boolean => {
   const distance = delta.distanceNethack(Point.origin);
   if (distance > Constants.VISION_RANGE) return false;
@@ -871,7 +884,7 @@ const inVisionCone = (delta: Point, facing: Point): boolean => {
 const wander = (entity: Entity, pathing: Pathing): Action => {
   if ((--pathing.time) <= 0) {
     pathing.wait = !pathing.wait;
-    const multiplier = pathing.wait ? 0 : 1;
+    const multiplier = pathing.wait ? Constants.WANDER_TURNS : 1;
     pathing.time = int(Math.random() * multiplier * 16);
   }
   if (pathing.wait) return {type: AT.Idle};
@@ -912,17 +925,19 @@ const plan = (board: Board, entity: Entity): Action => {
       const {commands, self: {attacks, pathing, trainer}} = entity.data;
       if (commands.length > 0) return followCommands(board, entity, commands);
 
-      if (pathing && 1 === 1) return wander(entity, pathing);
-
       const ready = !moveReady(entity);
       const defendEarly = ready ? defendLeader(board, entity) : null;
       if (defendEarly) return defendEarly;
 
-      const rivals = findRivals(board, entity, pathing);
-      if (rivals.length > 0 && attacks.length > 0) {
-        const target = sample(rivals);
+      const targets: Point[] = [];
+      for (const other of entity.known.getEntities()) {
+        if (!(other.rival && other.seen && other.state.pos)) continue;
+        targets.push(other.state.pos);
+      }
+      if (attacks.length > 0 && targets.length > 0) {
+        const target = sample(targets);
         const attack = sample(attacks);
-        entity.facing = target.pos.sub(entity.pos);
+        entity.facing = target.sub(entity.pos);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
       }
@@ -1252,13 +1267,6 @@ const updateFocus = (state: State, focus: Focus): void => {
   focus.last_tile = board.getTile(target);
 };
 
-const updatePlayerKnowledge = (state: State): void => {
-  const {board, focus, player} = state;
-  if (focus) updateFocus(state, focus);
-  const seen = player.data.seen;
-  if (seen) for (const point of board.getSeen(player)) seen.set(point, true);
-};
-
 //////////////////////////////////////////////////////////////////////////////
 
 const animateTarget = (state: State, target: Target): void => {
@@ -1338,8 +1346,8 @@ const TAU = 2 * Math.PI;
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(100),
-  MAP_SIZE_Y:    int(100),
+  MAP_SIZE_X:    int(63),
+  MAP_SIZE_Y:    int(63),
   FOV_RADIUS:    int(31),
   VISION_ANGLE:  TAU / 3,
   VISION_RANGE:  int(12),
@@ -1934,15 +1942,15 @@ const renderMap = (state: State): string => {
   }
 
   const pos = player.pos;
-  const offset_x = 0;
-  const offset_y = 0;
+  const offset_x = int(pos.x - (width  - 1) / 2);;
+  const offset_y = int(pos.y - (height - 1) / 2);;
   const offset = new Point(offset_x, offset_y);
 
   const show = (point: Point, glyph: Glyph, force: boolean = false) => {
     const x = point.x - offset_x, y = point.y - offset_y;
     if (!(0 <= x && x < width && 0 <= y && y < height)) return;
     const index = x + (width + 1) * y;
-    if (force || board.canSee(vision, point)) text[index] = glyph;
+    if (force || known.canSeeNow(point)) text[index] = glyph;
   };
 
   const kRecolorIfSeen = 0;
@@ -1955,7 +1963,7 @@ const renderMap = (state: State): string => {
     const index = x + (width + 1) * y;
     const glyph = text[index];
     const force = mode === kRecolorForced || mode === kRecolorLowPri;
-    const apply = glyph && (force || board.canSee(vision, point));
+    const apply = glyph && (force || known.canSeeNow(point));
     if (!apply) return;
 
     fg = mode === kRecolorLowPri ? glyph.fg : fg;
@@ -1970,11 +1978,7 @@ const renderMap = (state: State): string => {
     show(point, shaded_glyph, force);
   };
 
-  const entity = nonnull(board.getEntities()[1]);
-  const {facing, known} = entity;
-  if (entity.type !== ET.Pokemon) throw Error();
-  const {targets} = nonnull(entity.data.self.pathing);
-  const vision = board.getVision(entity);
+  const known = player.known;
   for (let x = int(0); x < width; x++) {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
@@ -1986,17 +1990,8 @@ const renderMap = (state: State): string => {
       shade(point, color, true);
     }
   }
-  targets.forEach((target, i) => {
-    show(target, new Glyph(' ', 'black', i ? '440' : '400'), true);
-  });
-
-  board.getEntities().forEach(x => {
-    shade(x.pos, x.glyph, true);
-  });
-  known.getEntities().forEach(x => {
-    if (!x.state.pos) return;
-    show(x.state.pos, x.state.glyph.recolor('black', x.seen ? '440' : '400'), true);
-  });
+  board.getEntities().forEach(
+      x => shade(x.pos, x.glyph, getTrainer(x) === player));
 
   if (state.target) {
     const frame = state.target.frame >> 1;
@@ -2025,13 +2020,12 @@ const renderMap = (state: State): string => {
     if (getTrainer(entity) === player) return;
 
     const pos = entity.pos;
-    const canSeePlayer = entity.known.canSeeNow(player.pos);
+    const vision = board.getUncachedVision(player.known, entity);
+    const canSeePlayer = board.canSee(vision.value, player.pos);
     const color = canSeePlayer ? '100' : '000';
 
-    for (const point of board.getSeen(entity)) {
-      const sees_now = player.known.canSeeNow(point);
-      const has_seen = player.known.remembers(point);
-      if (!sees_now && !has_seen) continue;
+    for (const point of vision.seen) {
+      if (!player.known.remembers(point)) continue;
       recolor(point, null, color, kRecolorLowPri);
     }
   };
@@ -2384,7 +2378,7 @@ const update = (io: IO) => {
   io.count = int((io.count + 1) & 0xffff);
 
   updateState(io.state, io.inputs);
-  updatePlayerKnowledge(io.state);
+  if (io.state.focus) updateFocus(io.state, io.state.focus);
 };
 
 const cachedSetContent = (element: Element, content: string): boolean => {
