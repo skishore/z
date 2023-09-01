@@ -327,16 +327,16 @@ class Board {
 //////////////////////////////////////////////////////////////////////////////
 
 interface CellKnowledge {
+  age: int,
   entity: EntityKnowledge | null,
-  memory: int;
-  seen: boolean;
   tile: Tile;
 };
 
 interface EntityKnowledge {
+  age: int,
+  last_pos: Point;
   rival: boolean;
   state: EntityPublicState;
-  seen: boolean;
 };
 
 class Knowledge {
@@ -350,7 +350,7 @@ class Knowledge {
 
   // Reads
 
-  canSeeNow(point: Point): boolean { return this.getCell(point)?.seen ?? false; }
+  canSeeNow(point: Point): boolean { return this.getCell(point)?.age === 0; }
 
   remembers(point: Point): boolean { return this.map.has(point.key()); }
 
@@ -383,14 +383,13 @@ class Knowledge {
     const player = entity.type === ET.Trainer && entity.data.player;
     this.forget(player);
 
-    const kMaxMemory = int(256);
     for (const point of board.getSeen(entity)) {
       const tile = board.getTile(point);
       const cell = (() => {
         const key = point.key();
         const old_value = this.map.get(key);
         if (!old_value) {
-          const value = {entity: null, memory: kMaxMemory, seen: true, tile};
+          const value = {age: int(0), entity: null, tile};
           this.map.set(key, value);
           return value;
         }
@@ -399,8 +398,7 @@ class Knowledge {
           old_value.entity.state.pos = null;
           old_value.entity = null;
         }
-        old_value.memory = kMaxMemory;
-        old_value.seen = true;
+        old_value.age = 0;
         old_value.tile = tile;
         return old_value;
       })();
@@ -413,7 +411,7 @@ class Knowledge {
         const old_value = this.entities.get(other);
         if (!old_value) {
           const rival = getTrainer(other) !== trainer;
-          const value = {seen: true, rival, state};
+          const value = {age: int(0), last_pos: point, rival, state};
           this.entities.set(other, value);
           return value;
         }
@@ -421,7 +419,8 @@ class Knowledge {
         const pos = old_value.state.pos;
         const cell = pos ? this.map.get(pos.key()) ?? null : null;
         if (cell) cell.entity = null;
-        old_value.seen = true;
+        old_value.age = 0;
+        old_value.last_pos = point;
         old_value.state = state;
         return old_value;
       })();
@@ -433,19 +432,24 @@ class Knowledge {
 
   private forget(player: boolean): void {
     if (player) {
-      for (const cell of this.map.values()) cell.seen = false;
-      for (const value of this.entities.values()) value.seen = false;
+      for (const cell of this.map.values()) cell.age = 1;
+      for (const value of this.entities.values()) value.age = 1;
       return;
     }
 
     const removed: int[] = [];
-    for (const [key, cell] of this.map.entries()) {
-      const memory = int(cell.memory  - 1);
-      memory < 0 ? removed.push(key) : cell.memory = memory;
-      cell.seen = false;
+    const removed_entities: Entity[] = [];
+    const kMaxMemory = int(256);
+    for (const [key, value] of this.map.entries()) {
+      value.age = int(value.age + 1);
+      if (value.age >= kMaxMemory) removed.push(key);
+    }
+    for (const [key, value] of this.entities.entries()) {
+      value.age = int(value.age + 1);
+      if (value.age >= kMaxMemory) removed_entities.push(key);
     }
     for (const key of removed) this.map.delete(key);
-    for (const value of this.entities.values()) value.seen = false;
+    for (const key of removed_entities) this.entities.delete(key);
   }
 };
 
@@ -525,7 +529,7 @@ type Command =
 
 interface Attack { name: string, range: int, damage: int, effect: GenEffect };
 
-interface Pathing { targets: Point[], time: int, wait: boolean };
+interface Pathing { time: int, wait: boolean };
 
 type PokemonSpeciesWithAttacks = PokemonSpeciesData & {attacks: Attack[]};
 
@@ -854,6 +858,39 @@ const findRivalPokemon = (board: Board, trainer: Trainer): Pokemon[] => {
   return result.slice(0, 16);
 };
 
+const exploreNearPoint =
+    (entity: Entity, source: Point, age: int, turns: int): Action => {
+  const known = entity.known;
+  const check = (x: Point) => known.getStatus(x) ?? Status.FREE;
+  const valid1 = (x: Point) => {
+    const cell = known.getCell(x);
+    if (cell && cell.age <= age) return false;
+    return Direction.all.some(y => !(known.getTile(x.add(y))?.blocked ?? true));
+  };
+  const valid0 = (x: Point) => {
+    return valid1(x) && !Direction.all.some(y => known.getTile(x.add(y))?.blocked);
+  };
+  const kBFSLimit = int(64);
+  const result = BFS(source, valid0, kBFSLimit, check) ??
+                 BFS(source, valid1, kBFSLimit, check);
+  const dir = (() => {
+    if (!result) return sample(Direction.all);
+    const {directions, targets} = result;
+    if (!directions.length || !targets.length) return sample(Direction.all);
+    const target = (() => {
+      const p = entity.pos;
+      if (source.equal(p)) return sample(targets);
+      targets.sort((a, b) => a.distanceSquared(p) - b.distanceSquared(p));
+      return nonnull(targets[0]);
+    })();
+    const path = AStar(entity.pos, target, check);
+    if (!path?.length) return sample(directions);
+    return Direction.assert(nonnull(path[0]).sub(entity.pos));
+  })();
+  entity.facing = dir;
+  return moveAction(dir, turns);
+};
+
 const wander = (entity: Entity, pathing: Pathing): Action => {
   if ((--pathing.time) <= 0) {
     pathing.wait = !pathing.wait;
@@ -861,35 +898,7 @@ const wander = (entity: Entity, pathing: Pathing): Action => {
     pathing.time = int(Math.random() * multiplier * 16);
   }
   if (pathing.wait) return {type: AT.Idle};
-
-  const {facing, known, pos: source} = entity;
-  const check = (x: Point) => known.getStatus(x) ?? Status.FREE;
-  const valid0 = (x: Point) => {
-    return !entity.known.remembers(x) &&
-           Direction.all.some(y => entity.known.remembers(x.add(y))) &&
-           Direction.all.every(y => !entity.known.getTile(x.add(y))?.blocked);
-  };
-  const valid1 = (x: Point) => {
-    return !entity.known.remembers(x) &&
-           Direction.all.some(y => entity.known.remembers(x.add(y)));
-  };
-  const kBFSLimit = int(64);
-  const result = BFS(source, valid0, kBFSLimit, check) ??
-                 BFS(source, valid1, kBFSLimit, check);
-  pathing.targets.length = 0;
-  const dir = (() => {
-    if (!result) return sample(Direction.all);
-    const {directions, targets} = result;
-    if (!directions.length || !targets.length) return sample(Direction.all);
-    const target = sample(targets);
-    pathing.targets = targets;
-    const path = AStar(source, target, check);
-    if (!path?.length) return sample(directions);
-    pathing.targets = [target].concat(targets.filter(x => !x.equal(target)));
-    return Direction.assert(nonnull(path[0]).sub(source));
-  })();
-  entity.facing = dir;
-  return moveAction(dir, Constants.WANDER_TURNS);
+  return exploreNearPoint(entity, entity.pos, int(9999), Constants.WANDER_TURNS);
 };
 
 const plan = (board: Board, entity: Entity): Action => {
@@ -903,9 +912,14 @@ const plan = (board: Board, entity: Entity): Action => {
       if (defendEarly) return defendEarly;
 
       const targets: Point[] = [];
+      const fallbacks: {age: int, pos: Point}[] = [];
       for (const other of entity.known.getEntities()) {
-        if (!(other.rival && other.seen && other.state.pos)) continue;
-        targets.push(other.state.pos);
+        if (!(other.rival)) continue;
+        if (other.age === 0 && other.state.pos) {
+          targets.push(other.state.pos);
+        } else {
+          fallbacks.push({age: other.age, pos: other.last_pos});
+        }
       }
       if (attacks.length > 0 && targets.length > 0) {
         const target = sample(targets);
@@ -913,6 +927,10 @@ const plan = (board: Board, entity: Entity): Action => {
         entity.facing = target.sub(entity.pos);
         const commands: Command[] = [{type: CT.Attack, attack, target}];
         return followCommands(board, entity, commands);
+      }
+      if (attacks.length > 0 && fallbacks.length > 0 && !trainer) {
+        const choice = nonnull(fallbacks.sort((a, b) => a.age - b.age)[0]);
+        return exploreNearPoint(entity, choice.pos, choice.age, 1);
       }
 
       const defendLate = !ready ? defendLeader(board, entity) : null;
@@ -1797,7 +1815,7 @@ const initState = (): State => {
     const pathing = (() => {
       if (trainer) return null;
       const facing = sample(Direction.all);
-      return {facing, seen: new Map(), targets: [], time: int(0), wait: false};
+      return {facing, seen: new Map(), time: int(0), wait: false};
     })();
     return {attacks, species, trainer, cur_hp: hp, max_hp: hp, pathing};
   };
@@ -1959,7 +1977,7 @@ const renderMap = (state: State): string => {
       if (!cell) continue;
 
       const glyph = cell.tile.glyph;
-      const color = cell.seen ? glyph : glyph.recolor('gray');
+      const color = cell.age > 0 ? glyph.recolor('gray') : glyph;
       shade(point, color, true);
     }
   }
