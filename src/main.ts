@@ -610,34 +610,31 @@ const wait = (entity: Entity, moves: number, turns: number): void => {
   entity.turn_timer += int(Math.round(Constants.TURN_TIMER * turns));
 };
 
+const makeEntity = <T extends Entity>(
+    type: T['type'], data: T['data'], pos: Point, glyph: Glyph, speed: number): T => {
+  const known = new Knowledge();
+  const facing = sample(Direction.all);
+  const result: Pokemon = {
+    type: type as ET.Pokemon, data: data as PokemonData,
+    facing, pos, glyph, known, speed, removed: false, move_timer: 0, turn_timer: 0,
+  };
+  return result as T;
+};
+
 const makePokemon = (pos: Point, self: PokemonIndividualData): Pokemon => {
   const {glyph, speed} = self.species;
   const data = {commands: [], self};
-  const known = new Knowledge();
-  const facing = sample(Direction.all);
-  return {type: ET.Pokemon, data, facing, pos, glyph, known, speed,
-          removed: false, move_timer: 0, turn_timer: 0};
+  return makeEntity<Pokemon>(ET.Pokemon, data, pos, glyph, speed);
 };
 
 const makeTrainer = (pos: Point, player: boolean, size: Point): Trainer => {
   const glyph = new Glyph('@');
-  const known = new Knowledge();
+  const summons: Pokemon[] = [];
+  const pokemon: PokemonEdge[] = [];
   const speed = Constants.TRAINER_SPEED;
-  const facing = Direction.s;
   const hp = Constants.TRAINER_HP;
-  const seen = player ? new Matrix(size, false) : null;
-  const data = {
-    input: null,
-    name: '',
-    seen,
-    player,
-    pokemon: [],
-    summons: [],
-    cur_hp: hp,
-    max_hp: hp,
-  };
-  return {type: ET.Trainer, data, facing, pos, glyph, known, speed,
-          removed: false, move_timer: 0, turn_timer: 0};
+  const data = {input: null, name: '', player, pokemon, summons, cur_hp: hp, max_hp: hp};
+  return makeEntity<Trainer>(ET.Trainer, data, pos, glyph, speed);
 };
 
 const hasLineOfSight = (entity: Entity, target: Point, range: int): boolean => {
