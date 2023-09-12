@@ -119,7 +119,7 @@ class Board {
     assert(this.getEntity(pos) === null);
     this.entityAtPos.set(pos.key(), entity);
     this.entity.push(entity);
-    entity.known.update(this, entity);
+    entity.known.update(null, this, entity);
   }
 
   advanceEntity(): void {
@@ -138,10 +138,10 @@ class Board {
     this.dirtyVision(entity);
   }
 
-  removeEntity(entity: Entity, state: State): void {
-    if (state.focus && state.focus.entity === entity &&
-        this.entityCanSee(state.player, entity.pos)) {
-      state.focus = null;
+  removeEntity(entity: Entity): void {
+    for (const other of this.entity) {
+      const known = other.known.getEntity(entity);
+      if (known && this.entityCanSee(other, entity.pos)) known.removed = true;
     }
 
     if (entity.type === ET.Trainer && entity.data.player) {
@@ -335,6 +335,7 @@ interface CellKnowledge {
 interface EntityKnowledge {
   age: int,
   last_pos: Point;
+  removed: boolean;
   rival: boolean;
   state: EntityPublicState;
 };
@@ -360,6 +361,10 @@ class Knowledge {
     return this.getCell(point)?.entity ?? null;
   }
 
+  getEntity(entity: Entity): EntityKnowledge | null {
+    return this.entities.get(entity) ?? null;
+  }
+
   getTile(point: Point): Tile | null {
     return this.getCell(point)?.tile ?? null;
   }
@@ -378,7 +383,7 @@ class Knowledge {
 
   // Writes
 
-  update(board: Board, entity: Entity): void {
+  update(anim: Anim | null, board: Board, entity: Entity): void {
     const trainer = getTrainer(entity);
     const player = entity.type === ET.Trainer && entity.data.player;
     this.forget(player);
@@ -406,12 +411,13 @@ class Knowledge {
       const other = board.getEntity(point);
       if (other === null || other === entity) continue;
 
-      const state = getEntityPublicState(null, other);
+      const state = getEntityPublicState(anim, other);
       const value = (() => {
         const old_value = this.entities.get(other);
         if (!old_value) {
+          const removed = false;
           const rival = getTrainer(other) !== trainer;
-          const value = {age: int(0), last_pos: point, rival, state};
+          const value = {age: int(0), last_pos: point, removed, rival, state};
           this.entities.set(other, value);
           return value;
         }
@@ -990,7 +996,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return;
             if (see_target) board.logAppend(`${capitalize(target_name)} blacked out!`);
-            board.removeEntity(target_entity, state);
+            board.removeEntity(target_entity);
           }));
         };
       } else {
@@ -1011,7 +1017,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
           board.addEffect(ApplyDamage(board, target, () => {
             if (data.cur_hp) return setAwareness();
             if (see_target) board.logAppend(`${capitalize(target_name)} fainted!`);
-            board.removeEntity(target_entity, state);
+            board.removeEntity(target_entity);
           }));
         };
       }
@@ -1051,7 +1057,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
       if (action.command.type === CT.Return &&
           hasLineOfSight(entity, target, range)) {
         board.addEffect(ApplyWithdraw(
-            source, target, () => board.removeEntity(pokemon, state)));
+            source, target, () => board.removeEntity(pokemon)));
       } else {
         pokemon.data.commands.push(action.command);
       }
@@ -1084,7 +1090,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
 
       // success
       board.addEffect(ApplyWithdraw(
-          source, target, () => board.removeEntity(pokemon, state)));
+          source, target, () => board.removeEntity(pokemon)));
       const name = pokemon.data.self.species.name;
       const text = entity.data.player
           ? `You withdraw ${name}.`
@@ -1237,22 +1243,29 @@ const initFocus = (state: State, point: Point): Focus | null => {
   const entity = state.board.getEntity(point);
   if (!entity || getTrainer(entity) === state.player) return null;
 
-  const target = entity ? entity.pos : point;
+  const target = entity.pos;
   const result = {last_seen: null, last_tile: null, seen: false, entity, target};
   updateFocus(state, result);
   return result;
 };
 
 const updateFocus = (state: State, focus: Focus): void => {
+  const {entity} = focus;
   const {anim, board, player} = state;
-  const target = focus.entity ? focus.entity.pos : focus.target;
-  focus.target = target;
-  focus.seen = !focus.entity?.removed && board.entityCanSee(player, target);
-  if (!focus.seen) return;
+  const known = player.known.getEntity(entity);
+  if (!known) return;
 
-  const entity = board.getEntity(target);
-  focus.last_seen = entity ? getEntityPublicState(anim, entity) : null;
-  focus.last_tile = board.getTile(target);
+  if (known && known.removed) {
+    state.focus = null;
+    return;
+  }
+
+  focus.seen = known.age === 0;
+  if (!focus.seen || !known.state.pos) return;
+
+  focus.target = known.state.pos;
+  focus.last_seen = known.state;
+  focus.last_tile = player.known.getTile(focus.target);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1427,7 +1440,7 @@ interface Focus {
   last_seen: EntityPublicState | null,
   last_tile: Tile | null,
   seen: boolean,
-  entity: Entity | null,
+  entity: Entity,
   target: Point,
 };
 
@@ -1861,7 +1874,7 @@ const updateState = (state: State, inputs: Input[]): void => {
       board.advanceEntity();
       continue;
     }
-    entity.known.update(board, entity);
+    entity.known.update(null, board, entity);
     const action = plan(board, entity);
     const result = act(state, entity, action);
     if (entity === player && !result.success) break;
@@ -2220,7 +2233,7 @@ const renderStatus = (state: State): string => {
 };
 
 const renderTarget = (state: State): string => {
-  const {anim, board, player, target, focus} = state;
+  const {player, target, focus} = state;
   const width = Constants.STATUS_SIZE;
   const rows: string[] = [];
 
@@ -2236,24 +2249,18 @@ const renderTarget = (state: State): string => {
           const name = target.data.pokemon.self.species.name;
           return `Sending out ${name}...`;
         }
-        case TT.FarLook: return `Examining...`;
+        case TT.FarLook: return 'Examining...';
       }
     })();
 
-    const color = !target && !focus?.seen ? '111' : null;
-    const seen = target ? board.entityCanSee(player, target.target)
-                        : focus?.seen;
-    const tile = target ? seen ? state.board.getTile(target.target) : null
-                        : focus?.last_tile;
-
-    const entity = ((): EntityPublicState | null => {
-      if (!target) return focus?.last_seen ?? null;
-      const entity = seen ? board.getEntity(target.target) : null;
-      return entity ? getEntityPublicState(anim, entity) : null;
-    })();
+    const color  = !target && !focus?.seen ? '111' : null;
+    const cell   = target ? player.known.getCell(target.target) : null;
+    const seen   = target ? cell?.age === 0 : focus?.seen;
+    const tile   = target ? cell?.tile : focus?.last_tile;
+    const entity = target ? seen ? cell?.entity?.state : null : focus?.last_seen;
 
     const tile_text = ((): string => {
-      if (!tile) return `You ${seen ? 'see' : 'saw'}: (unseen location)`;
+      if (!tile) return 'You see: (unseen location)';
       const glyph = color ? tile.glyph.recolor() : tile.glyph;
       const prefix = seen ? entity ? 'Standing on' : 'You see' :
                             entity ? 'Stood on'    : 'You saw';
@@ -2365,8 +2372,11 @@ const update = (io: IO) => {
   assert(io.timing.length <= Constants.FRAME_RATE);
   io.count = int((io.count + 1) & 0xffff);
 
-  updateState(io.state, io.inputs);
-  if (io.state.focus) updateFocus(io.state, io.state.focus);
+  const {inputs, state} = io;
+  updateState(state, inputs);
+  const {anim, board, player} = state;
+  player.known.update(anim, board, player);
+  if (state.focus) updateFocus(state, state.focus);
 };
 
 const cachedSetContent = (element: Element, content: string): boolean => {
