@@ -1347,9 +1347,9 @@ const TAU = 2 * Math.PI;
 
 const Constants = {
   LOG_SIZE:      int(4),
-  MAP_SIZE_X:    int(63),
-  MAP_SIZE_Y:    int(63),
-  FOV_RADIUS:    int(31),
+  MAP_SIZE_X:    int(43),
+  MAP_SIZE_Y:    int(43),
+  FOV_RADIUS:    int(21),
   VISION_ANGLE:  TAU / 3,
   VISION_RANGE:  int(12),
   WORLD_SIZE:    int(100),
