@@ -1898,6 +1898,7 @@ interface Element {
 };
 
 interface Timing {
+  update_end: number,
   start: number,
   end: number,
 };
@@ -1925,8 +1926,10 @@ const kHiddenFlag = '<hidden>';
 const kBreakGlyph = new Glyph('\n');
 const kEmptyGlyph = new Glyph(' ');
 
-const renderFrameRate = (cpu: number, fps: number): string => {
-  return `CPU: ${cpu.toFixed(2)}%; FPS: ${fps.toFixed(2)}  `;
+const renderFrameRate = (update: number, render: number, fps: number): string => {
+  return `Update: ${update.toFixed(2)}%; ` +
+         `Render: ${render.toFixed(2)}%; ` +
+         `FPS: ${fps.toFixed(2)}  `;
 };
 
 const renderLog = (state: State): string => {
@@ -2367,7 +2370,7 @@ const initIO = (state: State): IO => {
 
 const update = (io: IO) => {
   const start = Date.now();
-  io.timing.push({start, end: start});
+  io.timing.push({update_end: start, start, end: start});
   if (io.timing.length > Constants.FRAME_RATE) io.timing.shift();
   assert(io.timing.length <= Constants.FRAME_RATE);
   io.count = int((io.count + 1) & 0xffff);
@@ -2377,6 +2380,9 @@ const update = (io: IO) => {
   const {anim, board, player} = state;
   player.known.update(anim, board, player);
   if (state.focus) updateFocus(state, state.focus);
+
+  const last = nonnull(io.timing[io.timing.length - 1]);
+  last.update_end = Date.now();
 };
 
 const cachedSetContent = (element: Element, content: string): boolean => {
@@ -2397,17 +2403,19 @@ const render = (io: IO) => {
     cachedSetContent(io.ui.target, renderTarget(io.state)),
     io.count % 10 === 0,
   ];
+  const last = nonnull(io.timing[io.timing.length - 1]);
+  last.end = Date.now();
   if (!refresh.some(x => x)) return;
 
-  const last = nonnull(io.timing[io.timing.length - 1]);
-  const base = io.timing.reduce((acc, x) => acc += x.end - x.start, 0);
+  const update = io.timing.reduce((acc, x) => acc + x.update_end - x.start, 0);
+  const render = io.timing.reduce((acc, x) => acc + x.end - x.update_end, 0);
 
-  last.end = Date.now();
   const total = Math.max(last.end - nonnull(io.timing[0]).start, 1);
-  const cpu = 100 * (last.end - last.start + base) / total;
   const fps = 1000 * io.timing.length / total;
+  const update_cpu = 100 * update / total;
+  const render_cpu = 100 * render / total;
 
-  io.ui.fps.setContent(renderFrameRate(cpu, fps));
+  io.ui.fps.setContent(renderFrameRate(update_cpu, render_cpu, fps));
   io.ui.window.render();
 };
 
