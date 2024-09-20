@@ -1987,7 +1987,7 @@ const renderMap = (state: State): string => {
     for (let y = int(0); y < height; y++) {
       const point = (new Point(x, y)).add(offset);
       const cell = known.getCell(point);
-      if (!cell) continue;
+      if (!cell || cell.age > 0) continue;
 
       const glyph = cell.tile.glyph;
       const color = cell.age > 0 ? glyph.recolor('gray') : glyph;
@@ -2026,16 +2026,15 @@ const renderMap = (state: State): string => {
     const pos = entity.pos;
     const vision = board.getUncachedVision(player.known, entity);
     const canSeePlayer = board.canSee(vision.value, player.pos);
-    const color = canSeePlayer ? '100' : '000';
+    const color = canSeePlayer ? '100' : 'gray';
 
     for (const point of vision.seen) {
-      if (!player.known.remembers(point)) continue;
       recolor(point, null, color, kRecolorLowPri);
     }
   };
   const focused = (() => {
     if (state.target) return board.getEntity(state.target.target);
-    return focus && focus.seen ? focus.entity : null;
+    return focus && focus.seen && !frame ? focus.entity : null;
   })();
   if (focused) highlightSeen(focused);
   //findRivalPokemon(board, player).forEach(x => highlightSeen(x, 1));
