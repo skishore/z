@@ -19,6 +19,7 @@ class Board {
   private entityIndex: int;
   private entityVision: Map<Entity, Vision>;
   private defaultTile: Tile;
+  private fires: Map<int, Point>;
   private logs: Log[];
 
   constructor(size: Point, fov: int) {
@@ -30,6 +31,7 @@ class Board {
     this.entityIndex = 0;
     this.entityVision = new Map();
     this.defaultTile = nonnull(kTiles['#']);
+    this.fires = new Map();
     this.logs = [];
   }
 
@@ -72,7 +74,7 @@ class Board {
   }
 
   getStatus(pos: Point): Status {
-    if (this.getTile(pos).blocked) return Status.BLOCKED;
+    if (this.getTile(pos).flags & BLOCKED) return Status.BLOCKED;
     if (this.entityAtPos.has(pos.key())) return Status.OCCUPIED;
     return Status.FREE;
   }
@@ -80,8 +82,21 @@ class Board {
   // Writes
 
   setTile(pos: Point, tile: Tile): void {
+    if (!this.map.contains(pos)) return;
+
     this.map.set(pos, tile);
+    // TODO(shaunak): We should only call dirtyVision if the tile is visible.
     this.entity.forEach(x => this.dirtyVision(x));
+    // TODO(shaunak): Model links between tiles better; flammable tiles should
+    // have a link to their inflamed versions, and those should have a link to
+    // the tile they become after they burn down.
+    (tile.flags & ON_FIRE) ? this.fires.set(pos.key(), pos)
+                           : this.fires.delete(pos.key());
+  }
+
+  maybeStartFire(pos: Point): void {
+    const tile = this.getTile(pos);
+    if (tile.afire && Math.random() < 0.9) this.setTile(pos, tile.afire);
   }
 
   addEffect(effect: Effect): void {
@@ -125,6 +140,20 @@ class Board {
   advanceEntity(): void {
     charge(this.getActiveEntity());
     this.entityIndex = int((this.entityIndex + 1) % this.entity.length);
+  }
+
+  advanceFires(): void {
+    const initial = Array.from(this.fires.values());
+    for (const pos of initial) {
+      const tile = this.getTile(pos);
+      for (const dir of Direction.all) {
+        const next = pos.add(dir);
+        const tile = this.getTile(next);
+        // TODO(shaunak): Trees should be less likely to catch fire than grass.
+        if (tile.afire && Math.random() < 0.25) this.setTile(next, tile.afire);
+      }
+      if (Math.random() < 0.25) this.setTile(pos, nonnull(kTiles['ashes']));
+    }
   }
 
   moveEntity(entity: Entity, to: Point): void {
@@ -300,10 +329,10 @@ class Board {
         if (!parent) return int(100 * (kVisionRadius + 1) - 95 - 46 - 25);
 
         tile = map(q);
-        if (!tile || tile.blocked) return 0;
+        if (!tile || (tile.flags & OPAQUE)) return 0;
 
         const diagonal = p.x !== parent.x && p.y !== parent.y;
-        const loss = tile.obscure ? 95 + (diagonal ? 46 : 0) : 0;
+        const loss = (tile.flags & OBSCURE) ? 95 + (diagonal ? 46 : 0) : 0;
         const prev = value.get(parent.add(pos));
         return int(Math.max(prev - loss, 0));
       })();
@@ -372,7 +401,7 @@ class Knowledge {
   getStatus(point: Point): Status | null {
     const cell = this.getCell(point);
     if (!cell) return null;
-    if (cell.tile.blocked) return Status.BLOCKED;
+    if (cell.tile.flags & BLOCKED) return Status.BLOCKED;
     if (cell.entity) return Status.OCCUPIED;
     return Status.FREE;
   }
@@ -744,7 +773,7 @@ const defendSquare = (board: Board, start: Point, trainer: Trainer): Point | nul
   const okay = (p: Point) => {
     const other = board.getEntity(p);
     if (other && getTrainer(other) === trainer) return true;
-    return !board.getTile(p).blocked;
+    return !(board.getTile(p).flags & BLOCKED);
   };
 
   const scores: Map<int, number> = new Map();
@@ -868,10 +897,10 @@ const exploreNearPoint =
   const valid1 = (x: Point) => {
     const cell = known.getCell(x);
     if (cell && cell.age <= age) return false;
-    return Direction.all.some(y => !(known.getTile(x.add(y))?.blocked ?? true));
+    return Direction.all.some(y => !((known.getTile(x.add(y))?.flags ?? BLOCKED) & BLOCKED));
   };
   const valid0 = (x: Point) => {
-    return valid1(x) && !Direction.all.some(y => known.getTile(x.add(y))?.blocked);
+    return valid1(x) && !Direction.all.some(y => (known.getTile(x.add(y))?.flags ?? 0) & BLOCKED);
   };
   const kBFSLimit = int(64);
   const result = BFS(source, valid0, kBFSLimit, check) ??
@@ -1032,7 +1061,7 @@ const act = (state: State, entity: Entity, action: Action): Result => {
       const pos = entity.pos.add(direction);
       const player = entity.type === ET.Trainer && entity.data.player;
       if (pos.equal(entity.pos)) return kSuccess;
-      if (board.getTile(pos).blocked) return kFailure;
+      if (board.getTile(pos).flags & BLOCKED) return kFailure;
       const other = board.getEntity(pos);
       if (other) {
         if (getTrainer(other) !== entity) return kFailure;
@@ -1370,11 +1399,12 @@ const Constants = {
 };
 
 interface Tile {
-  readonly blocked: boolean,
-  readonly obscure: boolean,
+  readonly afire: Tile | null,
+  readonly flags: int,
   readonly glyph: Glyph,
   readonly description: string,
 };
+type Writeable<T> = {-readonly [P in keyof T]: T[P]};
 
 const kPlayerKey = 'a';
 const kReturnKey = 'r';
@@ -1384,11 +1414,46 @@ const kPartyKeys = `${'a'}sdfgh`;
 const kDirectionKeys = 'kulnjbhy';
 const kAlphabetKeys = 'abcdefghijklmnopqrstuvwxyz';
 
+const NONE    = 0;
+const BLOCKED = 1 << 0;
+const OPAQUE  = 1 << 1;
+const OBSCURE = 1 << 2;
+const ON_FIRE = 1 << 3;
+
 const kTiles: {[ch: string]: Tile} = {
-  '.': {blocked: false, obscure: false, glyph: new Glyph('.'),        description: 'ground'},
-  '"': {blocked: false, obscure: true,  glyph: new Glyph('"', '231'), description: 'tall grass'},
-  '#': {blocked: true,  obscure: true,  glyph: new Glyph('#', '010'), description: 'a tree'},
+  '.':  {
+    afire: null,
+    flags: int(NONE),
+    glyph: new Glyph('.'),
+    description: 'ground',
+  },
+  '"':  {
+    afire: null,
+    flags: int(OBSCURE),
+    glyph: new Glyph('"', '231'),
+    description: 'tall grass',
+  },
+  '#':  {
+    afire: null,
+    flags: int(BLOCKED | OPAQUE),
+    glyph: new Glyph('#', '010'),
+    description: 'a tree',
+  },
+  'ashes':  {
+    afire: null,
+    flags: int(NONE),
+    glyph: new Glyph('"', '111'),
+    description: 'ashes',
+  },
 };
+for (const ch of Array.from('"#')) {
+  const tile = nonnull(kTiles[ch]);
+  const glyph = tile.glyph.recolor('400');
+  const flags = int((tile.flags | BLOCKED | ON_FIRE) & ~(OPAQUE | OBSCURE));
+  const afire = {afire: null, flags, glyph, description: `${tile.description} on fire`};
+  kTiles[`${ch}-on-fire`] = afire;
+  (tile as Writeable<Tile>).afire = afire;
+}
 
 const kAttacks: Attack[] = [
   {name: 'Ember',    range: 12, damage: int(40), effect: Effects.Ember},
@@ -1401,17 +1466,24 @@ const kAttacks: Attack[] = [
 const species = (name: string, hp: int, speed: number, attack_names: string[],
                  glyph: Glyph): PokemonSpeciesWithAttacks => {
   attack_names = attack_names.slice();
-  attack_names.push('Tackle');
+  // TODO(shaunak): Hack to get more fires started...
+  if (attack_names[0] !== 'Ember') attack_names.push('Tackle');
   const attacks = attack_names.map(x=> only(kAttacks.filter(y => y.name === x)));
   return {name, glyph, hp, speed, attacks};
 };
 
 const kPokemon: PokemonSpeciesWithAttacks[] = [
-  species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', '020')),
+  //species('Bulbasaur',  int(90), 1/6, [],           new Glyph('B', '020')),
+  //species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', '410')),
+  //species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
+  //species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', '420')),
+  //species('Pikachu',    int(60), 1/4, [],           new Glyph('P', '440')),
+  // TODO(shaunak): Just for testing...
   species('Charmander', int(80), 1/5, ['Ember'],    new Glyph('C', '410')),
-  species('Squirtle',   int(70), 1/4, ['Ice Beam'], new Glyph('S', '234')),
-  species('Eevee',      int(80), 1/5, ['Headbutt'], new Glyph('E', '420')),
-  species('Pikachu',    int(60), 1/4, [],           new Glyph('P', '440')),
+  species('Vulpix',     int(80), 1/5, ['Ember'],    new Glyph('V', '410')),
+  species('Growlithe',  int(80), 1/5, ['Ember'],    new Glyph('G', '410')),
+  species('Ponyta',     int(80), 1/5, ['Ember'],    new Glyph('P', '410')),
+  species('Magmar',     int(80), 1/5, ['Ember'],    new Glyph('M', '410')),
   species('Rattata',    int(60), 1/4, ['Headbutt'], new Glyph('R')),
   species('Pidgey',     int(30), 1/3, [],           new Glyph('P')),
 ];
@@ -1812,7 +1884,7 @@ const initState = (): State => {
   const board = (() => {
     while (true) {
       const board = initBoard();
-      if (!board.getTile(point).blocked) return board;
+      if (!(board.getTile(point).flags & BLOCKED)) return board;
     }
   })();
   const player = makeTrainer(point, true, board.getSize());
@@ -1879,6 +1951,9 @@ const updateState = (state: State, inputs: Input[]): void => {
     const result = act(state, entity, action);
     if (entity === player && !result.success) break;
     wait(entity, result.moves, result.turns);
+
+    // TODO(shaunak): The spread of fire should not depend on player speed.
+    if (entity === player) board.advanceFires();
   }
 };
 
@@ -1903,6 +1978,11 @@ interface Timing {
   end: number,
 };
 
+interface Animation {
+  fires: Map<int, Color>,
+  frame: int,
+};
+
 interface UI {
   choice: Element,
   fps: Element,
@@ -1915,6 +1995,7 @@ interface UI {
 };
 
 interface IO {
+  anim: Animation,
   count: int,
   inputs: Input[],
   state: State,
@@ -1936,7 +2017,7 @@ const renderLog = (state: State): string => {
   return state.board.getLog().join('\n');
 };
 
-const renderMap = (state: State): string => {
+const renderMap = (state: State, anim: Animation): string => {
   const {board, focus, player, target} = state;
   const width  = Constants.MAP_SIZE_X;
   const height = Constants.MAP_SIZE_Y;
@@ -1994,6 +2075,35 @@ const renderMap = (state: State): string => {
       shade(point, color, true);
     }
   }
+
+  if ((++anim.frame) === 6) {
+    anim.fires.clear();
+    anim.frame = 0;
+  }
+
+  const vision = board.getVision(player);
+  for (let x = int(0); x < width; x++) {
+    for (let y = int(0); y < height; y++) {
+      const point = (new Point(x, y)).add(offset);
+      if ((vision.getOrNull(point) ?? -1) < 0) continue;
+      // TODO(shaunak): Have a better way to animate certain tiles.
+      const glyph = (() => {
+        const tile = board.getTile(point);
+        if (!(tile.flags & ON_FIRE)) return tile.glyph;
+
+        const key = point.key();
+        const color = anim.fires.get(key);
+        if (color) return tile.glyph.recolor(color);
+
+        const flame: Color[] = ['400', '420', '440'];
+        const selected = sample(flame);
+        anim.fires.set(key, selected);
+        return tile.glyph.recolor(selected);
+      })();
+      shade(point, glyph, true);
+    }
+  }
+
   board.getEntities().forEach(
       x => shade(x.pos, x.glyph, getTrainer(x) === player));
 
@@ -2364,7 +2474,9 @@ const initIO = (state: State): IO => {
     .concat(Array.from(kAlphabetKeys))
     .concat(kFastDirectionKeys);
   kAllKeys.forEach(x => window.key([x], () => inputs.push(x)));
-  return {count: 0, inputs, state, timing: [], ui};
+
+  const anim = {fires: new Map(), frame: int(0)};
+  return {anim, count: 0, inputs, state, timing: [], ui};
 };
 
 const update = (io: IO) => {
@@ -2395,7 +2507,7 @@ const cachedSetContent = (element: Element, content: string): boolean => {
 const render = (io: IO) => {
   const refresh = [
     cachedSetContent(io.ui.log, renderLog(io.state)),
-    cachedSetContent(io.ui.map, renderMap(io.state)),
+    cachedSetContent(io.ui.map, renderMap(io.state, io.anim)),
     cachedSetContent(io.ui.choice, renderChoice(io.state)),
     cachedSetContent(io.ui.rivals, renderRivals(io.state)),
     cachedSetContent(io.ui.status, renderStatus(io.state)),

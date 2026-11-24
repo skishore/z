@@ -7,6 +7,7 @@ import {Point, Direction, LOS} from './geo';
 interface Board {
   getGlyphAt: (pos: Point) => Glyph,
   getUnderlyingGlyphAt: (pos: Point) => Glyph,
+  maybeStartFire: (pos: Point) => void,
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -250,6 +251,11 @@ const SwitchEffect = (source: Point, target: Point): Effect => {
 const EmberEffect = (board: Board, source: Point, target: Point): Effect => {
   const effect = new Effect();
   const line = LOS(source, target);
+
+  // TODO(shaunak): These board mutations need to be recorded in the effect
+  // instead of just being immediately applied when we start the attack.
+  for (const pos of line) board.maybeStartFire(pos);
+  for (const dir of Direction.all) board.maybeStartFire(target.add(dir));
 
   const trail = (): Sparkle => [
     [random_delay(0), '*^^',   '400'],
